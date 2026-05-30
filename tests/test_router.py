@@ -1,0 +1,635 @@
+from __future__ import annotations
+
+import os
+from unittest.mock import AsyncMock
+
+import httpx
+import pytest
+from pytest_httpx import HTTPXMock
+
+from data_aggregator_mcp import router, taxonomy
+from data_aggregator_mcp.errors import UpstreamUnavailableError
+from data_aggregator_mcp.models import DataResource
+
+_LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
+_live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+
+
+def _res(id_: str, source: str, doi: str | None) -> DataResource:
+    return DataResource(id=id_, source=source, kind="dataset", title="t", doi=doi)
+
+
+_ZENODO_REC = {
+    "id": 123,
+    "doi": "10.5281/zenodo.123",
+    "metadata": {
+        "title": "z",
+        "resource_type": {"type": "dataset"},
+        "publication_date": "2024-01-01",
+    },
+    "files": [],
+}
+_DATACITE_ITEM = {
+    "id": "10.5061/dryad.x",
+    "attributes": {
+        "doi": "10.5061/dryad.x",
+        "titles": [{"title": "d"}],
+        "publicationYear": 2024,
+        "types": {"resourceTypeGeneral": "Dataset"},
+    },
+    "relationships": {"client": {"data": {"id": "dryad.dryad"}}},
+}
+
+
+def test_available_sources_lists_all_adapters() -> None:
+    assert router.available_sources() == ["zenodo", "datacite", "omics", "literature"]
+
+
+def test_select_unknown_source_raises() -> None:
+    with pytest.raises(ValueError, match="unknown source 'bogus'"):
+        router._select(["bogus"])
+
+
+def test_select_subset() -> None:
+    assert list(router._select(["datacite"])) == ["datacite"]
+
+
+def test_dedup_prefers_native_over_datacite_on_doi_collision() -> None:
+    native = _res("zenodo:123", "zenodo", "10.5281/zenodo.123")
+    via_dc = _res("datacite:10.5281/zenodo.123", "zenodo", "10.5281/zenodo.123")
+    out = router._dedup([via_dc, native])
+    assert len(out) == 1
+    assert out[0].id == "zenodo:123"  # native (fetchable) wins regardless of order
+
+
+def test_dedup_is_case_insensitive_on_doi() -> None:
+    a = _res("zenodo:1", "zenodo", "10.5281/ZENODO.1")
+    b = _res("datacite:10.5281/zenodo.1", "zenodo", "10.5281/zenodo.1")
+    assert len(router._dedup([a, b])) == 1
+
+
+def test_dedup_keeps_records_without_doi() -> None:
+    a = _res("zenodo:1", "zenodo", None)
+    b = _res("zenodo:2", "zenodo", None)
+    assert len(router._dedup([a, b])) == 2
+
+
+async def test_search_fans_out_and_merges(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url="https://zenodo.org/api/records?q=rna&size=10",
+        json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
+    )
+    httpx_mock.add_response(
+        url="https://api.datacite.org/dois?query=rna&page%5Bsize%5D=10",
+        json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
+    )
+    async with httpx.AsyncClient() as client:
+        total, results, errors, _exp = await router.search(
+            client, "rna", sources=["zenodo", "datacite"]
+        )
+    assert errors == {}
+    ids = {r.id for r in results}
+    assert ids == {"zenodo:123", "datacite:10.5061/dryad.x"}
+    assert total == 2
+
+
+async def test_search_captures_per_source_error_without_failing(httpx_mock: HTTPXMock) -> None:
+    # zenodo succeeds; datacite 500s past its retries → captured, not raised
+    httpx_mock.add_response(
+        url="https://zenodo.org/api/records?q=rna&size=10",
+        json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
+    )
+    httpx_mock.add_response(
+        url="https://api.datacite.org/dois?query=rna&page%5Bsize%5D=10",
+        status_code=500,
+        is_reusable=True,
+    )
+    async with httpx.AsyncClient() as client:
+        total, results, errors, _exp = await router.search(
+            client, "rna", sources=["zenodo", "datacite"]
+        )
+    assert [r.id for r in results] == ["zenodo:123"]
+    assert "datacite" in errors
+    assert "UpstreamUnavailableError" in errors["datacite"]
+
+
+async def test_search_respects_sources_filter(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url="https://api.datacite.org/dois?query=rna&page%5Bsize%5D=10",
+        json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
+    )
+    async with httpx.AsyncClient() as client:
+        total, results, errors, _exp = await router.search(client, "rna", sources=["datacite"])
+    assert [r.id for r in results] == ["datacite:10.5061/dryad.x"]
+    assert errors == {}
+
+
+def test_interleave_gives_each_source_fair_share() -> None:
+    # pure unit: a flat concat + truncate would return only the first list.
+    zen = [_res(f"zenodo:{i}", "zenodo", f"10.5281/zenodo.{i}") for i in range(5)]
+    dc = [_res(f"datacite:10.5061/d.{i}", "dryad", f"10.5061/d.{i}") for i in range(5)]
+    merged = router.interleave([zen, dc])
+    # round-robin: zenodo:0, datacite:0, zenodo:1, datacite:1, ...
+    assert merged[0].id == "zenodo:0"
+    assert merged[1].id == "datacite:10.5061/d.0"
+    # the top-5 slice must contain BOTH sources (the starvation regression)
+    top5 = merged[:5]
+    assert any(r.id.startswith("zenodo:") for r in top5)
+    assert any(r.id.startswith("datacite:") for r in top5)
+
+
+async def test_search_does_not_starve_later_source(httpx_mock: HTTPXMock) -> None:
+    # both sources return a FULL page of distinct-DOI hits; the merged top-`size`
+    # must still include DataCite (regression: flat-concat truncation hid it).
+    zen_hits = [
+        {
+            "id": i,
+            "doi": f"10.5281/zenodo.{i}",
+            "metadata": {
+                "title": f"z{i}",
+                "resource_type": {"type": "dataset"},
+                "publication_date": "2024-01-01",
+            },
+            "files": [],
+        }
+        for i in range(5)
+    ]
+    dc_hits = [
+        {
+            "id": f"10.5061/dryad.{i}",
+            "attributes": {
+                "doi": f"10.5061/dryad.{i}",
+                "titles": [{"title": f"d{i}"}],
+                "publicationYear": 2024,
+                "types": {"resourceTypeGeneral": "Dataset"},
+            },
+            "relationships": {"client": {"data": {"id": "dryad.dryad"}}},
+        }
+        for i in range(5)
+    ]
+    httpx_mock.add_response(
+        url="https://zenodo.org/api/records?q=x&size=5",
+        json={"hits": {"total": 5, "hits": zen_hits}},
+    )
+    httpx_mock.add_response(
+        url="https://api.datacite.org/dois?query=x&page%5Bsize%5D=5",
+        json={"data": dc_hits, "meta": {"total": 5}},
+    )
+    async with httpx.AsyncClient() as client:
+        total, results, errors, _exp = await router.search(
+            client, "x", size=5, sources=["zenodo", "datacite"]
+        )
+    assert len(results) == 5
+    sources_seen = {r.id.split(":", 1)[0] for r in results}
+    assert sources_seen == {"zenodo", "datacite"}  # both represented, neither starved
+
+
+async def test_resolve_routes_zenodo_prefix(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(url="https://zenodo.org/api/records/123", json=_ZENODO_REC)
+    async with httpx.AsyncClient() as client:
+        r = await router.resolve(client, "zenodo:123")
+    assert r.id == "zenodo:123"
+
+
+async def test_resolve_routes_bare_numeric_to_zenodo(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(url="https://zenodo.org/api/records/123", json=_ZENODO_REC)
+    async with httpx.AsyncClient() as client:
+        r = await router.resolve(client, "123")
+    assert r.id == "zenodo:123"
+
+
+async def test_resolve_routes_datacite_prefix(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url="https://api.datacite.org/dois/10.5061/dryad.x",
+        json={"data": _DATACITE_ITEM},
+    )
+    # DataCite resolve now fans out to the Dryad manifest resolver; an empty
+    # version link short-circuits dryad.files to [] (no /files call).
+    httpx_mock.add_response(
+        url="https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.x",
+        json={"_links": {}},
+    )
+    async with httpx.AsyncClient() as client:
+        r = await router.resolve(client, "datacite:10.5061/dryad.x")
+    assert r.source == "dryad"
+
+
+async def test_resolve_routes_bare_doi_to_datacite(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url="https://api.datacite.org/dois/10.5061/dryad.x",
+        json={"data": _DATACITE_ITEM},
+    )
+    httpx_mock.add_response(
+        url="https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.x",
+        json={"_links": {}},
+    )
+    async with httpx.AsyncClient() as client:
+        r = await router.resolve(client, "10.5061/dryad.x")
+    assert r.doi == "10.5061/dryad.x"
+
+
+async def test_resolve_unroutable_id_raises() -> None:
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(ValueError, match="cannot route id"):
+            await router.resolve(client, "garbage-no-prefix")
+
+
+async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    httpx_mock.add_response(
+        url="https://zenodo.org/api/records?q=rna&size=10",
+        json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
+    )
+    httpx_mock.add_response(
+        url="https://api.datacite.org/dois?query=rna&page%5Bsize%5D=10",
+        json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
+    )
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=rna&retmax=10&retmode=json",
+        json={"esearchresult": {"count": "1", "idlist": ["1"]}},
+    )
+    for db in ("sra", "bioproject"):
+        httpx_mock.add_response(
+            url=f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db={db}&term=rna&retmax=10&retmode=json",
+            json={"esearchresult": {"count": "0", "idlist": []}},
+        )
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&id=1&version=2.0&retmode=json",
+        json={
+            "result": {
+                "uids": ["1"],
+                "1": {"accession": "GSE1", "title": "g", "pdat": "2024/01/01"},
+            }
+        },
+    )
+    # literature is the 4th default source: pubmed + openaire both return empty here
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=rna&retmax=10&retmode=json",
+        json={"esearchresult": {"count": "0", "idlist": []}},
+    )
+    httpx_mock.add_response(
+        url="https://api.openaire.eu/graph/v1/researchProducts?search=rna&type=publication&pageSize=10",
+        json={"header": {"numFound": 0}, "results": []},
+    )
+    async with httpx.AsyncClient() as client:
+        total, results, errors, _exp = await router.search(client, "rna")
+    assert errors == {}
+    ids = {r.id for r in results}
+    assert "geo:GSE1" in ids
+    assert {"zenodo:123", "datacite:10.5061/dryad.x"} <= ids
+
+
+async def test_resolve_routes_omics_prefixes(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]&retmax=1&retmode=json",
+        json={"esearchresult": {"count": "1", "idlist": ["1"]}},
+    )
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&id=1&version=2.0&retmode=json",
+        json={
+            "result": {
+                "uids": ["1"],
+                "1": {"accession": "GSE1", "title": "g", "pdat": "2024/01/01"},
+            }
+        },
+    )
+    async with httpx.AsyncClient() as client:
+        r = await router.resolve(client, "geo:GSE1")
+    assert r.id == "geo:GSE1"
+
+
+async def test_resolve_routes_pubmed_prefix(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    _EUT = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+    httpx_mock.add_response(
+        url=f"{_EUT}/esummary.fcgi?db=pubmed&id=1&version=2.0&retmode=json",
+        json={
+            "result": {
+                "uids": ["1"],
+                "1": {
+                    "uid": "1",
+                    "title": "p",
+                    "sortpubdate": "2020/01/01 00:00",
+                    "authors": [],
+                    "articleids": [],
+                },
+            }
+        },
+    )
+    for db in ("sra", "gds", "bioproject"):
+        httpx_mock.add_response(
+            url=f"{_EUT}/elink.fcgi?dbfrom=pubmed&db={db}&id=1&retmode=json",
+            json={"linksets": [{}]},
+        )
+    # abstract enrichment via efetch (no AbstractText → description stays None).
+    httpx_mock.add_response(
+        url=f"{_EUT}/efetch.fcgi?db=pubmed&id=1&retmode=xml",
+        text="<PubmedArticleSet></PubmedArticleSet>",
+    )
+    async with httpx.AsyncClient() as client:
+        r = await router.resolve(client, "pubmed:1")
+    assert r.id == "pubmed:1"
+
+
+async def test_resolve_routes_openaire_prefix(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url="https://api.openaire.eu/graph/v1/researchProducts/abc",
+        json={
+            "id": "abc",
+            "mainTitle": "t",
+            "pids": [],
+            "instances": [],
+            "authors": [],
+            "subjects": [],
+        },
+    )
+    async with httpx.AsyncClient() as client:
+        r = await router.resolve(client, "openaire:abc")
+    assert r.id == "openaire:abc"
+    assert r.source == "openaire"
+
+
+async def test_search_expands_organism_synonyms(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    monkeypatch.setattr(
+        taxonomy,
+        "resolve_taxon",
+        AsyncMock(
+            return_value=taxonomy.TaxonInfo(
+                taxid=99112,
+                canonical_name="Phelipanche aegyptiaca",
+                synonyms=("Orobanche aegyptiaca",),
+                is_plant=True,
+            )
+        ),
+    )
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        total, results, errors, expansion = await router.search(
+            client, "small RNA", organism="Orobanche aegyptiaca", sources=["zenodo"]
+        )
+    assert "small RNA" in captured["query"]
+    assert "Phelipanche aegyptiaca" in captured["query"]
+    assert "Orobanche aegyptiaca" in captured["query"]
+    assert expansion is not None
+    assert expansion.taxid == 99112
+    assert expansion.synonyms == ["Orobanche aegyptiaca"]
+    assert errors == {}
+
+
+async def test_search_organism_lookup_failure_surfaces_error_and_runs_unexpanded(
+    httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        taxonomy, "resolve_taxon", AsyncMock(side_effect=UpstreamUnavailableError("NCBI down"))
+    )
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        total, results, errors, expansion = await router.search(
+            client, "small RNA", organism="Phelipanche aegyptiaca", sources=["zenodo"]
+        )
+    assert captured["query"] == "small RNA"  # ran un-expanded
+    assert expansion is None
+    assert "taxonomy" in errors
+    assert "UpstreamUnavailableError" in errors["taxonomy"]
+
+
+async def test_search_no_organism_param_skips_taxonomy(monkeypatch) -> None:
+    called = AsyncMock()
+    monkeypatch.setattr(taxonomy, "resolve_taxon", called)
+
+    async def fake_zenodo_search(client, query, *, size=10):
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        total, results, errors, expansion = await router.search(client, "rna", sources=["zenodo"])
+    called.assert_not_awaited()
+    assert expansion is None
+
+
+def _plant_info() -> "taxonomy.TaxonInfo":
+    return taxonomy.TaxonInfo(
+        taxid=99112,
+        canonical_name="Phelipanche aegyptiaca",
+        synonyms=("Orobanche aegyptiaca",),
+        is_plant=True,
+    )
+
+
+async def test_enrich_resource_fills_taxa_and_plant_crosslink(monkeypatch) -> None:
+    monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=_plant_info()))
+    r = DataResource(
+        id="geo:GSE1",
+        source="geo",
+        kind="study",
+        title="t",
+        organism=["Phelipanche aegyptiaca"],
+    )
+    async with httpx.AsyncClient() as client:
+        out = await router._enrich_resource(client, r)
+    assert [(t.taxid, t.name) for t in out.taxa] == [(99112, "Phelipanche aegyptiaca")]
+    assert ("described_in", "plant-genomics:taxid:99112") in [
+        (lnk.rel, lnk.target_id) for lnk in out.links
+    ]
+
+
+async def test_enrich_resource_non_plant_has_no_crosslink(monkeypatch) -> None:
+    info = taxonomy.TaxonInfo(
+        taxid=9606, canonical_name="Homo sapiens", synonyms=(), is_plant=False
+    )
+    monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=info))
+    r = DataResource(
+        id="sra:SRX1",
+        source="sra",
+        kind="sequencing_run",
+        title="t",
+        organism=["Homo sapiens"],
+    )
+    async with httpx.AsyncClient() as client:
+        out = await router._enrich_resource(client, r)
+    assert [t.taxid for t in out.taxa] == [9606]
+    assert out.links == []
+
+
+async def test_enrich_skips_resource_without_organism(monkeypatch) -> None:
+    called = AsyncMock()
+    monkeypatch.setattr(taxonomy, "resolve_taxon", called)
+    r = DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="t")
+    async with httpx.AsyncClient() as client:
+        out = await router._enrich(client, [r], {})
+    called.assert_not_awaited()
+    assert out[0].taxa == []
+
+
+async def test_search_enriches_results(monkeypatch) -> None:
+    monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=_plant_info()))
+
+    async def fake_omics_search(client, query, *, size=10):
+        return 1, [
+            DataResource(
+                id="geo:GSE1",
+                source="geo",
+                kind="study",
+                title="t",
+                organism=["Phelipanche aegyptiaca"],
+            )
+        ]
+
+    monkeypatch.setattr("data_aggregator_mcp.omics.search", fake_omics_search)
+    async with httpx.AsyncClient() as client:
+        total, results, errors, _exp = await router.search(client, "x", sources=["omics"])
+    assert results[0].taxa[0].taxid == 99112
+    assert any(lnk.target_id == "plant-genomics:taxid:99112" for lnk in results[0].links)
+
+
+async def test_search_enrichment_failure_surfaces_taxonomy_error(monkeypatch) -> None:
+    monkeypatch.setattr(
+        taxonomy, "resolve_taxon", AsyncMock(side_effect=UpstreamUnavailableError("down"))
+    )
+
+    async def fake_omics_search(client, query, *, size=10):
+        return 1, [
+            DataResource(
+                id="geo:GSE1",
+                source="geo",
+                kind="study",
+                title="t",
+                organism=["Phelipanche aegyptiaca"],
+            )
+        ]
+
+    monkeypatch.setattr("data_aggregator_mcp.omics.search", fake_omics_search)
+    async with httpx.AsyncClient() as client:
+        total, results, errors, _exp = await router.search(client, "x", sources=["omics"])
+    assert "taxonomy" in errors
+    assert results[0].taxa == []  # enrichment failed but the result still returned
+
+
+async def test_enrich_resource_dedups_same_taxid_from_two_names(monkeypatch) -> None:
+    # two raw organism strings resolving to the SAME taxid → one Taxon, one link
+    monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=_plant_info()))
+    r = DataResource(
+        id="geo:GSE1",
+        source="geo",
+        kind="study",
+        title="t",
+        organism=["Orobanche aegyptiaca", "Phelipanche aegyptiaca"],
+    )
+    async with httpx.AsyncClient() as client:
+        out = await router._enrich_resource(client, r)
+    assert len(out.taxa) == 1 and out.taxa[0].taxid == 99112
+    assert len([lnk for lnk in out.links if lnk.target_id == "plant-genomics:taxid:99112"]) == 1
+
+
+async def test_resolve_enriches_with_taxon(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=_plant_info()))
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]&retmax=1&retmode=json",
+        json={"esearchresult": {"count": "1", "idlist": ["1"]}},
+    )
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&id=1&version=2.0&retmode=json",
+        json={
+            "result": {
+                "uids": ["1"],
+                "1": {
+                    "accession": "GSE1",
+                    "title": "g",
+                    "pdat": "2024/01/01",
+                    "taxon": "Phelipanche aegyptiaca",
+                },
+            }
+        },
+    )
+    async with httpx.AsyncClient() as client:
+        r = await router.resolve(client, "geo:GSE1")
+    assert r.taxa[0].taxid == 99112
+    assert any(lnk.target_id == "plant-genomics:taxid:99112" for lnk in r.links)
+
+
+async def test_resolve_survives_taxonomy_failure(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    monkeypatch.setattr(
+        taxonomy, "resolve_taxon", AsyncMock(side_effect=UpstreamUnavailableError("down"))
+    )
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]&retmax=1&retmode=json",
+        json={"esearchresult": {"count": "1", "idlist": ["1"]}},
+    )
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&id=1&version=2.0&retmode=json",
+        json={
+            "result": {
+                "uids": ["1"],
+                "1": {
+                    "accession": "GSE1",
+                    "title": "g",
+                    "pdat": "2024/01/01",
+                    "taxon": "Phelipanche aegyptiaca",
+                },
+            }
+        },
+    )
+    async with httpx.AsyncClient() as client:
+        r = await router.resolve(client, "geo:GSE1")
+    assert r.id == "geo:GSE1"  # core record returned
+    assert r.taxa == []  # enrichment degraded gracefully
+
+
+async def test_enrich_resource_mixed_plant_and_non_plant(monkeypatch) -> None:
+    plant = taxonomy.TaxonInfo(
+        taxid=99112,
+        canonical_name="Phelipanche aegyptiaca",
+        synonyms=(),
+        is_plant=True,
+    )
+    animal = taxonomy.TaxonInfo(
+        taxid=9606,
+        canonical_name="Homo sapiens",
+        synonyms=(),
+        is_plant=False,
+    )
+
+    async def fake_resolve(client, name):
+        return plant if name == "Phelipanche aegyptiaca" else animal
+
+    monkeypatch.setattr(taxonomy, "resolve_taxon", fake_resolve)
+    r = DataResource(
+        id="sra:SRX1",
+        source="sra",
+        kind="sequencing_run",
+        title="t",
+        organism=["Phelipanche aegyptiaca", "Homo sapiens"],
+    )
+    async with httpx.AsyncClient() as client:
+        out = await router._enrich_resource(client, r)
+    assert {t.taxid for t in out.taxa} == {99112, 9606}  # both normalized
+    plant_links = [lnk.target_id for lnk in out.links if lnk.rel == "described_in"]
+    assert plant_links == ["plant-genomics:taxid:99112"]  # only the plant gets a cross-link
+
+
+@_live_only
+async def test_live_search_synonym_expansion_fires() -> None:
+    taxonomy._CACHE.clear()
+    async with httpx.AsyncClient() as client:
+        total, results, errors, expansion = await router.search(
+            client, "small RNA", organism="Phelipanche aegyptiaca", sources=["literature"]
+        )
+    assert expansion is not None
+    assert expansion.taxid == 99112
+    assert expansion.synonyms  # non-empty: at least one synonym was added
+    assert "taxonomy" not in errors
