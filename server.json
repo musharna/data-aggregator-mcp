@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.musharna/data-aggregator-mcp",
-  "description": "Research-data acquisition MCP — find and fetch datasets across archives, omics registries, and literature.",
+  "description": "Find & fetch research datasets across Zenodo, DataCite, NCBI omics, and literature.",
   "title": "Data Aggregator",
   "repository": {
     "url": "https://github.com/musharna/data-aggregator-mcp",
