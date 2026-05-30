@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "data-aggregator": {
+      "command": "uvx",
+      "args": ["data-aggregator-mcp"]
+    }
+  }
+}
