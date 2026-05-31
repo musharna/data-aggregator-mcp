@@ -199,6 +199,13 @@ def test_resolve_tool_exposes_cite_param() -> None:
     assert "cite" in tool.inputSchema["properties"]
 
 
+def test_list_sources_advertises_filters_and_cursor() -> None:
+    for s in server._SOURCES:
+        assert {"published_after", "published_before", "kind", "cursor"} <= set(
+            s["filters_supported"]
+        )
+
+
 def test_search_schema_exposes_pagination_and_filters() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
     props = tool.inputSchema["properties"]
