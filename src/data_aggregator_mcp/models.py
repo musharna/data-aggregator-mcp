@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -89,6 +90,9 @@ class DataResource(BaseModel):
     is_latest: bool | None = None  # None = no version info in links[]
     superseded_by: str | None = None  # id of the newer version, when known
     last_updated: str | None = None  # source's modified/updated timestamp (ISO 8601)
+    croissant: dict[str, Any] | None = (
+        None  # file-level Croissant export, on resolve(format=croissant)
+    )
 
 
 class TaxonExpansion(BaseModel):

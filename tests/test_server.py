@@ -426,3 +426,18 @@ async def test_get_prompt_find_data_includes_topic() -> None:
     text = result.messages[0].content.text
     assert "rice drought" in text
     assert "Oryza sativa" in text
+
+
+async def test_dispatch_resolve_renders_croissant(monkeypatch) -> None:
+    from data_aggregator_mcp.models import DataResource, FileEntry
+
+    async def fake_resolve(client, fid):
+        return DataResource(
+            id="zenodo:1", source="zenodo", kind="dataset", title="t",
+            files=[FileEntry(name="a.csv", url="https://x/a.csv")],
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    out = await server._dispatch("resolve", {"id": "zenodo:1", "format": "croissant"})
+    assert out["croissant"]["@type"] == "Dataset"
+    assert out["croissant"]["distribution"][0]["name"] == "a.csv"

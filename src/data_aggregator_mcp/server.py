@@ -21,6 +21,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
 from data_aggregator_mcp import citation
+from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import health as health_mod
 from data_aggregator_mcp import router, zenodo
@@ -277,6 +278,12 @@ TOOLS: list[types.Tool] = [
                     "negotiation; non-DOI records support 'csl-json' only. Omitted = no "
                     "citation. Failures degrade quietly (citation stays null).",
                 },
+                "format": {
+                    "type": "string",
+                    "enum": ["croissant"],
+                    "description": "Optional export to render onto the result. 'croissant' "
+                    "attaches a file-level Croissant JSON-LD manifest (croissant field).",
+                },
             },
             "required": ["id"],
         },
@@ -471,6 +478,11 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 if cite:
                     rendered = await citation.render(client, resource, cite)
                     resource = resource.model_copy(update={"citation": rendered})
+                fmt = args.get("format")
+                if fmt == "croissant":
+                    resource = resource.model_copy(
+                        update={"croissant": croissant_mod.render(resource)}
+                    )
                 return resource.model_dump()
             case "fetch":
                 fid = args["id"].strip()
