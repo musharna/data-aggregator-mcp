@@ -226,15 +226,15 @@ async def fetch_files(
                 client, f, target, budget=budget, force=force, extract=extract
             )
         if on_progress is not None:
-            # Serialize the counter bump + emit so each file gets a distinct,
-            # monotonically increasing ``done`` even under concurrent finishes.
+            # Serialize the counter bump AND the emit so callbacks fire in
+            # counter order — otherwise a slow callback for file N can be
+            # overtaken by N+1 and the client sees ``done`` go backwards.
             async with progress_lock:
                 done += 1
-                completed = done
-            await on_progress(completed, total, outcome.name)
+                await on_progress(done, total, outcome.name)
         return outcome
 
-    tasks = [asyncio.ensure_future(_guarded(f)) for f in selected]
+    tasks = [asyncio.create_task(_guarded(f)) for f in selected]
     try:
         outcomes: list[_Outcome] = list(await asyncio.gather(*tasks))
     except BaseException:
