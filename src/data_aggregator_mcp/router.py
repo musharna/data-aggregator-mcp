@@ -16,7 +16,15 @@ from typing import Any
 
 import httpx
 
-from data_aggregator_mcp import _cursor, datacite, literature, omics, taxonomy, zenodo
+from data_aggregator_mcp import (
+    _cursor,
+    datacite,
+    huggingface,
+    literature,
+    omics,
+    taxonomy,
+    zenodo,
+)
 from data_aggregator_mcp._merge import interleave
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import DataResource, Link, SearchResult, Taxon, TaxonExpansion
@@ -32,6 +40,7 @@ _ADAPTERS: dict[str, Any] = {
     "datacite": datacite,
     "omics": omics,
     "literature": literature,
+    "huggingface": huggingface,
 }
 
 
@@ -322,6 +331,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     - ``pubmed:``/``openaire:``          → literature
     - ``datacite:<doi>``                 → DataCite
     - ``zenodo:<id>`` / bare digits      → Zenodo (native; carries files[])
+    - ``hf:<owner>/<name>``              → HuggingFace (native; carries files[])
     - a bare DOI (contains ``/``)        → DataCite
     """
     rid = resource_id.strip()
@@ -334,6 +344,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = await datacite.resolve(client, rid)
     elif rid.startswith("zenodo:") or rid.isdigit():
         resource = await zenodo.resolve(client, rid)
+    elif prefix in huggingface.PREFIXES:
+        resource = await huggingface.resolve(client, rid)
     elif "/" in rid:
         resource = await datacite.resolve(client, rid)
     else:

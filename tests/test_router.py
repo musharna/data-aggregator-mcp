@@ -42,7 +42,33 @@ _DATACITE_ITEM = {
 
 
 def test_available_sources_lists_all_adapters() -> None:
-    assert router.available_sources() == ["zenodo", "datacite", "omics", "literature"]
+    assert router.available_sources() == [
+        "zenodo",
+        "datacite",
+        "omics",
+        "literature",
+        "huggingface",
+    ]
+
+
+def test_available_sources_includes_huggingface() -> None:
+    assert "huggingface" in router.available_sources()
+
+
+@pytest.mark.asyncio
+async def test_resolve_routes_hf_prefix(monkeypatch) -> None:
+    called = {}
+
+    async def fake(client, rid):
+        called["rid"] = rid
+        return DataResource(id=rid, source="huggingface", kind="dataset", title="t")
+
+    monkeypatch.setattr(router.huggingface, "resolve", fake)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as c:
+        r = await router.resolve(c, "hf:owner/name")
+    assert called["rid"] == "hf:owner/name" and r.source == "huggingface"
 
 
 def test_select_unknown_source_raises() -> None:
@@ -270,6 +296,11 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     httpx_mock.add_response(
         url="https://api.openaire.eu/graph/v1/researchProducts?search=rna&type=publication&pageSize=10",
         json={"header": {"numFound": 0}, "results": []},
+    )
+    # huggingface is the 5th default source: returns empty here
+    httpx_mock.add_response(
+        url="https://huggingface.co/api/datasets?search=rna&limit=10&full=true",
+        json=[],
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "rna")
