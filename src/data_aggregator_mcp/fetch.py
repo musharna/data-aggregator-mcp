@@ -17,6 +17,7 @@ from data_aggregator_mcp.models import DataResource, FetchResult, FileEntry
 DEFAULT_MAX_BYTES = 2_000_000_000  # ~2 GB
 DEFAULT_CACHE_DIR = Path.home() / ".cache" / "data-aggregator-mcp"
 _CHUNK = 1 << 16  # 64 KiB
+_MAX_CONCURRENCY = 4  # bounded parallel downloads per resource
 
 # Declared mimes whose body must NOT be HTML (the classic "paywall/login page
 # served in place of the file" failure for unverified downloads).
@@ -115,47 +116,54 @@ async def _download_one(
     written = 0
     first_head = b""
     first_chunk_seen = False
+    # Concurrency: a sibling task's failure cancels this one mid-stream
+    # (CancelledError). ANY escape before the file is verified-complete must
+    # remove our partial — but a completed file must survive. ``complete`` flips
+    # only on the success path; the broad ``except BaseException`` cleans up
+    # otherwise (covers cancellation, which the typed handlers below do not).
+    complete = False
     try:
-        async with client.stream("GET", f.url, timeout=300.0) as resp:
-            resp.raise_for_status()
-            with out.open("wb") as fh:
-                async for chunk in resp.aiter_bytes(_CHUNK):
-                    await budget.debit(len(chunk), f.name)
-                    written += len(chunk)
-                    if not first_chunk_seen:
-                        first_head = chunk[:512]
-                        first_chunk_seen = True
-                    if h is not None:
-                        h.update(chunk)
-                    fh.write(chunk)
-    except httpx.HTTPStatusError as exc:
-        out.unlink(missing_ok=True)
-        sc = exc.response.status_code
-        if sc == 404:
-            raise NotFoundError(f"fetch {f.name} → HTTP 404 ({f.url})") from exc
-        raise UpstreamUnavailableError(f"fetch {f.name} → HTTP {sc} ({f.url})") from exc
-    except (httpx.TimeoutException, httpx.TransportError) as exc:
-        out.unlink(missing_ok=True)
-        raise UpstreamUnavailableError(f"fetch {f.name} transport failure: {exc!r}") from exc
-    except FetchTooLargeError:
-        out.unlink(missing_ok=True)
-        raise
-    if h is not None and f.checksum:
-        expected = f.checksum.split(":", 1)[1]
-        if h.hexdigest() != expected:
-            out.unlink(missing_ok=True)
-            raise UpstreamUnavailableError(f"checksum mismatch for {f.name}")
-    if h is None and f.mime in _BINARY_MIMES and _looks_like_html(first_head):
-        out.unlink(missing_ok=True)
-        raise UpstreamUnavailableError(
-            f"fetch {f.name}: body is HTML, not the declared {f.mime} "
-            "(the URL likely served a login/paywall/error page)"
+        try:
+            async with client.stream("GET", f.url, timeout=300.0) as resp:
+                resp.raise_for_status()
+                with out.open("wb") as fh:
+                    async for chunk in resp.aiter_bytes(_CHUNK):
+                        await budget.debit(len(chunk), f.name)
+                        written += len(chunk)
+                        if not first_chunk_seen:
+                            first_head = chunk[:512]
+                            first_chunk_seen = True
+                        if h is not None:
+                            h.update(chunk)
+                        fh.write(chunk)
+        except httpx.HTTPStatusError as exc:
+            sc = exc.response.status_code
+            if sc == 404:
+                raise NotFoundError(f"fetch {f.name} → HTTP 404 ({f.url})") from exc
+            raise UpstreamUnavailableError(f"fetch {f.name} → HTTP {sc} ({f.url})") from exc
+        except (httpx.TimeoutException, httpx.TransportError) as exc:
+            raise UpstreamUnavailableError(f"fetch {f.name} transport failure: {exc!r}") from exc
+        if h is not None and f.checksum:
+            expected = f.checksum.split(":", 1)[1]
+            if h.hexdigest() != expected:
+                raise UpstreamUnavailableError(f"checksum mismatch for {f.name}")
+        if h is None and f.mime in _BINARY_MIMES and _looks_like_html(first_head):
+            raise UpstreamUnavailableError(
+                f"fetch {f.name}: body is HTML, not the declared {f.mime} "
+                "(the URL likely served a login/paywall/error page)"
+            )
+        extracted: list[str] = []
+        if extract and archive.is_archive(safe_name):
+            members = archive.extract_archive(out, target, max_bytes=budget.cap)
+            extracted = [str(m) for m in members]
+        complete = True
+        return _Outcome(
+            f.name, path=str(out), extracted=extracted, bytes=written, state="downloaded"
         )
-    extracted: list[str] = []
-    if extract and archive.is_archive(safe_name):
-        members = archive.extract_archive(out, target, max_bytes=budget.cap)
-        extracted = [str(m) for m in members]
-    return _Outcome(f.name, path=str(out), extracted=extracted, bytes=written, state="downloaded")
+    except BaseException:
+        if not complete:
+            out.unlink(missing_ok=True)
+        raise
 
 
 async def fetch_files(
@@ -188,11 +196,30 @@ async def fetch_files(
 
     budget = _Budget(remaining=max_bytes, force=force, cap=max_bytes)
 
-    outcomes: list[_Outcome] = []
-    for f in selected:
-        outcomes.append(
-            await _download_one(client, f, target, budget=budget, force=force, extract=extract)
-        )
+    # Download up to _MAX_CONCURRENCY files at once. The first failure
+    # propagates = fail-loud; the remaining in-flight tasks are cancelled and
+    # each cleans its own partial (see _download_one's BaseException handler).
+    # We must AWAIT that cancellation cleanup before re-raising: bare
+    # asyncio.gather propagates the first error while sibling cleanup is still
+    # pending, leaking 0-byte/partial files. So on any failure we cancel every
+    # task and await them all (suppressing their CancelledError) first.
+    sem = asyncio.Semaphore(_MAX_CONCURRENCY)
+
+    async def _guarded(f: FileEntry) -> _Outcome:
+        async with sem:
+            return await _download_one(
+                client, f, target, budget=budget, force=force, extract=extract
+            )
+
+    tasks = [asyncio.ensure_future(_guarded(f)) for f in selected]
+    try:
+        outcomes: list[_Outcome] = list(await asyncio.gather(*tasks))
+    except BaseException:
+        for t in tasks:
+            t.cancel()
+        # Drain so every task's partial-cleanup finishes before we propagate.
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
 
     paths: list[str] = []
     skipped: list[str] = []
@@ -208,6 +235,11 @@ async def fetch_files(
             paths.append(o.path)
             paths.extend(o.extracted)
         written_total += o.bytes
+
+    # Sort for order-stability: completion order under gather is nondeterministic.
+    paths.sort()
+    skipped.sort()
+    resumed.sort()
 
     (target / ".dataresource.json").write_text(resource.model_dump_json(indent=2))
     return FetchResult(paths=paths, bytes=written_total, skipped=skipped, resumed=resumed)

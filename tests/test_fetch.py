@@ -316,3 +316,140 @@ async def test_fetch_resume_force_redownloads_despite_match(tmp_path: Path) -> N
 
     assert url in requested  # force re-downloads
     assert out.resumed == []
+
+
+# --- Task 4: parallel downloads ----------------------------------------------
+
+
+class _SlowStream(httpx.AsyncByteStream):
+    """Streams ``content`` in chunks, sleeping ``delay`` seconds before each
+    chunk so multiple in-flight downloads measurably overlap."""
+
+    def __init__(self, content: bytes, *, chunk: int, delay: float) -> None:
+        self._content = content
+        self._chunk = chunk
+        self._delay = delay
+
+    async def __aiter__(self):
+        for i in range(0, len(self._content), self._chunk):
+            await asyncio.sleep(self._delay)
+            yield self._content[i : i + self._chunk]
+
+    async def aclose(self) -> None:  # noqa: D401
+        return None
+
+
+def _multi_resource(files: list[FileEntry]) -> DataResource:
+    return DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="t", files=files)
+
+
+async def test_fetch_four_files_all_land_stable_order(tmp_path: Path) -> None:
+    bodies = {f"https://x/f{i}.bin": f"body-{i}".encode() for i in range(4)}
+    files = [
+        FileEntry(
+            name=f"f{i}.bin", size=len(b), url=u, checksum=f"md5:{hashlib.md5(b).hexdigest()}"
+        )
+        for i, (u, b) in enumerate(bodies.items())
+    ]
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=bodies[str(request.url)])
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as client:
+        out = await fetch_mod.fetch_files(client, _multi_resource(files), dest=str(tmp_path))
+
+    target = tmp_path / "zenodo" / "1"
+    for i, b in enumerate(bodies.values()):
+        assert (target / f"f{i}.bin").read_bytes() == b
+    assert len(out.paths) == 4
+    assert out.paths == sorted(out.paths)  # stable regardless of completion order
+
+
+async def test_fetch_parallel_overlaps_in_time(tmp_path: Path) -> None:
+    """REAL-EXECUTION concurrency proof: 4 files, each served as several chunks
+    with a per-chunk sleep. Bounded-concurrency gather (4 workers) must run them
+    overlapping, so wall-time is well under the serial sum. Generous bound to
+    avoid flakiness on a loaded CI host."""
+    n_files = 4
+    chunks_per = 4
+    delay = 0.02
+    serial = n_files * chunks_per * delay  # ~0.32s if fully sequential
+    bodies = {f"https://x/f{i}.bin": (b"z" * 8 * chunks_per) for i in range(n_files)}
+    files = [
+        FileEntry(name=f"f{i}.bin", size=len(b), url=u, checksum=None)
+        for i, (u, b) in enumerate(bodies.items())
+    ]
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        body = bodies[str(request.url)]
+        return httpx.Response(200, stream=_SlowStream(body, chunk=8, delay=delay))
+
+    import time
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as client:
+        t0 = time.monotonic()
+        out = await fetch_mod.fetch_files(client, _multi_resource(files), dest=str(tmp_path))
+        elapsed = time.monotonic() - t0
+
+    assert len(out.paths) == n_files
+    # 4 workers ⇒ all 4 files overlap; expected wall ≈ one file's time (~0.08s).
+    assert elapsed < 0.6 * serial, f"no overlap: {elapsed:.3f}s vs serial {serial:.3f}s"
+
+
+async def test_fetch_parallel_one_404_raises_and_cleans_partial(tmp_path: Path) -> None:
+    """One file 404s while siblings are mid-stream. The whole fetch must raise
+    (fail-loud), the 404'd file leaves no partial, and the run does not hang."""
+    from data_aggregator_mcp.errors import NotFoundError
+
+    # Siblings stream slowly (long per-chunk sleep) so the immediate 404
+    # cancels them while they are still mid-stream — exercising the
+    # CancelledError → partial-cleanup path rather than a clean completion.
+    delay = 0.25
+    good = {f"https://x/f{i}.bin": (b"z" * 320) for i in range(3)}
+    bad_url = "https://x/bad.bin"
+    files = [
+        FileEntry(name=f"f{i}.bin", size=320, url=u, checksum=None) for i, u in enumerate(good)
+    ]
+    files.append(FileEntry(name="bad.bin", size=320, url=bad_url, checksum=None))
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url == bad_url:
+            return httpx.Response(404)
+        return httpx.Response(200, stream=_SlowStream(good[url], chunk=8, delay=delay))
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as client:
+        with pytest.raises(NotFoundError):
+            await asyncio.wait_for(
+                fetch_mod.fetch_files(client, _multi_resource(files), dest=str(tmp_path)),
+                timeout=5.0,  # guards against a hang
+            )
+
+    target = tmp_path / "zenodo" / "1"
+    assert not (target / "bad.bin").exists()  # 404 partial removed
+    # Cancellation cleanup is load-bearing: the slow siblings were cancelled
+    # mid-stream (their first chunk is gated behind asyncio.sleep), so their
+    # BaseException(CancelledError) handler must have unlinked each partial. No
+    # *.bin file may survive a failed fetch.
+    assert sorted(p.name for p in target.glob("*.bin")) == []
+
+
+async def test_fetch_parallel_under_declared_stream_blows_budget(tmp_path: Path) -> None:
+    """A file under-declares its size; the real stream blows the shared byte
+    budget → FetchTooLargeError (fail-loud), even under concurrency."""
+    big = b"y" * 10_000
+    # Declare a tiny size so the upfront pre-check passes, then stream far more.
+    files = [
+        FileEntry(name="a.bin", size=10, url="https://x/a.bin", checksum=None),
+        FileEntry(name="b.bin", size=10, url="https://x/b.bin", checksum=None),
+    ]
+    bodies = {"https://x/a.bin": big, "https://x/b.bin": big}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=bodies[str(request.url)])
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as client:
+        with pytest.raises(FetchTooLargeError):
+            await fetch_mod.fetch_files(
+                client, _multi_resource(files), dest=str(tmp_path), max_bytes=100
+            )
