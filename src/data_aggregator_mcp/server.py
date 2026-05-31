@@ -24,6 +24,7 @@ from data_aggregator_mcp import citation
 from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import health as health_mod
+from data_aggregator_mcp import ro_crate as ro_crate_mod
 from data_aggregator_mcp import router, zenodo
 from data_aggregator_mcp.errors import FetchNotSupportedError
 from data_aggregator_mcp.models import DataResource, FetchResult, SearchResult
@@ -280,9 +281,10 @@ TOOLS: list[types.Tool] = [
                 },
                 "format": {
                     "type": "string",
-                    "enum": ["croissant"],
+                    "enum": ["croissant", "ro-crate"],
                     "description": "Optional export to render onto the result. 'croissant' "
-                    "attaches a file-level Croissant JSON-LD manifest (croissant field).",
+                    "attaches a file-level Croissant JSON-LD manifest (croissant field); "
+                    "'ro-crate' attaches an RO-Crate 1.1 manifest (ro_crate field).",
                 },
             },
             "required": ["id"],
@@ -482,6 +484,10 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 if fmt == "croissant":
                     resource = resource.model_copy(
                         update={"croissant": croissant_mod.render(resource)}
+                    )
+                elif fmt == "ro-crate":
+                    resource = resource.model_copy(
+                        update={"ro_crate": ro_crate_mod.render(resource)}
                     )
                 return resource.model_dump()
             case "fetch":

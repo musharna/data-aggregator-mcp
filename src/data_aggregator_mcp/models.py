@@ -93,6 +93,7 @@ class DataResource(BaseModel):
     croissant: dict[str, Any] | None = (
         None  # file-level Croissant export, on resolve(format=croissant)
     )
+    ro_crate: dict[str, Any] | None = None  # RO-Crate export, on resolve(format=ro-crate)
 
 
 class TaxonExpansion(BaseModel):

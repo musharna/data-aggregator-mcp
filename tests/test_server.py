@@ -441,3 +441,17 @@ async def test_dispatch_resolve_renders_croissant(monkeypatch) -> None:
     out = await server._dispatch("resolve", {"id": "zenodo:1", "format": "croissant"})
     assert out["croissant"]["@type"] == "Dataset"
     assert out["croissant"]["distribution"][0]["name"] == "a.csv"
+
+
+async def test_dispatch_resolve_renders_ro_crate(monkeypatch) -> None:
+    from data_aggregator_mcp.models import DataResource, FileEntry
+
+    async def fake_resolve(client, fid):
+        return DataResource(
+            id="zenodo:1", source="zenodo", kind="dataset", title="t",
+            files=[FileEntry(name="a.csv", url="https://x/a.csv")],
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    out = await server._dispatch("resolve", {"id": "zenodo:1", "format": "ro-crate"})
+    assert out["ro_crate"]["@context"] == "https://w3id.org/ro/crate/1.1/context"
