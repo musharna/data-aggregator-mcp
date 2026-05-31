@@ -202,3 +202,117 @@ async def test_fetch_unverified_real_pdf_ok(httpx_mock: HTTPXMock, tmp_path: Pat
     async with httpx.AsyncClient() as client:
         out = await fetch_mod.fetch_files(client, _pdf_resource(url), dest=str(tmp_path))
     assert out.paths and Path(out.paths[0]).read_bytes().startswith(b"%PDF")
+
+
+# --- Task 3: resume (idempotent re-fetch) -------------------------------------
+#
+# These use a hand-rolled httpx.MockTransport rather than the pytest_httpx
+# fixture so we can count exactly which URLs were actually requested (to prove a
+# resumed file was NOT downloaded again).
+
+
+def _counting_client(bodies: dict[str, bytes], requested: list[str]) -> httpx.AsyncClient:
+    """An AsyncClient whose transport records every requested URL into
+    ``requested`` and returns ``bodies[url]`` (404 if absent)."""
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        requested.append(url)
+        if url in bodies:
+            return httpx.Response(200, content=bodies[url])
+        return httpx.Response(404)
+
+    return httpx.AsyncClient(transport=httpx.MockTransport(_handler))
+
+
+async def test_fetch_resume_checksum_match_skips_download(tmp_path: Path) -> None:
+    content = b"col1,col2\n1,2\n"
+    r = _resource(content)
+    url = r.files[0].url
+    target = tmp_path / "zenodo" / "1"
+    target.mkdir(parents=True)
+    (target / "d.csv").write_bytes(content)  # pre-existing, checksum-correct
+
+    requested: list[str] = []
+    async with _counting_client({url: content}, requested) as client:
+        out = await fetch_mod.fetch_files(client, r, dest=str(tmp_path))
+
+    assert url not in requested  # NO network request for the resumed file
+    assert out.resumed == ["d.csv"]
+    assert out.bytes == 0  # nothing transferred
+    assert len(out.paths) == 1 and out.paths[0].endswith("d.csv")
+
+
+async def test_fetch_resume_size_match_skips_download(tmp_path: Path) -> None:
+    content = b"abcd"
+    r = DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        files=[FileEntry(name="d.bin", size=4, url="https://x/d.bin", checksum=None)],
+    )
+    target = tmp_path / "zenodo" / "1"
+    target.mkdir(parents=True)
+    (target / "d.bin").write_bytes(content)  # size matches, no checksum
+
+    requested: list[str] = []
+    async with _counting_client({"https://x/d.bin": content}, requested) as client:
+        out = await fetch_mod.fetch_files(client, r, dest=str(tmp_path))
+
+    assert "https://x/d.bin" not in requested
+    assert out.resumed == ["d.bin"]
+
+
+async def test_fetch_resume_checksum_mismatch_redownloads(tmp_path: Path) -> None:
+    content = b"col1,col2\n1,2\n"
+    r = _resource(content)
+    url = r.files[0].url
+    target = tmp_path / "zenodo" / "1"
+    target.mkdir(parents=True)
+    (target / "d.csv").write_bytes(b"stale corrupt bytes")  # checksum will NOT match
+
+    requested: list[str] = []
+    async with _counting_client({url: content}, requested) as client:
+        out = await fetch_mod.fetch_files(client, r, dest=str(tmp_path))
+
+    assert url in requested  # re-downloaded
+    assert out.resumed == []
+    assert (target / "d.csv").read_bytes() == content
+
+
+async def test_fetch_resume_no_checksum_no_size_redownloads(tmp_path: Path) -> None:
+    content = b"unknowable"
+    r = DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        files=[FileEntry(name="d.bin", size=None, url="https://x/d.bin", checksum=None)],
+    )
+    target = tmp_path / "zenodo" / "1"
+    target.mkdir(parents=True)
+    (target / "d.bin").write_bytes(content)  # can't verify → must re-download
+
+    requested: list[str] = []
+    async with _counting_client({"https://x/d.bin": content}, requested) as client:
+        out = await fetch_mod.fetch_files(client, r, dest=str(tmp_path))
+
+    assert "https://x/d.bin" in requested
+    assert out.resumed == []
+
+
+async def test_fetch_resume_force_redownloads_despite_match(tmp_path: Path) -> None:
+    content = b"col1,col2\n1,2\n"
+    r = _resource(content)
+    url = r.files[0].url
+    target = tmp_path / "zenodo" / "1"
+    target.mkdir(parents=True)
+    (target / "d.csv").write_bytes(content)  # checksum-correct, but force overrides
+
+    requested: list[str] = []
+    async with _counting_client({url: content}, requested) as client:
+        out = await fetch_mod.fetch_files(client, r, dest=str(tmp_path), force=True)
+
+    assert url in requested  # force re-downloads
+    assert out.resumed == []

@@ -43,6 +43,25 @@ def _hasher(checksum: str | None):
     return hashlib.new(algo)
 
 
+def _already_complete(out: Path, f: FileEntry) -> bool:
+    """True iff the on-disk file can be *verified* complete: checksum match when
+    a checksum is declared, else size match when ``f.size`` is known. With
+    neither signal we cannot verify → re-download (safe default)."""
+    if not out.exists():
+        return False
+    if f.checksum and ":" in f.checksum:
+        h = _hasher(f.checksum)
+        if h is None:
+            return False
+        with out.open("rb") as fh:
+            for block in iter(lambda: fh.read(_CHUNK), b""):
+                h.update(block)
+        return h.hexdigest() == f.checksum.split(":", 1)[1]
+    if f.size is not None:
+        return out.stat().st_size == f.size
+    return False
+
+
 @dataclass
 class _Budget:
     """Shared byte budget across (eventually concurrent) downloads. ``debit``
@@ -90,6 +109,8 @@ async def _download_one(
     if not safe_name or safe_name in (".", ".."):
         return _Outcome(f.name, state="skipped")
     out = target / safe_name
+    if not force and _already_complete(out, f):
+        return _Outcome(f.name, path=str(out), state="resumed")
     h = _hasher(f.checksum)
     written = 0
     first_head = b""
@@ -175,15 +196,18 @@ async def fetch_files(
 
     paths: list[str] = []
     skipped: list[str] = []
+    resumed: list[str] = []
     written_total = 0
     for o in outcomes:
         if o.state == "skipped":
             skipped.append(o.name)
             continue
+        if o.state == "resumed":
+            resumed.append(o.name)
         if o.path is not None:
             paths.append(o.path)
             paths.extend(o.extracted)
         written_total += o.bytes
 
     (target / ".dataresource.json").write_text(resource.model_dump_json(indent=2))
-    return FetchResult(paths=paths, bytes=written_total, skipped=skipped)
+    return FetchResult(paths=paths, bytes=written_total, skipped=skipped, resumed=resumed)
