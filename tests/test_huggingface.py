@@ -1,3 +1,5 @@
+import os
+
 import httpx
 import pytest
 
@@ -82,9 +84,7 @@ async def test_search_gated_is_restricted():
     assert recs[0].access == "restricted"
 
 
-import os as _os
-
-_LIVE = _os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
+_LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
 
