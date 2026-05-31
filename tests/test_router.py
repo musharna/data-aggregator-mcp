@@ -818,3 +818,22 @@ async def test_empty_page_with_nonzero_total_does_not_loop(monkeypatch) -> None:
         page = await router.search_page(client, query="q", size=10)
     assert page.results == []
     assert page.next_cursor is None  # no candidates fetched → terminate, don't loop
+
+
+@_live_only
+async def test_live_orcid_funding_relations_extraction() -> None:
+    """Real-execution boundary probe: against the live Zenodo + DataCite APIs,
+    confirm the new metadata extraction (creator ORCID, funding, related links)
+    fires on real response shapes — not just synthetic fixtures.
+    """
+    async with httpx.AsyncClient() as client:
+        # Zenodo authors commonly carry ORCID iDs.
+        _t, zen, _e, _x = await router.search(client, "genomics", size=25, sources=["zenodo"])
+        # DataCite records commonly carry relatedIdentifiers and/or fundingReferences.
+        _t, dc, _e2, _x2 = await router.search(client, "climate", size=25, sources=["datacite"])
+    # creators are always structured Creator objects now (well-typed live).
+    assert all(hasattr(c, "name") for r in zen + dc for c in r.creators)
+    assert any(c.orcid for r in zen for c in r.creators), "no live Zenodo creator ORCID found"
+    assert any(r.links for r in dc) or any(r.funding for r in dc), (
+        "no live DataCite related-links or funding found"
+    )
