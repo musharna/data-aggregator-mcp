@@ -8,6 +8,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import datacite
 from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.models import Creator
 
 
 def _item() -> dict:
@@ -36,7 +37,7 @@ def test_normalize_maps_core_fields() -> None:
     assert r.source == "dryad"
     assert r.kind == "dataset"
     assert r.title == "Data and code from: retinal study"
-    assert r.creators == ["Doe, J.", "Roe, R."]
+    assert r.creators == [Creator(name="Doe, J."), Creator(name="Roe, R.")]
     assert r.year == 2023
     assert r.doi == "10.5061/dryad.98sf7m0wt"
     assert r.license == "cc0-1.0"

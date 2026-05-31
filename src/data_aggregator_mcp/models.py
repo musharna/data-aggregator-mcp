@@ -2,7 +2,29 @@
 
 from __future__ import annotations
 
+import re
+
 from pydantic import BaseModel, Field
+
+_ORCID_RE = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")
+
+
+def _orcid(value: str | None) -> str | None:
+    """Normalize an ORCID to its bare iD form, or None if absent/malformed."""
+    if not value:
+        return None
+    bare = value.rsplit("/", 1)[-1].strip()
+    return bare if _ORCID_RE.match(bare) else None
+
+
+class Creator(BaseModel):
+    name: str
+    orcid: str | None = None
+
+
+class FundingRef(BaseModel):
+    funder: str
+    award: str | None = None
 
 
 class FileEntry(BaseModel):
@@ -29,7 +51,8 @@ class DataResource(BaseModel):
     source: str
     kind: str  # dataset | sequencing_run | study | publication | software
     title: str
-    creators: list[str] = Field(default_factory=list)
+    creators: list[Creator] = Field(default_factory=list)
+    funding: list[FundingRef] = Field(default_factory=list)
     year: int | None = None
     description: str | None = None
     doi: str | None = None

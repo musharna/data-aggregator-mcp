@@ -8,6 +8,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import pubmed
 from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.models import Creator
 
 _EUT = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
@@ -32,7 +33,7 @@ def test_normalize_pubmed_maps_core_fields() -> None:
     assert r.source == "pubmed"
     assert r.kind == "publication"
     assert r.title.startswith("Covid-19 Breakthrough")
-    assert r.creators == ["Bergwerk M", "Gonen T"]
+    assert r.creators == [Creator(name="Bergwerk M"), Creator(name="Gonen T")]
     assert r.year == 2021
     assert r.doi == "10.1056/NEJMoa2109072"
     assert r.description is None  # esummary has no abstract

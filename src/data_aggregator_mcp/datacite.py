@@ -20,7 +20,7 @@ import httpx
 
 from data_aggregator_mcp import _http, dataverse, dryad, figshare, osf, zenodo
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import DataResource, compact
+from data_aggregator_mcp.models import Creator, DataResource, compact
 
 BASE_URL = "https://api.datacite.org"
 DEFAULT_TIMEOUT = 30.0
@@ -118,7 +118,7 @@ def _normalize(item: dict[str, Any]) -> DataResource:
         source=_source_for_client(client_id),
         kind=_KIND_MAP.get(rt, "dataset"),
         title=_first(a.get("titles"), "title") or "",
-        creators=[c.get("name", "") for c in (a.get("creators") or [])],
+        creators=[Creator(name=c.get("name", "")) for c in (a.get("creators") or [])],
         year=_year(a.get("publicationYear")),
         description=_first(a.get("descriptions"), "description"),
         doi=doi,

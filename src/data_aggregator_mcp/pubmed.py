@@ -17,7 +17,7 @@ import httpx
 
 from data_aggregator_mcp import _eutils, fulltext, omics
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import DataResource, Link
+from data_aggregator_mcp.models import Creator, DataResource, Link
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def _normalize_pubmed(doc: dict) -> DataResource:
         source="pubmed",
         kind="publication",
         title=doc.get("title", ""),
-        creators=[a["name"] for a in doc.get("authors", []) if a.get("name")],
+        creators=[Creator(name=a["name"]) for a in doc.get("authors", []) if a.get("name")],
         year=omics._year_from(doc.get("sortpubdate")),
         doi=doi,
         identifiers=identifiers,

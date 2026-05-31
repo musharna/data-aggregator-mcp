@@ -1,13 +1,48 @@
 from __future__ import annotations
 
 from data_aggregator_mcp.models import (
+    Creator,
     DataResource,
     FetchResult,
     FileEntry,
+    FundingRef,
     SearchResult,
+    _orcid,
     compact,
     normalize_access,
 )
+
+
+def test_creator_and_funding_types():
+    c = Creator(name="Ada Lovelace", orcid="0000-0002-1825-0097")
+    assert c.name == "Ada Lovelace" and c.orcid == "0000-0002-1825-0097"
+    assert Creator(name="No ORCID").orcid is None
+    f = FundingRef(funder="NSF", award="ABC-123")
+    assert f.funder == "NSF" and f.award == "ABC-123"
+
+
+def test_orcid_strips_url_and_validates():
+    assert _orcid("https://orcid.org/0000-0002-1825-0097") == "0000-0002-1825-0097"
+    assert _orcid("0000-0002-1825-0097") == "0000-0002-1825-0097"
+    assert _orcid("0000-0002-1825-009X") == "0000-0002-1825-009X"  # checksum X allowed
+    assert _orcid("garbage") is None
+    assert _orcid(None) is None
+
+
+def test_compact_preserves_creators_funding_links():
+    r = DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        creators=[Creator(name="A", orcid="0000-0002-1825-0097")],
+        funding=[FundingRef(funder="NSF", award="X")],
+        description="d" * 1000,
+        files=[],
+    )
+    c = compact(r)
+    assert c.creators == r.creators
+    assert c.funding == r.funding
 
 
 def test_dataresource_defaults_are_empty_collections() -> None:

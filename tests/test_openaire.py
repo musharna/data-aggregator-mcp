@@ -8,6 +8,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import openaire
 from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.models import Creator
 
 _ENT = "https://api.openaire.eu/graph/v1/researchProducts/doi_dedup___%3A%3A5c75a0e2"
 _SX = "https://api.scholexplorer.openaire.eu/v3/Links?sourcePid=10.1101/844522"
@@ -42,7 +43,7 @@ def test_normalize_openaire_maps_core_fields_and_strips_jats() -> None:
     assert r.source == "openaire"
     assert r.kind == "publication"
     assert r.title == "A comprehensive online database"
-    assert r.creators == ["Zhang, Hong", "Li, Wei"]
+    assert r.creators == [Creator(name="Zhang, Hong"), Creator(name="Li, Wei")]
     assert r.year == 2019
     assert r.doi == "10.1101/844522"
     assert r.subjects == ["Genomics"]

@@ -8,6 +8,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import zenodo
 from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.models import Creator
 
 
 def _record() -> dict:
@@ -42,7 +43,7 @@ def test_normalize_maps_core_fields() -> None:
     assert r.source == "zenodo"
     assert r.kind == "dataset"
     assert r.title == "Phelipanche small RNA dataset"
-    assert r.creators == ["Zangishei, Z.", "Aubry, S."]
+    assert r.creators == [Creator(name="Zangishei, Z."), Creator(name="Aubry, S.")]
     assert r.year == 2022
     assert r.doi == "10.5281/zenodo.7654321"
     assert r.license == "cc-by-4.0"

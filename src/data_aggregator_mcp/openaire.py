@@ -16,7 +16,7 @@ import httpx
 
 from data_aggregator_mcp import _http, fulltext, idconv, omics, scholix
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import DataResource, normalize_access
+from data_aggregator_mcp.models import Creator, DataResource, normalize_access
 
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
@@ -64,7 +64,9 @@ def _normalize_openaire(record: dict) -> DataResource:
         source="openaire",
         kind="publication",
         title=record.get("mainTitle") or "",
-        creators=[a["fullName"] for a in (record.get("authors") or []) if a.get("fullName")],
+        creators=[
+            Creator(name=a["fullName"]) for a in (record.get("authors") or []) if a.get("fullName")
+        ],
         year=omics._year_from(record.get("publicationDate")),
         description=description,
         doi=_doi_of(record),
