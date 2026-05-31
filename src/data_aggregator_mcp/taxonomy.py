@@ -15,6 +15,7 @@ from dataclasses import dataclass
 import httpx
 
 from data_aggregator_mcp import _eutils
+from data_aggregator_mcp._cache import MISS, TTLCache
 
 
 @dataclass(frozen=True)
@@ -46,7 +47,8 @@ def _parse_taxon(xml_text: str) -> TaxonInfo | None:
     )
 
 
-_CACHE: dict[str, TaxonInfo | None] = {}
+_NEG = object()  # cached "no match" (distinct from a missing key)
+_CACHE = TTLCache(maxsize=4096, ttl=3600.0)
 
 
 async def resolve_taxon(client: httpx.AsyncClient, name: str) -> TaxonInfo | None:
@@ -59,13 +61,14 @@ async def resolve_taxon(client: httpx.AsyncClient, name: str) -> TaxonInfo | Non
     key = name.strip().lower()
     if not key:
         return None
-    if key in _CACHE:
-        return _CACHE[key]
+    cached = _CACHE.get(key)
+    if cached is not MISS:
+        return None if cached is _NEG else cached
     _count, ids = await _eutils.esearch(client, "taxonomy", name, retmax=1)
     if not ids:
-        _CACHE[key] = None
+        _CACHE.set(key, _NEG)
         return None
     xml_text = await _eutils.efetch(client, "taxonomy", [ids[0]], retmode="xml")
     info = _parse_taxon(xml_text)
-    _CACHE[key] = info
+    _CACHE.set(key, info if info is not None else _NEG)
     return info
