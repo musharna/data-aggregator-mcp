@@ -116,8 +116,11 @@ otherwise `offsets` defaults to all-zero and the params come from the call.
    over the size budget (after `cut`) are NOT advanced past them → no recall loss. Dups
    dropped by `_dedup` are absent from `merged`, so they are re-fetched + re-deduped next
    page (the allowed "rare cross-page dup", bounded by one window).
-8. `more = (cut < len(merged) - 1) or any(len(recs_n) == size for each adapter n)` — leftover
-   fetched candidates OR any source that returned a full window may have more.
+8. `more = (cut < len(merged) - 1) or any(new_offsets[n] < adapter_total[n] for each adapter n)`
+   — leftover fetched candidates OR any source whose advanced offset is still short of its
+   upstream total. (Do **not** use `len(recs_n) == size`: the offset-slice makes a page-based
+   adapter return fewer than `size` records mid-stream even when it has more, which would stop
+   pagination prematurely. Compare the advanced offset against the upstream total instead.)
 9. `next_cursor = encode({q, sources, organism, filters, size, offsets: new_offsets})`
    if `more` else `None`. Set it on `SearchResult.next_cursor`.
 10. Enrich the emitted page (unchanged `_enrich`). Return

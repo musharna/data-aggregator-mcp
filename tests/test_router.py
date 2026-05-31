@@ -763,3 +763,26 @@ async def test_page1_unfiltered_matches_legacy(monkeypatch) -> None:
         legacy = await router.search(client, "q", size=10)  # old 4-tuple
         page = await router.search_page(client, query="q", size=10)
     assert [r.id for r in legacy[1]] == [r.id for r in page.results]
+
+
+async def test_more_uses_upstream_total_not_window_length(monkeypatch) -> None:
+    """Regression: a paged adapter returns < size records (page-boundary slice)
+    yet still has rows past its offset. ``more`` must key off the upstream total,
+    not ``len(recs) == size`` — else pagination stops prematurely and loses the
+    deeper results.
+    """
+    # zenodo reports 100 total hits but this window yields only 6 records
+    # (as the offset-slice would produce mid-stream), and all are consumed.
+    _mock_adapter(
+        monkeypatch,
+        "zenodo",
+        {0: (100, [_pres(f"z{i}", doi=f"10.z/{i}") for i in range(6)])},
+    )
+    for n in ("datacite", "omics", "literature"):
+        _mock_adapter(monkeypatch, n, {0: (0, [])})
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        page = await router.search_page(client, query="q", size=10)
+    assert len(page.results) == 6
+    assert page.next_cursor is not None  # 6 consumed < 100 total → more remains

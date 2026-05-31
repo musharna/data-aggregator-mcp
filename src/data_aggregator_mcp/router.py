@@ -230,16 +230,16 @@ async def search_page(
 
     origin: dict[int, str] = {}
     per_source: list[list[DataResource]] = []
-    returned_full: dict[str, bool] = {}
+    totals: dict[str, int] = {}
     total = 0
     for name, outcome in zip(names, outcomes):
         if isinstance(outcome, Exception):
             errors[name] = f"{type(outcome).__name__}: {outcome}"
-            returned_full[name] = False
+            totals[name] = 0
             continue
         adapter_total, recs = outcome
         total += adapter_total
-        returned_full[name] = len(recs) == size
+        totals[name] = adapter_total
         for r in recs:
             origin[id(r)] = name
         per_source.append(recs)
@@ -261,7 +261,11 @@ async def search_page(
     consumed_per_adapter = Counter(origin[id(r)] for r in consumed)
     new_offsets = {n: offsets.get(n, 0) + consumed_per_adapter.get(n, 0) for n in names}
 
-    more = (cut < len(merged) - 1) or any(returned_full.get(n, False) for n in names)
+    # More results remain if we left fetched candidates unconsumed, OR any source
+    # still has rows past our advanced offset. Using the upstream total (not
+    # len(recs)==size) is robust to the page-boundary slice that makes a paged
+    # adapter return < size records even when it has more.
+    more = (cut < len(merged) - 1) or any(new_offsets.get(n, 0) < totals.get(n, 0) for n in names)
     next_cursor = (
         _cursor.encode(
             {
