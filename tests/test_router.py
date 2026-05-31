@@ -635,6 +635,22 @@ async def test_live_search_synonym_expansion_fires() -> None:
     assert "taxonomy" not in errors
 
 
+@_live_only
+async def test_live_pagination_walks_zenodo_datacite() -> None:
+    """Real-execution boundary probe: page 2 (via next_cursor) returns records
+    disjoint from page 1 against the live Zenodo + DataCite APIs."""
+    async with httpx.AsyncClient() as client:
+        p1 = await router.search_page(
+            client, query="climate", size=5, sources=["zenodo", "datacite"]
+        )
+        assert p1.next_cursor is not None
+        p2 = await router.search_page(client, cursor=p1.next_cursor)
+    ids1 = {r.id for r in p1.results}
+    ids2 = {r.id for r in p2.results}
+    assert ids1 and ids2
+    assert ids1.isdisjoint(ids2)  # paging advanced, did not repeat page 1
+
+
 # --- Task 8: search_page pagination + filters ----------------------------------
 
 
