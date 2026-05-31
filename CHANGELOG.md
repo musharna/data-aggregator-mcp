@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.12.0] - 2026-05-31
+
+### Added
+
+- `search` pagination — an opaque `next_cursor` walks past the first page of
+  merged results; pass it back as `cursor` to fetch the next page (per-source
+  offsets are packed into the token; `size` stays "deduped results per page").
+- `search` filters — `published_after` / `published_before` (publication-year
+  bounds) and `kind` constrain results. Filtering is applied to the fetched
+  window on normalized fields; a record with no year is dropped when a year
+  bound is set.
+- `list_sources` now advertises `published_after` / `published_before` / `kind`
+  / `cursor` in each source's `filters_supported`.
+
 ## [0.11.0] - 2026-05-29
 
 ### Added
