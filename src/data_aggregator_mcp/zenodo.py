@@ -66,9 +66,18 @@ async def search(
     query: str,
     *,
     size: int = DEFAULT_SIZE,
+    offset: int = 0,
 ) -> tuple[int, list[DataResource]]:
-    """Search Zenodo records. Returns (total_hits, COMPACT resources)."""
-    params = {"q": query, "size": str(min(size, MAX_SIZE))}
+    """Search Zenodo records. Returns (total_hits, COMPACT resources).
+
+    ``offset`` selects the window [offset, offset+size): request page
+    ``offset // size + 1`` at page-size ``size`` and drop the first
+    ``offset % size`` records (page-boundary slice; see pagination spec).
+    """
+    capped = min(size, MAX_SIZE)
+    params = {"q": query, "size": str(capped)}
+    if offset:  # only when paging past page 1, so offset=0 request stays byte-identical
+        params["page"] = str(offset // capped + 1)
     data = await _http.request_json(
         client,
         "GET",
@@ -81,7 +90,9 @@ async def search(
     )
     hits = data.get("hits", {}) or {}
     records = hits.get("hits", []) or []
-    return int(hits.get("total", len(records))), [compact(_normalize(r)) for r in records]
+    sliced = records[offset % capped :]
+    total = int(hits.get("total", len(records)))
+    return total, [compact(_normalize(r)) for r in sliced]
 
 
 async def resolve(client: httpx.AsyncClient, record_id: str) -> DataResource:

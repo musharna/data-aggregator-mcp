@@ -115,6 +115,45 @@ def test_normalize_access_none_when_absent() -> None:
     assert zenodo._normalize(rec).access is None
 
 
+@pytest.mark.asyncio
+async def test_search_offset_requests_page_and_slices():
+    captured = {}
+
+    def make_record(i):
+        return {
+            "id": i,
+            "metadata": {"title": f"r{i}", "publication_date": "2020-01-01"},
+            "files": [],
+        }
+
+    async def handler(request):
+        captured.update(dict(request.url.params))
+        recs = [make_record(i) for i in range(10)]
+        return httpx.Response(200, json={"hits": {"total": 100, "hits": recs}})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        # offset=13, size=10 -> page 2 (offset//size+1), slice [13%10:] = drop first 3
+        total, recs = await zenodo.search(client, "q", size=10, offset=13)
+    assert captured["page"] == "2"
+    assert captured["size"] == "10"
+    assert len(recs) == 7  # 10 returned, sliced off first 3
+
+
+@pytest.mark.asyncio
+async def test_search_offset_zero_unchanged():
+    captured = {}
+
+    async def handler(request):
+        captured.update(dict(request.url.params))
+        return httpx.Response(200, json={"hits": {"total": 0, "hits": []}})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        await zenodo.search(client, "q", size=10)
+    assert captured.get("page", "1") == "1"
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
