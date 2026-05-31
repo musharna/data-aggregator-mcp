@@ -250,6 +250,7 @@ TOOLS: list[types.Tool] = [
             },
         },
         outputSchema=SearchResult.model_json_schema(),
+        annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
     types.Tool(
         name="resolve",
@@ -280,6 +281,7 @@ TOOLS: list[types.Tool] = [
             "required": ["id"],
         },
         outputSchema=DataResource.model_json_schema(),
+        annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
     types.Tool(
         name="fetch",
@@ -319,6 +321,9 @@ TOOLS: list[types.Tool] = [
             "required": ["id"],
         },
         outputSchema=FetchResult.model_json_schema(),
+        annotations=types.ToolAnnotations(
+            readOnlyHint=False, destructiveHint=False, idempotentHint=False
+        ),
     ),
     types.Tool(
         name="list_sources",
@@ -345,6 +350,7 @@ TOOLS: list[types.Tool] = [
             "properties": {"sources": {"type": "array", "items": {"type": "object"}}},
             "required": ["sources"],
         },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
 ]
 

@@ -391,8 +391,21 @@ async def test_search_dispatch_passes_rank(monkeypatch):  # IRON_LAW_OK
     async def fake_search_page(client, **kwargs):
         captured.update(kwargs)
         from data_aggregator_mcp.models import SearchResult
+
         return SearchResult(query=kwargs.get("query"), total=0, count=0, results=[], errors={})
 
     monkeypatch.setattr(server.router, "search_page", fake_search_page)
     await server._dispatch("search", {"query": "q", "rank": "semantic"})
     assert captured["rank"] == "semantic"
+
+
+def test_read_only_tools_are_annotated() -> None:
+    from data_aggregator_mcp import server
+
+    by_name = {t.name: t for t in server.TOOLS}
+    for n in ("search", "resolve", "list_sources"):
+        assert by_name[n].annotations is not None
+        assert by_name[n].annotations.readOnlyHint is True
+    # fetch writes files → not read-only, and not destructive to existing state
+    assert by_name["fetch"].annotations.readOnlyHint is False
+    assert by_name["fetch"].annotations.destructiveHint is False
