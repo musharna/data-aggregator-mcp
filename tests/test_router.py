@@ -802,3 +802,19 @@ async def test_more_uses_upstream_total_not_window_length(monkeypatch) -> None:
         page = await router.search_page(client, query="q", size=10)
     assert len(page.results) == 6
     assert page.next_cursor is not None  # 6 consumed < 100 total → more remains
+
+
+async def test_empty_page_with_nonzero_total_does_not_loop(monkeypatch) -> None:
+    """Regression (review M1): an adapter reporting total>0 but returning no
+    records must NOT emit a next_cursor — offsets cannot advance on an empty
+    page, so a cursor would replay the same window forever.
+    """
+    _mock_adapter(monkeypatch, "zenodo", {0: (50, [])})
+    for n in ("datacite", "omics", "literature"):
+        _mock_adapter(monkeypatch, n, {0: (0, [])})
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        page = await router.search_page(client, query="q", size=10)
+    assert page.results == []
+    assert page.next_cursor is None  # no candidates fetched → terminate, don't loop

@@ -265,7 +265,14 @@ async def search_page(
     # still has rows past our advanced offset. Using the upstream total (not
     # len(recs)==size) is robust to the page-boundary slice that makes a paged
     # adapter return < size records even when it has more.
-    more = (cut < len(merged) - 1) or any(new_offsets.get(n, 0) < totals.get(n, 0) for n in names)
+    #
+    # `bool(merged)` guard: an empty page consumed nothing, so offsets could not
+    # advance — emitting a cursor here would replay the identical window forever
+    # (e.g. an adapter that reports total>0 but returns []). No candidates fetched
+    # ⇒ no way to page forward ⇒ stop.
+    more = bool(merged) and (
+        (cut < len(merged) - 1) or any(new_offsets.get(n, 0) < totals.get(n, 0) for n in names)
+    )
     next_cursor = (
         _cursor.encode(
             {
