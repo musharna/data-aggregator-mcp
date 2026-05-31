@@ -239,6 +239,97 @@ async def test_dispatch_threads_cursor(monkeypatch) -> None:
     assert captured["query"] is None
 
 
+class _FakeSession:
+    def __init__(self) -> None:
+        self.progress_calls: list[tuple] = []
+
+    async def send_progress_notification(
+        self, progress_token, progress, total=None, message=None, **kw
+    ):
+        self.progress_calls.append((progress_token, progress, total))
+
+
+class _FakeMeta:
+    def __init__(self, token) -> None:
+        self.progressToken = token
+
+
+class _FakeReqCtx:
+    def __init__(self, token, session) -> None:
+        self.meta = _FakeMeta(token) if token is not None else None
+        self.session = session
+
+
+def _fake_fetchable_resolve():
+    from data_aggregator_mcp.models import DataResource, FileEntry
+
+    async def fake_resolve(client, fid):
+        return DataResource(
+            id="zenodo:1",
+            source="zenodo",
+            kind="dataset",
+            title="t",
+            files=[
+                FileEntry(name="a.txt", url="https://x/a.txt", size=1),
+                FileEntry(name="b.txt", url="https://x/b.txt", size=1),
+            ],
+        )
+
+    return fake_resolve
+
+
+async def test_dispatch_fetch_sends_progress_when_token_present(monkeypatch) -> None:
+    import mcp.server.lowlevel.server as low
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", _fake_fetchable_resolve())
+
+    async def fake_fetch_files(client, resource, *, on_progress=None, **kw):
+        from data_aggregator_mcp.models import FetchResult
+
+        if on_progress is not None:
+            await on_progress(1, 2, "a.txt")
+            await on_progress(2, 2, "b.txt")
+        return FetchResult(paths=["/tmp/a.txt", "/tmp/b.txt"], bytes=2)
+
+    monkeypatch.setattr("data_aggregator_mcp.fetch.fetch_files", fake_fetch_files)
+
+    sess = _FakeSession()
+    tok = low.request_ctx.set(_FakeReqCtx("tok-123", sess))
+    try:
+        out = await server._dispatch("fetch", {"id": "zenodo:1"})
+    finally:
+        low.request_ctx.reset(tok)
+
+    assert len(out["paths"]) == 2
+    assert len(sess.progress_calls) >= 1
+    assert sess.progress_calls[0][0] == "tok-123"
+
+
+async def test_dispatch_fetch_no_token_sends_nothing(monkeypatch) -> None:
+    import mcp.server.lowlevel.server as low
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", _fake_fetchable_resolve())
+
+    async def fake_fetch_files(client, resource, *, on_progress=None, **kw):
+        from data_aggregator_mcp.models import FetchResult
+
+        if on_progress is not None:
+            await on_progress(1, 1, "a.txt")
+        return FetchResult(paths=["/tmp/a.txt"], bytes=1)
+
+    monkeypatch.setattr("data_aggregator_mcp.fetch.fetch_files", fake_fetch_files)
+
+    sess = _FakeSession()
+    tok = low.request_ctx.set(_FakeReqCtx(None, sess))
+    try:
+        out = await server._dispatch("fetch", {"id": "zenodo:1"})
+    finally:
+        low.request_ctx.reset(tok)
+
+    assert len(out["paths"]) == 1  # fetch still returns normally
+    assert sess.progress_calls == []  # no token ⇒ no notifications
+
+
 async def test_dispatch_threads_filters(monkeypatch) -> None:
     from data_aggregator_mcp.models import SearchResult
 

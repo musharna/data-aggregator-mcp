@@ -453,3 +453,62 @@ async def test_fetch_parallel_under_declared_stream_blows_budget(tmp_path: Path)
             await fetch_mod.fetch_files(
                 client, _multi_resource(files), dest=str(tmp_path), max_bytes=100
             )
+
+
+# --- Task 5: progress notifications ------------------------------------------
+
+
+async def test_fetch_invokes_on_progress_once_per_file(tmp_path: Path) -> None:
+    """on_progress is awaited once per file with a running done-count covering
+    1..N and a constant total==N. Completion order under concurrency is
+    nondeterministic, so assert the SET of done-values rather than strict order."""
+    n = 5
+    bodies = {f"https://x/f{i}.bin": f"body-{i}".encode() for i in range(n)}
+    files = [
+        FileEntry(
+            name=f"f{i}.bin", size=len(b), url=u, checksum=f"md5:{hashlib.md5(b).hexdigest()}"
+        )
+        for i, (u, b) in enumerate(bodies.items())
+    ]
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=bodies[str(request.url)])
+
+    calls: list[tuple[int, int, str]] = []
+
+    async def _recorder(done: int, total: int, name: str) -> None:
+        calls.append((done, total, name))
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as client:
+        out = await fetch_mod.fetch_files(
+            client, _multi_resource(files), dest=str(tmp_path), on_progress=_recorder
+        )
+
+    assert len(out.paths) == n
+    assert len(calls) == n  # once per file
+    dones = sorted(c[0] for c in calls)
+    assert dones == list(range(1, n + 1))  # done covers 1..N
+    assert {c[1] for c in calls} == {n}  # total constant == N
+    assert {c[2] for c in calls} == {f"f{i}.bin" for i in range(n)}
+
+
+async def test_fetch_none_on_progress_is_noop(tmp_path: Path) -> None:
+    """on_progress=None (the default) must not break the fetch."""
+    body = b"hello"
+    files = [
+        FileEntry(
+            name="a.bin",
+            size=len(body),
+            url="https://x/a.bin",
+            checksum=f"md5:{hashlib.md5(body).hexdigest()}",
+        )
+    ]
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_handler)) as client:
+        out = await fetch_mod.fetch_files(
+            client, _multi_resource(files), dest=str(tmp_path), on_progress=None
+        )
+    assert len(out.paths) == 1

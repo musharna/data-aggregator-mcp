@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import fnmatch
 import hashlib
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -175,10 +176,19 @@ async def fetch_files(
     max_bytes: int = DEFAULT_MAX_BYTES,
     force: bool = False,
     extract: bool = False,
+    on_progress: Callable[[int, int, str], Awaitable[None]] | None = None,
 ) -> FetchResult:
     """Download ``resource`` files to disk. ``files`` is an optional glob over
     file names. Fails loud over ``max_bytes`` unless ``force``. Verifies
     checksums when present; writes a ``.dataresource.json`` provenance sidecar.
+
+    ``on_progress`` (optional) is awaited once per file as it reaches a terminal
+    state, with ``(completed_count, total_count, last_name)`` where ``total`` is
+    ``len(selected)`` and ``completed_count`` runs 1..total. Completion order
+    under concurrency is nondeterministic, so the count is monotonic but file
+    names arrive in finish order. None → no callback. ``on_progress`` is part of
+    the fetch's own success path: if it raises, that raises (callers wanting
+    fail-soft telemetry must swallow inside their callback).
     """
     target = _target_dir(resource, dest)
     target.mkdir(parents=True, exist_ok=True)
@@ -205,11 +215,24 @@ async def fetch_files(
     # task and await them all (suppressing their CancelledError) first.
     sem = asyncio.Semaphore(_MAX_CONCURRENCY)
 
+    total = len(selected)
+    progress_lock = asyncio.Lock()
+    done = 0
+
     async def _guarded(f: FileEntry) -> _Outcome:
+        nonlocal done
         async with sem:
-            return await _download_one(
+            outcome = await _download_one(
                 client, f, target, budget=budget, force=force, extract=extract
             )
+        if on_progress is not None:
+            # Serialize the counter bump + emit so each file gets a distinct,
+            # monotonically increasing ``done`` even under concurrent finishes.
+            async with progress_lock:
+                done += 1
+                completed = done
+            await on_progress(completed, total, outcome.name)
+        return outcome
 
     tasks = [asyncio.ensure_future(_guarded(f)) for f in selected]
     try:
