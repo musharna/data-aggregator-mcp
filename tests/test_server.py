@@ -409,3 +409,20 @@ def test_read_only_tools_are_annotated() -> None:
     # fetch writes files → not read-only, and not destructive to existing state
     assert by_name["fetch"].annotations.readOnlyHint is False
     assert by_name["fetch"].annotations.destructiveHint is False
+
+
+async def test_list_prompts_exposes_templates() -> None:
+    from data_aggregator_mcp import server
+
+    prompts = await server._list_prompts()
+    names = {p.name for p in prompts}
+    assert {"find_data", "data_behind_paper", "search_resolve_fetch"} <= names
+
+
+async def test_get_prompt_find_data_includes_topic() -> None:
+    from data_aggregator_mcp import server
+
+    result = await server._get_prompt("find_data", {"topic": "rice drought", "organism": "Oryza sativa"})
+    text = result.messages[0].content.text
+    assert "rice drought" in text
+    assert "Oryza sativa" in text

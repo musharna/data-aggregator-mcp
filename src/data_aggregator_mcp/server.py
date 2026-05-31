@@ -360,6 +360,88 @@ async def _list_tools() -> list[types.Tool]:
     return TOOLS
 
 
+_PROMPTS: list[types.Prompt] = [
+    types.Prompt(
+        name="find_data",
+        description="Find datasets/data for a topic, optionally scoped to an organism.",
+        arguments=[
+            types.PromptArgument(
+                name="topic", description="What to find data about", required=True
+            ),
+            types.PromptArgument(
+                name="organism",
+                description="Optional organism to expand via NCBI Taxonomy",
+                required=False,
+            ),
+        ],
+    ),
+    types.Prompt(
+        name="data_behind_paper",
+        description="Find the datasets / accessions behind a paper (by DOI, PMID, or title).",
+        arguments=[
+            types.PromptArgument(
+                name="paper", description="DOI, 'pubmed:<id>', or paper title", required=True
+            ),
+        ],
+    ),
+    types.Prompt(
+        name="search_resolve_fetch",
+        description="Walk the search → resolve → fetch flow for a data need.",
+        arguments=[
+            types.PromptArgument(name="need", description="What data is needed", required=True),
+        ],
+    ),
+]
+
+
+@server.list_prompts()
+async def _list_prompts() -> list[types.Prompt]:
+    return _PROMPTS
+
+
+def _prompt_text(name: str, args: dict[str, str]) -> str:
+    if name == "find_data":
+        topic = args.get("topic", "")
+        organism = args.get("organism")
+        org = (
+            f" Pass organism='{organism}' to expand the query with NCBI-Taxonomy synonyms."
+            if organism
+            else ""
+        )
+        return (
+            f"Use the data-aggregator `search` tool to find datasets about: {topic}.{org} "
+            "Review the compact results, then `resolve` the most relevant id for its full "
+            "files[] manifest, and `fetch` to download."
+        )
+    if name == "data_behind_paper":
+        paper = args.get("paper", "")
+        return (
+            f"Find the data behind '{paper}'. If it is a DOI/PMID, `resolve` it — publication "
+            "resolve attaches links[] to datasets/accessions and normalized identifiers. Then "
+            "`resolve`/`fetch` each linked dataset. Otherwise `search` for the paper first."
+        )
+    if name == "search_resolve_fetch":
+        need = args.get("need", "")
+        return (
+            f"Goal: {need}. 1) `search` (add organism= to expand taxonomy synonyms). "
+            "2) `resolve` a chosen id for the full record + files[]. 3) `fetch` to download. "
+            "Use `list_sources` to see which sources are fetchable."
+        )
+    raise ValueError(f"unknown prompt: {name}")
+
+
+@server.get_prompt()
+async def _get_prompt(name: str, arguments: dict[str, str] | None) -> types.GetPromptResult:
+    args = arguments or {}
+    text = _prompt_text(name, args)
+    return types.GetPromptResult(
+        description=next((p.description for p in _PROMPTS if p.name == name), None),
+        messages=[
+            types.PromptMessage(role="user", content=types.TextContent(type="text", text=text)),
+        ],
+    )
+
+
 async def _dispatch(name: str, args: dict[str, Any]) -> Any:
     if name == "list_sources":
         if not args.get("check_health"):
