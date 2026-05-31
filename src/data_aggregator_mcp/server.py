@@ -35,6 +35,7 @@ _FETCHABLE_SOURCES = (
     "datacite:",
     "pubmed:",
     "openaire:",
+    "hf:",
 )  # id prefixes with a working fetch backend
 
 
@@ -151,6 +152,26 @@ _SOURCES: list[dict[str, Any]] = [
         "fetchable": "open-access only",
         "fetchable_notes": "Open-access full text fetchable (EuropePMC XML / Unpaywall PDF, unverified); paywalled/non-OA ids fail loud.",
         "id_example": "pubmed:23066504 | openaire:<id>",
+    },
+    {
+        "name": "huggingface",
+        "layer": "archives",
+        "kinds": ["dataset"],
+        "filters_supported": [
+            "query",
+            "size",
+            "published_after",
+            "published_before",
+            "kind",
+            "cursor",
+        ],
+        "auth_required": False,
+        "rate_limit": "HuggingFace Hub anonymous (generous)",
+        "status": "live (discovery + resolve + fetch; contributes to page 1 only — HF paginates by cursor, not offset)",
+        "fetchable": True,
+        "fetchable_notes": "Files downloadable via the HF resolve URL (unverified — no checksum/size in the API).",
+        "id_example": "hf:davidcechak/Arabidopsis_thaliana_DNA_v0",
+        "description": "HuggingFace Hub datasets — searchable, resolvable, and fetchable via the resolve URL.",
     },
 ]
 

@@ -22,6 +22,16 @@ def test_list_sources_reports_datacite() -> None:
     assert any(s["name"] == "datacite" and s["layer"] == "archives" for s in out)
 
 
+def test_hf_is_fetchable() -> None:
+    assert server._is_fetchable("hf:owner/name") is True
+
+
+async def test_list_sources_includes_huggingface() -> None:
+    out = await server._dispatch("list_sources", {})
+    names = {s["name"] for s in out["sources"]}
+    assert "huggingface" in names
+
+
 def test_search_tool_exposes_sources_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
     assert "sources" in tool.inputSchema["properties"]
