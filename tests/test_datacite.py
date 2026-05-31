@@ -357,12 +357,54 @@ async def test_resolve_zenodo_doi_delegates_to_zenodo(httpx_mock: HTTPXMock) -> 
 def test_normalize_ignores_non_orcid_scheme_even_if_shape_matches():
     """An ISNI/GND identifier can match the ORCID shape; only a creator whose
     nameIdentifierScheme is ORCID (or an orcid.org URL) yields an ORCID."""
-    item = {"attributes": {"doi": "10.x/y", "titles": [{"title": "t"}], "types": {},
+    item = {
+        "attributes": {
+            "doi": "10.x/y",
+            "titles": [{"title": "t"}],
+            "types": {},
             "creators": [
-                {"name": "A", "nameIdentifiers": [
-                    {"nameIdentifier": "0000-0001-2103-2683", "nameIdentifierScheme": "ISNI"}]},
-                {"name": "B", "nameIdentifiers": [
-                    {"nameIdentifier": "0000-0002-1825-0097", "nameIdentifierScheme": "ORCID"}]}]}}
+                {
+                    "name": "A",
+                    "nameIdentifiers": [
+                        {"nameIdentifier": "0000-0001-2103-2683", "nameIdentifierScheme": "ISNI"}
+                    ],
+                },
+                {
+                    "name": "B",
+                    "nameIdentifiers": [
+                        {"nameIdentifier": "0000-0002-1825-0097", "nameIdentifierScheme": "ORCID"}
+                    ],
+                },
+            ],
+        }
+    }
     r = datacite._normalize(item)
-    assert r.creators[0].orcid is None     # ISNI shape matched but scheme wrong → rejected
+    assert r.creators[0].orcid is None  # ISNI shape matched but scheme wrong → rejected
     assert r.creators[1].orcid == "0000-0002-1825-0097"
+
+
+def test_normalize_populates_metrics_from_attributes() -> None:
+    from data_aggregator_mcp.datacite import _normalize
+
+    item = {
+        "attributes": {
+            "doi": "10.5061/dryad.x",
+            "titles": [{"title": "t"}],
+            "types": {"resourceTypeGeneral": "Dataset"},
+            "citationCount": 5,
+            "viewCount": 200,
+            "downloadCount": 17,
+        }
+    }
+    r = _normalize(item)
+    assert r.metrics is not None
+    assert r.metrics.citations == 5
+    assert r.metrics.views == 200
+    assert r.metrics.downloads == 17
+
+
+def test_normalize_metrics_none_when_absent() -> None:
+    from data_aggregator_mcp.datacite import _normalize
+
+    item = {"attributes": {"doi": "10.5061/dryad.y", "titles": [{"title": "t"}]}}
+    assert _normalize(item).metrics is None
