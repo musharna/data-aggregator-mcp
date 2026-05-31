@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.13.0] - 2026-05-31
+
+### Changed
+
+- **Breaking:** `creators` is now a list of `{name, orcid}` objects (was a list of
+  name strings). ORCID iDs are populated from DataCite `nameIdentifiers` and Zenodo
+  creator metadata where available.
+
+### Added
+
+- `funding` — funding references (`{funder, award}`) from DataCite `fundingReferences`
+  and Zenodo `grants`.
+- Related-identifier `links` — DataCite `relatedIdentifiers` / Zenodo
+  `related_identifiers` are surfaced as `links` (verbatim targets; no graph traversal).
+
 ## [0.12.0] - 2026-05-31
 
 ### Added

@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 from data_aggregator_mcp import citation
-from data_aggregator_mcp.models import DataResource
+from data_aggregator_mcp.models import Creator, DataResource
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
@@ -20,7 +20,7 @@ _NO_DOI = DataResource(
     source="omics",
     kind="dataset",
     title="My Study",
-    creators=["Doe, Jane"],
+    creators=[Creator(name="Doe, Jane")],
     year=2021,
 )
 

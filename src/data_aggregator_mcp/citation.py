@@ -45,7 +45,7 @@ def _accept_for(fmt: str) -> str:
 def _csl_json_from_metadata(r: DataResource) -> str:
     item: dict = {"id": r.id, "type": _CSL_TYPE.get(r.kind, "dataset"), "title": r.title}
     if r.creators:
-        item["author"] = [{"literal": c} for c in r.creators]
+        item["author"] = [{"literal": c.name} for c in r.creators]
     if r.year:
         item["issued"] = {"date-parts": [[r.year]]}
     if r.doi:

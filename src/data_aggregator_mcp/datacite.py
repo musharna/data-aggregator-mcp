@@ -20,7 +20,15 @@ import httpx
 
 from data_aggregator_mcp import _http, dataverse, dryad, figshare, osf, zenodo
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import DataResource, compact
+from data_aggregator_mcp.models import (
+    Creator,
+    DataResource,
+    FundingRef,
+    Link,
+    _orcid,
+    _rel,
+    compact,
+)
 
 BASE_URL = "https://api.datacite.org"
 DEFAULT_TIMEOUT = 30.0
@@ -102,6 +110,22 @@ def _access_from_rights(rights_list: list[dict[str, Any]] | None) -> str | None:
     return None
 
 
+def _creator(c: dict[str, Any]) -> Creator:
+    orcid = None
+    for nid in c.get("nameIdentifiers") or []:
+        ident = nid.get("nameIdentifier") or ""
+        scheme = (nid.get("nameIdentifierScheme") or "").upper()
+        # Only treat it as an ORCID when the source SAYS so — an ISNI/GND id can
+        # match the ORCID shape, so the regex alone is not sufficient evidence.
+        if scheme != "ORCID" and "orcid.org" not in ident.lower():
+            continue
+        cand = _orcid(ident)
+        if cand:
+            orcid = cand
+            break
+    return Creator(name=c.get("name", ""), orcid=orcid)
+
+
 def _normalize(item: dict[str, Any]) -> DataResource:
     a = item.get("attributes", {}) or {}
     client_id = (((item.get("relationships") or {}).get("client") or {}).get("data") or {}).get(
@@ -118,13 +142,23 @@ def _normalize(item: dict[str, Any]) -> DataResource:
         source=_source_for_client(client_id),
         kind=_KIND_MAP.get(rt, "dataset"),
         title=_first(a.get("titles"), "title") or "",
-        creators=[c.get("name", "") for c in (a.get("creators") or [])],
+        creators=[_creator(c) for c in (a.get("creators") or [])],
+        funding=[
+            FundingRef(funder=f["funderName"], award=f.get("awardNumber") or f.get("awardTitle"))
+            for f in (a.get("fundingReferences") or [])
+            if f.get("funderName")
+        ],
         year=_year(a.get("publicationYear")),
         description=_first(a.get("descriptions"), "description"),
         doi=doi,
         subjects=[s.get("subject", "") for s in (a.get("subjects") or []) if s.get("subject")],
         license=license_,
         access=_access_from_rights(rights),
+        links=[
+            Link(rel=_rel(r["relationType"]), target_id=r["relatedIdentifier"])
+            for r in (a.get("relatedIdentifiers") or [])
+            if r.get("relationType") and r.get("relatedIdentifier")
+        ],
         files=[],  # DataCite is metadata-only
     )
 

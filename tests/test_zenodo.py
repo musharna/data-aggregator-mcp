@@ -8,6 +8,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import zenodo
 from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.models import Creator, FundingRef
 
 
 def _record() -> dict:
@@ -42,7 +43,7 @@ def test_normalize_maps_core_fields() -> None:
     assert r.source == "zenodo"
     assert r.kind == "dataset"
     assert r.title == "Phelipanche small RNA dataset"
-    assert r.creators == ["Zangishei, Z.", "Aubry, S."]
+    assert r.creators == [Creator(name="Zangishei, Z."), Creator(name="Aubry, S.")]
     assert r.year == 2022
     assert r.doi == "10.5281/zenodo.7654321"
     assert r.license == "cc-by-4.0"
@@ -152,6 +153,53 @@ async def test_search_offset_zero_unchanged():
     async with httpx.AsyncClient(transport=transport) as client:
         await zenodo.search(client, "q", size=10)
     assert captured.get("page", "1") == "1"
+
+
+def test_normalize_extracts_creator_orcid() -> None:
+    rec = {
+        "id": 1,
+        "metadata": {
+            "title": "t",
+            "creators": [
+                {"name": "A", "orcid": "0000-0002-1825-0097"},
+                {"name": "B"},
+            ],
+        },
+    }
+    r = zenodo._normalize(rec)
+    assert r.creators[0].orcid == "0000-0002-1825-0097"
+    assert r.creators[1].orcid is None
+
+
+def test_normalize_extracts_funding() -> None:
+    rec = {
+        "id": 1,
+        "metadata": {
+            "title": "t",
+            "grants": [
+                {"code": "654321", "funder": {"name": "European Commission"}},
+                {"title": "T", "funder": {"name": "NSF"}},
+                {"code": "x"},
+            ],
+        },
+    }
+    r = zenodo._normalize(rec)
+    assert r.funding == [
+        FundingRef(funder="European Commission", award="654321"),
+        FundingRef(funder="NSF", award="T"),
+    ]
+
+
+def test_normalize_extracts_related_links() -> None:
+    rec = {
+        "id": 1,
+        "metadata": {
+            "title": "t",
+            "related_identifiers": [{"identifier": "10.1/x", "relation": "isPartOf"}],
+        },
+    }
+    r = zenodo._normalize(rec)
+    assert ("is_part_of", "10.1/x") in {(link.rel, link.target_id) for link in r.links}
 
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"

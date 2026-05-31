@@ -8,6 +8,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import datacite
 from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.models import Creator, FundingRef
 
 
 def _item() -> dict:
@@ -36,7 +37,7 @@ def test_normalize_maps_core_fields() -> None:
     assert r.source == "dryad"
     assert r.kind == "dataset"
     assert r.title == "Data and code from: retinal study"
-    assert r.creators == ["Doe, J.", "Roe, R."]
+    assert r.creators == [Creator(name="Doe, J."), Creator(name="Roe, R.")]
     assert r.year == 2023
     assert r.doi == "10.5061/dryad.98sf7m0wt"
     assert r.license == "cc0-1.0"
@@ -211,6 +212,77 @@ async def test_search_offset_requests_page_number_and_slices():
     assert len(recs) == 10  # 20%10 == 0, no slice
 
 
+def test_normalize_extracts_creator_orcid() -> None:
+    item = {
+        "attributes": {
+            "doi": "10.x/y",
+            "titles": [{"title": "t"}],
+            "types": {},
+            "creators": [
+                {
+                    "name": "A",
+                    "nameIdentifiers": [
+                        {
+                            "nameIdentifier": "https://orcid.org/0000-0002-1825-0097",
+                            "nameIdentifierScheme": "ORCID",
+                        }
+                    ],
+                },
+                {"name": "B"},
+            ],
+        }
+    }
+    r = datacite._normalize(item)
+    assert r.creators[0].orcid == "0000-0002-1825-0097"
+    assert r.creators[1].orcid is None
+
+
+def test_normalize_extracts_funding() -> None:
+    item = {
+        "attributes": {
+            "doi": "10.x/y",
+            "titles": [{"title": "t"}],
+            "types": {},
+            "fundingReferences": [
+                {"funderName": "NSF", "awardNumber": "ABC-123"},
+                {"funderName": "NIH", "awardTitle": "Big Grant"},
+                {"awardNumber": "no-funder"},
+            ],
+        }
+    }
+    r = datacite._normalize(item)
+    assert r.funding == [
+        FundingRef(funder="NSF", award="ABC-123"),
+        FundingRef(funder="NIH", award="Big Grant"),
+    ]
+
+
+def test_rel_snake_cases_relation_types() -> None:
+    from data_aggregator_mcp.models import _rel
+
+    assert _rel("IsSupplementTo") == "is_supplement_to"
+    assert _rel("isPartOf") == "is_part_of"
+    assert _rel("IsVersionOf") == "is_version_of"
+
+
+def test_normalize_extracts_related_links() -> None:
+    item = {
+        "attributes": {
+            "doi": "10.x/y",
+            "titles": [{"title": "t"}],
+            "types": {},
+            "relatedIdentifiers": [
+                {"relatedIdentifier": "10.5281/zenodo.1", "relationType": "IsSupplementTo"},
+                {"relatedIdentifier": "10.1/v1", "relationType": "IsVersionOf"},
+            ],
+        }
+    }
+    r = datacite._normalize(item)
+    rels = {(link.rel, link.target_id) for link in r.links}
+    assert ("is_supplement_to", "10.5281/zenodo.1") in rels
+    assert ("is_version_of", "10.1/v1") in rels
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
@@ -280,3 +352,17 @@ async def test_resolve_zenodo_doi_delegates_to_zenodo(httpx_mock: HTTPXMock) -> 
         r = await datacite.resolve(client, "datacite:10.5281/zenodo.7654321")
     assert r.source == "zenodo"
     assert [f.name for f in r.files] == ["data.csv"]
+
+
+def test_normalize_ignores_non_orcid_scheme_even_if_shape_matches():
+    """An ISNI/GND identifier can match the ORCID shape; only a creator whose
+    nameIdentifierScheme is ORCID (or an orcid.org URL) yields an ORCID."""
+    item = {"attributes": {"doi": "10.x/y", "titles": [{"title": "t"}], "types": {},
+            "creators": [
+                {"name": "A", "nameIdentifiers": [
+                    {"nameIdentifier": "0000-0001-2103-2683", "nameIdentifierScheme": "ISNI"}]},
+                {"name": "B", "nameIdentifiers": [
+                    {"nameIdentifier": "0000-0002-1825-0097", "nameIdentifierScheme": "ORCID"}]}]}}
+    r = datacite._normalize(item)
+    assert r.creators[0].orcid is None     # ISNI shape matched but scheme wrong → rejected
+    assert r.creators[1].orcid == "0000-0002-1825-0097"
