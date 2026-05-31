@@ -75,6 +75,19 @@ def test_normalize_no_license_tag():
     assert huggingface._normalize({"id": "a/b", "author": "a", "tags": []}).license is None
 
 
+def test_normalize_populates_metrics_from_hf_fields():
+    d = {"id": "owner/name", "downloads": 1234, "likes": 9, "createdAt": "2024-01-01"}
+    r = huggingface._normalize(d)
+    assert r.metrics is not None
+    assert r.metrics.downloads == 1234
+    assert r.metrics.likes == 9
+    assert r.metrics.citations is None
+
+
+def test_normalize_metrics_none_when_hf_counts_absent():
+    assert huggingface._normalize({"id": "owner/name"}).metrics is None
+
+
 @pytest.mark.asyncio
 async def test_search_gated_is_restricted():
     async with httpx.AsyncClient(

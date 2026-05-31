@@ -8,7 +8,7 @@ import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import Creator, DataResource, FileEntry, compact
+from data_aggregator_mcp.models import Creator, DataResource, FileEntry, Metrics, compact
 
 API = "https://huggingface.co/api/datasets"
 FILE_BASE = "https://huggingface.co/datasets"
@@ -24,6 +24,15 @@ def _license(tags: list[str], card: dict | None) -> str | None:
         if t.startswith("license:"):
             return t.split(":", 1)[1] or None
     return (card or {}).get("license")
+
+
+def _metrics(d: dict[str, Any]) -> Metrics | None:
+    """Pull HF's downloads/likes. Returns None when neither is present so the
+    field stays absent rather than a zero-filled object."""
+    dls, likes = d.get("downloads"), d.get("likes")
+    if dls is None and likes is None:
+        return None
+    return Metrics(downloads=dls, likes=likes)
 
 
 def _normalize(d: dict[str, Any]) -> DataResource:
@@ -48,6 +57,7 @@ def _normalize(d: dict[str, Any]) -> DataResource:
         license=_license(tags, d.get("cardData")),
         subjects=[t for t in tags if ":" not in t],
         access="restricted" if d.get("gated") else "open",
+        metrics=_metrics(d),
         files=files,
     )
 
