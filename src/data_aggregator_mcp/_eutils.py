@@ -40,9 +40,12 @@ async def esearch(
         "db": db,
         "term": term,
         "retmax": str(retmax),
-        "retstart": str(retstart),
         **_common_params(),
     }
+    if retstart:
+        # only sent when paging past the first window, so the offset=0 request
+        # stays byte-identical to the pre-pagination one (see P1 spec)
+        params["retstart"] = str(retstart)
     data = await _http.request_json(
         client,
         "GET",
