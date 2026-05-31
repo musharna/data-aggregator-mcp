@@ -30,7 +30,14 @@ from data_aggregator_mcp import (
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
 from data_aggregator_mcp.errors import ValidationError
-from data_aggregator_mcp.models import DataResource, Link, SearchResult, Taxon, TaxonExpansion
+from data_aggregator_mcp.models import (
+    DataResource,
+    Link,
+    SearchResult,
+    Taxon,
+    TaxonExpansion,
+    derive_version_status,
+)
 
 _VALID_KINDS = {"dataset", "sequencing_run", "study", "publication", "software"}
 
@@ -195,6 +202,13 @@ def _passes_filters(r: DataResource, f: dict[str, Any]) -> bool:
     return True
 
 
+def _with_version_status(r: DataResource) -> DataResource:
+    is_latest, superseded_by = derive_version_status(r.links)
+    if is_latest is None and superseded_by is None:
+        return r
+    return r.model_copy(update={"is_latest": is_latest, "superseded_by": superseded_by})
+
+
 async def search_page(
     client: httpx.AsyncClient,
     *,
@@ -338,6 +352,7 @@ async def search_page(
     )
 
     enriched = await _enrich(client, emitted, errors)
+    enriched = [_with_version_status(r) for r in enriched]
     return SearchResult(
         query=query,
         total=total,
@@ -401,5 +416,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             resource = await _enrich_resource(client, resource)
         except Exception as exc:  # additive enrichment must not sink a valid resolve
             logger.warning("resolve enrichment failed for %s: %r", rid, exc)
+    is_latest, superseded_by = derive_version_status(resource.links)
+    if is_latest is not None or superseded_by is not None:
+        resource = resource.model_copy(
+            update={"is_latest": is_latest, "superseded_by": superseded_by}
+        )
     _RESOLVE_CACHE.set(rid, resource)
     return resource

@@ -911,9 +911,7 @@ async def test_search_semantic_reorders_window(monkeypatch):
 
     monkeypatch.setattr(router.embeddings, "rerank", fake_rerank)
 
-    r = await router.search_page(
-        None, query="fruit", size=10, sources=["zenodo"], rank="semantic"
-    )
+    r = await router.search_page(None, query="fruit", size=10, sources=["zenodo"], rank="semantic")
     assert [x.id for x in r.results] == ["zenodo:b", "zenodo:a"]
 
 
@@ -929,8 +927,29 @@ async def test_search_semantic_failsoft_keeps_order_and_notes_error(monkeypatch)
 
     monkeypatch.setattr(router.embeddings, "rerank", fake_rerank)
 
-    r = await router.search_page(
-        None, query="x", size=10, sources=["zenodo"], rank="semantic"
-    )
+    r = await router.search_page(None, query="x", size=10, sources=["zenodo"], rank="semantic")
     assert [x.id for x in r.results] == ["zenodo:a"]
     assert r.errors.get("semantic") == "unavailable"
+
+
+async def test_resolve_sets_version_status(monkeypatch) -> None:
+    import httpx
+
+    from data_aggregator_mcp import router
+    from data_aggregator_mcp.models import DataResource, Link
+
+    async def fake_zenodo_resolve(client, rid):
+        return DataResource(
+            id="zenodo:1",
+            source="zenodo",
+            kind="dataset",
+            title="t",
+            links=[Link(rel="is_previous_version_of", target_id="zenodo:2")],
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.resolve", fake_zenodo_resolve)
+    router._RESOLVE_CACHE.clear()
+    async with httpx.AsyncClient() as client:
+        r = await router.resolve(client, "zenodo:1")
+    assert r.is_latest is False
+    assert r.superseded_by == "zenodo:2"

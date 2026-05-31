@@ -86,6 +86,8 @@ class DataResource(BaseModel):
     links: list[Link] = Field(default_factory=list)
     citation: str | None = None  # rendered on resolve when cite= is requested
     metrics: Metrics | None = None  # usage/impact signals, source-dependent
+    is_latest: bool | None = None  # None = no version info in links[]
+    superseded_by: str | None = None  # id of the newer version, when known
 
 
 class TaxonExpansion(BaseModel):
@@ -142,3 +144,21 @@ def normalize_access(raw: str | None) -> str | None:
     if not raw or not str(raw).strip():
         return None
     return _ACCESS_ALIASES.get(str(raw).strip().lower(), "unknown")
+
+
+# links[].rel values that say "a NEWER version of me exists" (I am superseded).
+_SUPERSEDED_BY_RELS = {"is_previous_version_of", "is_obsoleted_by"}
+# links[].rel values that say "I supersede / version an OLDER record".
+_SUPERSEDES_RELS = {"is_new_version_of", "obsoletes", "has_version", "is_version_of"}
+
+
+def derive_version_status(links: list["Link"]) -> tuple[bool | None, str | None]:
+    """Infer (is_latest, superseded_by) from version relations in links[].
+    Returns (None, None) when links carry no version information at all —
+    absence of evidence, not a claim of latest."""
+    for lnk in links:
+        if lnk.rel in _SUPERSEDED_BY_RELS:
+            return False, lnk.target_id
+    if any(lnk.rel in _SUPERSEDES_RELS for lnk in links):
+        return True, None
+    return None, None
