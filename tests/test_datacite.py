@@ -352,3 +352,17 @@ async def test_resolve_zenodo_doi_delegates_to_zenodo(httpx_mock: HTTPXMock) -> 
         r = await datacite.resolve(client, "datacite:10.5281/zenodo.7654321")
     assert r.source == "zenodo"
     assert [f.name for f in r.files] == ["data.csv"]
+
+
+def test_normalize_ignores_non_orcid_scheme_even_if_shape_matches():
+    """An ISNI/GND identifier can match the ORCID shape; only a creator whose
+    nameIdentifierScheme is ORCID (or an orcid.org URL) yields an ORCID."""
+    item = {"attributes": {"doi": "10.x/y", "titles": [{"title": "t"}], "types": {},
+            "creators": [
+                {"name": "A", "nameIdentifiers": [
+                    {"nameIdentifier": "0000-0001-2103-2683", "nameIdentifierScheme": "ISNI"}]},
+                {"name": "B", "nameIdentifiers": [
+                    {"nameIdentifier": "0000-0002-1825-0097", "nameIdentifierScheme": "ORCID"}]}]}}
+    r = datacite._normalize(item)
+    assert r.creators[0].orcid is None     # ISNI shape matched but scheme wrong → rejected
+    assert r.creators[1].orcid == "0000-0002-1825-0097"

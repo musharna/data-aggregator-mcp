@@ -175,3 +175,10 @@ def test_compact_preserves_identifiers_and_drops_files() -> None:
     c = compact(r)
     assert c.identifiers == {"pmid": "1", "pmcid": "PMC9"}
     assert c.files == []
+
+
+def test_orcid_accepts_lowercase_x_checksum():
+    from data_aggregator_mcp.models import _orcid
+    # ORCID checksum may arrive lowercase; canonicalize to uppercase X.
+    assert _orcid("0000-0002-1825-009x") == "0000-0002-1825-009X"
+    assert _orcid("https://orcid.org/0000-0002-1825-009x") == "0000-0002-1825-009X"

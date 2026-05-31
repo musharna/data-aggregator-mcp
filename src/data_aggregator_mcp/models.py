@@ -10,10 +10,13 @@ _ORCID_RE = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")
 
 
 def _orcid(value: str | None) -> str | None:
-    """Normalize an ORCID to its bare iD form, or None if absent/malformed."""
+    """Normalize an ORCID to its bare, canonical iD form, or None if
+    absent/malformed. Uppercases the checksum char so a lowercase ``x`` is
+    accepted and returned canonically.
+    """
     if not value:
         return None
-    bare = value.rsplit("/", 1)[-1].strip()
+    bare = value.rsplit("/", 1)[-1].strip().upper()
     return bare if _ORCID_RE.match(bare) else None
 
 

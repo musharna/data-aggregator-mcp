@@ -113,7 +113,13 @@ def _access_from_rights(rights_list: list[dict[str, Any]] | None) -> str | None:
 def _creator(c: dict[str, Any]) -> Creator:
     orcid = None
     for nid in c.get("nameIdentifiers") or []:
-        cand = _orcid(nid.get("nameIdentifier"))
+        ident = nid.get("nameIdentifier") or ""
+        scheme = (nid.get("nameIdentifierScheme") or "").upper()
+        # Only treat it as an ORCID when the source SAYS so — an ISNI/GND id can
+        # match the ORCID shape, so the regex alone is not sufficient evidence.
+        if scheme != "ORCID" and "orcid.org" not in ident.lower():
+            continue
+        cand = _orcid(ident)
         if cand:
             orcid = cand
             break
