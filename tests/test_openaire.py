@@ -190,6 +190,22 @@ async def test_resolve_falls_back_to_request_id_when_record_id_blank(httpx_mock:
     )  # falls back to the request id, not "openaire:"
 
 
+@pytest.mark.asyncio
+async def test_search_offset_requests_page_and_slices():
+    captured = {}
+
+    async def handler(request):
+        captured.update(dict(request.url.params))
+        results = [{"id": str(i), "title": f"t{i}"} for i in range(10)]
+        return httpx.Response(200, json={"header": {"numFound": 100}, "results": results})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        total, recs = await openaire.search(client, "q", size=10, offset=10)
+    assert captured["page"] == "2"  # 10//10 + 1
+    assert len(recs) == 10
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 

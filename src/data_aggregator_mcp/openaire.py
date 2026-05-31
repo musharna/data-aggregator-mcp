@@ -84,16 +84,22 @@ async def search(
     query: str,
     *,
     size: int = DEFAULT_SIZE,
+    offset: int = 0,
 ) -> tuple[int, list[DataResource]]:
+    capped = min(size, MAX_SIZE)
+    params: dict[str, str | int] = {"search": query, "type": "publication", "pageSize": capped}
+    if offset:  # only when paging past page 1, so offset=0 request stays byte-identical
+        params["page"] = offset // capped + 1
     data = await _http.request_json(
         client,
         "GET",
         BASE_URL,
         service="OpenAIRE",
-        params={"search": query, "type": "publication", "pageSize": min(size, MAX_SIZE)},
+        params=params,
     )
     total = int(data.get("header", {}).get("numFound", 0) or 0)
-    return total, [_normalize_openaire(r) for r in data.get("results", []) or []]
+    results = (data.get("results", []) or [])[offset % capped :]
+    return total, [_normalize_openaire(r) for r in results]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
