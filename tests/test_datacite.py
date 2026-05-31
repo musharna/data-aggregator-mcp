@@ -257,6 +257,32 @@ def test_normalize_extracts_funding() -> None:
     ]
 
 
+def test_rel_snake_cases_relation_types() -> None:
+    from data_aggregator_mcp.models import _rel
+
+    assert _rel("IsSupplementTo") == "is_supplement_to"
+    assert _rel("isPartOf") == "is_part_of"
+    assert _rel("IsVersionOf") == "is_version_of"
+
+
+def test_normalize_extracts_related_links() -> None:
+    item = {
+        "attributes": {
+            "doi": "10.x/y",
+            "titles": [{"title": "t"}],
+            "types": {},
+            "relatedIdentifiers": [
+                {"relatedIdentifier": "10.5281/zenodo.1", "relationType": "IsSupplementTo"},
+                {"relatedIdentifier": "10.1/v1", "relationType": "IsVersionOf"},
+            ],
+        }
+    }
+    r = datacite._normalize(item)
+    rels = {(link.rel, link.target_id) for link in r.links}
+    assert ("is_supplement_to", "10.5281/zenodo.1") in rels
+    assert ("is_version_of", "10.1/v1") in rels
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 

@@ -20,7 +20,15 @@ import httpx
 
 from data_aggregator_mcp import _http, dataverse, dryad, figshare, osf, zenodo
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import Creator, DataResource, FundingRef, _orcid, compact
+from data_aggregator_mcp.models import (
+    Creator,
+    DataResource,
+    FundingRef,
+    Link,
+    _orcid,
+    _rel,
+    compact,
+)
 
 BASE_URL = "https://api.datacite.org"
 DEFAULT_TIMEOUT = 30.0
@@ -140,6 +148,11 @@ def _normalize(item: dict[str, Any]) -> DataResource:
         subjects=[s.get("subject", "") for s in (a.get("subjects") or []) if s.get("subject")],
         license=license_,
         access=_access_from_rights(rights),
+        links=[
+            Link(rel=_rel(r["relationType"]), target_id=r["relatedIdentifier"])
+            for r in (a.get("relatedIdentifiers") or [])
+            if r.get("relationType") and r.get("relatedIdentifier")
+        ],
         files=[],  # DataCite is metadata-only
     )
 

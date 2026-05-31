@@ -17,6 +17,12 @@ def _orcid(value: str | None) -> str | None:
     return bare if _ORCID_RE.match(bare) else None
 
 
+def _rel(s: str) -> str:
+    """Snake-case a DataCite/Zenodo relation type, e.g. IsSupplementTo →
+    is_supplement_to, isPartOf → is_part_of."""
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", s).lower()
+
+
 class Creator(BaseModel):
     name: str
     orcid: str | None = None

@@ -18,7 +18,9 @@ from data_aggregator_mcp.models import (
     DataResource,
     FileEntry,
     FundingRef,
+    Link,
     _orcid,
+    _rel,
     compact,
     normalize_access,
 )
@@ -75,6 +77,11 @@ def _normalize(record: dict[str, Any]) -> DataResource:
         subjects=list(meta.get("keywords", []) or []),
         license=(meta.get("license") or {}).get("id"),
         access=normalize_access(meta.get("access_right")),
+        links=[
+            Link(rel=_rel(r["relation"]), target_id=r["identifier"])
+            for r in (meta.get("related_identifiers") or [])
+            if r.get("relation") and r.get("identifier")
+        ],
         files=files,
     )
 

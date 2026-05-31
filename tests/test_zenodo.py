@@ -190,6 +190,18 @@ def test_normalize_extracts_funding() -> None:
     ]
 
 
+def test_normalize_extracts_related_links() -> None:
+    rec = {
+        "id": 1,
+        "metadata": {
+            "title": "t",
+            "related_identifiers": [{"identifier": "10.1/x", "relation": "isPartOf"}],
+        },
+    }
+    r = zenodo._normalize(rec)
+    assert ("is_part_of", "10.1/x") in {(link.rel, link.target_id) for link in r.links}
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
