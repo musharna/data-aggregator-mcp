@@ -223,3 +223,38 @@ def test_zenodo_is_datacite_fetchable() -> None:
     from data_aggregator_mcp import server
 
     assert "zenodo" in server._DATACITE_FETCHABLE
+
+
+@live_only
+async def test_live_zenodo_refetch_resumes_verified_files(tmp_path) -> None:
+    """Real-execution resume probe: fetch a small checksummed Zenodo file, then
+    re-fetch to the same dir and confirm it is skipped (resumed, zero bytes)."""
+    from data_aggregator_mcp import zenodo
+
+    async with httpx.AsyncClient(timeout=120, follow_redirects=True) as client:
+        # find a record with a small (<1 MB) checksummed file
+        _t, recs = await zenodo.search(client, "data csv", size=20)
+        pick = None
+        for r in recs:
+            full = await zenodo.resolve(client, r.id)
+            for f in full.files:
+                if f.checksum and f.size and f.size < 1_000_000 and f.url:
+                    pick = (full, f.name)
+                    break
+            if pick:
+                break
+        if pick is None:
+            pytest.skip("no small checksummed Zenodo file found in sample")
+        full, fname = pick
+
+        first = await fetch_mod.fetch_files(
+            client, full, dest=str(tmp_path), files=fname, max_bytes=5_000_000
+        )
+        assert first.paths and first.bytes > 0  # really downloaded
+
+        second = await fetch_mod.fetch_files(
+            client, full, dest=str(tmp_path), files=fname, max_bytes=5_000_000
+        )
+    assert fname in second.resumed       # skipped on re-fetch
+    assert second.bytes == 0             # nothing transferred
+    assert second.paths                  # path still reported

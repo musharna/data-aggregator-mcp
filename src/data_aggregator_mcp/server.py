@@ -12,6 +12,7 @@ literature ids fail loud.
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 
 import httpx
@@ -24,6 +25,8 @@ from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import router, zenodo
 from data_aggregator_mcp.errors import FetchNotSupportedError
 from data_aggregator_mcp.models import DataResource, FetchResult, SearchResult
+
+logger = logging.getLogger(__name__)
 
 _FETCHABLE_SOURCES = (
     "zenodo:",
@@ -338,6 +341,29 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 resource = await router.resolve(client, fid)
                 _ensure_repo_fetchable(fid, resource)
                 _ensure_fulltext_available(fid, resource)
+                # Wire MCP progress notifications when the caller supplied a
+                # progressToken (in the request meta). The notification is
+                # auxiliary telemetry: a send failure is logged and swallowed so
+                # it can NEVER abort or mask the actual download. This is the one
+                # sanctioned fail-soft spot — the core fetch still succeeds.
+                try:
+                    ctx = server.request_context
+                except LookupError:
+                    ctx = None  # called outside an MCP request (e.g. a unit test)
+                token = getattr(getattr(ctx, "meta", None), "progressToken", None)
+                on_progress = None
+                if token is not None and ctx is not None:
+                    session = ctx.session
+
+                    async def _on_progress(done: int, total: int, name: str) -> None:
+                        try:
+                            await session.send_progress_notification(
+                                token, progress=done, total=total
+                            )
+                        except Exception as exc:  # noqa: BLE001 - auxiliary telemetry
+                            logger.warning("progress notification failed: %r", exc)
+
+                    on_progress = _on_progress
                 out = await fetch_mod.fetch_files(
                     client,
                     resource,
@@ -346,6 +372,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     max_bytes=args.get("max_bytes", fetch_mod.DEFAULT_MAX_BYTES),
                     force=args.get("force", False),
                     extract=args.get("extract", False),
+                    on_progress=on_progress,
                 )
                 return out.model_dump()
             case _:

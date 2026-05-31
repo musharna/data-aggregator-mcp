@@ -100,6 +100,7 @@ class FetchResult(BaseModel):
     paths: list[str] = Field(default_factory=list)
     bytes: int = 0
     skipped: list[str] = Field(default_factory=list)
+    resumed: list[str] = Field(default_factory=list)
 
 
 SEARCH_DESC_LIMIT = 500

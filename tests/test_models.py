@@ -65,7 +65,13 @@ def test_search_result_shape() -> None:
 
 def test_fetch_result_shape() -> None:
     fr = FetchResult(paths=["/tmp/a"], bytes=10, skipped=[])
-    assert fr.model_dump() == {"paths": ["/tmp/a"], "bytes": 10, "skipped": []}
+    assert fr.model_dump() == {"paths": ["/tmp/a"], "bytes": 10, "skipped": [], "resumed": []}
+
+
+def test_fetch_result_resumed_roundtrip() -> None:
+    assert FetchResult(resumed=["a"]).resumed == ["a"]
+    assert FetchResult().resumed == []
+    assert FetchResult(resumed=["a"]).model_dump()["resumed"] == ["a"]
 
 
 def test_compact_strips_files_and_truncates_description() -> None:
@@ -179,6 +185,7 @@ def test_compact_preserves_identifiers_and_drops_files() -> None:
 
 def test_orcid_accepts_lowercase_x_checksum():
     from data_aggregator_mcp.models import _orcid
+
     # ORCID checksum may arrive lowercase; canonicalize to uppercase X.
     assert _orcid("0000-0002-1825-009x") == "0000-0002-1825-009X"
     assert _orcid("https://orcid.org/0000-0002-1825-009x") == "0000-0002-1825-009X"

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.14.0] - 2026-05-31
+
+### Added
+
+- `fetch` now downloads a resource's files in parallel (bounded concurrency).
+- `fetch` resume — files already present and verified (by checksum, else size) are
+  skipped and reported in `FetchResult.resumed`; a re-run is idempotent. `force=true`
+  re-downloads everything.
+- `fetch` emits MCP progress notifications as files complete when the caller supplies
+  a `progressToken`.
+
 ## [0.13.0] - 2026-05-31
 
 ### Changed
