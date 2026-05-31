@@ -80,3 +80,24 @@ async def test_search_gated_is_restricted():
     ) as c:
         _t, recs = await huggingface.search(c, "x", size=5)
     assert recs[0].access == "restricted"
+
+
+import os as _os
+
+_LIVE = _os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
+_live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_search_and_resolve() -> None:
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+        total, recs = await huggingface.search(client, "dna", size=5)
+        assert total >= 1
+        r0 = recs[0]
+        assert r0.id.startswith("hf:") and r0.source == "huggingface" and r0.kind == "dataset"
+        # resolve a known small dataset → files attached with working URLs
+        full = await huggingface.resolve(client, "hf:davidcechak/Arabidopsis_thaliana_DNA_v0")
+        assert full.files, "resolve should attach siblings as files"
+        head = await client.head(full.files[0].url)
+        assert head.status_code < 400  # resolve URL serves (2xx/3xx)
