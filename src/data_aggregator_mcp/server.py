@@ -35,6 +35,7 @@ _FETCHABLE_SOURCES = (
     "datacite:",
     "pubmed:",
     "openaire:",
+    "hf:",
 )  # id prefixes with a working fetch backend
 
 
@@ -152,6 +153,26 @@ _SOURCES: list[dict[str, Any]] = [
         "fetchable_notes": "Open-access full text fetchable (EuropePMC XML / Unpaywall PDF, unverified); paywalled/non-OA ids fail loud.",
         "id_example": "pubmed:23066504 | openaire:<id>",
     },
+    {
+        "name": "huggingface",
+        "layer": "archives",
+        "kinds": ["dataset"],
+        "filters_supported": [
+            "query",
+            "size",
+            "published_after",
+            "published_before",
+            "kind",
+            "cursor",
+        ],
+        "auth_required": False,
+        "rate_limit": "HuggingFace Hub anonymous (generous)",
+        "status": "live (discovery + resolve + fetch; contributes to page 1 only — HF paginates by cursor, not offset)",
+        "fetchable": True,
+        "fetchable_notes": "Files downloadable via the HF resolve URL (unverified — no checksum/size in the API).",
+        "id_example": "hf:davidcechak/Arabidopsis_thaliana_DNA_v0",
+        "description": "HuggingFace Hub datasets — searchable, resolvable, and fetchable via the resolve URL.",
+    },
 ]
 
 TOOLS: list[types.Tool] = [
@@ -161,8 +182,9 @@ TOOLS: list[types.Tool] = [
             "Search public research-data archives, omics registries, and the "
             "literature for datasets, software, publications, and sequencing data. "
             "Fans out across Zenodo, DataCite (Dryad, Figshare, Dataverse, OSF, "
-            "Mendeley), NCBI omics (GEO, SRA, BioProject), and literature (PubMed + "
-            "OpenAIRE). Returns compact DataResource records; per-source failures are "
+            "Mendeley), NCBI omics (GEO, SRA, BioProject), literature (PubMed + "
+            "OpenAIRE), and HuggingFace Hub (datasets). Returns compact DataResource "
+            "records; per-source failures are "
             "reported in errors{}. Use resolve for the full record (SRA resolve attaches "
             "the ENA FASTQ manifest; publication resolve attaches links[] to datasets/"
             "accessions, normalized identifiers (pmid/pmcid/doi), and — when open access — "
@@ -185,7 +207,7 @@ TOOLS: list[types.Tool] = [
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Restrict fan-out to these sources (default: all). "
-                    "Available: zenodo, datacite, omics, literature",
+                    "Available: zenodo, datacite, omics, literature, huggingface",
                 },
                 "organism": {
                     "type": "string",
@@ -220,7 +242,7 @@ TOOLS: list[types.Tool] = [
         name="resolve",
         description=(
             "Fetch the full DataResource for a known id (e.g. 'zenodo:7654321', "
-            "'datacite:10.5061/dryad.x', a bare Zenodo record id, or a DOI), "
+            "'datacite:10.5061/dryad.x', 'hf:owner/name', a bare Zenodo record id, or a DOI), "
             "including the complete files[] manifest. Publication resolve also attaches "
             "normalized identifiers (pmid/pmcid/doi) and, when open access, a full-text file. "
             "Pass cite=<format> to render a "
@@ -250,9 +272,10 @@ TOOLS: list[types.Tool] = [
         name="fetch",
         description=(
             "Download a resource's files to local disk and return the PATHS (never "
-            "the file contents). Fetchable: Zenodo, SRA (ENA FASTQ), GEO supplementary files, and "
+            "the file contents). Fetchable: Zenodo, SRA (ENA FASTQ), GEO supplementary files, "
             "DataCite-discovered Figshare/Dataverse/OSF deposits (md5-verified), "
-            "and open-access literature full text (EuropePMC XML / Unpaywall PDF, unverified); "
+            "open-access literature full text (EuropePMC XML / Unpaywall PDF, unverified), "
+            "and HuggingFace datasets (via the HF resolve URL, unverified); "
             "a DataCite Dryad id is manifest-only (resolve lists its files but fetch fails loud), "
             "and other DataCite repos plus paywalled/non-OA literature ids fail loud. "
             "Fails loud if selected files exceed max_bytes unless force=true. "

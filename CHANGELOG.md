@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.0] - 2026-05-31
+
+### Added
+
+- HuggingFace datasets as a search/resolve/fetch source (`hf:<owner>/<name>`). Files
+  are fetchable via the HF resolve URL (unverified — the API exposes no checksum/size).
+  HF contributes to the first results page only (its API paginates by cursor, not offset).
+
 ## [0.14.0] - 2026-05-31
 
 ### Added
