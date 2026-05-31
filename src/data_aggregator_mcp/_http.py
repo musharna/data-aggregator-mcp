@@ -8,6 +8,7 @@ from typing import Any, Callable, Mapping
 
 import httpx
 
+from data_aggregator_mcp import _ratelimit
 from data_aggregator_mcp.errors import (
     NotFoundError,
     RateLimitError,
@@ -48,6 +49,7 @@ async def _retrying(
     last_exc: Exception | None = None
     for attempt in range(max_retries):
         try:
+            await _ratelimit.acquire(service)
             resp = await client.request(
                 method, url, params=params, data=data, headers=headers, timeout=timeout
             )
