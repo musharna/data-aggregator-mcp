@@ -18,6 +18,8 @@ from collections.abc import Awaitable, Callable
 _DEFAULT_RATE = 10.0
 
 
+# Rate is sampled once at bucket-creation time (first request); a key added
+# after the process starts requires a restart to take effect.
 def _ncbi_rate() -> float:
     return 10.0 if (os.environ.get("NCBI_API_KEY") or os.environ.get("NCBI_EMAIL")) else 3.0
 

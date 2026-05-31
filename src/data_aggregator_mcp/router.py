@@ -277,6 +277,10 @@ async def search_page(
         # Re-rank the full fetched window by semantic similarity, then emit the
         # top `size` that pass filters. Ranking needs every candidate, so the
         # WHOLE window is consumed (window-based pagination) — see the spec.
+        # Anchor the re-rank on the raw `query`, not the organism-expanded
+        # `effective_query`: the boolean-expanded string ("(q) AND (syn1 OR syn2)")
+        # is a poor embedding anchor, and `merged` is already organism-filtered by
+        # the fan-out, so query-relevance within that set is the right signal.
         reordered, reason = await embeddings.rerank(client, query, merged)
         if reason:
             errors["semantic"] = reason

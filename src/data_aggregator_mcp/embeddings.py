@@ -4,8 +4,9 @@ Disabled (returns None) unless ``EMBEDDING_API_BASE`` is set. NEVER raises into
 the search path — any failure degrades to keyword order. No local model, no
 required key (a keyless local server is supported by omitting the auth header).
 
-NOTE: ``_http`` sends bodies via httpx ``data=`` (no ``json=`` param), so we
-serialize the JSON ourselves and set Content-Type explicitly.
+NOTE: ``_http`` has no ``json=`` param, so we serialize the JSON ourselves, pass
+it as ``content=`` (httpx's non-deprecated raw-body param), and set Content-Type
+explicitly.
 """
 
 from __future__ import annotations
@@ -48,7 +49,7 @@ async def embed(client: httpx.AsyncClient, texts: list[str]) -> list[list[float]
             "POST",
             f"{base}/embeddings",
             service="embeddings",
-            data=payload,
+            content=payload,
             headers=headers,
         )
         return [row["embedding"] for row in body["data"]]

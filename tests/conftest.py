@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from data_aggregator_mcp import _ratelimit, router
+from data_aggregator_mcp import _ratelimit, router, taxonomy
 
 
 @pytest.fixture(autouse=True)
@@ -21,6 +21,8 @@ def _reset_process_singletons():
     """
     _ratelimit.reset()
     router._RESOLVE_CACHE.clear()
+    taxonomy._CACHE.clear()
     yield
     _ratelimit.reset()
     router._RESOLVE_CACHE.clear()
+    taxonomy._CACHE.clear()

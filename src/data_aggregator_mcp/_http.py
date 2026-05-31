@@ -32,6 +32,7 @@ async def _retrying(
     service: str,
     params: Mapping[str, Any] | None = None,
     data: Any = None,
+    content: Any = None,
     headers: Mapping[str, str] | None = None,
     timeout: float = 30.0,
     max_retries: int = 3,
@@ -51,7 +52,13 @@ async def _retrying(
         try:
             await _ratelimit.acquire(service)
             resp = await client.request(
-                method, url, params=params, data=data, headers=headers, timeout=timeout
+                method,
+                url,
+                params=params,
+                data=data,
+                content=content,
+                headers=headers,
+                timeout=timeout,
             )
         except _TRANSPORT_ERRORS as exc:
             last_exc = exc
@@ -187,6 +194,7 @@ async def request_json(
     service: str,
     params: Mapping[str, Any] | None = None,
     data: Any = None,
+    content: Any = None,
     headers: Mapping[str, str] | None = None,
     timeout: float = 30.0,
     max_retries: int = 3,
@@ -201,6 +209,7 @@ async def request_json(
         service=service,
         params=params,
         data=data,
+        content=content,
         headers=headers,
         timeout=timeout,
         max_retries=max_retries,
