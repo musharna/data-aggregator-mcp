@@ -8,7 +8,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import datacite
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import Creator
+from data_aggregator_mcp.models import Creator, FundingRef
 
 
 def _item() -> dict:
@@ -235,6 +235,26 @@ def test_normalize_extracts_creator_orcid() -> None:
     r = datacite._normalize(item)
     assert r.creators[0].orcid == "0000-0002-1825-0097"
     assert r.creators[1].orcid is None
+
+
+def test_normalize_extracts_funding() -> None:
+    item = {
+        "attributes": {
+            "doi": "10.x/y",
+            "titles": [{"title": "t"}],
+            "types": {},
+            "fundingReferences": [
+                {"funderName": "NSF", "awardNumber": "ABC-123"},
+                {"funderName": "NIH", "awardTitle": "Big Grant"},
+                {"awardNumber": "no-funder"},
+            ],
+        }
+    }
+    r = datacite._normalize(item)
+    assert r.funding == [
+        FundingRef(funder="NSF", award="ABC-123"),
+        FundingRef(funder="NIH", award="Big Grant"),
+    ]
 
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"

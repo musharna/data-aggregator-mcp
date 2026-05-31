@@ -17,6 +17,7 @@ from data_aggregator_mcp.models import (
     Creator,
     DataResource,
     FileEntry,
+    FundingRef,
     _orcid,
     compact,
     normalize_access,
@@ -60,6 +61,13 @@ def _normalize(record: dict[str, Any]) -> DataResource:
         creators=[
             Creator(name=c.get("name", ""), orcid=_orcid(c.get("orcid")))
             for c in meta.get("creators", []) or []
+        ],
+        funding=[
+            FundingRef(
+                funder=(g.get("funder") or {}).get("name"), award=g.get("code") or g.get("title")
+            )
+            for g in (meta.get("grants") or [])
+            if (g.get("funder") or {}).get("name")
         ],
         year=year,
         description=meta.get("description"),

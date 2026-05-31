@@ -8,7 +8,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import zenodo
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import Creator
+from data_aggregator_mcp.models import Creator, FundingRef
 
 
 def _record() -> dict:
@@ -169,6 +169,25 @@ def test_normalize_extracts_creator_orcid() -> None:
     r = zenodo._normalize(rec)
     assert r.creators[0].orcid == "0000-0002-1825-0097"
     assert r.creators[1].orcid is None
+
+
+def test_normalize_extracts_funding() -> None:
+    rec = {
+        "id": 1,
+        "metadata": {
+            "title": "t",
+            "grants": [
+                {"code": "654321", "funder": {"name": "European Commission"}},
+                {"title": "T", "funder": {"name": "NSF"}},
+                {"code": "x"},
+            ],
+        },
+    }
+    r = zenodo._normalize(rec)
+    assert r.funding == [
+        FundingRef(funder="European Commission", award="654321"),
+        FundingRef(funder="NSF", award="T"),
+    ]
 
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
