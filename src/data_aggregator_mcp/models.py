@@ -55,6 +55,16 @@ class Taxon(BaseModel):
     name: str  # canonical NCBI ScientificName
 
 
+class Metrics(BaseModel):
+    """Usage/impact signals, each a separate axis — NO blended score. All
+    nullable: a source that does not expose an axis leaves it None."""
+
+    citations: int | None = None
+    views: int | None = None
+    downloads: int | None = None
+    likes: int | None = None
+
+
 class DataResource(BaseModel):
     id: str  # source-prefixed canonical id, e.g. "zenodo:123"
     source: str
@@ -75,6 +85,7 @@ class DataResource(BaseModel):
     files: list[FileEntry] = Field(default_factory=list)
     links: list[Link] = Field(default_factory=list)
     citation: str | None = None  # rendered on resolve when cite= is requested
+    metrics: Metrics | None = None  # usage/impact signals, source-dependent
 
 
 class TaxonExpansion(BaseModel):

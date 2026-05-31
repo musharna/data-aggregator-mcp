@@ -16,6 +16,7 @@ from data_aggregator_mcp.models import (
     FetchResult,
     FileEntry,
     Link,
+    Metrics,
     SearchResult,
 )
 
@@ -39,6 +40,7 @@ def _sample_resource() -> DataResource:
         doi="10.5061/dryad.x",
         files=[FileEntry(name="a.csv", url="https://x/a.csv", checksum="md5:abc")],
         links=[Link(rel="is_supplement_to", target_id="datacite:10.1/y")],
+        metrics=Metrics(citations=3, views=100, downloads=42),
     )
 
 
