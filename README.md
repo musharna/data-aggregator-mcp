@@ -7,6 +7,7 @@ registries, and literature — behind a single normalized model.**
 [![Python](https://img.shields.io/pypi/pyversions/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml)
+[![Glama](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp/badge)](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp)
 
 `search` one query across **Zenodo, DataCite** (Dryad / Figshare / Dataverse /
 OSF / Mendeley), **NCBI omics** (GEO / SRA / BioProject), and **literature**
