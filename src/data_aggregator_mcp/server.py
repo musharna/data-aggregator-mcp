@@ -235,6 +235,18 @@ TOOLS: list[types.Tool] = [
                     "enum": ["dataset", "sequencing_run", "study", "publication", "software"],
                     "description": "Keep only results of this kind.",
                 },
+                "rank": {
+                    "type": "string",
+                    "enum": ["relevance", "semantic"],
+                    "default": "relevance",
+                    "description": (
+                        "Result ordering. 'relevance' (default) = upstream/merged order. "
+                        "'semantic' re-ranks the fetched page by embedding similarity to the "
+                        "query (needs EMBEDDING_API_BASE; degrades to relevance order with an "
+                        "errors['semantic'] note if unconfigured). In semantic mode pagination "
+                        "is window-based (each page consumes its full fetched window)."
+                    ),
+                },
             },
         },
         outputSchema=SearchResult.model_json_schema(),
@@ -362,6 +374,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     published_before=args.get("published_before"),
                     kind=args.get("kind"),
                     cursor=args.get("cursor"),
+                    rank=args.get("rank", "relevance"),
                 )
                 return result.model_dump()
             case "resolve":

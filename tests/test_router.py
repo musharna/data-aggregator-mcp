@@ -894,3 +894,43 @@ async def test_resolve_is_cached_by_id(monkeypatch):
     second = await router.resolve(None, "zenodo:1")
     assert calls["n"] == 1  # second served from cache
     assert first is second
+
+
+@pytest.mark.asyncio
+async def test_search_semantic_reorders_window(monkeypatch):
+    async def fake_zen_search(client, query, *, size, offset=0):
+        return 2, [
+            DataResource(id="zenodo:a", source="zenodo", kind="dataset", title="apple"),
+            DataResource(id="zenodo:b", source="zenodo", kind="dataset", title="banana"),
+        ]
+
+    monkeypatch.setattr(router.zenodo, "search", fake_zen_search)
+
+    async def fake_rerank(client, query, resources):
+        return list(reversed(resources)), None
+
+    monkeypatch.setattr(router.embeddings, "rerank", fake_rerank)
+
+    r = await router.search_page(
+        None, query="fruit", size=10, sources=["zenodo"], rank="semantic"
+    )
+    assert [x.id for x in r.results] == ["zenodo:b", "zenodo:a"]
+
+
+@pytest.mark.asyncio
+async def test_search_semantic_failsoft_keeps_order_and_notes_error(monkeypatch):
+    async def fake_zen_search(client, query, *, size, offset=0):
+        return 1, [DataResource(id="zenodo:a", source="zenodo", kind="dataset", title="apple")]
+
+    monkeypatch.setattr(router.zenodo, "search", fake_zen_search)
+
+    async def fake_rerank(client, query, resources):
+        return resources, "unavailable"
+
+    monkeypatch.setattr(router.embeddings, "rerank", fake_rerank)
+
+    r = await router.search_page(
+        None, query="x", size=10, sources=["zenodo"], rank="semantic"
+    )
+    assert [x.id for x in r.results] == ["zenodo:a"]
+    assert r.errors.get("semantic") == "unavailable"

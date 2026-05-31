@@ -20,6 +20,7 @@ import httpx
 from data_aggregator_mcp import (
     _cursor,
     datacite,
+    embeddings,
     huggingface,
     literature,
     omics,
@@ -205,6 +206,7 @@ async def search_page(
     published_before: int | None = None,
     kind: str | None = None,
     cursor: str | None = None,
+    rank: str = "relevance",
 ) -> SearchResult:
     """Fan out a search, merge + dedup, filter, and walk to a cut point that
     advances per-adapter offsets — returning a ``SearchResult`` whose
@@ -227,6 +229,7 @@ async def search_page(
         filters = st.get("filters") or {}
         size = st["size"]
         offsets = st["offsets"]
+        rank = st.get("rank", "relevance")
         expansion = None  # frozen on continuation; do not re-expand
         effective_query = query
         errors: dict[str, str] = {}
@@ -270,17 +273,34 @@ async def search_page(
 
     merged = _dedup(interleave(per_source))
 
-    emitted: list[DataResource] = []
-    cut = -1
-    for i, r in enumerate(merged):
-        cut = i
-        if _passes_filters(r, filters):
-            emitted.append(r)
-            if len(emitted) == size:
-                break
-    if cut < 0:
+    if rank == "semantic":
+        # Re-rank the full fetched window by semantic similarity, then emit the
+        # top `size` that pass filters. Ranking needs every candidate, so the
+        # WHOLE window is consumed (window-based pagination) — see the spec.
+        reordered, reason = await embeddings.rerank(client, query, merged)
+        if reason:
+            errors["semantic"] = reason
+        merged = reordered
+        emitted = []
+        for r in merged:
+            if _passes_filters(r, filters):
+                emitted.append(r)
+                if len(emitted) == size:
+                    break
+        consumed = merged
         cut = len(merged) - 1
-    consumed = merged[: cut + 1]
+    else:
+        emitted = []
+        cut = -1
+        for i, r in enumerate(merged):
+            cut = i
+            if _passes_filters(r, filters):
+                emitted.append(r)
+                if len(emitted) == size:
+                    break
+        if cut < 0:
+            cut = len(merged) - 1
+        consumed = merged[: cut + 1]
 
     consumed_per_adapter = Counter(origin[id(r)] for r in consumed)
     new_offsets = {n: offsets.get(n, 0) + consumed_per_adapter.get(n, 0) for n in names}
@@ -306,6 +326,7 @@ async def search_page(
                 "filters": filters,
                 "size": size,
                 "offsets": new_offsets,
+                "rank": rank,
             }
         )
         if more
