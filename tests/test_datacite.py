@@ -408,3 +408,16 @@ def test_normalize_metrics_none_when_absent() -> None:
 
     item = {"attributes": {"doi": "10.5061/dryad.y", "titles": [{"title": "t"}]}}
     assert _normalize(item).metrics is None
+
+
+def test_normalize_populates_last_updated() -> None:
+    from data_aggregator_mcp.datacite import _normalize
+
+    item = {
+        "attributes": {
+            "doi": "10.x/y",
+            "titles": [{"title": "t"}],
+            "updated": "2025-03-04T00:00:00Z",
+        }
+    }
+    assert _normalize(item).last_updated == "2025-03-04T00:00:00Z"

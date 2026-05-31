@@ -165,6 +165,7 @@ def _normalize(item: dict[str, Any]) -> DataResource:
         license=license_,
         access=_access_from_rights(rights),
         metrics=_metrics(a),
+        last_updated=a.get("updated"),
         links=[
             Link(rel=_rel(r["relationType"]), target_id=r["relatedIdentifier"])
             for r in (a.get("relatedIdentifiers") or [])

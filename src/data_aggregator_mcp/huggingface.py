@@ -58,6 +58,7 @@ def _normalize(d: dict[str, Any]) -> DataResource:
         subjects=[t for t in tags if ":" not in t],
         access="restricted" if d.get("gated") else "open",
         metrics=_metrics(d),
+        last_updated=d.get("lastModified"),
         files=files,
     )
 

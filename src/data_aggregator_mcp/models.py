@@ -88,6 +88,7 @@ class DataResource(BaseModel):
     metrics: Metrics | None = None  # usage/impact signals, source-dependent
     is_latest: bool | None = None  # None = no version info in links[]
     superseded_by: str | None = None  # id of the newer version, when known
+    last_updated: str | None = None  # source's modified/updated timestamp (ISO 8601)
 
 
 class TaxonExpansion(BaseModel):

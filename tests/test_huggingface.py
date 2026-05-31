@@ -88,6 +88,11 @@ def test_normalize_metrics_none_when_hf_counts_absent():
     assert huggingface._normalize({"id": "owner/name"}).metrics is None
 
 
+def test_normalize_populates_last_updated():
+    d = {"id": "owner/name", "lastModified": "2025-06-01T12:00:00.000Z"}
+    assert huggingface._normalize(d).last_updated == "2025-06-01T12:00:00.000Z"
+
+
 @pytest.mark.asyncio
 async def test_search_gated_is_restricted():
     async with httpx.AsyncClient(

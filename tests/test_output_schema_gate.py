@@ -41,6 +41,7 @@ def _sample_resource() -> DataResource:
         files=[FileEntry(name="a.csv", url="https://x/a.csv", checksum="md5:abc")],
         links=[Link(rel="is_supplement_to", target_id="datacite:10.1/y")],
         metrics=Metrics(citations=3, views=100, downloads=42),
+        last_updated="2025-03-04T00:00:00Z",
     )
 
 
