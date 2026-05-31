@@ -43,19 +43,23 @@ gh release create v0.11.0 --title v0.11.0 --notes-from-tag
 The publish workflow verifies the tag matches the package version, builds the
 wheel + sdist, and uploads to PyPI via OIDC trusted publishing.
 
-### 4. Submit to the official MCP registry (after the PyPI release is live)
+### 4. Submit to the official MCP registry — automated
+
+`.github/workflows/publish-registry.yml` handles this via GitHub Actions OIDC
+(`mcp-publisher login github-oidc`) — no device flow, no stored credentials. It
+fires automatically on a published release: it waits for the PyPI release to be
+queryable (the registry validates `https://pypi.org/pypi/data-aggregator-mcp/json`
+and the `mcp-name: io.github.musharna/data-aggregator-mcp` marker in the
+published description), then runs `mcp-publisher publish` reading `server.json`.
+
+To (re)publish the current `server.json` version without cutting a release —
+e.g. to backfill a release whose registry step predated this workflow — trigger
+it manually:
 
 ```bash
-# install the publisher CLI (see modelcontextprotocol/registry releases)
-mcp-publisher login github      # OIDC device flow; grants the io.github.musharna/* namespace
-mcp-publisher publish           # reads server.json; validates the README mcp-name marker
+gh workflow run publish-registry.yml --ref main
 ```
 
-The registry fetches `https://pypi.org/pypi/data-aggregator-mcp/json` and
-confirms the `mcp-name: io.github.musharna/data-aggregator-mcp` marker is present
-in the published description — so the PyPI release in step 3 must land first.
-
-## Future enhancement (not built)
-
-Registry submission can be automated in GitHub Actions via OIDC (a separate
-`mcp-publisher` CI step). Left manual here by design.
+The manual device-flow path (`mcp-publisher login github`) remains available as
+a fallback but is not needed; mcp-publisher 1.7.9's device flow does not honor
+GitHub's poll interval and reliably fails with `slow_down`.
