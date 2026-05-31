@@ -57,6 +57,7 @@ def test_available_sources_includes_huggingface() -> None:
 
 @pytest.mark.asyncio
 async def test_resolve_routes_hf_prefix(monkeypatch) -> None:
+    router._RESOLVE_CACHE.clear()
     called = {}
 
     async def fake(client, rid):
@@ -211,6 +212,7 @@ async def test_search_does_not_starve_later_source(httpx_mock: HTTPXMock) -> Non
 
 
 async def test_resolve_routes_zenodo_prefix(httpx_mock: HTTPXMock) -> None:
+    router._RESOLVE_CACHE.clear()
     httpx_mock.add_response(url="https://zenodo.org/api/records/123", json=_ZENODO_REC)
     async with httpx.AsyncClient() as client:
         r = await router.resolve(client, "zenodo:123")
@@ -218,6 +220,7 @@ async def test_resolve_routes_zenodo_prefix(httpx_mock: HTTPXMock) -> None:
 
 
 async def test_resolve_routes_bare_numeric_to_zenodo(httpx_mock: HTTPXMock) -> None:
+    router._RESOLVE_CACHE.clear()
     httpx_mock.add_response(url="https://zenodo.org/api/records/123", json=_ZENODO_REC)
     async with httpx.AsyncClient() as client:
         r = await router.resolve(client, "123")
@@ -225,6 +228,7 @@ async def test_resolve_routes_bare_numeric_to_zenodo(httpx_mock: HTTPXMock) -> N
 
 
 async def test_resolve_routes_datacite_prefix(httpx_mock: HTTPXMock) -> None:
+    router._RESOLVE_CACHE.clear()
     httpx_mock.add_response(
         url="https://api.datacite.org/dois/10.5061/dryad.x",
         json={"data": _DATACITE_ITEM},
@@ -241,6 +245,7 @@ async def test_resolve_routes_datacite_prefix(httpx_mock: HTTPXMock) -> None:
 
 
 async def test_resolve_routes_bare_doi_to_datacite(httpx_mock: HTTPXMock) -> None:
+    router._RESOLVE_CACHE.clear()
     httpx_mock.add_response(
         url="https://api.datacite.org/dois/10.5061/dryad.x",
         json={"data": _DATACITE_ITEM},
@@ -311,6 +316,7 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
 
 
 async def test_resolve_routes_omics_prefixes(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    router._RESOLVE_CACHE.clear()
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
         url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]&retmax=1&retmode=json",
@@ -331,6 +337,7 @@ async def test_resolve_routes_omics_prefixes(httpx_mock: HTTPXMock, monkeypatch)
 
 
 async def test_resolve_routes_pubmed_prefix(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    router._RESOLVE_CACHE.clear()
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     _EUT = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
     httpx_mock.add_response(
@@ -364,6 +371,7 @@ async def test_resolve_routes_pubmed_prefix(httpx_mock: HTTPXMock, monkeypatch) 
 
 
 async def test_resolve_routes_openaire_prefix(httpx_mock: HTTPXMock) -> None:
+    router._RESOLVE_CACHE.clear()
     httpx_mock.add_response(
         url="https://api.openaire.eu/graph/v1/researchProducts/abc",
         json={
@@ -566,6 +574,7 @@ async def test_enrich_resource_dedups_same_taxid_from_two_names(monkeypatch) -> 
 
 
 async def test_resolve_enriches_with_taxon(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    router._RESOLVE_CACHE.clear()
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=_plant_info()))
     httpx_mock.add_response(
@@ -593,6 +602,7 @@ async def test_resolve_enriches_with_taxon(httpx_mock: HTTPXMock, monkeypatch) -
 
 
 async def test_resolve_survives_taxonomy_failure(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    router._RESOLVE_CACHE.clear()
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     monkeypatch.setattr(
         taxonomy, "resolve_taxon", AsyncMock(side_effect=UpstreamUnavailableError("down"))
@@ -868,3 +878,59 @@ async def test_live_orcid_funding_relations_extraction() -> None:
     assert any(r.links for r in dc) or any(r.funding for r in dc), (
         "no live DataCite related-links or funding found"
     )
+
+
+@pytest.mark.asyncio
+async def test_resolve_is_cached_by_id(monkeypatch):
+    router._RESOLVE_CACHE.clear()
+    calls = {"n": 0}
+
+    async def fake_zenodo_resolve(client, rid):
+        calls["n"] += 1
+        return DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="X")
+
+    monkeypatch.setattr(router.zenodo, "resolve", fake_zenodo_resolve)
+    first = await router.resolve(None, "zenodo:1")
+    second = await router.resolve(None, "zenodo:1")
+    assert calls["n"] == 1  # second served from cache
+    assert first is second
+
+
+@pytest.mark.asyncio
+async def test_search_semantic_reorders_window(monkeypatch):
+    async def fake_zen_search(client, query, *, size, offset=0):
+        return 2, [
+            DataResource(id="zenodo:a", source="zenodo", kind="dataset", title="apple"),
+            DataResource(id="zenodo:b", source="zenodo", kind="dataset", title="banana"),
+        ]
+
+    monkeypatch.setattr(router.zenodo, "search", fake_zen_search)
+
+    async def fake_rerank(client, query, resources):
+        return list(reversed(resources)), None
+
+    monkeypatch.setattr(router.embeddings, "rerank", fake_rerank)
+
+    r = await router.search_page(
+        None, query="fruit", size=10, sources=["zenodo"], rank="semantic"
+    )
+    assert [x.id for x in r.results] == ["zenodo:b", "zenodo:a"]
+
+
+@pytest.mark.asyncio
+async def test_search_semantic_failsoft_keeps_order_and_notes_error(monkeypatch):
+    async def fake_zen_search(client, query, *, size, offset=0):
+        return 1, [DataResource(id="zenodo:a", source="zenodo", kind="dataset", title="apple")]
+
+    monkeypatch.setattr(router.zenodo, "search", fake_zen_search)
+
+    async def fake_rerank(client, query, resources):
+        return resources, "unavailable"
+
+    monkeypatch.setattr(router.embeddings, "rerank", fake_rerank)
+
+    r = await router.search_page(
+        None, query="x", size=10, sources=["zenodo"], rank="semantic"
+    )
+    assert [x.id for x in r.results] == ["zenodo:a"]
+    assert r.errors.get("semantic") == "unavailable"

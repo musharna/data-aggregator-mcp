@@ -22,6 +22,7 @@ from mcp.server.stdio import stdio_server
 
 from data_aggregator_mcp import citation
 from data_aggregator_mcp import fetch as fetch_mod
+from data_aggregator_mcp import health as health_mod
 from data_aggregator_mcp import router, zenodo
 from data_aggregator_mcp.errors import FetchNotSupportedError
 from data_aggregator_mcp.models import DataResource, FetchResult, SearchResult
@@ -234,6 +235,18 @@ TOOLS: list[types.Tool] = [
                     "enum": ["dataset", "sequencing_run", "study", "publication", "software"],
                     "description": "Keep only results of this kind.",
                 },
+                "rank": {
+                    "type": "string",
+                    "enum": ["relevance", "semantic"],
+                    "default": "relevance",
+                    "description": (
+                        "Result ordering. 'relevance' (default) = upstream/merged order. "
+                        "'semantic' re-ranks the fetched page by embedding similarity to the "
+                        "query (needs EMBEDDING_API_BASE; degrades to relevance order with an "
+                        "errors['semantic'] note if unconfigured). In semantic mode pagination "
+                        "is window-based (each page consumes its full fetched window)."
+                    ),
+                },
             },
         },
         outputSchema=SearchResult.model_json_schema(),
@@ -313,7 +326,20 @@ TOOLS: list[types.Tool] = [
             "List wired data sources and their capabilities (layer, kinds, supported "
             "filters, auth requirement, rate limit, status)."
         ),
-        inputSchema={"type": "object", "properties": {}},
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "check_health": {
+                    "type": "boolean",
+                    "description": (
+                        "When true, probe each source's base endpoint and attach a "
+                        "'health' field ({status: up|down, latency_ms, detail}) to each "
+                        "source. Default false: returns the static catalog with no network."
+                    ),
+                    "default": False,
+                },
+            },
+        },
         outputSchema={
             "type": "object",
             "properties": {"sources": {"type": "array", "items": {"type": "object"}}},
@@ -330,7 +356,11 @@ async def _list_tools() -> list[types.Tool]:
 
 async def _dispatch(name: str, args: dict[str, Any]) -> Any:
     if name == "list_sources":
-        return {"sources": _SOURCES}
+        if not args.get("check_health"):
+            return {"sources": _SOURCES}
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            probed = {h["name"]: h for h in await health_mod.probe_sources(client)}
+        return {"sources": [{**s, "health": probed.get(s["name"])} for s in _SOURCES]}
     async with httpx.AsyncClient(follow_redirects=True) as client:
         match name:
             case "search":
@@ -344,6 +374,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     published_before=args.get("published_before"),
                     kind=args.get("kind"),
                     cursor=args.get("cursor"),
+                    rank=args.get("rank", "relevance"),
                 )
                 return result.model_dump()
             case "resolve":

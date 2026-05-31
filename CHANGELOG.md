@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.16.0] - 2026-05-31
+
+### Added
+
+- Per-service rate limiting — an async token bucket paces outbound requests per
+  upstream (NCBI 3/s, 10/s with `NCBI_API_KEY`/`NCBI_EMAIL`; generous elsewhere),
+  acquired on every request and retry so a fan-out or 429-retry storm can't trip a
+  documented limit.
+- `list_sources(check_health=true)` — probes each source's base endpoint and
+  attaches `{status, latency_ms, detail}` per source. The default call stays
+  instant and network-free.
+- `search(rank="semantic")` — re-ranks the fetched page by embedding similarity
+  to the query via an optional OpenAI-compatible endpoint (`EMBEDDING_API_BASE`,
+  `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`). Degrades to relevance order with an
+  `errors["semantic"]` note when unconfigured or on failure. Semantic mode
+  paginates window-by-window (each page consumes its full fetched window).
+
+### Changed
+
+- `resolve` results are cached in-process (TTL, default 3600s; `CACHE_TTL_SECONDS`
+  to override, `0` disables). The previously unbounded taxonomy cache now uses the
+  same bounded TTL+LRU cache.
+
 ## [0.15.0] - 2026-05-31
 
 ### Added

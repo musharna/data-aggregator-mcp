@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from collections import Counter
 from typing import Any
 
@@ -19,12 +20,14 @@ import httpx
 from data_aggregator_mcp import (
     _cursor,
     datacite,
+    embeddings,
     huggingface,
     literature,
     omics,
     taxonomy,
     zenodo,
 )
+from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import DataResource, Link, SearchResult, Taxon, TaxonExpansion
@@ -42,6 +45,19 @@ _ADAPTERS: dict[str, Any] = {
     "literature": literature,
     "huggingface": huggingface,
 }
+
+
+def _cache_ttl() -> float:
+    raw = os.environ.get("CACHE_TTL_SECONDS")
+    if raw is None:
+        return 3600.0
+    try:
+        return float(raw)
+    except ValueError:
+        return 3600.0
+
+
+_RESOLVE_CACHE = TTLCache(maxsize=512, ttl=_cache_ttl())
 
 
 def available_sources() -> list[str]:
@@ -190,6 +206,7 @@ async def search_page(
     published_before: int | None = None,
     kind: str | None = None,
     cursor: str | None = None,
+    rank: str = "relevance",
 ) -> SearchResult:
     """Fan out a search, merge + dedup, filter, and walk to a cut point that
     advances per-adapter offsets — returning a ``SearchResult`` whose
@@ -212,6 +229,7 @@ async def search_page(
         filters = st.get("filters") or {}
         size = st["size"]
         offsets = st["offsets"]
+        rank = st.get("rank", "relevance")
         expansion = None  # frozen on continuation; do not re-expand
         effective_query = query
         errors: dict[str, str] = {}
@@ -255,17 +273,38 @@ async def search_page(
 
     merged = _dedup(interleave(per_source))
 
-    emitted: list[DataResource] = []
-    cut = -1
-    for i, r in enumerate(merged):
-        cut = i
-        if _passes_filters(r, filters):
-            emitted.append(r)
-            if len(emitted) == size:
-                break
-    if cut < 0:
+    if rank == "semantic":
+        # Re-rank the full fetched window by semantic similarity, then emit the
+        # top `size` that pass filters. Ranking needs every candidate, so the
+        # WHOLE window is consumed (window-based pagination) — see the spec.
+        # Anchor the re-rank on the raw `query`, not the organism-expanded
+        # `effective_query`: the boolean-expanded string ("(q) AND (syn1 OR syn2)")
+        # is a poor embedding anchor, and `merged` is already organism-filtered by
+        # the fan-out, so query-relevance within that set is the right signal.
+        reordered, reason = await embeddings.rerank(client, query, merged)
+        if reason:
+            errors["semantic"] = reason
+        merged = reordered
+        emitted = []
+        for r in merged:
+            if _passes_filters(r, filters):
+                emitted.append(r)
+                if len(emitted) == size:
+                    break
+        consumed = merged
         cut = len(merged) - 1
-    consumed = merged[: cut + 1]
+    else:
+        emitted = []
+        cut = -1
+        for i, r in enumerate(merged):
+            cut = i
+            if _passes_filters(r, filters):
+                emitted.append(r)
+                if len(emitted) == size:
+                    break
+        if cut < 0:
+            cut = len(merged) - 1
+        consumed = merged[: cut + 1]
 
     consumed_per_adapter = Counter(origin[id(r)] for r in consumed)
     new_offsets = {n: offsets.get(n, 0) + consumed_per_adapter.get(n, 0) for n in names}
@@ -291,6 +330,7 @@ async def search_page(
                 "filters": filters,
                 "size": size,
                 "offsets": new_offsets,
+                "rank": rank,
             }
         )
         if more
@@ -335,6 +375,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     - a bare DOI (contains ``/``)        → DataCite
     """
     rid = resource_id.strip()
+    cached = _RESOLVE_CACHE.get(rid)
+    if cached is not MISS:
+        return cached
     prefix = rid.split(":", 1)[0]
     if prefix in omics.PREFIXES:
         resource = await omics.resolve(client, rid)
@@ -358,4 +401,5 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             resource = await _enrich_resource(client, resource)
         except Exception as exc:  # additive enrichment must not sink a valid resolve
             logger.warning("resolve enrichment failed for %s: %r", rid, exc)
+    _RESOLVE_CACHE.set(rid, resource)
     return resource

@@ -7,6 +7,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import taxonomy
+from data_aggregator_mcp._cache import TTLCache
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
@@ -138,3 +139,47 @@ async def test_live_resolve_taxon_phelipanche_synonym() -> None:
     assert info.canonical_name == "Phelipanche aegyptiaca"
     assert "Orobanche aegyptiaca" in info.synonyms
     assert info.is_plant is True
+
+
+class _Clk:
+    def __init__(self) -> None:
+        self.t = 0.0
+
+    def now(self) -> float:
+        return self.t
+
+
+@pytest.mark.asyncio
+async def test_resolve_taxon_negative_cache_one_roundtrip(monkeypatch):
+    taxonomy._CACHE.clear()
+    calls = {"n": 0}
+
+    async def fake_esearch(client, db, term, retmax=1):
+        calls["n"] += 1
+        return 0, []  # no ids -> negative
+
+    monkeypatch.setattr(taxonomy._eutils, "esearch", fake_esearch)
+    assert await taxonomy.resolve_taxon(None, "Nonexistus") is None
+    assert await taxonomy.resolve_taxon(None, "Nonexistus") is None
+    assert calls["n"] == 1  # negative result cached
+
+
+@pytest.mark.asyncio
+async def test_resolve_taxon_cache_expires(monkeypatch):
+    clk = _Clk()
+    saved = taxonomy._CACHE
+    taxonomy._CACHE = TTLCache(maxsize=64, ttl=10.0, now=clk.now)
+    try:
+        calls = {"n": 0}
+
+        async def fake_esearch(client, db, term, retmax=1):
+            calls["n"] += 1
+            return 0, []
+
+        monkeypatch.setattr(taxonomy._eutils, "esearch", fake_esearch)
+        await taxonomy.resolve_taxon(None, "X")
+        clk.t = 10.0  # expire
+        await taxonomy.resolve_taxon(None, "X")
+        assert calls["n"] == 2
+    finally:
+        taxonomy._CACHE = saved
