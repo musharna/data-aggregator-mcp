@@ -8,7 +8,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import router, taxonomy
-from data_aggregator_mcp.errors import UpstreamUnavailableError
+from data_aggregator_mcp.errors import UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import DataResource
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
@@ -365,7 +365,7 @@ async def test_search_expands_organism_synonyms(httpx_mock: HTTPXMock, monkeypat
     )
     captured = {}
 
-    async def fake_zenodo_search(client, query, *, size=10):
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
         captured["query"] = query
         return 0, []
 
@@ -391,7 +391,7 @@ async def test_search_organism_lookup_failure_surfaces_error_and_runs_unexpanded
     )
     captured = {}
 
-    async def fake_zenodo_search(client, query, *, size=10):
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
         captured["query"] = query
         return 0, []
 
@@ -410,7 +410,7 @@ async def test_search_no_organism_param_skips_taxonomy(monkeypatch) -> None:
     called = AsyncMock()
     monkeypatch.setattr(taxonomy, "resolve_taxon", called)
 
-    async def fake_zenodo_search(client, query, *, size=10):
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -477,7 +477,7 @@ async def test_enrich_skips_resource_without_organism(monkeypatch) -> None:
 async def test_search_enriches_results(monkeypatch) -> None:
     monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=_plant_info()))
 
-    async def fake_omics_search(client, query, *, size=10):
+    async def fake_omics_search(client, query, *, size=10, offset=0):
         return 1, [
             DataResource(
                 id="geo:GSE1",
@@ -500,7 +500,7 @@ async def test_search_enrichment_failure_surfaces_taxonomy_error(monkeypatch) ->
         taxonomy, "resolve_taxon", AsyncMock(side_effect=UpstreamUnavailableError("down"))
     )
 
-    async def fake_omics_search(client, query, *, size=10):
+    async def fake_omics_search(client, query, *, size=10, offset=0):
         return 1, [
             DataResource(
                 id="geo:GSE1",
@@ -633,3 +633,188 @@ async def test_live_search_synonym_expansion_fires() -> None:
     assert expansion.taxid == 99112
     assert expansion.synonyms  # non-empty: at least one synonym was added
     assert "taxonomy" not in errors
+
+
+@_live_only
+async def test_live_pagination_walks_zenodo_datacite() -> None:
+    """Real-execution boundary probe: page 2 (via next_cursor) returns records
+    disjoint from page 1 against the live Zenodo + DataCite APIs."""
+    async with httpx.AsyncClient() as client:
+        p1 = await router.search_page(
+            client, query="climate", size=5, sources=["zenodo", "datacite"]
+        )
+        assert p1.next_cursor is not None
+        p2 = await router.search_page(client, cursor=p1.next_cursor)
+    ids1 = {r.id for r in p1.results}
+    ids2 = {r.id for r in p2.results}
+    assert ids1 and ids2
+    assert ids1.isdisjoint(ids2)  # paging advanced, did not repeat page 1
+
+
+# --- Task 8: search_page pagination + filters ----------------------------------
+
+
+def _pres(rid, *, doi=None, year=2020, kind="dataset", source="zenodo"):
+    return DataResource(id=rid, source=source, kind=kind, title=rid, doi=doi, year=year)
+
+
+def _mock_adapter(monkeypatch, name, pages):
+    """pages: dict offset -> (total, [DataResource]). search() looks up by offset."""
+
+    async def search(client, query, *, size, offset=0):
+        return pages.get(offset, (0, []))
+
+    monkeypatch.setattr(router._ADAPTERS[name], "search", search)
+
+
+async def test_fresh_search_sets_next_cursor_when_full_window(monkeypatch) -> None:
+    _mock_adapter(
+        monkeypatch,
+        "zenodo",
+        {0: (100, [_pres(f"z{i}", doi=f"10.z/{i}") for i in range(10)])},
+    )
+    for n in ("datacite", "omics", "literature"):
+        _mock_adapter(monkeypatch, n, {0: (0, [])})
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        page = await router.search_page(client, query="q", size=10)
+    assert page.next_cursor is not None
+
+
+async def test_continuation_advances_offsets(monkeypatch) -> None:
+    _mock_adapter(
+        monkeypatch,
+        "zenodo",
+        {
+            0: (100, [_pres(f"z{i}", doi=f"10.z/{i}") for i in range(10)]),
+            10: (100, [_pres(f"z{i}", doi=f"10.z/{i}") for i in range(10, 20)]),
+        },
+    )
+    for n in ("datacite", "omics", "literature"):
+        _mock_adapter(monkeypatch, n, {0: (0, []), 10: (0, [])})
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        p1 = await router.search_page(client, query="q", size=10)
+        assert p1.next_cursor is not None
+        p2 = await router.search_page(client, cursor=p1.next_cursor)
+    ids1 = {r.id for r in p1.results}
+    ids2 = {r.id for r in p2.results}
+    assert ids1.isdisjoint(ids2)  # page 2 walked deeper
+
+
+async def test_filter_stall_is_avoided(monkeypatch) -> None:
+    # all page-1 records are year=1999 (filtered out by published_after=2010);
+    # page-2 records pass. Offsets MUST advance past the rejected page.
+    _mock_adapter(
+        monkeypatch,
+        "zenodo",
+        {
+            0: (100, [_pres(f"z{i}", doi=f"10.z/{i}", year=1999) for i in range(10)]),
+            10: (100, [_pres(f"z{i}", doi=f"10.z/{i}", year=2015) for i in range(10, 20)]),
+        },
+    )
+    for n in ("datacite", "omics", "literature"):
+        _mock_adapter(monkeypatch, n, {0: (0, []), 10: (0, [])})
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        p1 = await router.search_page(client, query="q", size=10, published_after=2010)
+    assert p1.results == [] and p1.next_cursor is not None  # advanced, not stalled
+
+
+async def test_year_and_kind_filters(monkeypatch) -> None:
+    recs = [
+        _pres("a", doi="10/a", year=2005, kind="dataset"),
+        _pres("b", doi="10/b", year=2018, kind="dataset"),
+        _pres("c", doi="10/c", year=2018, kind="publication"),
+        _pres("d", doi="10/d", year=None, kind="dataset"),
+    ]
+    _mock_adapter(monkeypatch, "zenodo", {0: (4, recs)})
+    for n in ("datacite", "omics", "literature"):
+        _mock_adapter(monkeypatch, n, {0: (0, [])})
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        p = await router.search_page(
+            client, query="q", size=10, published_after=2010, kind="dataset"
+        )
+    # 2018 dataset only; c wrong kind, a too old, d year=None dropped
+    assert {r.id for r in p.results} == {"b"}
+
+
+async def test_unknown_kind_rejected() -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        with pytest.raises(ValidationError):
+            await router.search_page(client, query="q", kind="nonsense")
+
+
+async def test_corrupt_cursor_rejected() -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        with pytest.raises(ValidationError):
+            await router.search_page(client, cursor="garbage!!")
+
+
+async def test_neither_query_nor_cursor_rejected() -> None:
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        with pytest.raises(ValidationError):
+            await router.search_page(client, size=10)
+
+
+async def test_page1_unfiltered_matches_legacy(monkeypatch) -> None:
+    recs = [_pres(f"z{i}", doi=f"10.z/{i}") for i in range(5)]
+    _mock_adapter(monkeypatch, "zenodo", {0: (5, recs)})
+    for n in ("datacite", "omics", "literature"):
+        _mock_adapter(monkeypatch, n, {0: (0, [])})
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        legacy = await router.search(client, "q", size=10)  # old 4-tuple
+        page = await router.search_page(client, query="q", size=10)
+    assert [r.id for r in legacy[1]] == [r.id for r in page.results]
+
+
+async def test_more_uses_upstream_total_not_window_length(monkeypatch) -> None:
+    """Regression: a paged adapter returns < size records (page-boundary slice)
+    yet still has rows past its offset. ``more`` must key off the upstream total,
+    not ``len(recs) == size`` — else pagination stops prematurely and loses the
+    deeper results.
+    """
+    # zenodo reports 100 total hits but this window yields only 6 records
+    # (as the offset-slice would produce mid-stream), and all are consumed.
+    _mock_adapter(
+        monkeypatch,
+        "zenodo",
+        {0: (100, [_pres(f"z{i}", doi=f"10.z/{i}") for i in range(6)])},
+    )
+    for n in ("datacite", "omics", "literature"):
+        _mock_adapter(monkeypatch, n, {0: (0, [])})
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        page = await router.search_page(client, query="q", size=10)
+    assert len(page.results) == 6
+    assert page.next_cursor is not None  # 6 consumed < 100 total → more remains
+
+
+async def test_empty_page_with_nonzero_total_does_not_loop(monkeypatch) -> None:
+    """Regression (review M1): an adapter reporting total>0 but returning no
+    records must NOT emit a next_cursor — offsets cannot advance on an empty
+    page, so a cursor would replay the same window forever.
+    """
+    _mock_adapter(monkeypatch, "zenodo", {0: (50, [])})
+    for n in ("datacite", "omics", "literature"):
+        _mock_adapter(monkeypatch, n, {0: (0, [])})
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        page = await router.search_page(client, query="q", size=10)
+    assert page.results == []
+    assert page.next_cursor is None  # no candidates fetched → terminate, don't loop

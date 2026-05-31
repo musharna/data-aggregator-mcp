@@ -33,9 +33,19 @@ async def esearch(
     term: str,
     *,
     retmax: int,
+    retstart: int = 0,
 ) -> tuple[int, list[str]]:
     """Return (total_count, idlist) for ``term`` in NCBI database ``db``."""
-    params = {"db": db, "term": term, "retmax": str(retmax), **_common_params()}
+    params = {
+        "db": db,
+        "term": term,
+        "retmax": str(retmax),
+        **_common_params(),
+    }
+    if retstart:
+        # only sent when paging past the first window, so the offset=0 request
+        # stays byte-identical to the pre-pagination one (see P1 spec)
+        params["retstart"] = str(retstart)
     data = await _http.request_json(
         client,
         "GET",

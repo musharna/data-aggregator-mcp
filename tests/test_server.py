@@ -151,13 +151,15 @@ def test_search_tool_exposes_organism_param() -> None:
 
 
 async def test_dispatch_search_passes_organism_to_router(monkeypatch) -> None:
+    from data_aggregator_mcp.models import SearchResult
+
     captured = {}
 
-    async def fake_router_search(client, query, *, size=10, sources=None, organism=None):
-        captured["organism"] = organism
-        return 0, [], {}, None
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(query=kwargs.get("query"), total=0, count=0, results=[], errors={})
 
-    monkeypatch.setattr("data_aggregator_mcp.router.search", fake_router_search)
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
     out = await server._dispatch("search", {"query": "rna", "organism": "Zea mays"})
     assert captured["organism"] == "Zea mays"
     assert out["taxon_expansion"] is None
@@ -195,3 +197,67 @@ async def test_dispatch_resolve_no_cite_leaves_citation_none(monkeypatch) -> Non
 def test_resolve_tool_exposes_cite_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "resolve")
     assert "cite" in tool.inputSchema["properties"]
+
+
+def test_list_sources_advertises_filters_and_cursor() -> None:
+    for s in server._SOURCES:
+        assert {"published_after", "published_before", "kind", "cursor"} <= set(
+            s["filters_supported"]
+        )
+
+
+def test_search_schema_exposes_pagination_and_filters() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "search")
+    props = tool.inputSchema["properties"]
+    assert {"cursor", "published_after", "published_before", "kind"} <= set(props)
+    assert props["kind"]["enum"] == [
+        "dataset",
+        "sequencing_run",
+        "study",
+        "publication",
+        "software",
+    ]
+
+
+def test_search_schema_query_not_required() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "search")
+    assert "query" not in tool.inputSchema.get("required", [])
+
+
+async def test_dispatch_threads_cursor(monkeypatch) -> None:
+    from data_aggregator_mcp.models import SearchResult
+
+    captured = {}
+
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(query="q", total=0, count=0, results=[], errors={})
+
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
+    await server._dispatch("search", {"cursor": "tok"})
+    assert captured["cursor"] == "tok"
+    assert captured["query"] is None
+
+
+async def test_dispatch_threads_filters(monkeypatch) -> None:
+    from data_aggregator_mcp.models import SearchResult
+
+    captured = {}
+
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(query="rice", total=0, count=0, results=[], errors={})
+
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
+    await server._dispatch(
+        "search",
+        {
+            "query": "rice",
+            "published_after": 2010,
+            "published_before": 2020,
+            "kind": "dataset",
+        },
+    )
+    assert captured["published_after"] == 2010
+    assert captured["published_before"] == 2020
+    assert captured["kind"] == "dataset"

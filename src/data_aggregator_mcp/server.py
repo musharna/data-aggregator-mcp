@@ -79,7 +79,14 @@ _SOURCES: list[dict[str, Any]] = [
         "name": "zenodo",
         "layer": "archives",
         "kinds": ["dataset", "publication", "software"],
-        "filters_supported": ["query", "size"],
+        "filters_supported": [
+            "query",
+            "size",
+            "published_after",
+            "published_before",
+            "kind",
+            "cursor",
+        ],
         "auth_required": False,
         "rate_limit": "~60/min anonymous",
         "status": "live",
@@ -90,7 +97,13 @@ _SOURCES: list[dict[str, Any]] = [
         "name": "datacite",
         "layer": "archives",
         "kinds": ["dataset", "publication", "software"],
-        "filters_supported": ["query"],
+        "filters_supported": [
+            "query",
+            "published_after",
+            "published_before",
+            "kind",
+            "cursor",
+        ],
         "auth_required": False,
         "rate_limit": "respects 429/Retry-After",
         "status": "live (discovery; fetch on resolve for Figshare/Dataverse/OSF/Zenodo, manifest-only for Dryad)",
@@ -102,7 +115,14 @@ _SOURCES: list[dict[str, Any]] = [
         "name": "omics",
         "layer": "omics",
         "kinds": ["study", "sequencing_run"],
-        "filters_supported": ["query", "organism"],
+        "filters_supported": [
+            "query",
+            "organism",
+            "published_after",
+            "published_before",
+            "kind",
+            "cursor",
+        ],
         "auth_required": False,
         "rate_limit": "NCBI 3/s (10/s with NCBI_API_KEY); ENA unmetered",
         "status": "live (discovery; SRA FASTQ + GEO supplementary fetch on resolve)",
@@ -114,7 +134,14 @@ _SOURCES: list[dict[str, Any]] = [
         "name": "literature",
         "layer": "literature",
         "kinds": ["publication"],
-        "filters_supported": ["query", "organism"],
+        "filters_supported": [
+            "query",
+            "organism",
+            "published_after",
+            "published_before",
+            "kind",
+            "cursor",
+        ],
         "auth_required": False,
         "rate_limit": "NCBI 3/s (10/s with NCBI_API_KEY); OpenAIRE + ScholeXplorer unmetered",
         "status": "live (discovery + resolve-time data links + identifiers; fetch retrieves open-access full text via EuropePMC/Unpaywall)",
@@ -164,8 +191,25 @@ TOOLS: list[types.Tool] = [
                     "'Orobanche aegyptiaca' also matches 'Phelipanche aegyptiaca'). The "
                     "expansion is echoed in taxon_expansion.",
                 },
+                "cursor": {
+                    "type": "string",
+                    "description": "Opaque pagination token from a prior search's next_cursor. "
+                    "When set, all other search params are read from the cursor.",
+                },
+                "published_after": {
+                    "type": "integer",
+                    "description": "Keep results with year >= this.",
+                },
+                "published_before": {
+                    "type": "integer",
+                    "description": "Keep results with year <= this.",
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": ["dataset", "sequencing_run", "study", "publication", "software"],
+                    "description": "Keep only results of this kind.",
+                },
             },
-            "required": ["query"],
         },
         outputSchema=SearchResult.model_json_schema(),
     ),
@@ -264,21 +308,18 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
     async with httpx.AsyncClient(follow_redirects=True) as client:
         match name:
             case "search":
-                total, results, errors, expansion = await router.search(
+                result = await router.search_page(
                     client,
-                    args["query"],
+                    query=args.get("query"),
                     size=args.get("size", zenodo.DEFAULT_SIZE),
                     sources=args.get("sources"),
                     organism=args.get("organism"),
+                    published_after=args.get("published_after"),
+                    published_before=args.get("published_before"),
+                    kind=args.get("kind"),
+                    cursor=args.get("cursor"),
                 )
-                return SearchResult(
-                    query=args["query"],
-                    total=total,
-                    count=len(results),
-                    results=results,
-                    errors=errors,
-                    taxon_expansion=expansion,
-                ).model_dump()
+                return result.model_dump()
             case "resolve":
                 resource = await router.resolve(client, args["id"])
                 cite = args.get("cite")

@@ -263,6 +263,23 @@ async def test_resolve_bioproject_attaches_sra_links(httpx_mock: HTTPXMock, monk
     assert any(lnk.target_id == "sra:SRX9" and lnk.rel == "has_data" for lnk in r.links)
 
 
+@pytest.mark.asyncio
+async def test_search_offset_threads_retstart(monkeypatch) -> None:
+    seen = []
+
+    async def fake_esearch(client, db, term, *, retmax, retstart=0):
+        seen.append((db, retstart))
+        return 0, []
+
+    monkeypatch.setattr(omics._eutils, "esearch", fake_esearch)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        await omics.search(client, "q", size=10, offset=30)
+    assert all(rs == 30 for _, rs in seen)
+    assert len(seen) == len(omics._DB)
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 

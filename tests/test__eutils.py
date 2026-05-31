@@ -131,3 +131,29 @@ async def test_efetch_retries_malformed_xml_then_returns_text(
     async with httpx.AsyncClient() as client:
         body = await _eutils.efetch(client, "taxonomy", ["3701"])
     assert "<TaxId>3701</TaxId>" in body
+
+
+async def test_esearch_sends_retstart() -> None:
+    captured: dict = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        captured.update(dict(request.url.params))
+        return httpx.Response(200, json={"esearchresult": {"count": "99", "idlist": ["1"]}})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        await _eutils.esearch(client, "pubmed", "cancer", retmax=10, retstart=20)
+    assert captured["retstart"] == "20"
+
+
+async def test_esearch_default_retstart_zero_or_absent() -> None:
+    captured: dict = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        captured.update(dict(request.url.params))
+        return httpx.Response(200, json={"esearchresult": {"count": "1", "idlist": ["1"]}})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        await _eutils.esearch(client, "pubmed", "cancer", retmax=10)
+    assert captured.get("retstart", "0") == "0"

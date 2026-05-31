@@ -30,11 +30,12 @@ async def search(
     query: str,
     *,
     size: int = DEFAULT_SIZE,
+    offset: int = 0,
 ) -> tuple[int, list[DataResource]]:
     """Discover across PubMed + OpenAIRE. Returns (summed_total, COMPACT)."""
     capped = min(size, MAX_SIZE)
     outcomes = await asyncio.gather(
-        *(b.search(client, query, size=capped) for b in _BACKENDS.values()),
+        *(b.search(client, query, size=capped, offset=offset) for b in _BACKENDS.values()),
         return_exceptions=True,
     )
     total = 0

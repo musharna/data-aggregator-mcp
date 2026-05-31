@@ -105,9 +105,9 @@ _NORMALIZERS = {"gds": _normalize_geo, "sra": _normalize_sra, "bioproject": _nor
 
 
 async def _search_db(
-    client: httpx.AsyncClient, db: str, query: str, size: int
+    client: httpx.AsyncClient, db: str, query: str, size: int, offset: int = 0
 ) -> tuple[int, list[DataResource]]:
-    count, ids = await _eutils.esearch(client, db, query, retmax=size)
+    count, ids = await _eutils.esearch(client, db, query, retmax=size, retstart=offset)
     if not ids:
         return count, []
     docs = await _eutils.esummary(client, db, ids)
@@ -130,11 +130,12 @@ async def search(
     query: str,
     *,
     size: int = DEFAULT_SIZE,
+    offset: int = 0,
 ) -> tuple[int, list[DataResource]]:
     """Discover across GEO + SRA + BioProject. Returns (summed_total, COMPACT)."""
     capped = min(size, MAX_SIZE)
     outcomes = await asyncio.gather(
-        *(_search_db(client, db, query, capped) for db in _DB.values()),
+        *(_search_db(client, db, query, capped, offset) for db in _DB.values()),
         return_exceptions=True,
     )
     total = 0

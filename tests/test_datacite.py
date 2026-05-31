@@ -181,6 +181,36 @@ def test_normalize_access_none_without_open_license() -> None:
     assert datacite._normalize(item).access is None
 
 
+@pytest.mark.asyncio
+async def test_search_offset_requests_page_number_and_slices():
+    captured = {}
+
+    def rec(i):
+        return {
+            "id": f"10.x/{i}",
+            "type": "dois",
+            "attributes": {
+                "doi": f"10.x/{i}",
+                "titles": [{"title": f"t{i}"}],
+                "publicationYear": 2020,
+                "types": {},
+            },
+        }
+
+    async def handler(request):
+        captured.update(dict(request.url.params))
+        return httpx.Response(
+            200, json={"data": [rec(i) for i in range(10)], "meta": {"total": 100}}
+        )
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        total, recs = await datacite.search(client, "q", size=10, offset=20)
+    assert captured["page[number]"] == "3"  # 20//10 + 1
+    assert captured["page[size]"] == "10"
+    assert len(recs) == 10  # 20%10 == 0, no slice
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 

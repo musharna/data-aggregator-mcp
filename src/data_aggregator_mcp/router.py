@@ -11,13 +11,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections import Counter
 from typing import Any
 
 import httpx
 
-from data_aggregator_mcp import datacite, literature, omics, taxonomy, zenodo
+from data_aggregator_mcp import _cursor, datacite, literature, omics, taxonomy, zenodo
 from data_aggregator_mcp._merge import interleave
-from data_aggregator_mcp.models import DataResource, Link, Taxon, TaxonExpansion
+from data_aggregator_mcp.errors import ValidationError
+from data_aggregator_mcp.models import DataResource, Link, SearchResult, Taxon, TaxonExpansion
+
+_VALID_KINDS = {"dataset", "sequencing_run", "study", "publication", "software"}
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +153,153 @@ async def _enrich(
     return out
 
 
+def _passes_filters(r: DataResource, f: dict[str, Any]) -> bool:
+    """Apply the E2 facet filters to a normalized resource. A record with
+    ``year is None`` is dropped whenever either year bound is set (cannot prove
+    it satisfies the bound — fail toward exclusion).
+    """
+    pa, pb, kind = f.get("published_after"), f.get("published_before"), f.get("kind")
+    if kind is not None and r.kind != kind:
+        return False
+    if (pa is not None or pb is not None) and r.year is None:
+        return False
+    if pa is not None and r.year < pa:
+        return False
+    if pb is not None and r.year > pb:
+        return False
+    return True
+
+
+async def search_page(
+    client: httpx.AsyncClient,
+    *,
+    query: str | None = None,
+    size: int = 10,
+    sources: list[str] | None = None,
+    organism: str | None = None,
+    published_after: int | None = None,
+    published_before: int | None = None,
+    kind: str | None = None,
+    cursor: str | None = None,
+) -> SearchResult:
+    """Fan out a search, merge + dedup, filter, and walk to a cut point that
+    advances per-adapter offsets — returning a ``SearchResult`` whose
+    ``next_cursor`` replays the next page.
+
+    Two call modes: a fresh search (pass ``query`` + optional
+    ``sources``/``organism``/filters/``size``) or a continuation (pass only
+    ``cursor``; every other parameter is read from the cursor and the organism
+    is NOT re-expanded, keeping pages consistent). See the pagination spec for
+    the cut-point offset-advance that prevents a fully-filtered page stalling.
+    """
+    if kind is not None and kind not in _VALID_KINDS:
+        raise ValidationError(f"unknown kind {kind!r}; valid: {sorted(_VALID_KINDS)}")
+
+    if cursor is not None:
+        st = _cursor.decode(cursor)
+        query = st["q"]
+        sources = st.get("sources")
+        organism = st.get("organism")
+        filters = st.get("filters") or {}
+        size = st["size"]
+        offsets = st["offsets"]
+        expansion = None  # frozen on continuation; do not re-expand
+        effective_query = query
+        errors: dict[str, str] = {}
+    else:
+        if query is None:
+            raise ValidationError("search requires either 'query' or 'cursor'")
+        filters = {
+            "published_after": published_after,
+            "published_before": published_before,
+            "kind": kind,
+        }
+        errors = {}
+        effective_query, expansion = await _expand_organism(client, query, organism, errors)
+        offsets = {}
+
+    adapters = _select(sources)
+    names = list(adapters)
+    outcomes = await asyncio.gather(
+        *(
+            adapters[n].search(client, effective_query, size=size, offset=offsets.get(n, 0))
+            for n in names
+        ),
+        return_exceptions=True,
+    )
+
+    origin: dict[int, str] = {}
+    per_source: list[list[DataResource]] = []
+    totals: dict[str, int] = {}
+    total = 0
+    for name, outcome in zip(names, outcomes):
+        if isinstance(outcome, Exception):
+            errors[name] = f"{type(outcome).__name__}: {outcome}"
+            totals[name] = 0
+            continue
+        adapter_total, recs = outcome
+        total += adapter_total
+        totals[name] = adapter_total
+        for r in recs:
+            origin[id(r)] = name
+        per_source.append(recs)
+
+    merged = _dedup(interleave(per_source))
+
+    emitted: list[DataResource] = []
+    cut = -1
+    for i, r in enumerate(merged):
+        cut = i
+        if _passes_filters(r, filters):
+            emitted.append(r)
+            if len(emitted) == size:
+                break
+    if cut < 0:
+        cut = len(merged) - 1
+    consumed = merged[: cut + 1]
+
+    consumed_per_adapter = Counter(origin[id(r)] for r in consumed)
+    new_offsets = {n: offsets.get(n, 0) + consumed_per_adapter.get(n, 0) for n in names}
+
+    # More results remain if we left fetched candidates unconsumed, OR any source
+    # still has rows past our advanced offset. Using the upstream total (not
+    # len(recs)==size) is robust to the page-boundary slice that makes a paged
+    # adapter return < size records even when it has more.
+    #
+    # `bool(merged)` guard: an empty page consumed nothing, so offsets could not
+    # advance — emitting a cursor here would replay the identical window forever
+    # (e.g. an adapter that reports total>0 but returns []). No candidates fetched
+    # ⇒ no way to page forward ⇒ stop.
+    more = bool(merged) and (
+        (cut < len(merged) - 1) or any(new_offsets.get(n, 0) < totals.get(n, 0) for n in names)
+    )
+    next_cursor = (
+        _cursor.encode(
+            {
+                "q": query,
+                "sources": sources,
+                "organism": organism,
+                "filters": filters,
+                "size": size,
+                "offsets": new_offsets,
+            }
+        )
+        if more
+        else None
+    )
+
+    enriched = await _enrich(client, emitted, errors)
+    return SearchResult(
+        query=query,
+        total=total,
+        count=len(enriched),
+        results=enriched,
+        errors=errors,
+        next_cursor=next_cursor,
+        taxon_expansion=expansion,
+    )
+
+
 async def search(
     client: httpx.AsyncClient,
     query: str,
@@ -157,32 +308,12 @@ async def search(
     sources: list[str] | None = None,
     organism: str | None = None,
 ) -> tuple[int, list[DataResource], dict[str, str], TaxonExpansion | None]:
-    """Fan out ``query`` to selected adapters concurrently, merge + dedup.
-
-    When ``organism`` is given it is resolved against NCBI Taxonomy and the
-    query is expanded with the canonical name + synonyms (synonym expansion).
+    """Legacy 4-tuple entrypoint, preserved for existing callers/tests. Delegates
+    to :func:`search_page` (page 1, no filters) and unpacks its model.
     Returns ``(total, deduped_results, errors, taxon_expansion)``.
     """
-    adapters = _select(sources)
-    names = list(adapters)
-    errors: dict[str, str] = {}
-    effective_query, expansion = await _expand_organism(client, query, organism, errors)
-    outcomes = await asyncio.gather(
-        *(adapters[n].search(client, effective_query, size=size) for n in names),
-        return_exceptions=True,
-    )
-    per_source: list[list[DataResource]] = []
-    total = 0
-    for name, outcome in zip(names, outcomes):
-        if isinstance(outcome, Exception):
-            errors[name] = f"{type(outcome).__name__}: {outcome}"
-            continue
-        adapter_total, recs = outcome
-        total += adapter_total
-        per_source.append(recs)
-    merged = _dedup(interleave(per_source))[:size]
-    enriched = await _enrich(client, merged, errors)
-    return total, enriched, errors, expansion
+    r = await search_page(client, query=query, size=size, sources=sources, organism=organism)
+    return r.total, r.results, r.errors, r.taxon_expansion
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:

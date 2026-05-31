@@ -77,8 +77,11 @@ async def search(
     query: str,
     *,
     size: int = DEFAULT_SIZE,
+    offset: int = 0,
 ) -> tuple[int, list[DataResource]]:
-    count, ids = await _eutils.esearch(client, "pubmed", query, retmax=min(size, MAX_SIZE))
+    count, ids = await _eutils.esearch(
+        client, "pubmed", query, retmax=min(size, MAX_SIZE), retstart=offset
+    )
     if not ids:
         return count, []
     docs = await _eutils.esummary(client, "pubmed", ids)
