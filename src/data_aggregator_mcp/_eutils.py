@@ -33,9 +33,16 @@ async def esearch(
     term: str,
     *,
     retmax: int,
+    retstart: int = 0,
 ) -> tuple[int, list[str]]:
     """Return (total_count, idlist) for ``term`` in NCBI database ``db``."""
-    params = {"db": db, "term": term, "retmax": str(retmax), **_common_params()}
+    params = {
+        "db": db,
+        "term": term,
+        "retmax": str(retmax),
+        "retstart": str(retstart),
+        **_common_params(),
+    }
     data = await _http.request_json(
         client,
         "GET",

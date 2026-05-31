@@ -9,7 +9,7 @@ from data_aggregator_mcp import _eutils
 async def test_esearch_returns_count_and_idlist(httpx_mock: HTTPXMock, monkeypatch) -> None:
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=rice&retmax=10&retmode=json",
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=rice&retmax=10&retstart=0&retmode=json",
         json={"esearchresult": {"count": "42", "idlist": ["200181578", "200181579"]}},
     )
     async with httpx.AsyncClient() as client:
@@ -41,7 +41,7 @@ async def test_api_key_appended_when_env_set(httpx_mock: HTTPXMock, monkeypatch)
     # The mock matches only if _common_params() appended api_key=testkey to the URL.
     monkeypatch.setenv("NCBI_API_KEY", "testkey")
     httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=rice&retmax=10&retmode=json&api_key=testkey",
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=rice&retmax=10&retstart=0&retmode=json&api_key=testkey",
         json={"esearchresult": {"count": "1", "idlist": ["1"]}},
     )
     async with httpx.AsyncClient() as client:
@@ -131,3 +131,29 @@ async def test_efetch_retries_malformed_xml_then_returns_text(
     async with httpx.AsyncClient() as client:
         body = await _eutils.efetch(client, "taxonomy", ["3701"])
     assert "<TaxId>3701</TaxId>" in body
+
+
+async def test_esearch_sends_retstart() -> None:
+    captured: dict = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        captured.update(dict(request.url.params))
+        return httpx.Response(200, json={"esearchresult": {"count": "99", "idlist": ["1"]}})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        await _eutils.esearch(client, "pubmed", "cancer", retmax=10, retstart=20)
+    assert captured["retstart"] == "20"
+
+
+async def test_esearch_default_retstart_zero_or_absent() -> None:
+    captured: dict = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        captured.update(dict(request.url.params))
+        return httpx.Response(200, json={"esearchresult": {"count": "1", "idlist": ["1"]}})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        await _eutils.esearch(client, "pubmed", "cancer", retmax=10)
+    assert captured.get("retstart", "0") == "0"
