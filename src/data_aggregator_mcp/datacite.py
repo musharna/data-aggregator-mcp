@@ -20,7 +20,7 @@ import httpx
 
 from data_aggregator_mcp import _http, dataverse, dryad, figshare, osf, zenodo
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import Creator, DataResource, compact
+from data_aggregator_mcp.models import Creator, DataResource, _orcid, compact
 
 BASE_URL = "https://api.datacite.org"
 DEFAULT_TIMEOUT = 30.0
@@ -102,6 +102,16 @@ def _access_from_rights(rights_list: list[dict[str, Any]] | None) -> str | None:
     return None
 
 
+def _creator(c: dict[str, Any]) -> Creator:
+    orcid = None
+    for nid in c.get("nameIdentifiers") or []:
+        cand = _orcid(nid.get("nameIdentifier"))
+        if cand:
+            orcid = cand
+            break
+    return Creator(name=c.get("name", ""), orcid=orcid)
+
+
 def _normalize(item: dict[str, Any]) -> DataResource:
     a = item.get("attributes", {}) or {}
     client_id = (((item.get("relationships") or {}).get("client") or {}).get("data") or {}).get(
@@ -118,7 +128,7 @@ def _normalize(item: dict[str, Any]) -> DataResource:
         source=_source_for_client(client_id),
         kind=_KIND_MAP.get(rt, "dataset"),
         title=_first(a.get("titles"), "title") or "",
-        creators=[Creator(name=c.get("name", "")) for c in (a.get("creators") or [])],
+        creators=[_creator(c) for c in (a.get("creators") or [])],
         year=_year(a.get("publicationYear")),
         description=_first(a.get("descriptions"), "description"),
         doi=doi,

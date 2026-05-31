@@ -155,6 +155,22 @@ async def test_search_offset_zero_unchanged():
     assert captured.get("page", "1") == "1"
 
 
+def test_normalize_extracts_creator_orcid() -> None:
+    rec = {
+        "id": 1,
+        "metadata": {
+            "title": "t",
+            "creators": [
+                {"name": "A", "orcid": "0000-0002-1825-0097"},
+                {"name": "B"},
+            ],
+        },
+    }
+    r = zenodo._normalize(rec)
+    assert r.creators[0].orcid == "0000-0002-1825-0097"
+    assert r.creators[1].orcid is None
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 

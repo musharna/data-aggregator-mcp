@@ -212,6 +212,31 @@ async def test_search_offset_requests_page_number_and_slices():
     assert len(recs) == 10  # 20%10 == 0, no slice
 
 
+def test_normalize_extracts_creator_orcid() -> None:
+    item = {
+        "attributes": {
+            "doi": "10.x/y",
+            "titles": [{"title": "t"}],
+            "types": {},
+            "creators": [
+                {
+                    "name": "A",
+                    "nameIdentifiers": [
+                        {
+                            "nameIdentifier": "https://orcid.org/0000-0002-1825-0097",
+                            "nameIdentifierScheme": "ORCID",
+                        }
+                    ],
+                },
+                {"name": "B"},
+            ],
+        }
+    }
+    r = datacite._normalize(item)
+    assert r.creators[0].orcid == "0000-0002-1825-0097"
+    assert r.creators[1].orcid is None
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 

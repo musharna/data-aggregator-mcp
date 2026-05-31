@@ -17,6 +17,7 @@ from data_aggregator_mcp.models import (
     Creator,
     DataResource,
     FileEntry,
+    _orcid,
     compact,
     normalize_access,
 )
@@ -56,7 +57,10 @@ def _normalize(record: dict[str, Any]) -> DataResource:
         source="zenodo",
         kind=_KIND_MAP.get(rtype, "dataset"),
         title=meta.get("title", ""),
-        creators=[Creator(name=c.get("name", "")) for c in meta.get("creators", []) or []],
+        creators=[
+            Creator(name=c.get("name", ""), orcid=_orcid(c.get("orcid")))
+            for c in meta.get("creators", []) or []
+        ],
         year=year,
         description=meta.get("description"),
         doi=record.get("doi"),
