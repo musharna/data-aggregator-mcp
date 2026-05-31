@@ -134,9 +134,14 @@ async def search(
     query: str,
     *,
     size: int = DEFAULT_SIZE,
+    offset: int = 0,
 ) -> tuple[int, list[DataResource]]:
-    """Search DataCite DOIs. Returns (total_hits, COMPACT resources)."""
-    params = {"query": query, "page[size]": str(min(size, MAX_SIZE))}
+    """Search DataCite DOIs. Returns (total_hits, COMPACT resources).
+    ``offset`` → page ``offset // size + 1`` then drop first ``offset % size``."""
+    capped = min(size, MAX_SIZE)
+    params = {"query": query, "page[size]": str(capped)}
+    if offset:  # only when paging past page 1, so offset=0 request stays byte-identical
+        params["page[number]"] = str(offset // capped + 1)
     body = await _http.request_json(
         client,
         "GET",
@@ -147,7 +152,7 @@ async def search(
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
     )
-    items = body.get("data", []) or []
+    items = (body.get("data", []) or [])[offset % capped :]
     total = int((body.get("meta") or {}).get("total", len(items)))
     return total, [compact(_normalize(it)) for it in items]
 
