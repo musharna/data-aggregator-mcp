@@ -265,8 +265,9 @@ async def search(
     ``offset % size`` records (page-boundary slice; see pagination spec).
     """
     capped = min(size, MAX_SIZE)
-    page = offset // capped + 1
-    params = {"q": query, "size": str(capped), "page": str(page)}
+    params = {"q": query, "size": str(capped)}
+    if offset:  # only when paging past page 1, so offset=0 request stays byte-identical
+        params["page"] = str(offset // capped + 1)
     data = await _http.request_json(
         client, "GET", f"{BASE_URL}/api/records",
         service="Zenodo search", params=params,
@@ -339,8 +340,9 @@ async def search(
     """Search DataCite DOIs. Returns (total_hits, COMPACT resources).
     ``offset`` → page ``offset // size + 1`` then drop first ``offset % size``."""
     capped = min(size, MAX_SIZE)
-    page = offset // capped + 1
-    params = {"query": query, "page[size]": str(capped), "page[number]": str(page)}
+    params = {"query": query, "page[size]": str(capped)}
+    if offset:  # only when paging past page 1, so offset=0 request stays byte-identical
+        params["page[number]"] = str(offset // capped + 1)
     body = await _http.request_json(
         client, "GET", f"{BASE_URL}/dois",
         service="DataCite search", params=params,
@@ -395,10 +397,11 @@ Run: `pytest tests/test_openaire.py -k offset -v` — Expected: FAIL.
 
 - [ ] **Step 3: Implement**
 
-Add `offset: int = 0`; compute `capped = min(size, MAX_SIZE)`, `page = offset // capped + 1`,
-add `"page": page` to params, slice results `[offset % capped:]` before normalizing. Match the
-existing `_normalize_openaire` call. (Confirm the OpenAIRE `page` param name against the live
-adapter's BASE_URL API; it is 1-indexed `page` alongside `pageSize`.)
+Add `offset: int = 0`; compute `capped = min(size, MAX_SIZE)`. Add `"page"` to params **only when
+`offset` is nonzero** (`params["page"] = offset // capped + 1`), so the `offset=0` request stays
+byte-identical to today's (existing exact-URL mocks must stay green — see the eutils `retstart`
+precedent commit `eb5f098`). Slice results `[offset % capped:]` before normalizing. Match the
+existing `_normalize_openaire` call. The OpenAIRE param is 1-indexed `page` alongside `pageSize`.
 
 - [ ] **Step 4: Run to verify pass**
 
