@@ -41,3 +41,7 @@ class AuthRequiredError(DataAggregatorError):
 
 class FetchNotSupportedError(DataAggregatorError):
     """The resolved resource's source has no fetch adapter yet (discovery-only)."""
+
+
+class ValidationError(DataAggregatorError):
+    """Caller supplied invalid input (bad cursor, unknown filter value, ...)."""
