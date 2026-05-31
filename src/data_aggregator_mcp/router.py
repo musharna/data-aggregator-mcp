@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from collections import Counter
 from typing import Any
 
@@ -25,6 +26,7 @@ from data_aggregator_mcp import (
     taxonomy,
     zenodo,
 )
+from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import DataResource, Link, SearchResult, Taxon, TaxonExpansion
@@ -42,6 +44,19 @@ _ADAPTERS: dict[str, Any] = {
     "literature": literature,
     "huggingface": huggingface,
 }
+
+
+def _cache_ttl() -> float:
+    raw = os.environ.get("CACHE_TTL_SECONDS")
+    if raw is None:
+        return 3600.0
+    try:
+        return float(raw)
+    except ValueError:
+        return 3600.0
+
+
+_RESOLVE_CACHE = TTLCache(maxsize=512, ttl=_cache_ttl())
 
 
 def available_sources() -> list[str]:
@@ -335,6 +350,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     - a bare DOI (contains ``/``)        → DataCite
     """
     rid = resource_id.strip()
+    cached = _RESOLVE_CACHE.get(rid)
+    if cached is not MISS:
+        return cached
     prefix = rid.split(":", 1)[0]
     if prefix in omics.PREFIXES:
         resource = await omics.resolve(client, rid)
@@ -358,4 +376,5 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             resource = await _enrich_resource(client, resource)
         except Exception as exc:  # additive enrichment must not sink a valid resolve
             logger.warning("resolve enrichment failed for %s: %r", rid, exc)
+    _RESOLVE_CACHE.set(rid, resource)
     return resource
