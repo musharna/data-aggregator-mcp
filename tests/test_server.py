@@ -362,3 +362,23 @@ async def test_dispatch_threads_filters(monkeypatch) -> None:
     assert captured["published_after"] == 2010
     assert captured["published_before"] == 2020
     assert captured["kind"] == "dataset"
+
+
+@pytest.mark.asyncio
+async def test_list_sources_default_is_network_free():
+    out = await server._dispatch("list_sources", {})
+    assert "sources" in out
+    assert all("health" not in s for s in out["sources"])
+
+
+@pytest.mark.asyncio
+async def test_list_sources_check_health_merges_health(monkeypatch):
+    async def fake_probe(client):
+        return [
+            {"name": n, "status": "up", "latency_ms": 12, "detail": None}
+            for n in [s["name"] for s in server._SOURCES]
+        ]
+
+    monkeypatch.setattr(server.health_mod, "probe_sources", fake_probe)
+    out = await server._dispatch("list_sources", {"check_health": True})
+    assert all(s["health"]["status"] == "up" for s in out["sources"])

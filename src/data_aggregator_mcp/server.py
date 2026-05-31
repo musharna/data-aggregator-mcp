@@ -22,6 +22,7 @@ from mcp.server.stdio import stdio_server
 
 from data_aggregator_mcp import citation
 from data_aggregator_mcp import fetch as fetch_mod
+from data_aggregator_mcp import health as health_mod
 from data_aggregator_mcp import router, zenodo
 from data_aggregator_mcp.errors import FetchNotSupportedError
 from data_aggregator_mcp.models import DataResource, FetchResult, SearchResult
@@ -313,7 +314,20 @@ TOOLS: list[types.Tool] = [
             "List wired data sources and their capabilities (layer, kinds, supported "
             "filters, auth requirement, rate limit, status)."
         ),
-        inputSchema={"type": "object", "properties": {}},
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "check_health": {
+                    "type": "boolean",
+                    "description": (
+                        "When true, probe each source's base endpoint and attach a "
+                        "'health' field ({status: up|down, latency_ms, detail}) to each "
+                        "source. Default false: returns the static catalog with no network."
+                    ),
+                    "default": False,
+                },
+            },
+        },
         outputSchema={
             "type": "object",
             "properties": {"sources": {"type": "array", "items": {"type": "object"}}},
@@ -330,7 +344,11 @@ async def _list_tools() -> list[types.Tool]:
 
 async def _dispatch(name: str, args: dict[str, Any]) -> Any:
     if name == "list_sources":
-        return {"sources": _SOURCES}
+        if not args.get("check_health"):
+            return {"sources": _SOURCES}
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            probed = {h["name"]: h for h in await health_mod.probe_sources(client)}
+        return {"sources": [{**s, "health": probed.get(s["name"])} for s in _SOURCES]}
     async with httpx.AsyncClient(follow_redirects=True) as client:
         match name:
             case "search":
