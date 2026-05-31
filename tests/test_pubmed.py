@@ -167,6 +167,22 @@ async def test_resolve_unroutable_prefix_raises() -> None:
             await pubmed.resolve(client, "openaire:x")
 
 
+@pytest.mark.asyncio
+async def test_search_offset_threads_retstart(monkeypatch) -> None:
+    seen: dict = {}
+
+    async def fake_esearch(client, db, term, *, retmax, retstart=0):
+        seen["retstart"] = retstart
+        return 0, []
+
+    monkeypatch.setattr(pubmed._eutils, "esearch", fake_esearch)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        await pubmed.search(client, "q", size=10, offset=25)
+    assert seen["retstart"] == 25
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 

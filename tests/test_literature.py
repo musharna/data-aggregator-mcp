@@ -13,13 +13,13 @@ def test_prefixes_are_the_two_backends() -> None:
 
 
 async def test_search_interleaves_both_backends(monkeypatch) -> None:
-    async def fake_pubmed(client, query, *, size):
+    async def fake_pubmed(client, query, *, size, offset=0):
         return 5, [
             DataResource(id=f"pubmed:{i}", source="pubmed", kind="publication", title="p")
             for i in range(2)
         ]
 
-    async def fake_openaire(client, query, *, size):
+    async def fake_openaire(client, query, *, size, offset=0):
         return 7, [
             DataResource(id=f"openaire:{i}", source="openaire", kind="publication", title="o")
             for i in range(2)
@@ -35,10 +35,10 @@ async def test_search_interleaves_both_backends(monkeypatch) -> None:
 
 
 async def test_search_logs_backend_failure_keeps_partial(monkeypatch, caplog) -> None:
-    async def ok(client, query, *, size):
+    async def ok(client, query, *, size, offset=0):
         return 1, [DataResource(id="pubmed:1", source="pubmed", kind="publication", title="p")]
 
-    async def boom(client, query, *, size):
+    async def boom(client, query, *, size, offset=0):
         raise RuntimeError("openaire down")
 
     monkeypatch.setattr(literature.pubmed, "search", ok)
@@ -60,6 +60,23 @@ async def test_resolve_routes_by_prefix(monkeypatch) -> None:
     async with httpx.AsyncClient() as client:
         r = await literature.resolve(client, "pubmed:34320281")
     assert r.id == "pubmed:34320281"
+
+
+@pytest.mark.asyncio
+async def test_search_offset_forwarded_to_backends(monkeypatch) -> None:
+    seen = []
+
+    async def fake_backend_search(client, query, *, size, offset=0):
+        seen.append(offset)
+        return 0, []
+
+    for b in literature._BACKENDS.values():
+        monkeypatch.setattr(b, "search", fake_backend_search)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as client:
+        await literature.search(client, "q", size=10, offset=40)
+    assert seen and all(o == 40 for o in seen)
 
 
 async def test_resolve_unroutable_raises() -> None:
