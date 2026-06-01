@@ -9,6 +9,7 @@ from data_aggregator_mcp.models import (
     SearchResult,
     _orcid,
     compact,
+    derive_access_modes,
     normalize_access,
 )
 
@@ -226,3 +227,28 @@ def test_derive_version_status() -> None:
 
     # no version info at all
     assert derive_version_status([Link(rel="is_supplement_to", target_id="x")]) == (None, None)
+
+
+def test_access_modes_defaults_empty():
+    r = DataResource(id="x:1", source="x", kind="dataset", title="t")
+    assert r.access_modes == []
+
+
+def test_derive_access_modes_tabular_with_extra():
+    files = [FileEntry(name="data.parquet", url="https://h/data.parquet")]
+    assert derive_access_modes(files, operate=True) == ["fetch", "schema", "preview", "head", "sql"]
+
+
+def test_derive_access_modes_tabular_without_extra_is_fetch_only():
+    files = [FileEntry(name="data.parquet", url="https://h/data.parquet")]
+    assert derive_access_modes(files, operate=False) == ["fetch"]
+
+
+def test_derive_access_modes_non_tabular_is_fetch_only():
+    files = [FileEntry(name="img.png", url="https://h/img.png")]
+    assert derive_access_modes(files, operate=True) == ["fetch"]
+
+
+def test_derive_access_modes_no_url_is_empty():
+    files = [FileEntry(name="data.parquet", url=None)]
+    assert derive_access_modes(files, operate=True) == []

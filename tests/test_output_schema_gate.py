@@ -42,6 +42,7 @@ def _sample_resource() -> DataResource:
         links=[Link(rel="is_supplement_to", target_id="datacite:10.1/y")],
         metrics=Metrics(citations=3, views=100, downloads=42),
         last_updated="2025-03-04T00:00:00Z",
+        access_modes=["fetch", "schema", "preview", "head", "sql"],
     )
 
 

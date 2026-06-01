@@ -45,3 +45,8 @@ class FetchNotSupportedError(DataAggregatorError):
 
 class ValidationError(DataAggregatorError):
     """Caller supplied invalid input (bad cursor, unknown filter value, ...)."""
+
+
+class OperateNotSupportedError(DataAggregatorError):
+    """The requested op/file is not operable (not tabular, not range-readable, or
+    the [operate] extra is absent)."""

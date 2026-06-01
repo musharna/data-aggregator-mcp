@@ -1,6 +1,6 @@
 [project]
 name = "data-aggregator-mcp"
-version = "0.18.0"
+version = "0.19.0"
 description = "Research-data acquisition MCP — find and fetch datasets across archives, omics registries, and literature"
 readme = "README.md"
 license = "MIT"
@@ -40,6 +40,12 @@ dev = [
     "ruff>=0.3",
     "pyyaml>=6.0",
     "jsonschema>=4.20",
+]
+operate = [
+    "duckdb>=1.1",
+    "pyarrow>=17",
+    "fsspec>=2024.6",
+    "aiohttp>=3.9",
 ]
 
 [project.scripts]

@@ -26,6 +26,7 @@ from data_aggregator_mcp import (
     literature,
     omics,
     omicsdi,
+    operate,
     taxonomy,
     zenodo,
 )
@@ -38,6 +39,7 @@ from data_aggregator_mcp.models import (
     SearchResult,
     Taxon,
     TaxonExpansion,
+    derive_access_modes,
     derive_version_status,
 )
 
@@ -432,5 +434,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = resource.model_copy(
             update={"is_latest": is_latest, "superseded_by": superseded_by}
         )
+    resource = resource.model_copy(
+        update={
+            "access_modes": derive_access_modes(resource.files, operate=operate.OPERATE_AVAILABLE)
+        }
+    )
     _RESOLVE_CACHE.set(rid, resource)
     return resource
