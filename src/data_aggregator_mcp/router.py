@@ -20,10 +20,12 @@ import httpx
 from data_aggregator_mcp import (
     _cursor,
     datacite,
+    dataone,
     embeddings,
     huggingface,
     literature,
     omics,
+    omicsdi,
     taxonomy,
     zenodo,
 )
@@ -47,10 +49,12 @@ logger = logging.getLogger(__name__)
 # a DOI collision the fetchable record is encountered before the DataCite one.
 _ADAPTERS: dict[str, Any] = {
     "zenodo": zenodo,
+    "dataone": dataone,
     "datacite": datacite,
     "omics": omics,
     "literature": literature,
     "huggingface": huggingface,
+    "omicsdi": omicsdi,
 }
 
 
@@ -384,6 +388,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     """Route ``resolve`` by id shape, then enrich with normalized taxa + links.
     - ``geo:``/``sra:``/``bioproject:``  → omics (NCBI)
     - ``pubmed:``/``openaire:``          → literature
+    - ``dataone:<pid>``                  → DataONE (verified fetch)
+    - ``omicsdi:<source>:<acc>``         → OmicsDI (routes fetch to PRIDE/MetaboLights)
     - ``datacite:<doi>``                 → DataCite
     - ``zenodo:<id>`` / bare digits      → Zenodo (native; carries files[])
     - ``hf:<owner>/<name>``              → HuggingFace (native; carries files[])
@@ -398,6 +404,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = await omics.resolve(client, rid)
     elif prefix in literature.PREFIXES:
         resource = await literature.resolve(client, rid)
+    elif prefix in dataone.PREFIXES:
+        resource = await dataone.resolve(client, rid)
+    elif prefix in omicsdi.PREFIXES:
+        resource = await omicsdi.resolve(client, rid)
     elif rid.startswith("datacite:"):
         resource = await datacite.resolve(client, rid)
     elif rid.startswith("zenodo:") or rid.isdigit():
@@ -409,7 +419,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     else:
         raise ValueError(
             f"cannot route id {resource_id!r}: expected 'zenodo:<id>', 'datacite:<doi>', "
-            "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', a bare Zenodo id, or a DOI"
+            "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', 'dataone:<pid>', "
+            "'omicsdi:<source>:<acc>', a bare Zenodo id, or a DOI"
         )
     if resource.organism:
         try:
