@@ -191,6 +191,32 @@ _SOURCES: list[dict[str, Any]] = [
         "id_example": "hf:davidcechak/Arabidopsis_thaliana_DNA_v0",
         "description": "HuggingFace Hub datasets — searchable, resolvable, and fetchable via the resolve URL.",
     },
+    {
+        "name": "dataone",
+        "layer": "archives",
+        "kinds": ["dataset"],
+        "filters_supported": ["query", "size", "cursor"],
+        "auth_required": False,
+        "rate_limit": "public CN; courtesy only",
+        "status": "live (eco/environmental federation; verified fetch via Member Nodes)",
+        "fetchable": True,
+        "fetchable_notes": "Data objects fetched from Member Nodes with per-object MD5/SHA-256 verification.",
+        "id_example": "dataone:doi:10.18739/A26336",
+        "description": "DataONE federation of environmental & earth-science repositories (KNB, Arctic Data Center, PANGAEA, TERN, ...).",
+    },
+    {
+        "name": "omicsdi",
+        "layer": "omics",
+        "kinds": ["study"],
+        "filters_supported": ["query", "size"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (proteomics/metabolomics discovery; first page only)",
+        "fetchable": "per-repo",
+        "fetchable_notes": "PRIDE + MetaboLights records are fetchable (unverified - no upstream checksum); MassIVE/Metabolomics Workbench/GNPS/PeptideAtlas are discovery-only.",
+        "id_example": "omicsdi:pride:PXD000001",
+        "description": "Omics Discovery Index - proteomics & metabolomics studies; restricted to the mass-spec modality repos not already covered by the omics leg.",
+    },
 ]
 
 TOOLS: list[types.Tool] = [

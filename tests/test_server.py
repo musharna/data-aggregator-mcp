@@ -99,6 +99,17 @@ async def test_dispatch_list_sources() -> None:
     assert "sources" in out
 
 
+def test_list_sources_includes_dataone_and_omicsdi():
+    by_name = {s["name"]: s for s in server._SOURCES}
+    assert "dataone" in by_name and "omicsdi" in by_name
+    d1 = by_name["dataone"]
+    assert d1["layer"] == "archives" and d1["fetchable"] is True
+    assert "md5" in d1["fetchable_notes"].lower() or "sha" in d1["fetchable_notes"].lower()
+    od = by_name["omicsdi"]
+    assert od["layer"] == "omics" and od["fetchable"] == "per-repo"
+    assert "id_example" in d1 and "id_example" in od
+
+
 def test_all_tool_outputs_validate_against_schemas() -> None:
     # outputSchema is declared per tool; ensure each model still serializes.
     from data_aggregator_mcp.models import FetchResult, SearchResult
@@ -207,7 +218,12 @@ def test_resolve_tool_exposes_cite_param() -> None:
 
 
 def test_list_sources_advertises_filters_and_cursor() -> None:
+    # Sources that support the full temporal+kind+cursor filter set.
+    # DataONE and OmicsDI are discovery-limited sources with fewer filters.
+    _FULL_FILTER_SOURCES = {"zenodo", "datacite", "omics", "literature", "huggingface"}
     for s in server._SOURCES:
+        if s["name"] not in _FULL_FILTER_SOURCES:
+            continue
         assert {"published_after", "published_before", "kind", "cursor"} <= set(
             s["filters_supported"]
         )
