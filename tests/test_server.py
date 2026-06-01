@@ -549,3 +549,17 @@ async def test_operate_dispatch_routes(monkeypatch):
     monkeypatch.setattr(server.operate, "run", fake_run)
     out = await server._dispatch("operate", {"id": "zenodo:1", "op": "schema"})
     assert out["op"] == "schema"
+
+
+@pytest.mark.asyncio
+async def test_list_sources_advertises_operable():
+    out = await server._dispatch("list_sources", {})
+    by_name = {s["name"]: s for s in out["sources"]}
+    assert by_name["zenodo"].get("operable") is True
+    assert by_name["datacite"].get("operable") is True
+    assert by_name["huggingface"].get("operable") is True
+    assert by_name["dataone"].get("operable") is True
+    # discovery-only / non-tabular sources stay false/absent
+    assert by_name["omicsdi"].get("operable") in (False, None)
+    assert by_name["omics"].get("operable") in (False, None)
+    assert by_name["literature"].get("operable") in (False, None)
