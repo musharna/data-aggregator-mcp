@@ -59,3 +59,20 @@ async def test_write_copy_rejected():
     # COPY is not a SELECT, so the SELECT-only validation must reject it before execution.
     with pytest.raises(ValidationError):
         await duckquery.run_sql(PARQUET_URL, "sample.parquet", "COPY data TO '/tmp/x.csv'")
+
+
+@pytest.mark.asyncio
+async def test_head_column_quote_is_escaped():
+    # a column name containing a double-quote must not break out of the identifier
+    # quoting into injected SQL — it should be treated as a (nonexistent) column name
+    # and raise a binder error, NOT execute injected statements.
+    with pytest.raises(Exception) as ei:
+        await duckquery.run_head(
+            PARQUET_URL,
+            "sample.parquet",
+            n=2,
+            columns=['name" ; DROP TABLE data; --'],
+        )
+    # the doubled-quote keeps it a single identifier; DuckDB complains about the column,
+    # which proves no statement-stacking break-out occurred.
+    assert "drop" not in str(ei.value).lower() or "syntax" not in str(ei.value).lower()

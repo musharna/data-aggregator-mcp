@@ -88,5 +88,5 @@ async def run_sql(url: str, file: str, query: str, *, row_cap: int = DEFAULT_ROW
 
 
 async def run_head(url: str, file: str, *, n: int, columns: list[str] | None) -> dict:
-    proj = ", ".join(f'"{c}"' for c in columns) if columns else "*"
+    proj = ", ".join('"' + c.replace('"', '""') + '"' for c in columns) if columns else "*"
     return await asyncio.to_thread(_run, url, file, f"SELECT {proj} FROM data", n)
