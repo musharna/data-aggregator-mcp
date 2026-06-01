@@ -10,11 +10,11 @@ registries, and literature — behind a single normalized model.**
 [![Glama](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp/badge)](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp)
 
 `search` one query across **Zenodo, DataCite** (Dryad / Figshare / Dataverse /
-OSF / Mendeley), **NCBI omics** (GEO / SRA / BioProject), **literature**
-(PubMed / OpenAIRE), and **HuggingFace** datasets — deduplicated, normalized,
-and cross-linked. `resolve` any hit to its file manifest, citation, trust
-signals, and the data it points at. `fetch` it to disk with checksum
-verification.
+OSF / Mendeley), **NCBI omics** (GEO / SRA / BioProject), **DataONE** (eco /
+environmental), **literature** (PubMed / OpenAIRE), **OmicsDI** (proteomics /
+metabolomics), and **HuggingFace** datasets — deduplicated, normalized, and
+cross-linked. `resolve` any hit to its file manifest, citation, trust signals,
+and the data it points at. `fetch` it to disk with checksum verification.
 
 mcp-name: io.github.musharna/data-aggregator-mcp
 
@@ -115,6 +115,10 @@ Add to a client's MCP config (e.g. Claude Desktop `claude_desktop_config.json`):
 | NCBI BioProject              |    ✅    |    → SRA links    |        —         |
 | PubMed / OpenAIRE            |    ✅    | ✅ (OA full text) |      none²       |
 | HuggingFace datasets         |    ✅    | ✅ (resolve URL)  |       none       |
+| DataONE (eco/env)            |    ✅    | ✅ (Member Node)  |  md5 / sha-256   |
+| OmicsDI → PRIDE              |    ✅    |  ✅ (HTTPS FTP)   |    size only     |
+| OmicsDI → MetaboLights       |    ✅    |  ✅ (HTTPS FTP)   |       none       |
+| OmicsDI → other MS repos     |    ✅    |         —         |        —         |
 
 ¹ Dryad downloads are token / bot-challenge gated, so `fetch` fails loud;
 `resolve` still lists the files.
@@ -150,7 +154,8 @@ dropped.
 Full record + files manifest. Routes by id shape — `zenodo:7654321`, a bare DOI,
 `datacite:10.5061/dryad.x`, an omics id (`sra:SRX079566`, `geo:GSE332789`,
 `bioproject:PRJNA1468572`), a literature id (`pubmed:34320281`, `openaire:<id>`),
-or a HuggingFace id (`hf:owner/name`). Attaches, where available:
+a HuggingFace id (`hf:owner/name`), a DataONE id (`dataone:doi:10.5063/F1HT2M7Q`),
+or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
 
 - **`files[]`** — ENA FASTQ manifest (SRA), GEO `suppl/`, or the host repo's
   native manifest (Figshare / Dataverse / OSF / Dryad).
@@ -182,10 +187,12 @@ Download files to disk and return their paths. Streams under a `max_bytes` guard
   path traversal and runaway extracted size. Off by default.
 - Unverified fetches (GEO `suppl/`, literature full text) get a content-type
   sniff that fails loud if a declared binary is actually an HTML page.
-- Fetchable: **Zenodo**, **SRA**, **GEO**, DataCite-hosted **Figshare** /
-  **Dataverse** / **OSF**, **HuggingFace** datasets, and **literature**
-  open-access full text. **Dryad** and other DataCite repos are discovery-only
-  and raise `FetchNotSupportedError`.
+- Fetchable: **Zenodo**, **SRA**, **GEO**, **DataONE** (Member-Node objects,
+  md5/sha-256 verified), DataCite-hosted **Figshare** / **Dataverse** / **OSF**,
+  **HuggingFace** datasets, **PRIDE** / **MetaboLights** (via OmicsDI, unverified),
+  and **literature** open-access full text. **Dryad**, other DataCite repos, and
+  other OmicsDI repos (MassIVE / GNPS / ...) are discovery-only and raise
+  `FetchNotSupportedError`.
 
 ### `list_sources()`
 

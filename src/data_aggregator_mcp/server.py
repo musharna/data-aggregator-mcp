@@ -39,6 +39,8 @@ _FETCHABLE_SOURCES = (
     "pubmed:",
     "openaire:",
     "hf:",
+    "dataone:",
+    "omicsdi:",
 )  # id prefixes with a working fetch backend
 
 
@@ -62,6 +64,19 @@ def _ensure_repo_fetchable(fid: str, resource: DataResource) -> None:
         raise FetchNotSupportedError(
             f"'{fid}' (repo: {resource.source}) is discovery-only for fetch — its file "
             f"manifest is available via resolve, but no adapter streams its bytes.{hint}"
+        )
+
+
+def _ensure_omicsdi_fetchable(fid: str, resource: DataResource) -> None:
+    """Fail loud when an omicsdi: id resolved to no files — its repo (MassIVE,
+    Metabolomics Workbench, GNPS, PeptideAtlas) is discovery-only this wave.
+    PRIDE/MetaboLights populate files[] at resolve and pass."""
+    if fid.startswith("omicsdi:") and not resource.files:
+        landing = next((lnk.target_id for lnk in resource.links if lnk.rel == "landing_page"), None)
+        where = f" Fetch from the source repo directly: {landing}" if landing else ""
+        raise FetchNotSupportedError(
+            f"'{fid}' is discovery-only for fetch — only PRIDE and MetaboLights records "
+            f"are streamable; this repo exposes no wired fetch backend.{where}"
         )
 
 
@@ -176,6 +191,32 @@ _SOURCES: list[dict[str, Any]] = [
         "id_example": "hf:davidcechak/Arabidopsis_thaliana_DNA_v0",
         "description": "HuggingFace Hub datasets — searchable, resolvable, and fetchable via the resolve URL.",
     },
+    {
+        "name": "dataone",
+        "layer": "archives",
+        "kinds": ["dataset"],
+        "filters_supported": ["query", "size", "cursor"],
+        "auth_required": False,
+        "rate_limit": "public CN; courtesy only",
+        "status": "live (eco/environmental federation; verified fetch via Member Nodes)",
+        "fetchable": True,
+        "fetchable_notes": "Data objects fetched from Member Nodes with per-object MD5/SHA-256 verification.",
+        "id_example": "dataone:doi:10.18739/A26336",
+        "description": "DataONE federation of environmental & earth-science repositories (KNB, Arctic Data Center, PANGAEA, TERN, ...).",
+    },
+    {
+        "name": "omicsdi",
+        "layer": "omics",
+        "kinds": ["study"],
+        "filters_supported": ["query", "size"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (proteomics/metabolomics discovery; first page only)",
+        "fetchable": "per-repo",
+        "fetchable_notes": "PRIDE + MetaboLights records are fetchable (unverified - no upstream checksum); MassIVE/Metabolomics Workbench/GNPS/PeptideAtlas are discovery-only.",
+        "id_example": "omicsdi:pride:PXD000001",
+        "description": "Omics Discovery Index - proteomics & metabolomics studies; restricted to the mass-spec modality repos not already covered by the omics leg.",
+    },
 ]
 
 TOOLS: list[types.Tool] = [
@@ -186,7 +227,8 @@ TOOLS: list[types.Tool] = [
             "literature for datasets, software, publications, and sequencing data. "
             "Fans out across Zenodo, DataCite (Dryad, Figshare, Dataverse, OSF, "
             "Mendeley), NCBI omics (GEO, SRA, BioProject), literature (PubMed + "
-            "OpenAIRE), and HuggingFace Hub (datasets). Returns compact DataResource "
+            "OpenAIRE), HuggingFace Hub (datasets), DataONE (eco/environmental federation), "
+            "and OmicsDI (proteomics/metabolomics). Returns compact DataResource "
             "records; per-source failures are "
             "reported in errors{}. Use resolve for the full record (SRA resolve attaches "
             "the ENA FASTQ manifest; publication resolve attaches links[] to datasets/"
@@ -210,7 +252,7 @@ TOOLS: list[types.Tool] = [
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Restrict fan-out to these sources (default: all). "
-                    "Available: zenodo, datacite, omics, literature, huggingface",
+                    "Available: zenodo, datacite, omics, literature, huggingface, dataone, omicsdi",
                 },
                 "organism": {
                     "type": "string",
@@ -501,6 +543,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 resource = await router.resolve(client, fid)
                 _ensure_repo_fetchable(fid, resource)
                 _ensure_fulltext_available(fid, resource)
+                _ensure_omicsdi_fetchable(fid, resource)
                 # Wire MCP progress notifications when the caller supplied a
                 # progressToken (in the request meta). The notification is
                 # auxiliary telemetry: a send failure is logged and swallowed so

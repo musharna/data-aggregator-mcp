@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from unittest.mock import AsyncMock
 
 import httpx
@@ -44,10 +45,12 @@ _DATACITE_ITEM = {
 def test_available_sources_lists_all_adapters() -> None:
     assert router.available_sources() == [
         "zenodo",
+        "dataone",
         "datacite",
         "omics",
         "literature",
         "huggingface",
+        "omicsdi",
     ]
 
 
@@ -306,6 +309,15 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     httpx_mock.add_response(
         url="https://huggingface.co/api/datasets?search=rna&limit=10&full=true",
         json=[],
+    )
+    # dataone + omicsdi are also default sources: return empty here
+    httpx_mock.add_response(
+        url=re.compile(r"https://cn\.dataone\.org/cn/v2/query/solr/.*"),
+        json={"response": {"numFound": 0, "docs": []}},
+    )
+    httpx_mock.add_response(
+        url=re.compile(r"https://www\.omicsdi\.org/ws/dataset/search.*"),
+        json={"datasets": []},
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "rna")
@@ -953,3 +965,40 @@ async def test_resolve_sets_version_status(monkeypatch) -> None:
         r = await router.resolve(client, "zenodo:1")
     assert r.is_latest is False
     assert r.superseded_by == "zenodo:2"
+
+
+def test_dataone_and_omicsdi_registered_in_precedence_order():
+    names = list(router._ADAPTERS)
+    assert "dataone" in names and "omicsdi" in names
+    # dataone before datacite (keep the verified copy on a DOI tie); omicsdi last
+    assert names.index("dataone") < names.index("datacite")
+    assert names[-1] == "omicsdi"
+
+
+@pytest.mark.asyncio
+async def test_resolve_routes_dataone_prefix(monkeypatch):
+    called = {}
+
+    async def fake(client, rid):
+        called["rid"] = rid
+        from data_aggregator_mcp.models import DataResource
+
+        return DataResource(id=rid, source="dataone", kind="dataset", title="t")
+
+    monkeypatch.setattr("data_aggregator_mcp.dataone.resolve", fake)
+    async with httpx.AsyncClient() as c:
+        r = await router.resolve(c, "dataone:doi:10.5/x")
+    assert called["rid"] == "dataone:doi:10.5/x" and r.source == "dataone"
+
+
+@pytest.mark.asyncio
+async def test_resolve_routes_omicsdi_prefix(monkeypatch):
+    async def fake(client, rid):
+        from data_aggregator_mcp.models import DataResource
+
+        return DataResource(id=rid, source="omicsdi", kind="study", title="t")
+
+    monkeypatch.setattr("data_aggregator_mcp.omicsdi.resolve", fake)
+    async with httpx.AsyncClient() as c:
+        r = await router.resolve(c, "omicsdi:pride:PXD000001")
+    assert r.source == "omicsdi"
