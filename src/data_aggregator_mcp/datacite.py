@@ -25,6 +25,7 @@ from data_aggregator_mcp.models import (
     DataResource,
     FundingRef,
     Link,
+    Metrics,
     _orcid,
     _rel,
     compact,
@@ -110,6 +111,15 @@ def _access_from_rights(rights_list: list[dict[str, Any]] | None) -> str | None:
     return None
 
 
+def _metrics(a: dict[str, Any]) -> Metrics | None:
+    """Pull DataCite's inline usage counts. Returns None when none are present
+    so the field stays absent rather than a zero-filled object."""
+    cites, views, dls = a.get("citationCount"), a.get("viewCount"), a.get("downloadCount")
+    if cites is None and views is None and dls is None:
+        return None
+    return Metrics(citations=cites, views=views, downloads=dls)
+
+
 def _creator(c: dict[str, Any]) -> Creator:
     orcid = None
     for nid in c.get("nameIdentifiers") or []:
@@ -154,6 +164,8 @@ def _normalize(item: dict[str, Any]) -> DataResource:
         subjects=[s.get("subject", "") for s in (a.get("subjects") or []) if s.get("subject")],
         license=license_,
         access=_access_from_rights(rights),
+        metrics=_metrics(a),
+        last_updated=a.get("updated"),
         links=[
             Link(rel=_rel(r["relationType"]), target_id=r["relatedIdentifier"])
             for r in (a.get("relatedIdentifiers") or [])

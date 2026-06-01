@@ -189,3 +189,40 @@ def test_orcid_accepts_lowercase_x_checksum():
     # ORCID checksum may arrive lowercase; canonicalize to uppercase X.
     assert _orcid("0000-0002-1825-009x") == "0000-0002-1825-009X"
     assert _orcid("https://orcid.org/0000-0002-1825-009x") == "0000-0002-1825-009X"
+
+
+def test_metrics_default_none_and_populated_roundtrip() -> None:
+    from data_aggregator_mcp.models import DataResource, Metrics
+
+    bare = DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="t")
+    assert bare.metrics is None
+
+    m = DataResource(
+        id="datacite:10.x/y",
+        source="dryad",
+        kind="dataset",
+        title="t",
+        metrics=Metrics(citations=3, views=100, downloads=42, likes=None),
+    )
+    dumped = m.model_dump()
+    assert dumped["metrics"]["citations"] == 3
+    assert dumped["metrics"]["likes"] is None
+
+
+def test_derive_version_status() -> None:
+    from data_aggregator_mcp.models import Link, derive_version_status
+
+    # superseded: a newer version exists
+    older = [Link(rel="is_previous_version_of", target_id="datacite:10.x/v2")]
+    assert derive_version_status(older) == (False, "datacite:10.x/v2")
+
+    # obsoleted alias
+    obs = [Link(rel="is_obsoleted_by", target_id="datacite:10.x/v3")]
+    assert derive_version_status(obs) == (False, "datacite:10.x/v3")
+
+    # latest: it supersedes an older one but nothing supersedes it
+    newest = [Link(rel="is_new_version_of", target_id="datacite:10.x/v1")]
+    assert derive_version_status(newest) == (True, None)
+
+    # no version info at all
+    assert derive_version_status([Link(rel="is_supplement_to", target_id="x")]) == (None, None)

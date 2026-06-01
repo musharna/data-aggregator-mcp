@@ -1,6 +1,6 @@
 [project]
 name = "data-aggregator-mcp"
-version = "0.16.0"
+version = "0.17.0"
 description = "Research-data acquisition MCP — find and fetch datasets across archives, omics registries, and literature"
 readme = "README.md"
 license = "MIT"
@@ -39,6 +39,7 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.3",
     "pyyaml>=6.0",
+    "jsonschema>=4.20",
 ]
 
 [project.scripts]

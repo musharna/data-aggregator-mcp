@@ -391,8 +391,67 @@ async def test_search_dispatch_passes_rank(monkeypatch):  # IRON_LAW_OK
     async def fake_search_page(client, **kwargs):
         captured.update(kwargs)
         from data_aggregator_mcp.models import SearchResult
+
         return SearchResult(query=kwargs.get("query"), total=0, count=0, results=[], errors={})
 
     monkeypatch.setattr(server.router, "search_page", fake_search_page)
     await server._dispatch("search", {"query": "q", "rank": "semantic"})
     assert captured["rank"] == "semantic"
+
+
+def test_read_only_tools_are_annotated() -> None:
+    from data_aggregator_mcp import server
+
+    by_name = {t.name: t for t in server.TOOLS}
+    for n in ("search", "resolve", "list_sources"):
+        assert by_name[n].annotations is not None
+        assert by_name[n].annotations.readOnlyHint is True
+    # fetch writes files → not read-only, and not destructive to existing state
+    assert by_name["fetch"].annotations.readOnlyHint is False
+    assert by_name["fetch"].annotations.destructiveHint is False
+
+
+async def test_list_prompts_exposes_templates() -> None:
+    from data_aggregator_mcp import server
+
+    prompts = await server._list_prompts()
+    names = {p.name for p in prompts}
+    assert {"find_data", "data_behind_paper", "search_resolve_fetch"} <= names
+
+
+async def test_get_prompt_find_data_includes_topic() -> None:
+    from data_aggregator_mcp import server
+
+    result = await server._get_prompt("find_data", {"topic": "rice drought", "organism": "Oryza sativa"})
+    text = result.messages[0].content.text
+    assert "rice drought" in text
+    assert "Oryza sativa" in text
+
+
+async def test_dispatch_resolve_renders_croissant(monkeypatch) -> None:
+    from data_aggregator_mcp.models import DataResource, FileEntry
+
+    async def fake_resolve(client, fid):
+        return DataResource(
+            id="zenodo:1", source="zenodo", kind="dataset", title="t",
+            files=[FileEntry(name="a.csv", url="https://x/a.csv")],
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    out = await server._dispatch("resolve", {"id": "zenodo:1", "format": "croissant"})
+    assert out["croissant"]["@type"] == "Dataset"
+    assert out["croissant"]["distribution"][0]["name"] == "a.csv"
+
+
+async def test_dispatch_resolve_renders_ro_crate(monkeypatch) -> None:
+    from data_aggregator_mcp.models import DataResource, FileEntry
+
+    async def fake_resolve(client, fid):
+        return DataResource(
+            id="zenodo:1", source="zenodo", kind="dataset", title="t",
+            files=[FileEntry(name="a.csv", url="https://x/a.csv")],
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    out = await server._dispatch("resolve", {"id": "zenodo:1", "format": "ro-crate"})
+    assert out["ro_crate"]["@context"] == "https://w3id.org/ro/crate/1.1/context"
