@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.18.0] - 2026-05-31
+
+### Added
+
+- **DataONE** source — eco/environmental federation (KNB, Arctic Data Center, PANGAEA, …) with verified fetch: data objects stream from Member Nodes with per-object MD5/SHA-256 checksum verification.
+- **OmicsDI** source — proteomics/metabolomics discovery, restricted to the mass-spec modality repos (PRIDE, MassIVE, MetaboLights, Metabolomics Workbench, GNPS, PeptideAtlas) not already covered by the omics leg.
+- **PRIDE** and **MetaboLights** fetch backends — `omicsdi:pride:*` / `omicsdi:metabolights_dataset:*` records fetch end-to-end over the EBI HTTPS mirror (unverified: no upstream checksum; PRIDE is size-checked). Other OmicsDI repos are discovery-only and fail loud at fetch with a source pointer.
+
+### Notes
+
+- OmicsDI contributes first-page results only (modality post-filtering precludes stable pagination).
+- No dedup-ranking change: the existing binary rule already keeps the verified copy on every realistic DOI collision.
+
 ## [0.17.0] - 2026-05-31
 
 ### Added
