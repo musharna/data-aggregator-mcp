@@ -5,6 +5,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import server
 from data_aggregator_mcp.errors import FetchNotSupportedError
+from data_aggregator_mcp.models import DataResource, FileEntry, Link
 
 
 def test_catalog_exposes_four_tools() -> None:
@@ -84,7 +85,6 @@ async def test_dispatch_search_merges_and_surfaces_errors(httpx_mock: HTTPXMock)
 
 
 async def test_dispatch_fetch_fails_loud_for_unsupported_datacite_repo(monkeypatch) -> None:
-    from data_aggregator_mcp.models import DataResource
 
     async def fake_resolve(client, fid):
         return DataResource(id=fid, source="mendeley", kind="dataset", title="t", doi="10.x/y")
@@ -101,7 +101,7 @@ async def test_dispatch_list_sources() -> None:
 
 def test_all_tool_outputs_validate_against_schemas() -> None:
     # outputSchema is declared per tool; ensure each model still serializes.
-    from data_aggregator_mcp.models import DataResource, FetchResult, SearchResult
+    from data_aggregator_mcp.models import FetchResult, SearchResult
 
     SearchResult(query="q", total=0, count=0).model_dump()
     DataResource(id="datacite:10.x/y", source="dryad", kind="dataset", title="t").model_dump()
@@ -133,7 +133,6 @@ async def test_dispatch_fetch_fails_loud_for_paywalled_literature_id(monkeypatch
     # Literature ids now pass the cheap pre-gate (OA full text is fetchable), so the
     # fail-loud moves post-resolve: a paywalled / non-OA paper resolves with files=[]
     # and is rejected by _ensure_fulltext_available rather than silently empty.
-    from data_aggregator_mcp.models import DataResource
 
     async def fake_resolve(client, fid):
         return DataResource(id=fid, source="pubmed", kind="publication", title="t")
@@ -176,7 +175,6 @@ async def test_dispatch_search_passes_organism_to_router(monkeypatch) -> None:
 
 
 async def test_dispatch_resolve_renders_citation_when_cite_given(httpx_mock, monkeypatch) -> None:
-    from data_aggregator_mcp.models import DataResource
 
     async def fake_resolve(client, fid):
         return DataResource(
@@ -194,7 +192,6 @@ async def test_dispatch_resolve_renders_citation_when_cite_given(httpx_mock, mon
 
 
 async def test_dispatch_resolve_no_cite_leaves_citation_none(monkeypatch) -> None:
-    from data_aggregator_mcp.models import DataResource
 
     async def fake_resolve(client, fid):
         return DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="t")
@@ -271,7 +268,6 @@ class _FakeReqCtx:
 
 
 def _fake_fetchable_resolve():
-    from data_aggregator_mcp.models import DataResource, FileEntry
 
     async def fake_resolve(client, fid):
         return DataResource(
@@ -422,18 +418,22 @@ async def test_list_prompts_exposes_templates() -> None:
 async def test_get_prompt_find_data_includes_topic() -> None:
     from data_aggregator_mcp import server
 
-    result = await server._get_prompt("find_data", {"topic": "rice drought", "organism": "Oryza sativa"})
+    result = await server._get_prompt(
+        "find_data", {"topic": "rice drought", "organism": "Oryza sativa"}
+    )
     text = result.messages[0].content.text
     assert "rice drought" in text
     assert "Oryza sativa" in text
 
 
 async def test_dispatch_resolve_renders_croissant(monkeypatch) -> None:
-    from data_aggregator_mcp.models import DataResource, FileEntry
 
     async def fake_resolve(client, fid):
         return DataResource(
-            id="zenodo:1", source="zenodo", kind="dataset", title="t",
+            id="zenodo:1",
+            source="zenodo",
+            kind="dataset",
+            title="t",
             files=[FileEntry(name="a.csv", url="https://x/a.csv")],
         )
 
@@ -444,14 +444,58 @@ async def test_dispatch_resolve_renders_croissant(monkeypatch) -> None:
 
 
 async def test_dispatch_resolve_renders_ro_crate(monkeypatch) -> None:
-    from data_aggregator_mcp.models import DataResource, FileEntry
 
     async def fake_resolve(client, fid):
         return DataResource(
-            id="zenodo:1", source="zenodo", kind="dataset", title="t",
+            id="zenodo:1",
+            source="zenodo",
+            kind="dataset",
+            title="t",
             files=[FileEntry(name="a.csv", url="https://x/a.csv")],
         )
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
     out = await server._dispatch("resolve", {"id": "zenodo:1", "format": "ro-crate"})
     assert out["ro_crate"]["@context"] == "https://w3id.org/ro/crate/1.1/context"
+
+
+def test_dataone_and_omicsdi_are_fetchable_prefixes():
+    assert server._is_fetchable("dataone:doi:10.5/x")
+    assert server._is_fetchable("omicsdi:pride:PXD000001")
+
+
+def test_ensure_omicsdi_fetchable_raises_when_no_files():
+    r = DataResource(id="omicsdi:massive:MSV1", source="omicsdi", kind="study", title="x", files=[])
+    with pytest.raises(FetchNotSupportedError):
+        server._ensure_omicsdi_fetchable("omicsdi:massive:MSV1", r)
+
+
+def test_ensure_omicsdi_fetchable_passes_when_files_present():
+    r = DataResource(
+        id="omicsdi:pride:PXD1",
+        source="omicsdi",
+        kind="study",
+        title="x",
+        files=[FileEntry(name="a", url="https://x/a")],
+    )
+    server._ensure_omicsdi_fetchable("omicsdi:pride:PXD1", r)  # no raise
+
+
+def test_ensure_omicsdi_fetchable_ignores_non_omicsdi_ids():
+    r = DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="x", files=[])
+    server._ensure_omicsdi_fetchable("zenodo:1", r)  # no raise
+
+
+def test_ensure_omicsdi_fetchable_error_points_to_landing_page():
+    landing = "https://www.omicsdi.org/dataset/massive/MSV1"
+    r = DataResource(
+        id="omicsdi:massive:MSV1",
+        source="omicsdi",
+        kind="study",
+        title="x",
+        files=[],
+        links=[Link(rel="landing_page", target_id=landing)],
+    )
+    with pytest.raises(FetchNotSupportedError) as exc:
+        server._ensure_omicsdi_fetchable("omicsdi:massive:MSV1", r)
+    assert landing in str(exc.value)  # actionable pointer to the source repo

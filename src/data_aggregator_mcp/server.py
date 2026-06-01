@@ -39,6 +39,8 @@ _FETCHABLE_SOURCES = (
     "pubmed:",
     "openaire:",
     "hf:",
+    "dataone:",
+    "omicsdi:",
 )  # id prefixes with a working fetch backend
 
 
@@ -62,6 +64,19 @@ def _ensure_repo_fetchable(fid: str, resource: DataResource) -> None:
         raise FetchNotSupportedError(
             f"'{fid}' (repo: {resource.source}) is discovery-only for fetch — its file "
             f"manifest is available via resolve, but no adapter streams its bytes.{hint}"
+        )
+
+
+def _ensure_omicsdi_fetchable(fid: str, resource: DataResource) -> None:
+    """Fail loud when an omicsdi: id resolved to no files — its repo (MassIVE,
+    Metabolomics Workbench, GNPS, PeptideAtlas) is discovery-only this wave.
+    PRIDE/MetaboLights populate files[] at resolve and pass."""
+    if fid.startswith("omicsdi:") and not resource.files:
+        landing = next((lnk.target_id for lnk in resource.links if lnk.rel == "landing_page"), None)
+        where = f" Fetch from the source repo directly: {landing}" if landing else ""
+        raise FetchNotSupportedError(
+            f"'{fid}' is discovery-only for fetch — only PRIDE and MetaboLights records "
+            f"are streamable; this repo exposes no wired fetch backend.{where}"
         )
 
 
@@ -501,6 +516,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 resource = await router.resolve(client, fid)
                 _ensure_repo_fetchable(fid, resource)
                 _ensure_fulltext_available(fid, resource)
+                _ensure_omicsdi_fetchable(fid, resource)
                 # Wire MCP progress notifications when the caller supplied a
                 # progressToken (in the request meta). The notification is
                 # auxiliary telemetry: a send failure is logged and swallowed so
