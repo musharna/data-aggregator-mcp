@@ -10,10 +10,11 @@ registries, and literature — behind a single normalized model.**
 [![Glama](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp/badge)](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp)
 
 `search` one query across **Zenodo, DataCite** (Dryad / Figshare / Dataverse /
-OSF / Mendeley), **NCBI omics** (GEO / SRA / BioProject), and **literature**
-(PubMed / OpenAIRE) — deduplicated, normalized, and cross-linked. `resolve` any
-hit to its file manifest, citation, and the data it points at. `fetch` it to
-disk with checksum verification.
+OSF / Mendeley), **NCBI omics** (GEO / SRA / BioProject), **literature**
+(PubMed / OpenAIRE), and **HuggingFace** datasets — deduplicated, normalized,
+and cross-linked. `resolve` any hit to its file manifest, citation, trust
+signals, and the data it points at. `fetch` it to disk with checksum
+verification.
 
 mcp-name: io.github.musharna/data-aggregator-mcp
 
@@ -42,6 +43,11 @@ records:
 - **Citations, access & full text** — render a citation in any CSL style, get
   normalized access/license, and pull open-access full text — all in one
   `resolve`.
+- **Trust signals** — usage `metrics` (citations / views / downloads / likes),
+  version status (`is_latest` / `superseded_by`), and `last_updated` freshness,
+  surfaced wherever the source exposes them.
+- **Interop exports** — `resolve(format="croissant")` or `"ro-crate"` hands a
+  dataset to an ML or research-packaging pipeline as standard JSON-LD.
 
 ## ⚡ Quickstart
 
@@ -108,6 +114,7 @@ Add to a client's MCP config (e.g. Claude Desktop `claude_desktop_config.json`):
 | NCBI GEO                     |    ✅    |   ✅ (`suppl/`)   |      none²       |
 | NCBI BioProject              |    ✅    |    → SRA links    |        —         |
 | PubMed / OpenAIRE            |    ✅    | ✅ (OA full text) |      none²       |
+| HuggingFace datasets         |    ✅    | ✅ (resolve URL)  |       none       |
 
 ¹ Dryad downloads are token / bot-challenge gated, so `fetch` fails loud;
 `resolve` still lists the files.
@@ -116,7 +123,7 @@ page served in place of a binary).
 
 ## 🛠️ Tools
 
-### `search(query, size?, sources?, organism?)`
+### `search(query?, size?, sources?, organism?, kind?, published_after?, published_before?, rank?, cursor?)`
 
 Fan out across all wired sources in parallel and return compact `DataResource`
 records, deduped by DOI. Per-source failures land in `errors{}` — never silently
@@ -128,13 +135,22 @@ dropped.
   taxa.
 - `sources` — restrict the fan-out, e.g. `["omics"]`.
 - `size` — max results (1–50).
+- `kind` — keep only `dataset` / `sequencing_run` / `study` / `publication` /
+  `software`.
+- `published_after` / `published_before` — filter by publication year.
+- `rank` — `relevance` (default) or `semantic` (re-rank the fetched page by
+  embedding similarity to the query; needs `EMBEDDING_API_BASE`, degrades to
+  relevance order otherwise).
+- `cursor` — opaque token from a prior result's `next_cursor`; pages forward
+  across every source. In `cursor` mode the other params are read from the
+  token, so `query` is optional.
 
-### `resolve(id)`
+### `resolve(id, cite?, format?)`
 
 Full record + files manifest. Routes by id shape — `zenodo:7654321`, a bare DOI,
 `datacite:10.5061/dryad.x`, an omics id (`sra:SRX079566`, `geo:GSE332789`,
-`bioproject:PRJNA1468572`), or a literature id (`pubmed:34320281`,
-`openaire:<id>`). Attaches, where available:
+`bioproject:PRJNA1468572`), a literature id (`pubmed:34320281`, `openaire:<id>`),
+or a HuggingFace id (`hf:owner/name`). Attaches, where available:
 
 - **`files[]`** — ENA FASTQ manifest (SRA), GEO `suppl/`, or the host repo's
   native manifest (Figshare / Dataverse / OSF / Dryad).
@@ -149,6 +165,12 @@ Full record + files manifest. Routes by id shape — `zenodo:7654321`, a bare DO
   style name (`apa`, `mla`, `vancouver`, …). DOI records use content
   negotiation; others render CSL-JSON from metadata. Off by default; failures
   degrade quietly.
+- **trust signals** — `metrics` (citations / views / downloads / likes),
+  `is_latest` / `superseded_by` (derived from version links), and `last_updated`
+  freshness, where the source provides them.
+- **`format`** — pass `format="croissant"` (file-level Croissant JSON-LD) or
+  `"ro-crate"` (minimal RO-Crate 1.1) to attach a standard manifest under the
+  matching field, for ML or research-packaging pipelines.
 
 ### `fetch(id, dest?, files?, max_bytes?, force?, extract?)`
 
@@ -161,14 +183,23 @@ Download files to disk and return their paths. Streams under a `max_bytes` guard
 - Unverified fetches (GEO `suppl/`, literature full text) get a content-type
   sniff that fails loud if a declared binary is actually an HTML page.
 - Fetchable: **Zenodo**, **SRA**, **GEO**, DataCite-hosted **Figshare** /
-  **Dataverse** / **OSF**, and **literature** open-access full text. **Dryad**
-  and other DataCite repos are discovery-only and raise
-  `FetchNotSupportedError`.
+  **Dataverse** / **OSF**, **HuggingFace** datasets, and **literature**
+  open-access full text. **Dryad** and other DataCite repos are discovery-only
+  and raise `FetchNotSupportedError`.
 
 ### `list_sources()`
 
 Wired sources with their capabilities — layer, kinds, supported filters,
 fetchability, id examples, auth, and rate limits.
+
+### Prompts
+
+Three workflow prompts surface in clients (e.g. `/mcp__data_aggregator__*` in
+Claude Code):
+
+- **`find_data`** — find datasets for a topic, optionally scoped to an organism.
+- **`data_behind_paper`** — find the datasets / accessions behind a paper.
+- **`search_resolve_fetch`** — walk the end-to-end search → resolve → fetch flow.
 
 ## ⚙️ Configuration
 
