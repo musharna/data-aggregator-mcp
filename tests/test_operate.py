@@ -1,4 +1,5 @@
 # tests/test_operate.py
+import os
 import pathlib
 
 import httpx
@@ -110,3 +111,35 @@ async def test_schema_op_not_size_gated(patch_resolve, monkeypatch):
     async with httpx.AsyncClient() as c:
         out = await operate.run(c, "zenodo:1", "schema")
     assert "columns" in out
+
+
+_LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
+_live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+
+# A small, stable, openly-downloadable Parquet on the HuggingFace CDN.
+_LIVE_PARQUET = (
+    "https://huggingface.co/datasets/mteb/tweet_sentiment_extraction/resolve/refs%2F"
+    "convert%2Fparquet/default/test/0000.parquet"
+)
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_operate_sql_no_full_download(monkeypatch):
+    res = DataResource(
+        id="hf:live",
+        source="huggingface",
+        kind="dataset",
+        title="t",
+        files=[FileEntry(name="0000.parquet", url=_LIVE_PARQUET)],
+    )
+
+    async def fake_resolve(client, rid):
+        return res
+
+    monkeypatch.setattr(router, "resolve", fake_resolve)
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        sch = await operate.run(c, "hf:live", "schema")
+        assert sch["columns"]
+        rows = await operate.run(c, "hf:live", "sql", query="SELECT * FROM data LIMIT 5")
+        assert len(rows["rows"]) == 5
