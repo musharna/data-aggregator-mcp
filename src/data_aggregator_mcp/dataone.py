@@ -8,12 +8,18 @@ built from ``checksumAlgorithm`` so ``fetch.py``'s ``_hasher`` verifies either.
 
 from __future__ import annotations
 
+import asyncio
+from urllib.parse import quote
+from xml.etree import ElementTree as ET
+
 import httpx
 
 from data_aggregator_mcp import _http
-from data_aggregator_mcp.models import Creator, DataResource, compact
+from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.models import Creator, DataResource, FileEntry, compact
 
 SOLR = "https://cn.dataone.org/cn/v2/query/solr/"
+RESOLVE = "https://cn.dataone.org/cn/v2/resolve/{pid}"
 PREFIXES = {"dataone"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
@@ -23,11 +29,13 @@ MAX_RETRIES = 3
 _SEARCH_FL = (
     "identifier,title,author,origin,formatId,dateUploaded,datePublished,dateModified,resourceMap"
 )
+_RESOLVE_FL = "identifier,title,author,origin,dateUploaded,datePublished,dateModified,resourceMap"
+_DATA_FL = "identifier,fileName,size,checksum,checksumAlgorithm"
 
 
 def _year(*vals: str | None) -> int | None:
     for v in vals:
-        if v and len(v) >= 4 and v[:4].isdigit():
+        if v and isinstance(v, str) and len(v) >= 4 and v[:4].isdigit():
             return int(v[:4])
     return None
 
@@ -78,3 +86,59 @@ async def search(
     q = f"({query}) AND formatType:METADATA"
     total, docs = await _solr(client, q, rows=capped, start=offset, fl=_SEARCH_FL)
     return total, [compact(_normalize(d)) for d in docs]
+
+
+def _first_url(xml_text: str) -> str | None:
+    """First <url> in a DataONE ObjectLocationList (namespace-agnostic), or None."""
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return None
+    for el in root.iter():
+        if el.tag.rsplit("}", 1)[-1] == "url" and el.text:
+            return el.text.strip()
+    return None
+
+
+async def _object_url(client: httpx.AsyncClient, pid: str) -> str | None:
+    """Resolve a data PID to a Member-Node byte url (CN /object 404s for MN-only
+    objects, so we must read the ObjectLocationList)."""
+    resp = await client.get(RESOLVE.format(pid=quote(pid, safe="")), timeout=DEFAULT_TIMEOUT)
+    if resp.status_code != 200:
+        return None
+    return _first_url(resp.text)
+
+
+async def _file_entry(client: httpx.AsyncClient, doc: dict) -> FileEntry | None:
+    pid = doc.get("identifier")
+    if not pid:
+        return None
+    url = await _object_url(client, pid)
+    if not url:
+        return None
+    algo, cs = doc.get("checksumAlgorithm"), doc.get("checksum")
+    checksum = f"{algo.lower()}:{cs}" if algo and cs else None
+    return FileEntry(
+        name=doc.get("fileName") or pid,
+        url=url,
+        size=doc.get("size"),
+        checksum=checksum,
+        source="dataone",
+    )
+
+
+async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
+    pid = resource_id.split(":", 1)[1] if resource_id.startswith("dataone:") else resource_id
+    _total, docs = await _solr(client, f'identifier:"{pid}"', rows=1, fl=_RESOLVE_FL)
+    if not docs:
+        raise NotFoundError(f"DataONE has no object {pid!r}")
+    resource = _normalize(docs[0])
+    rmaps = docs[0].get("resourceMap")
+    rmap = rmaps[0] if isinstance(rmaps, list) and rmaps else None
+    if not rmap:
+        return resource  # metadata-only package
+    _t, data_docs = await _solr(
+        client, f'resourceMap:"{rmap}" AND formatType:DATA', rows=MAX_SIZE, fl=_DATA_FL
+    )
+    entries = await asyncio.gather(*[_file_entry(client, d) for d in data_docs])
+    return resource.model_copy(update={"files": [e for e in entries if e is not None]})
