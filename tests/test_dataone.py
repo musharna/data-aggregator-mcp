@@ -144,6 +144,55 @@ async def test_resolve_404_when_no_doc():
             await dataone.resolve(c, "dataone:missing")
 
 
+@pytest.mark.asyncio
+async def test_resolve_normalizes_hyphenated_checksum_algorithm():
+    meta = {
+        "response": {
+            "numFound": 1,
+            "docs": [
+                {
+                    "identifier": "doi:10.5/x",
+                    "title": "t",
+                    "resourceMap": ["resource_map_doi:10.5/x"],
+                }
+            ],
+        }
+    }
+    data = {
+        "response": {
+            "numFound": 1,
+            "docs": [
+                {
+                    "identifier": "urn:uuid:abc",
+                    "fileName": "f.csv",
+                    "size": 5,
+                    "checksum": "deadbeef",
+                    "checksumAlgorithm": "SHA-256",
+                }
+            ],
+        }
+    }
+    objloc = (
+        '<ns2:objectLocationList xmlns:ns2="http://ns.dataone.org/service/types/v1">'
+        "<objectLocation><url>https://mn.example/object/urn:uuid:abc</url>"
+        "</objectLocation></ns2:objectLocationList>"
+    )
+
+    def handler(request):
+        p, q = request.url.path, request.url.params.get("q", "")
+        if p.endswith("/query/solr/") and "identifier:" in q:
+            return httpx.Response(200, json=meta)
+        if p.endswith("/query/solr/") and "formatType:DATA" in q:
+            return httpx.Response(200, json=data)
+        if "/resolve/" in p:
+            return httpx.Response(200, text=objloc)
+        raise AssertionError(f"unexpected {p}?{q}")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        r = await dataone.resolve(c, "dataone:doi:10.5/x")
+    assert r.files[0].checksum == "sha256:deadbeef"  # hyphen stripped → valid hashlib name
+
+
 @_live_only
 @pytest.mark.asyncio
 async def test_live_resolve_and_fetch_verifies_checksum():

@@ -117,7 +117,10 @@ async def _file_entry(client: httpx.AsyncClient, doc: dict) -> FileEntry | None:
     if not url:
         return None
     algo, cs = doc.get("checksumAlgorithm"), doc.get("checksum")
-    checksum = f"{algo.lower()}:{cs}" if algo and cs else None
+    # DataONE reports both "SHA256" and hyphenated "SHA-256"; strip the hyphen so
+    # the algo is a valid hashlib name (matches dryad.py) — else fetch.py silently
+    # skips verification (unknown algo → no hasher).
+    checksum = f"{algo.lower().replace('-', '')}:{cs}" if algo and cs else None
     return FileEntry(
         name=doc.get("fileName") or pid,
         url=url,
