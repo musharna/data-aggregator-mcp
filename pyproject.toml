@@ -41,6 +41,11 @@ dev = [
     "pyyaml>=6.0",
     "jsonschema>=4.20",
 ]
+operate = [
+    "duckdb>=1.1",
+    "pyarrow>=17",
+    "fsspec>=2024.6",
+]
 
 [project.scripts]
 data-aggregator-mcp = "data_aggregator_mcp.server:main"
