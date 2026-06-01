@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.17.0] - 2026-05-31
+
+### Added
+
+- Structured-output round-trip gate (`tests/test_output_schema_gate.py`) — every
+  tool's output is validated against its declared `outputSchema`, guarding against
+  field drift between `model_dump()` and `model_json_schema()`.
+- `DataResource.metrics` (citations/views/downloads/likes — separate axes, no
+  blended score), populated from DataCite inline counts and HuggingFace
+  downloads/likes.
+- `DataResource.is_latest` / `superseded_by`, derived from version relations in
+  `links[]` (fields only; no ranking change).
+- `DataResource.last_updated` freshness (DataCite + HuggingFace).
+- Tool annotations (`readOnlyHint` on search/resolve/list_sources; explicit
+  read/destructive/idempotent hints on fetch).
+- MCP prompts: `find_data`, `data_behind_paper`, `search_resolve_fetch`.
+- Export: `resolve(format="croissant")` (file-level Croissant) and
+  `resolve(format="ro-crate")` (RO-Crate 1.1).
+
 ## [0.16.0] - 2026-05-31
 
 ### Added
