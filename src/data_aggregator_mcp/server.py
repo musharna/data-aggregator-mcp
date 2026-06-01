@@ -24,6 +24,7 @@ from data_aggregator_mcp import citation
 from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import health as health_mod
+from data_aggregator_mcp import operate
 from data_aggregator_mcp import ro_crate as ro_crate_mod
 from data_aggregator_mcp import router, zenodo
 from data_aggregator_mcp.errors import FetchNotSupportedError
@@ -403,6 +404,42 @@ TOOLS: list[types.Tool] = [
         },
         annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
+    types.Tool(
+        name="operate",
+        description=(
+            "Inspect or query a remote tabular file (Parquet/CSV/TSV) WITHOUT downloading "
+            "it. op='schema' returns columns+types; 'preview' a small sample; 'head' the "
+            "first n rows; 'sql' a read-only SELECT against the file (exposed as the view "
+            "'data', e.g. \"SELECT * FROM data WHERE x > 1\"). Addresses a file by catalog "
+            "id + file name (resolve the id first to see files[] and access_modes). Requires "
+            "the [operate] extra; fails loud if the file is not an operable tabular file."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "op": {"type": "string", "enum": ["schema", "preview", "head", "sql"]},
+                "id": {"type": "string", "description": "DataResource id (e.g. 'zenodo:7654321')"},
+                "file": {
+                    "type": "string",
+                    "description": "File name within the record; optional when exactly one "
+                    "operable file is present.",
+                },
+                "query": {"type": "string", "description": "Read-only SELECT for op='sql'."},
+                "n": {
+                    "type": "integer",
+                    "description": "Row count for head/preview",
+                    "default": 20,
+                },
+                "columns": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional column projection for head.",
+                },
+            },
+            "required": ["op", "id"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
 ]
 
 
@@ -578,6 +615,16 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     on_progress=on_progress,
                 )
                 return out.model_dump()
+            case "operate":
+                return await operate.run(
+                    client,
+                    args["id"],
+                    args["op"],
+                    file=args.get("file"),
+                    query=args.get("query"),
+                    n=args.get("n", 20),
+                    columns=args.get("columns"),
+                )
             case _:
                 raise ValueError(f"unknown tool: {name}")
 

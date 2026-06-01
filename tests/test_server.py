@@ -8,9 +8,9 @@ from data_aggregator_mcp.errors import FetchNotSupportedError
 from data_aggregator_mcp.models import DataResource, FileEntry, Link
 
 
-def test_catalog_exposes_four_tools() -> None:
+def test_catalog_exposes_core_tools() -> None:
     names = {t.name for t in server.TOOLS}
-    assert names == {"search", "resolve", "fetch", "list_sources"}
+    assert names == {"search", "resolve", "fetch", "list_sources", "operate"}
 
 
 def test_list_sources_reports_zenodo() -> None:
@@ -531,3 +531,21 @@ def test_search_schema_sources_description_includes_dataone_and_omicsdi():
     assert "omicsdi" in sources_desc, (
         f"'omicsdi' missing from sources description: {sources_desc!r}"
     )
+
+
+def test_operate_tool_registered():
+    names = {t.name for t in server.TOOLS}
+    assert "operate" in names
+    op = next(t for t in server.TOOLS if t.name == "operate")
+    assert op.inputSchema["required"] == ["op", "id"]
+    assert set(op.inputSchema["properties"]["op"]["enum"]) == {"schema", "preview", "head", "sql"}
+
+
+@pytest.mark.asyncio
+async def test_operate_dispatch_routes(monkeypatch):
+    async def fake_run(client, rid, op, **kw):
+        return {"op": op, "file": "x.parquet", "columns": [], "rows": []}
+
+    monkeypatch.setattr(server.operate, "run", fake_run)
+    out = await server._dispatch("operate", {"id": "zenodo:1", "op": "schema"})
+    assert out["op"] == "schema"

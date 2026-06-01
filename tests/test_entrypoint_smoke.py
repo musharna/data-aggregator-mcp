@@ -17,4 +17,4 @@ async def test_entrypoint_serves_over_stdio() -> None:
             tools = await session.list_tools()
     assert init.serverInfo.name == "data-aggregator-mcp"
     names = {t.name for t in tools.tools}
-    assert names == {"search", "resolve", "fetch", "list_sources"}
+    assert names == {"search", "resolve", "fetch", "list_sources", "operate"}
