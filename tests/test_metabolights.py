@@ -5,37 +5,52 @@ import pytest
 
 from data_aggregator_mcp import metabolights
 
-_BODY = {
-    "study": [
-        {
-            "file": "m_MTBLS1_metabolite_profiling_NMR_spectroscopy_v2_maf.tsv",
-            "type": "metadata_maf",
-            "status": "active",
-            "directory": False,
-        },
-        {"file": "RAW", "type": "raw", "status": "active", "directory": True},
-    ],
-    "latest": [],
-}
+# Apache autoindex listing as the EBI FTP mirror actually serves it: a sort link,
+# an absolute parent link, subdirectories, and the real (FTP) filenames — note the
+# assay file is `a_MTBLS1_metabolite_profiling…`, NOT the WS API's `…_NMR_…`
+# variant that 404s. Sourcing names from this listing is the whole point of the fix.
+_LISTING = """<html><head><title>Index</title></head><body>
+<h1>Index of /pub/databases/metabolights/studies/public/MTBLS1</h1>
+<table>
+<tr><td><a href="?C=N;O=D">Name</a></td></tr>
+<tr><td><a href="/pub/databases/metabolights/studies/public/">Parent Directory</a></td></tr>
+<tr><td><a href="FILES/">FILES/</a></td></tr>
+<tr><td><a href="HASHES/">HASHES/</a></td></tr>
+<tr><td><a href="a_MTBLS1_metabolite_profiling_NMR_spectroscopy.txt">a_</a></td></tr>
+<tr><td><a href="i_Investigation.txt">i_Investigation.txt</a></td></tr>
+<tr><td><a href="s_MTBLS1.txt">s_MTBLS1.txt</a></td></tr>
+</table></body></html>"""
 
 
 @pytest.mark.asyncio
-async def test_files_builds_https_urls_no_checksum_no_size():
+async def test_files_from_ftp_listing_real_names_skip_subdirs():
     async def handler(request):
-        assert request.url.path.endswith("/studies/MTBLS1/files")
-        assert request.url.params["include_raw_data"] == "false"
-        return httpx.Response(200, json=_BODY)
+        assert request.url.path.endswith("/public/MTBLS1/")
+        return httpx.Response(200, text=_LISTING)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
         files = await metabolights.files(c, "MTBLS1")
-    assert len(files) == 1  # the directory entry is dropped
-    f = files[0]
-    assert f.url == (
+    # Subdirs (FILES/, HASHES/), the sort link (?C=…) and the absolute parent link
+    # are all excluded; only real top-level files survive, with their FTP names.
+    assert [f.name for f in files] == [
+        "a_MTBLS1_metabolite_profiling_NMR_spectroscopy.txt",
+        "i_Investigation.txt",
+        "s_MTBLS1.txt",
+    ]
+    assert files[0].url == (
         "https://ftp.ebi.ac.uk/pub/databases/metabolights/studies/public/"
-        "MTBLS1/m_MTBLS1_metabolite_profiling_NMR_spectroscopy_v2_maf.tsv"
+        "MTBLS1/a_MTBLS1_metabolite_profiling_NMR_spectroscopy.txt"
     )
-    assert f.checksum is None and f.size is None
-    assert f.source == "metabolights"
+    assert all(f.checksum is None and f.size is None for f in files)
+    assert all(f.source == "metabolights" for f in files)
+
+
+def test_listing_files_filters_sort_links_parent_and_dirs():
+    html = (
+        '<a href="?C=N;O=D">x</a><a href="/parent/">p</a>'
+        '<a href="SUBDIR/">d</a><a href="real_file.tsv">f</a>'
+    )
+    assert metabolights._listing_files(html) == ["real_file.tsv"]
 
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
