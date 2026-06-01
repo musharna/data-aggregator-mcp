@@ -47,6 +47,18 @@ async def test_sql_op_end_to_end(patch_resolve):
 
 
 @pytest.mark.asyncio
+async def test_result_byte_cap_trims_wide_results(patch_resolve, monkeypatch):
+    # The row cap bounds count; RESULT_BYTE_CAP bounds total bytes. With a tiny
+    # cap, a multi-row result is trimmed and flagged truncated.
+    patch_resolve(_res([FileEntry(name="sample.parquet", url=PARQUET_URL)]))
+    monkeypatch.setattr(operate, "RESULT_BYTE_CAP", 40)
+    async with httpx.AsyncClient() as c:
+        out = await operate.run(c, "zenodo:1", "sql", query="SELECT * FROM data")
+    assert out["truncated"] is True
+    assert 0 < len(out["rows"]) < 3  # at least one kept, not all three
+
+
+@pytest.mark.asyncio
 async def test_single_operable_file_auto_selected(patch_resolve):
     patch_resolve(_res([FileEntry(name="sample.parquet", url=PARQUET_URL)]))
     async with httpx.AsyncClient() as c:

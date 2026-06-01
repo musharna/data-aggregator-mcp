@@ -58,13 +58,16 @@ async def schema(url: str, file: str) -> dict:
 def _preview_parquet(url: str, n: int) -> dict:
     with fsspec.open(url, "rb") as f:
         pf = pq.ParquetFile(f)
-        batch = next(pf.iter_batches(batch_size=n))
         cols = [
-            {"name": n2, "type": _arrow_type(t)}
-            for n2, t in zip(pf.schema_arrow.names, pf.schema_arrow.types)
+            {"name": cn, "type": _arrow_type(t)}
+            for cn, t in zip(pf.schema_arrow.names, pf.schema_arrow.types)
         ]
-        rows = batch.to_pylist()
-    return {"format": "parquet", "columns": cols, "rows": rows[:n]}
+        nrows = pf.metadata.num_rows if pf.metadata is not None else None
+        # An empty Parquet (zero row groups) yields no batches; next() must not raise
+        # StopIteration here — asyncio rejects it as a thread-result exception.
+        batch = next(pf.iter_batches(batch_size=n), None)
+        rows = batch.to_pylist() if batch is not None else []
+    return {"format": "parquet", "columns": cols, "rows": rows[:n], "row_estimate": nrows}
 
 
 def _preview_csv(url: str, n: int) -> dict:
@@ -76,7 +79,7 @@ def _preview_csv(url: str, n: int) -> dict:
             break
         rows.append(dict(row))
     cols = [{"name": h, "type": "string"} for h in (reader.fieldnames or [])]
-    return {"format": "csv", "columns": cols, "rows": rows}
+    return {"format": "csv", "columns": cols, "rows": rows, "row_estimate": None}
 
 
 async def preview(url: str, file: str, *, n: int = 20) -> dict:

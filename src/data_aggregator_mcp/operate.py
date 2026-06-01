@@ -72,6 +72,30 @@ def _source_size(url: str) -> int | None:
     return int(size) if size is not None else None
 
 
+def _cap_result_bytes(result: dict) -> dict:
+    """Trim a rows-bearing result so its JSON payload stays under RESULT_BYTE_CAP,
+    setting ``truncated`` when rows are dropped. The row cap bounds count; this
+    bounds total bytes (1000 wide rows can still be large)."""
+    import json
+
+    rows = result.get("rows")
+    if not rows:
+        return result
+    kept: list = []
+    total = 0
+    capped = False
+    for r in rows:
+        total += len(json.dumps(r, default=str).encode())
+        if total > RESULT_BYTE_CAP:
+            capped = True
+            break
+        kept.append(r)
+    if capped:
+        result["rows"] = kept
+        result["truncated"] = True
+    return result
+
+
 async def run(
     client: httpx.AsyncClient,
     resource_id: str,
@@ -99,7 +123,7 @@ async def run(
     # before locking down the local FS), so guard the source size. schema/preview use
     # the footer/CSV-sniff (range reads only) and are intentionally NOT gated.
     if op in ("head", "sql"):
-        size = _source_size(target.url)
+        size = await asyncio.to_thread(_source_size, target.url)
         if size is not None and size > SOURCE_BYTE_CEILING:
             raise OperateNotSupportedError(
                 f"{target.name!r} is {size} bytes, over the operate ceiling of "
@@ -121,6 +145,7 @@ async def run(
         raise OperateNotSupportedError(
             f"operate op={op!r} exceeded {WALL_TIMEOUT_S}s wall-clock limit"
         ) from exc
+    result = _cap_result_bytes(result)
     result["file"] = target.name
     result["op"] = op
     return result
