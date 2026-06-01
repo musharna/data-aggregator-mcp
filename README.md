@@ -26,7 +26,7 @@ mcp-name: io.github.musharna/data-aggregator-mcp
 
 ## ✨ Why this
 
-Most data MCPs wrap a single source. This one **unifies** them behind four tools
+Most data MCPs wrap a single source. This one **unifies** them behind five tools
 and one `DataResource` model, so an agent searches once and gets back comparable
 records:
 
@@ -48,6 +48,10 @@ records:
   surfaced wherever the source exposes them.
 - **Interop exports** — `resolve(format="croissant")` or `"ro-crate"` hands a
   dataset to an ML or research-packaging pipeline as standard JSON-LD.
+- **Operate on data in place** — `operate` reads the schema, previews rows, or
+  runs a read-only SQL `SELECT` against a remote Parquet/CSV/TSV **without
+  downloading it** (Parquet footer + DuckDB httpfs range reads). Optional
+  `[operate]` extra; base install is unchanged.
 
 → Full rationale and a comparison vs. single-source servers, breadth gateways, and
 ML-dataset tools: **[docs/POSITIONING.md](docs/POSITIONING.md)**.
@@ -85,6 +89,13 @@ fetch("sra:SRX079566", dest="./data")
 ```bash
 pip install data-aggregator-mcp
 data-aggregator-mcp        # or: python -m data_aggregator_mcp
+```
+
+To use the `operate` tool (query remote tabular files in place), install the
+optional extra:
+
+```bash
+pip install "data-aggregator-mcp[operate]"
 ```
 
 Add to a client's MCP config (e.g. Claude Desktop `claude_desktop_config.json`):
@@ -200,7 +211,26 @@ Download files to disk and return their paths. Streams under a `max_bytes` guard
 ### `list_sources()`
 
 Wired sources with their capabilities — layer, kinds, supported filters,
-fetchability, id examples, auth, and rate limits.
+fetchability, `operable` flag, id examples, auth, and rate limits.
+
+### `operate(op, id, file?, query?, n?, columns?)`
+
+Inspect or query a remote tabular file (Parquet / CSV / TSV) **without
+downloading it**. Addresses a file by catalog `id` + `file` name (defaults to the
+first tabular file on the resolved record). Ops:
+
+- `schema` — column names + types (reads the Parquet footer / sniffs the CSV
+  header; no full load).
+- `preview` — a small sample of rows.
+- `head` — the first `n` rows (default 20), optionally restricted to `columns`.
+- `sql` — a read-only `SELECT` (the file is the view `data`), e.g.
+  `SELECT col, count(*) FROM data GROUP BY 1`.
+
+Backed by the Parquet footer reader + DuckDB `httpfs` range reads. `sql` runs in
+a locked-down DuckDB (read-only, local filesystem disabled, single-SELECT
+validation, row / wall-clock caps). Requires the optional `[operate]` extra
+(`pip install data-aggregator-mcp[operate]`); without it, `operate` returns a
+clear install-the-extra message and the other four tools are unaffected.
 
 ### Prompts
 
