@@ -1002,3 +1002,26 @@ async def test_resolve_routes_omicsdi_prefix(monkeypatch):
     async with httpx.AsyncClient() as c:
         r = await router.resolve(c, "omicsdi:pride:PXD000001")
     assert r.source == "omicsdi"
+
+
+@pytest.mark.asyncio
+async def test_resolve_sets_access_modes(monkeypatch) -> None:
+    from data_aggregator_mcp import operate
+    from data_aggregator_mcp.models import FileEntry
+
+    res = DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        files=[FileEntry(name="d.parquet", url="https://h/d.parquet")],
+    )
+
+    async def fake_zenodo_resolve(client, rid):
+        return res
+
+    monkeypatch.setattr(router.zenodo, "resolve", fake_zenodo_resolve)
+    monkeypatch.setattr(operate, "OPERATE_AVAILABLE", True)
+    async with httpx.AsyncClient() as c:
+        out = await router.resolve(c, "zenodo:1")
+    assert "sql" in out.access_modes and "fetch" in out.access_modes
