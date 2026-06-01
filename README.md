@@ -154,7 +154,8 @@ dropped.
 Full record + files manifest. Routes by id shape — `zenodo:7654321`, a bare DOI,
 `datacite:10.5061/dryad.x`, an omics id (`sra:SRX079566`, `geo:GSE332789`,
 `bioproject:PRJNA1468572`), a literature id (`pubmed:34320281`, `openaire:<id>`),
-or a HuggingFace id (`hf:owner/name`). Attaches, where available:
+a HuggingFace id (`hf:owner/name`), a DataONE id (`dataone:doi:10.5063/F1HT2M7Q`),
+or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
 
 - **`files[]`** — ENA FASTQ manifest (SRA), GEO `suppl/`, or the host repo's
   native manifest (Figshare / Dataverse / OSF / Dryad).
