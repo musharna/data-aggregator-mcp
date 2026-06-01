@@ -284,7 +284,7 @@ TOOLS: list[types.Tool] = [
                     "enum": ["croissant", "ro-crate"],
                     "description": "Optional export to render onto the result. 'croissant' "
                     "attaches a file-level Croissant JSON-LD manifest (croissant field); "
-                    "'ro-crate' attaches an RO-Crate 1.1 manifest (ro_crate field).",
+                    "'ro-crate' attaches a minimal RO-Crate 1.1 manifest (ro_crate field).",
                 },
             },
             "required": ["id"],
