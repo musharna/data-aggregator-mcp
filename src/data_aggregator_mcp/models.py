@@ -94,6 +94,7 @@ class DataResource(BaseModel):
         None  # file-level Croissant export, on resolve(format=croissant)
     )
     ro_crate: dict[str, Any] | None = None  # RO-Crate export, on resolve(format=ro-crate)
+    access_modes: list[str] = Field(default_factory=list)  # best-effort: fetch + operate modes
 
 
 class TaxonExpansion(BaseModel):
@@ -168,3 +169,23 @@ def derive_version_status(links: list["Link"]) -> tuple[bool | None, str | None]
     if any(lnk.rel in _SUPERSEDES_RELS for lnk in links):
         return True, None
     return None, None
+
+
+_TABULAR_EXTS = (".parquet", ".pq", ".csv", ".tsv")
+
+
+def derive_access_modes(files: list["FileEntry"], *, operate: bool) -> list[str]:
+    """Best-effort Tier-1 capability claim for a resolved record.
+
+    ``fetch`` when any file has a download url; the operate modes
+    (schema/preview/head/sql) when a tabular file is present AND the [operate]
+    extra is installed. Format-dependent modes are *claims* — operate verifies
+    them per-file and fails loud if the claim does not hold.
+    """
+    has_url = any(f.url for f in files)
+    if not has_url:
+        return []
+    modes = ["fetch"]
+    if operate and any((f.name or "").lower().endswith(_TABULAR_EXTS) for f in files if f.url):
+        modes += ["schema", "preview", "head", "sql"]
+    return modes
