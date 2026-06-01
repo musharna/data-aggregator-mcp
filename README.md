@@ -49,6 +49,9 @@ records:
 - **Interop exports** — `resolve(format="croissant")` or `"ro-crate"` hands a
   dataset to an ML or research-packaging pipeline as standard JSON-LD.
 
+→ Full rationale and a comparison vs. single-source servers, breadth gateways, and
+ML-dataset tools: **[docs/POSITIONING.md](docs/POSITIONING.md)**.
+
 ## ⚡ Quickstart
 
 Run with no install:
