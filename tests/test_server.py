@@ -515,3 +515,19 @@ def test_ensure_omicsdi_fetchable_error_points_to_landing_page():
     with pytest.raises(FetchNotSupportedError) as exc:
         server._ensure_omicsdi_fetchable("omicsdi:massive:MSV1", r)
     assert landing in str(exc.value)  # actionable pointer to the source repo
+
+
+# ---------------------------------------------------------------------------
+# Fix #2 — search tool schema must advertise dataone and omicsdi in sources
+# ---------------------------------------------------------------------------
+
+
+def test_search_schema_sources_description_includes_dataone_and_omicsdi():
+    tool = next(t for t in server.TOOLS if t.name == "search")
+    sources_desc = tool.inputSchema["properties"]["sources"]["description"]
+    assert "dataone" in sources_desc, (
+        f"'dataone' missing from sources description: {sources_desc!r}"
+    )
+    assert "omicsdi" in sources_desc, (
+        f"'omicsdi' missing from sources description: {sources_desc!r}"
+    )

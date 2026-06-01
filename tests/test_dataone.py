@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from data_aggregator_mcp import dataone
-from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.errors import DataAggregatorError, NotFoundError
 from data_aggregator_mcp.models import Creator
 
 _SEARCH = {
@@ -205,3 +205,61 @@ async def test_live_resolve_and_fetch_verifies_checksum():
         dest = os.environ.get("CLAUDE_JOB_DIR", "/tmp") + "/d1test"
         res = await fetch.fetch_files(c, r.model_copy(update={"files": [small]}), dest=dest)
         assert res.paths  # fetch.py raises on checksum mismatch, so reaching here = verified
+
+
+# ---------------------------------------------------------------------------
+# Fix #1 — _object_url must fail loud on 5xx (route through _http.request_xml)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_object_url_5xx_raises_dataaggreagtor_error():
+    """A persistent 5xx from /cn/v2/resolve/ must raise, never silently return None."""
+    call_count = 0
+
+    def handler(request):
+        nonlocal call_count
+        call_count += 1
+        if "/resolve/" in request.url.path:
+            return httpx.Response(500, text="internal error")
+        raise AssertionError(f"unexpected request {request.url}")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        with pytest.raises(DataAggregatorError):
+            await dataone._object_url(c, "urn:uuid:test-5xx")
+    # must have retried (MAX_RETRIES=3)
+    assert call_count == dataone.MAX_RETRIES
+
+
+@pytest.mark.asyncio
+async def test_object_url_404_returns_none():
+    """A 404 from /cn/v2/resolve/ means object not locatable → return None (skip it)."""
+
+    def handler(request):
+        if "/resolve/" in request.url.path:
+            return httpx.Response(404, text="not found")
+        raise AssertionError(f"unexpected request {request.url}")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        result = await dataone._object_url(c, "urn:uuid:test-404")
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Fix #3 — _normalize must populate doi from doi:-prefixed PIDs
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_sets_doi_from_doi_prefixed_pid():
+    r = dataone._normalize({"identifier": "doi:10.18739/A26336", "title": "X"})
+    assert r.doi == "10.18739/A26336"
+
+
+def test_normalize_doi_none_for_uuid_pid():
+    r = dataone._normalize({"identifier": "urn:uuid:abc", "title": "Y"})
+    assert r.doi is None
+
+
+def test_normalize_doi_none_for_plain_ark():
+    r = dataone._normalize({"identifier": "knb-lter-jrn.20050360.9823", "title": "Z"})
+    assert r.doi is None

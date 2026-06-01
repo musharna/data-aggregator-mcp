@@ -50,6 +50,7 @@ def _creators(doc: dict) -> list[Creator]:
 
 def _normalize(doc: dict) -> DataResource:
     pid = doc.get("identifier", "")
+    doi = pid[4:] if pid[:4].lower() == "doi:" else None
     return DataResource(
         id=f"dataone:{pid}",
         source="dataone",
@@ -58,6 +59,7 @@ def _normalize(doc: dict) -> DataResource:
         creators=_creators(doc),
         year=_year(doc.get("datePublished"), doc.get("dateUploaded")),
         last_updated=doc.get("dateModified"),
+        doi=doi,
         files=[],
     )
 
@@ -102,9 +104,19 @@ def _first_url(xml_text: str) -> str | None:
 
 async def _object_url(client: httpx.AsyncClient, pid: str) -> str | None:
     """Resolve a data PID to a Member-Node byte url (CN /object 404s for MN-only
-    objects, so we must read the ObjectLocationList)."""
-    resp = await client.get(RESOLVE.format(pid=quote(pid, safe="")), timeout=DEFAULT_TIMEOUT)
-    if resp.status_code != 200:
+    objects, so we read the ObjectLocationList). A 404 means the object is not
+    locatable → skip it; transport/5xx errors surface via the taxonomy (with
+    retries), never a silently-truncated manifest."""
+    resp = await _http.request_xml(
+        client,
+        "GET",
+        RESOLVE.format(pid=quote(pid, safe="")),
+        service="DataONE resolve",
+        timeout=DEFAULT_TIMEOUT,
+        max_retries=MAX_RETRIES,
+        not_found_returns=None,
+    )
+    if resp is None:
         return None
     return _first_url(resp.text)
 

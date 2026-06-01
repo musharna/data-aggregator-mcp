@@ -227,7 +227,8 @@ TOOLS: list[types.Tool] = [
             "literature for datasets, software, publications, and sequencing data. "
             "Fans out across Zenodo, DataCite (Dryad, Figshare, Dataverse, OSF, "
             "Mendeley), NCBI omics (GEO, SRA, BioProject), literature (PubMed + "
-            "OpenAIRE), and HuggingFace Hub (datasets). Returns compact DataResource "
+            "OpenAIRE), HuggingFace Hub (datasets), DataONE (eco/environmental federation), "
+            "and OmicsDI (proteomics/metabolomics). Returns compact DataResource "
             "records; per-source failures are "
             "reported in errors{}. Use resolve for the full record (SRA resolve attaches "
             "the ENA FASTQ manifest; publication resolve attaches links[] to datasets/"
@@ -251,7 +252,7 @@ TOOLS: list[types.Tool] = [
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Restrict fan-out to these sources (default: all). "
-                    "Available: zenodo, datacite, omics, literature, huggingface",
+                    "Available: zenodo, datacite, omics, literature, huggingface, dataone, omicsdi",
                 },
                 "organism": {
                     "type": "string",
