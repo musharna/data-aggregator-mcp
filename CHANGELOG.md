@@ -8,6 +8,11 @@
 - **OmicsDI** source — proteomics/metabolomics discovery, restricted to the mass-spec modality repos (PRIDE, MassIVE, MetaboLights, Metabolomics Workbench, GNPS, PeptideAtlas) not already covered by the omics leg.
 - **PRIDE** and **MetaboLights** fetch backends — `omicsdi:pride:*` / `omicsdi:metabolights_dataset:*` records fetch end-to-end over the EBI HTTPS mirror (unverified: no upstream checksum; PRIDE is size-checked). Other OmicsDI repos are discovery-only and fail loud at fetch with a source pointer.
 
+### Fixed
+
+- DataONE resolve follows the `/cn/v2/resolve/` **303** correctly: the Member-Node url is read from the `Location` header instead of chasing the redirect into the object bytes (which broke checksum verification). Live-validated end-to-end.
+- MetaboLights file urls are sourced from the FTP directory listing, not the WS `/files` API, whose logical names don't always match the physical FTP filename (assay files 404'd).
+
 ### Notes
 
 - OmicsDI contributes first-page results only (modality post-filtering precludes stable pagination).

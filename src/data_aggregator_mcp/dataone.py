@@ -103,11 +103,14 @@ def _first_url(xml_text: str) -> str | None:
 
 
 async def _object_url(client: httpx.AsyncClient, pid: str) -> str | None:
-    """Resolve a data PID to a Member-Node byte url (CN /object 404s for MN-only
-    objects, so we read the ObjectLocationList). A 404 means the object is not
-    locatable → skip it; transport/5xx errors surface via the taxonomy (with
-    retries), never a silently-truncated manifest."""
-    resp = await _http.request_xml(
+    """Resolve a data PID to a Member-Node byte url. CN ``/cn/v2/resolve/`` answers
+    303 with the MN url in the ``Location`` header (its body also carries the
+    ObjectLocationList). We must NOT follow the redirect — the client follows by
+    default and would download the object *bytes* instead of the locator, then fail
+    to parse them as XML. A 404 means the object is not locatable → skip it;
+    transport/5xx errors surface via the taxonomy (with retries), never a
+    silently-truncated manifest."""
+    resp = await _http.request_with_retry(
         client,
         "GET",
         RESOLVE.format(pid=quote(pid, safe="")),
@@ -115,10 +118,14 @@ async def _object_url(client: httpx.AsyncClient, pid: str) -> str | None:
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         not_found_returns=None,
+        follow_redirects=False,
     )
-    if resp is None:
+    if resp is None:  # 404 → object not locatable
         return None
-    return _first_url(resp.text)
+    location = resp.headers.get("location")
+    if location:  # 303 redirect (live CN behavior)
+        return location
+    return _first_url(resp.text)  # 200 ObjectLocationList body (legacy / non-redirect)
 
 
 async def _file_entry(client: httpx.AsyncClient, doc: dict) -> FileEntry | None:

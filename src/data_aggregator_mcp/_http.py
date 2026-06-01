@@ -18,6 +18,9 @@ from data_aggregator_mcp.errors import (
 _RAISE = object()
 _RETRY_AFTER_CAP = 60.0
 _RETRYABLE_STATUSES = (429, 500, 502, 503, 504)
+# Redirect statuses returned (not followed) when a caller passes follow_redirects=False
+# — e.g. DataONE /resolve/ answers 303 with the Member-Node url in the Location header.
+_REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 # Transport-level failures (no HTTP response): connect/read/write/timeout/protocol.
 _TRANSPORT_ERRORS = (httpx.TimeoutException, httpx.TransportError)
 # Malformed 2xx body: json.JSONDecodeError ⊂ ValueError; ET.ParseError ⊄ ValueError.
@@ -38,6 +41,7 @@ async def _retrying(
     max_retries: int = 3,
     not_found_returns: Any = _RAISE,
     parse: Callable[[httpx.Response], Any] | None = None,
+    follow_redirects: bool = True,
 ) -> Any:
     """Issue ``method url`` with retry + classification. Transport errors and
     (when ``parse`` is given) a malformed 2xx body are retried like a 5xx, then
@@ -59,6 +63,7 @@ async def _retrying(
                 content=content,
                 headers=headers,
                 timeout=timeout,
+                follow_redirects=follow_redirects,
             )
         except _TRANSPORT_ERRORS as exc:
             last_exc = exc
@@ -72,7 +77,9 @@ async def _retrying(
 
         last_status = resp.status_code
 
-        if resp.status_code == 200:
+        if resp.status_code == 200 or (
+            not follow_redirects and resp.status_code in _REDIRECT_STATUSES
+        ):
             if parse is None:
                 return resp
             try:
@@ -129,9 +136,12 @@ async def request_with_retry(
     timeout: float = 30.0,
     max_retries: int = 3,
     not_found_returns: Any = _RAISE,
+    follow_redirects: bool = True,
 ) -> httpx.Response | Any:
     """Return the 2xx ``Response``; transport / 429 / 5xx retried; terminal → typed error.
-    Pass ``not_found_returns=<sentinel>`` to return the sentinel on 404."""
+    Pass ``not_found_returns=<sentinel>`` to return the sentinel on 404. Pass
+    ``follow_redirects=False`` to return a 3xx ``Response`` unfollowed (read its
+    ``Location`` header) instead of chasing it."""
     return await _retrying(
         client,
         method,
@@ -144,6 +154,7 @@ async def request_with_retry(
         max_retries=max_retries,
         not_found_returns=not_found_returns,
         parse=None,
+        follow_redirects=follow_redirects,
     )
 
 

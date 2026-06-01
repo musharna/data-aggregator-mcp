@@ -245,6 +245,25 @@ async def test_object_url_404_returns_none():
     assert result is None
 
 
+@pytest.mark.asyncio
+async def test_object_url_303_returns_location_without_following():
+    """CN /resolve/ answers 303 with the Member-Node url in Location; the redirect
+    must NOT be followed (else we download the object bytes instead of the locator)."""
+    mn_url = "https://arcticdata.io/metacat/d1/mn/v2/object/urn:uuid:abc"
+
+    def handler(request):
+        if "/resolve/" in request.url.path:
+            return httpx.Response(303, headers={"Location": mn_url}, text="<redirect/>")
+        # reaching here means the 303 was followed to the object bytes — the bug.
+        raise AssertionError(f"redirect was followed to {request.url}")
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), follow_redirects=True
+    ) as c:
+        result = await dataone._object_url(c, "urn:uuid:abc")
+    assert result == mn_url
+
+
 # ---------------------------------------------------------------------------
 # Fix #3 — _normalize must populate doi from doi:-prefixed PIDs
 # ---------------------------------------------------------------------------
