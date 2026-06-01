@@ -63,7 +63,7 @@ def _preview_parquet(url: str, n: int) -> dict:
             {"name": n2, "type": _arrow_type(t)}
             for n2, t in zip(pf.schema_arrow.names, pf.schema_arrow.types)
         ]
-    rows = batch.to_pylist()
+        rows = batch.to_pylist()
     return {"format": "parquet", "columns": cols, "rows": rows[:n]}
 
 
