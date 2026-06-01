@@ -73,6 +73,7 @@ async def test_head_column_quote_is_escaped():
             n=2,
             columns=['name" ; DROP TABLE data; --'],
         )
-    # the doubled-quote keeps it a single identifier; DuckDB complains about the column,
-    # which proves no statement-stacking break-out occurred.
-    assert "drop" not in str(ei.value).lower() or "syntax" not in str(ei.value).lower()
+    msg = str(ei.value).lower()
+    # the doubled-quote kept the payload as a single (nonexistent) identifier, so
+    # DuckDB raises a binder/column error — proving no statement-stacking break-out.
+    assert "binder error" in msg or "not found" in msg or "does not have a column" in msg
