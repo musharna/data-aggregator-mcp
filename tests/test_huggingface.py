@@ -51,6 +51,8 @@ async def test_resolve_attaches_files_skips_gitattributes():
     }
 
     async def handler(request):
+        if request.url.host == "datasets-server.huggingface.co":
+            return httpx.Response(404)
         assert request.url.path.endswith("/api/datasets/owner/name")
         return httpx.Response(200, json=body)
 
@@ -104,6 +106,71 @@ async def test_search_gated_is_restricted():
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+
+
+@pytest.mark.asyncio
+async def test_resolve_enriches_with_datasets_server_parquet(monkeypatch):
+    from data_aggregator_mcp import hf_datasets_server
+    from data_aggregator_mcp.models import FileEntry
+
+    body = {**_DS, "siblings": [{"rfilename": "README.md"}]}
+
+    async def fake_parquet(client, ds_id):
+        return [
+            FileEntry(
+                name="default/train/0000.parquet",
+                url="https://h/0.parquet",
+                source="hf-datasets-server",
+            )
+        ]
+
+    monkeypatch.setattr(hf_datasets_server, "parquet_files", fake_parquet)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body))
+    ) as c:
+        r = await huggingface.resolve(c, "hf:owner/name")
+    names = [f.name for f in r.files]
+    assert names == ["README.md", "default/train/0000.parquet"]
+    assert r.files[-1].source == "hf-datasets-server"
+
+
+@pytest.mark.asyncio
+async def test_resolve_survives_datasets_server_404(monkeypatch):
+    from data_aggregator_mcp import hf_datasets_server
+    from data_aggregator_mcp.errors import NotFoundError as NFE
+
+    body = {**_DS, "siblings": [{"rfilename": "data/train.parquet"}]}
+
+    async def fake_parquet(client, ds_id):
+        raise NFE("no converted view")
+
+    monkeypatch.setattr(hf_datasets_server, "parquet_files", fake_parquet)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body))
+    ) as c:
+        r = await huggingface.resolve(c, "hf:owner/name")
+    assert [f.name for f in r.files] == ["data/train.parquet"]  # raw siblings only
+
+
+@pytest.mark.asyncio
+async def test_resolve_logs_on_datasets_server_error(monkeypatch, caplog):
+    import logging as _logging
+
+    from data_aggregator_mcp import hf_datasets_server
+
+    body = {**_DS, "siblings": [{"rfilename": "data/train.parquet"}]}
+
+    async def fake_parquet(client, ds_id):
+        raise RuntimeError("datasets-server 503")
+
+    monkeypatch.setattr(hf_datasets_server, "parquet_files", fake_parquet)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body))
+    ) as c:
+        with caplog.at_level(_logging.WARNING):
+            r = await huggingface.resolve(c, "hf:owner/name")
+    assert [f.name for f in r.files] == ["data/train.parquet"]  # never breaks resolve
+    assert any("datasets-server" in m.lower() for m in caplog.messages)
 
 
 @_live_only
