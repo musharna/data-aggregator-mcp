@@ -1,5 +1,6 @@
 # tests/test_hf_datasets_server.py
 import logging
+import os
 
 import httpx
 import pytest
@@ -101,3 +102,24 @@ def test_converted_parquet_file_advertises_operate_modes():
         "head",
         "sql",
     ]
+
+
+_LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
+_live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_resolve_enriches_and_operates():
+    from data_aggregator_mcp import huggingface, operate
+
+    ds = "hf:mteb/tweet_sentiment_extraction"
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        r = await huggingface.resolve(c, ds)
+        dss = [f for f in r.files if f.source == "hf-datasets-server"]
+        assert dss, "resolve should surface datasets-server parquet files"
+
+        sch = await operate.run(c, ds, "schema", file=dss[0].name)
+        assert sch["columns"]
+        rows = await operate.run(c, ds, "sql", query="SELECT * FROM data LIMIT 5", file=dss[0].name)
+        assert len(rows["rows"]) == 5
