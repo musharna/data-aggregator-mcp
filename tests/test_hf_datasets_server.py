@@ -82,3 +82,22 @@ async def test_parquet_files_404_raises_notfound():
     async with _client(lambda r: httpx.Response(404)) as c:
         with pytest.raises(NotFoundError):
             await hf_datasets_server.parquet_files(c, "o/missing")
+
+
+def test_converted_parquet_file_advertises_operate_modes():
+    from data_aggregator_mcp.models import FileEntry, derive_access_modes
+
+    files = [
+        FileEntry(
+            name="default/train/0000.parquet",
+            url="https://huggingface.co/datasets/o/n/resolve/refs%2Fconvert%2Fparquet/default/train/0000.parquet",
+            source="hf-datasets-server",
+        )
+    ]
+    assert derive_access_modes(files, operate=True) == [
+        "fetch",
+        "schema",
+        "preview",
+        "head",
+        "sql",
+    ]
