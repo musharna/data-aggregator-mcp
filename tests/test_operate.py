@@ -5,6 +5,12 @@ import pathlib
 import httpx
 import pytest
 
+# The operate end-to-end tests exercise the [operate] engines (duckdb/pyarrow/
+# fsspec). Skip cleanly in a base-only env rather than failing at runtime.
+pytest.importorskip("duckdb")
+pytest.importorskip("pyarrow")
+pytest.importorskip("fsspec")
+
 from data_aggregator_mcp import operate, router
 from data_aggregator_mcp.errors import OperateNotSupportedError, ValidationError
 from data_aggregator_mcp.models import DataResource, FileEntry

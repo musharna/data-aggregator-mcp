@@ -3,6 +3,9 @@ import pathlib
 
 import pytest
 
+# Needs the [operate] extra (duckdb). Skip cleanly in a base-only env.
+pytest.importorskip("duckdb")
+
 from data_aggregator_mcp import duckquery
 from data_aggregator_mcp.errors import ValidationError
 

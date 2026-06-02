@@ -3,6 +3,11 @@ import pathlib
 
 import pytest
 
+# These tests need the [operate] extra (pyarrow/fsspec). Skip cleanly in a
+# base-only env instead of crashing at collection on the module-level imports.
+pytest.importorskip("fsspec")
+pytest.importorskip("pyarrow")
+
 from data_aggregator_mcp import tabular
 
 FX = pathlib.Path(__file__).parent / "fixtures"
