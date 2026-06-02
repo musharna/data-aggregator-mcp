@@ -232,6 +232,12 @@ validation, row / wall-clock caps). Requires the optional `[operate]` extra
 (`pip install data-aggregator-mcp[operate]`); without it, `operate` returns a
 clear install-the-extra message and the other four tools are unaffected.
 
+Any HuggingFace dataset with a datasets-server converted view is operable
+(`schema` / `preview` / `head` / `sql`): `resolve` surfaces the auto-converted
+Parquet files (`source="hf-datasets-server"`) even for datasets stored as
+JSON/JSONL/arrow, so pass `file=<config>/<split>/...parquet` to pick a split when
+there are several.
+
 ### Prompts
 
 Three workflow prompts surface in clients (e.g. `/mcp__data_aggregator__*` in

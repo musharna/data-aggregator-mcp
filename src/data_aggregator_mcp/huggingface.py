@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import httpx
 
-from data_aggregator_mcp import _http
+from data_aggregator_mcp import _http, hf_datasets_server
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import Creator, DataResource, FileEntry, Metrics, compact
 
@@ -17,6 +18,8 @@ DEFAULT_SIZE = 10
 MAX_SIZE = 50
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+
+logger = logging.getLogger(__name__)
 
 
 def _license(tags: list[str], card: dict | None) -> str | None:
@@ -99,4 +102,11 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         )
     except NotFoundError:
         raise NotFoundError(f"HuggingFace has no dataset {ds_id!r}") from None
-    return _normalize(body)
+    resource = _normalize(body)
+    try:
+        resource.files += await hf_datasets_server.parquet_files(client, ds_id)
+    except NotFoundError:
+        pass  # no converted view — normal (gated / too-big / non-tabular / pending)
+    except Exception as exc:  # noqa: BLE001 — best-effort; never break resolve
+        logger.warning("datasets-server enrichment failed for %s: %r", ds_id, exc)
+    return resource

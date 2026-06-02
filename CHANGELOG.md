@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.20.0] - 2026-06-02
+
+### Added
+
+- HuggingFace datasets are now operable via the datasets-server auto-converted
+  Parquet: `huggingface.resolve()` surfaces those files (`source="hf-datasets-server"`),
+  so `operate` (schema/preview/head/sql) reaches datasets stored as JSON/JSONL/arrow,
+  not only ones that ship `.parquet` at the raw URL. Best-effort: a dataset with no
+  converted view (gated/too-big/pending) keeps its raw siblings unchanged.
+
 ## [0.19.0] - 2026-06-01
 
 ### Added
