@@ -145,6 +145,10 @@ async def search(
             # partial results beat total failure, but log (don't silently swallow) the cause
             logger.warning("omics search: NCBI %s db failed: %r", db, outcome)
             continue
+        # gather(return_exceptions=True) types outcome as tuple | BaseException; the
+        # Exception guard above can't subtract the BaseException supertype, so narrow
+        # positively to the success tuple before unpacking.
+        assert isinstance(outcome, tuple)
         db_total, recs = outcome
         total += db_total
         per_db.append(recs)

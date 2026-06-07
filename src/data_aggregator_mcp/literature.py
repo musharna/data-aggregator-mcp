@@ -44,6 +44,10 @@ async def search(
         if isinstance(outcome, Exception):
             logger.warning("literature search: %s backend failed: %r", name, outcome)
             continue
+        # gather(return_exceptions=True) types outcome as tuple | BaseException; the
+        # Exception guard above can't subtract the BaseException supertype, so narrow
+        # positively to the success tuple before unpacking.
+        assert isinstance(outcome, tuple)
         backend_total, recs = outcome
         total += backend_total
         per_backend.append(recs)

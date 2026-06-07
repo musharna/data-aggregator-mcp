@@ -117,13 +117,18 @@ async def run(
 
     resource = await router.resolve(client, resource_id)
     target = _select_file(resource.files, file)
+    # _select_file only returns operable files, and _operable() requires a truthy url,
+    # so target.url is guaranteed non-None here. Bind it to a local str so the narrowed
+    # type survives into the _go() closure (a captured attribute would widen back).
+    assert target.url is not None
+    url = target.url
     n = min(n, ROW_CAP)
 
     # head/sql eager-load the whole remote file into memory (DuckDB materializes it
     # before locking down the local FS), so guard the source size. schema/preview use
     # the footer/CSV-sniff (range reads only) and are intentionally NOT gated.
     if op in ("head", "sql"):
-        size = await asyncio.to_thread(_source_size, target.url)
+        size = await asyncio.to_thread(_source_size, url)
         if size is not None and size > SOURCE_BYTE_CEILING:
             raise OperateNotSupportedError(
                 f"{target.name!r} is {size} bytes, over the operate ceiling of "
@@ -132,12 +137,14 @@ async def run(
 
     async def _go() -> dict:
         if op == "schema":
-            return await tabular.schema(target.url, target.name)
+            return await tabular.schema(url, target.name)
         if op == "preview":
-            return await tabular.preview(target.url, target.name, n=n)
+            return await tabular.preview(url, target.name, n=n)
         if op == "head":
-            return await duckquery.run_head(target.url, target.name, n=n, columns=columns)
-        return await duckquery.run_sql(target.url, target.name, query, row_cap=ROW_CAP)
+            return await duckquery.run_head(url, target.name, n=n, columns=columns)
+        # reached only when op == "sql", which the line-113 guard requires a query for.
+        assert query is not None
+        return await duckquery.run_sql(url, target.name, query, row_cap=ROW_CAP)
 
     try:
         result = await asyncio.wait_for(_go(), timeout=WALL_TIMEOUT_S)

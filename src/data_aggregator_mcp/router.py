@@ -284,6 +284,10 @@ async def search_page(
             errors[name] = f"{type(outcome).__name__}: {outcome}"
             totals[name] = 0
             continue
+        # gather(return_exceptions=True) types outcome as tuple | BaseException; the
+        # Exception guard above can't subtract the BaseException supertype, so narrow
+        # positively to the success tuple before unpacking.
+        assert isinstance(outcome, tuple)
         adapter_total, recs = outcome
         total += adapter_total
         totals[name] = adapter_total

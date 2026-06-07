@@ -6,6 +6,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **mypy is now a blocking CI gate.** Added mypy (dev dep + `[tool.mypy]` config) and a blocking `Types (mypy)` step to CI. Cleared the existing type debt with real `None`-handling fixes (narrowing asserts that match documented invariants + a walrus binding); no `# type: ignore` needed. No runtime change.
+
 ## [0.20.0] - 2026-06-02
 
 ### Added

@@ -65,11 +65,9 @@ def _normalize(record: dict[str, Any]) -> DataResource:
             for c in meta.get("creators", []) or []
         ],
         funding=[
-            FundingRef(
-                funder=(g.get("funder") or {}).get("name"), award=g.get("code") or g.get("title")
-            )
+            FundingRef(funder=funder_name, award=g.get("code") or g.get("title"))
             for g in (meta.get("grants") or [])
-            if (g.get("funder") or {}).get("name")
+            if (funder_name := (g.get("funder") or {}).get("name"))
         ],
         year=year,
         description=meta.get("description"),

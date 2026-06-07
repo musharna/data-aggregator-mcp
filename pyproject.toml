@@ -43,6 +43,7 @@ dev = [
     "ruff>=0.3",
     "pyyaml>=6.0",
     "jsonschema>=4.20",
+    "mypy>=2.1.0",
 ]
 operate = [
     "duckdb>=1.1",
@@ -70,6 +71,11 @@ packages = ["src/data_aggregator_mcp"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = true
 
 [tool.ruff]
 line-length = 100
