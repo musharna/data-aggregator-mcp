@@ -1,4 +1,3 @@
-
 import pytest
 
 from data_aggregator_mcp import _ratelimit

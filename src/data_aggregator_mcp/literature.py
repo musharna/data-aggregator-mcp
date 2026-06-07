@@ -40,7 +40,7 @@ async def search(
     )
     total = 0
     per_backend: list[list[DataResource]] = []
-    for name, outcome in zip(_BACKENDS, outcomes):
+    for name, outcome in zip(_BACKENDS, outcomes, strict=False):
         if isinstance(outcome, Exception):
             logger.warning("literature search: %s backend failed: %r", name, outcome)
             continue

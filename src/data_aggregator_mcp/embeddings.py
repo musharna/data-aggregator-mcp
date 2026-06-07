@@ -62,7 +62,7 @@ def _cosine(a: list[float], b: list[float]) -> float:
     nb = math.sqrt(sum(y * y for y in b))
     if na == 0.0 or nb == 0.0:
         return -1.0  # zero-norm sorts last
-    return sum(x * y for x, y in zip(a, b)) / (na * nb)
+    return sum(x * y for x, y in zip(a, b, strict=False)) / (na * nb)
 
 
 def cosine_rank(query_vec: list[float], cand_vecs: list[list[float]]) -> list[int]:

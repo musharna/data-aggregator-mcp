@@ -74,3 +74,10 @@ asyncio_mode = "auto"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+# E/F (default) plus import-sorting, bugbear, pyupgrade, and simplify.
+# E501 (line-too-long) is intentionally left to the formatter — `ruff format`
+# wraps code; E501 would otherwise only nag about long strings/comments/URLs.
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501"]

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import xml.etree.ElementTree as ET
-from typing import Any, Callable, Mapping
+from collections.abc import Callable, Mapping
+from typing import Any
 
 import httpx
 

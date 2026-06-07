@@ -141,7 +141,7 @@ async def run(
 
     try:
         result = await asyncio.wait_for(_go(), timeout=WALL_TIMEOUT_S)
-    except asyncio.TimeoutError as exc:
+    except TimeoutError as exc:
         raise OperateNotSupportedError(
             f"operate op={op!r} exceeded {WALL_TIMEOUT_S}s wall-clock limit"
         ) from exc

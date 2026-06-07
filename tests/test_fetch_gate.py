@@ -255,6 +255,6 @@ async def test_live_zenodo_refetch_resumes_verified_files(tmp_path) -> None:
         second = await fetch_mod.fetch_files(
             client, full, dest=str(tmp_path), files=fname, max_bytes=5_000_000
         )
-    assert fname in second.resumed       # skipped on re-fetch
-    assert second.bytes == 0             # nothing transferred
-    assert second.paths                  # path still reported
+    assert fname in second.resumed  # skipped on re-fetch
+    assert second.bytes == 0  # nothing transferred
+    assert second.paths  # path still reported

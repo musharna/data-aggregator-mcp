@@ -203,7 +203,7 @@ def _passes_filters(r: DataResource, f: dict[str, Any]) -> bool:
         return False
     if pa is not None and r.year < pa:
         return False
-    if pb is not None and r.year > pb:
+    if pb is not None and r.year > pb:  # noqa: SIM103 — parallel guard-clause style
         return False
     return True
 
@@ -279,7 +279,7 @@ async def search_page(
     per_source: list[list[DataResource]] = []
     totals: dict[str, int] = {}
     total = 0
-    for name, outcome in zip(names, outcomes):
+    for name, outcome in zip(names, outcomes, strict=False):
         if isinstance(outcome, Exception):
             errors[name] = f"{type(outcome).__name__}: {outcome}"
             totals[name] = 0

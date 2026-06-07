@@ -77,7 +77,7 @@ def _run(url: str, file: str, sql: str, row_cap: int) -> dict:
     names = [c["name"] for c in cols]
     return {
         "columns": cols,
-        "rows": [dict(zip(names, r)) for r in rows],
+        "rows": [dict(zip(names, r, strict=False)) for r in rows],
         "truncated": truncated,
     }
 

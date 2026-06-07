@@ -140,7 +140,7 @@ async def search(
     )
     total = 0
     per_db: list[list[DataResource]] = []
-    for db, outcome in zip(_DB.values(), outcomes):
+    for db, outcome in zip(_DB.values(), outcomes, strict=False):
         if isinstance(outcome, Exception):
             # partial results beat total failure, but log (don't silently swallow) the cause
             logger.warning("omics search: NCBI %s db failed: %r", db, outcome)

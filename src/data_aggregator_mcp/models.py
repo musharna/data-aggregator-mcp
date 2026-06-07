@@ -159,7 +159,7 @@ _SUPERSEDED_BY_RELS = {"is_previous_version_of", "is_obsoleted_by"}
 _SUPERSEDES_RELS = {"is_new_version_of", "obsoletes", "has_version", "is_version_of"}
 
 
-def derive_version_status(links: list["Link"]) -> tuple[bool | None, str | None]:
+def derive_version_status(links: list[Link]) -> tuple[bool | None, str | None]:
     """Infer (is_latest, superseded_by) from version relations in links[].
     Returns (None, None) when links carry no version information at all —
     absence of evidence, not a claim of latest."""
@@ -174,7 +174,7 @@ def derive_version_status(links: list["Link"]) -> tuple[bool | None, str | None]
 _TABULAR_EXTS = (".parquet", ".pq", ".csv", ".tsv")
 
 
-def derive_access_modes(files: list["FileEntry"], *, operate: bool) -> list[str]:
+def derive_access_modes(files: list[FileEntry], *, operate: bool) -> list[str]:
     """Best-effort Tier-1 capability claim for a resolved record.
 
     ``fetch`` when any file has a download url; the operate modes

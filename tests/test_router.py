@@ -471,7 +471,7 @@ async def test_search_no_organism_param_skips_taxonomy(monkeypatch) -> None:
     assert expansion is None
 
 
-def _plant_info() -> "taxonomy.TaxonInfo":
+def _plant_info() -> taxonomy.TaxonInfo:
     return taxonomy.TaxonInfo(
         taxid=99112,
         canonical_name="Phelipanche aegyptiaca",

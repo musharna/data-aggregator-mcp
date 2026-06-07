@@ -20,13 +20,11 @@ from mcp import types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
-from data_aggregator_mcp import citation
+from data_aggregator_mcp import citation, operate, router, zenodo
 from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import health as health_mod
-from data_aggregator_mcp import operate
 from data_aggregator_mcp import ro_crate as ro_crate_mod
-from data_aggregator_mcp import router, zenodo
 from data_aggregator_mcp.errors import FetchNotSupportedError
 from data_aggregator_mcp.models import DataResource, FetchResult, SearchResult
 

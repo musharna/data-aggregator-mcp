@@ -28,7 +28,7 @@ def _schema_parquet(url: str) -> dict:
         pf = pq.ParquetFile(f)
         cols = [
             {"name": n, "type": _arrow_type(t)}
-            for n, t in zip(pf.schema_arrow.names, pf.schema_arrow.types)
+            for n, t in zip(pf.schema_arrow.names, pf.schema_arrow.types, strict=False)
         ]
         nrows = pf.metadata.num_rows if pf.metadata is not None else None
     return {"format": "parquet", "columns": cols, "row_estimate": nrows}
@@ -60,7 +60,7 @@ def _preview_parquet(url: str, n: int) -> dict:
         pf = pq.ParquetFile(f)
         cols = [
             {"name": cn, "type": _arrow_type(t)}
-            for cn, t in zip(pf.schema_arrow.names, pf.schema_arrow.types)
+            for cn, t in zip(pf.schema_arrow.names, pf.schema_arrow.types, strict=False)
         ]
         nrows = pf.metadata.num_rows if pf.metadata is not None else None
         # An empty Parquet (zero row groups) yields no batches; next() must not raise
