@@ -62,7 +62,7 @@ claude mcp add data-aggregator -- uvx data-aggregator-mcp
 ## Pull requests
 
 - `uv run ruff check .` and `uv run pytest -q` must both pass — CI enforces this
-  on Python 3.11 and 3.12.
+  on Python 3.11, 3.12, and 3.13.
 - Add or update tests for the behavior you change. New source backends and tool
   behavior should come with mocked-API tests; live probes (gated by
   `DATA_AGGREGATOR_MCP_LIVE`) are welcome for new sources.
