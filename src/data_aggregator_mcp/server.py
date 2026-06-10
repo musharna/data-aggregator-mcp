@@ -40,6 +40,7 @@ _FETCHABLE_SOURCES = (
     "hf:",
     "dataone:",
     "omicsdi:",
+    "dandi:",
     "openml:",
     "pdb:",
 )  # id prefixes with a working fetch backend
@@ -221,6 +222,20 @@ _SOURCES: list[dict[str, Any]] = [
         "fetchable_notes": "PRIDE + MetaboLights records are fetchable (unverified - no upstream checksum); MassIVE/Metabolomics Workbench/GNPS/PeptideAtlas are discovery-only.",
         "id_example": "omicsdi:pride:PXD000001",
         "description": "Omics Discovery Index - proteomics & metabolomics studies; restricted to the mass-spec modality repos not already covered by the omics leg.",
+    },
+    {
+        "name": "dandi",
+        "layer": "omics",
+        "kinds": ["dataset"],
+        "filters_supported": ["query", "size"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (DANDI Archive search/resolve; asset-manifest fetch on resolve)",
+        "fetchable": True,
+        "operable": False,
+        "fetchable_notes": "Assets stream from the DANDI API (302→S3, unverified — no checksum in the listing); the manifest is capped at the first 100 assets for large dandisets.",
+        "id_example": "dandi:000004",
+        "description": "DANDI Archive — neurophysiology dandisets (NWB); search + resolve with a per-asset download manifest.",
     },
     {
         "name": "openml",

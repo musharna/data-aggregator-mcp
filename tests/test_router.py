@@ -47,6 +47,7 @@ def test_available_sources_lists_all_adapters() -> None:
         "zenodo",
         "dataone",
         "datacite",
+        "dandi",
         "omics",
         "literature",
         "huggingface",
@@ -321,6 +322,11 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     httpx_mock.add_response(
         url=re.compile(r"https://www\.omicsdi\.org/ws/dataset/search.*"),
         json={"datasets": []},
+    )
+    # dandi is also a default source: returns empty here
+    httpx_mock.add_response(
+        url=re.compile(r"https://api\.dandiarchive\.org/api/dandisets/.*"),
+        json={"count": 0, "results": []},
     )
     # openml is also a default source: returns empty here
     httpx_mock.add_response(

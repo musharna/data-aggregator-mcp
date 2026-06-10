@@ -19,6 +19,7 @@ import httpx
 
 from data_aggregator_mcp import (
     _cursor,
+    dandi,
     datacite,
     dataone,
     embeddings,
@@ -56,6 +57,7 @@ _ADAPTERS: dict[str, Any] = {
     "zenodo": zenodo,
     "dataone": dataone,
     "datacite": datacite,
+    "dandi": dandi,
     "omics": omics,
     "literature": literature,
     "huggingface": huggingface,
@@ -418,6 +420,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = await literature.resolve(client, rid)
     elif prefix in dataone.PREFIXES:
         resource = await dataone.resolve(client, rid)
+    elif prefix in dandi.PREFIXES:
+        resource = await dandi.resolve(client, rid)
     elif prefix in omicsdi.PREFIXES:
         resource = await omicsdi.resolve(client, rid)
     elif prefix in openml.PREFIXES:
@@ -438,7 +442,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise ValueError(
             f"cannot route id {resource_id!r}: expected 'zenodo:<id>', 'datacite:<doi>', "
             "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', 'dataone:<pid>', "
-            "'omicsdi:<source>:<acc>', 'openml:<id>', 'pdb:<id>', 'gwas:<acc>', "
+            "'omicsdi:<source>:<acc>', 'dandi:<id>', 'openml:<id>', 'pdb:<id>', 'gwas:<acc>', "
             "a bare Zenodo id, or a DOI"
         )
     if resource.organism:
