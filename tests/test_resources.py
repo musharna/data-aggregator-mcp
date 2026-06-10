@@ -53,4 +53,5 @@ async def test_live_read_resource_resolves_real_record() -> None:
 
     contents = await server._read_resource(AnyUrl(resources.record_uri("pdb:1bg2")))
     rec = json.loads(list(contents)[0].content)
-    assert rec["id"] == "pdb:1bg2" and rec["source"] == "pdb"
+    # resolve canonicalizes the id (PDB returns the upper-cased accession, e.g. pdb:1BG2)
+    assert rec["id"].lower() == "pdb:1bg2" and rec["source"] == "pdb"

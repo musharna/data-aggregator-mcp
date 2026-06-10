@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-06-10
+
+### Added
+
+- **MCP resources** — resolved records and the source catalog are now addressable as
+  MCP resources (a separate primitive from tools). A client can read any record by URI
+  `dataresource://record/{id}` (where `{id}` is the same source-prefixed id the `resolve`
+  tool accepts, URL-encoded) and the source catalog at `dataresource://catalog`. Backed
+  by the existing resolve pipeline; the `resources` capability is now advertised.
+
 ## [0.24.0] - 2026-06-10
 
 ### Added
