@@ -63,6 +63,37 @@ async def test_search_paginates_1_indexed():
     assert captured["page"] == "3"
 
 
+@pytest.mark.asyncio
+async def test_search_page_and_page_size_agree_past_max_size():
+    # size > MAX_SIZE: page must derive from the CAPPED page_size, not raw size,
+    # and the offset%capped remainder is sliced off the returned page.
+    captured = {}
+
+    async def handler(request):
+        captured["page"] = request.url.params.get("page")
+        captured["page_size"] = request.url.params.get("page_size")
+        return httpx.Response(200, json=_SEARCH)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        total, recs = await dandi.search(c, "x", size=100, offset=100)
+    # capped = 50 → page = 100//50 + 1 = 3, page_size = 50, slice offset%50 = 0
+    assert captured["page_size"] == "50"
+    assert captured["page"] == "3"
+    assert [r.id for r in recs] == ["dandi:000003", "dandi:000999"]
+
+
+@pytest.mark.asyncio
+async def test_search_slices_offset_remainder():
+    # offset not page-aligned: drop the first offset%capped records of the page.
+    async def handler(request):
+        return httpx.Response(200, json=_SEARCH)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        _, recs = await dandi.search(c, "x", size=2, offset=1)
+    # capped=2, offset%2=1 → drop first record, keep the second
+    assert [r.id for r in recs] == ["dandi:000999"]
+
+
 _DETAIL = {
     "identifier": "000004",
     "created": "2020-03-16T21:48:04Z",

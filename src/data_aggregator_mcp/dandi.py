@@ -59,13 +59,18 @@ def _normalize_listing(d: dict) -> DataResource:
 async def search(
     client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
 ) -> tuple[int, list[DataResource]]:
-    page = offset // size + 1 if size else 1
+    # DANDI pages 1-indexed at a fixed page_size; request page ``offset // capped + 1``
+    # at page-size ``capped`` and drop the first ``offset % capped`` records so an
+    # arbitrary offset still maps onto the window [offset, offset+size). page and
+    # page_size must agree on ``capped`` (not raw size) or paging past MAX_SIZE skews.
+    capped = min(size, MAX_SIZE)
+    page = offset // capped + 1 if capped else 1
     body = await _http.request_json(
         client,
         "GET",
         f"{API}/dandisets/",
         service="DANDI search",
-        params={"search": query, "page_size": min(size, MAX_SIZE), "page": page},
+        params={"search": query, "page_size": capped, "page": page},
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
@@ -73,7 +78,8 @@ async def search(
     )
     results = (body or {}).get("results") or []
     total = (body or {}).get("count", len(results))
-    return total, [compact(_normalize_listing(d)) for d in results]
+    sliced = results[offset % capped :] if capped else results
+    return total, [compact(_normalize_listing(d)) for d in sliced]
 
 
 # dcite contributor roles we treat as authorship (others: Funder, Sponsor, ...).
