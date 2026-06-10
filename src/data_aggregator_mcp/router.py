@@ -122,6 +122,17 @@ def _dedup(resources: list[DataResource]) -> list[DataResource]:
     return [by_doi[k] for k in order] + no_doi
 
 
+def _or_group(terms: list[str]) -> str:
+    """Build a quoted ``"a" OR "b"`` group for query expansion, neutralizing any
+    embedded double-quote in a term. Free-text ontology labels (NCBI Taxonomy
+    synonyms, MeSH entry terms) must not break the surrounding quoting handed to
+    downstream adapters. Terms that are empty after neutralization are dropped.
+    Shared by ``_expand_organism`` and ``_expand_disease`` so the safety lives in
+    one place."""
+    safe = [t.replace('"', " ").strip() for t in terms]
+    return " OR ".join(f'"{t}"' for t in safe if t)
+
+
 async def _expand_organism(
     client: httpx.AsyncClient, query: str, organism: str | None, errors: dict[str, str]
 ) -> tuple[str, TaxonExpansion | None]:
@@ -140,7 +151,7 @@ async def _expand_organism(
     if info is None:
         return query, None
     terms = list(dict.fromkeys([info.canonical_name, *info.synonyms]))
-    or_group = " OR ".join(f'"{t}"' for t in terms)
+    or_group = _or_group(terms)
     effective = f"({query}) AND ({or_group})"
     expansion = TaxonExpansion(
         input=organism,
@@ -170,7 +181,7 @@ async def _expand_disease(
     if info is None:
         return query, None
     terms = list(dict.fromkeys([info.canonical, *info.synonyms]))
-    or_group = " OR ".join(f'"{t}"' for t in terms)
+    or_group = _or_group(terms)
     effective = f"({query}) AND ({or_group})"
     expansion = MeshExpansion(
         input=disease,

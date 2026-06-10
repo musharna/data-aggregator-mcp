@@ -511,6 +511,32 @@ def _mesh_info() -> mesh.MeshInfo:
     )
 
 
+def test_or_group_neutralizes_embedded_quotes_and_drops_empties() -> None:
+    # Free-text ontology labels with a stray double-quote must not break the
+    # surrounding quoting handed to downstream adapters. _or_group is shared by
+    # organism + disease expansion, so this pins the safety once.
+    assert router._or_group(["Breast Neoplasms", 'a"b', "   ", '"']) == (
+        '"Breast Neoplasms" OR "a b"'
+    )
+
+
+async def test_search_disease_synonym_with_quote_produces_wellformed_query(monkeypatch) -> None:
+    info = mesh.MeshInfo(ui="D000001", canonical="Foo", synonyms=('bar"baz',))
+    monkeypatch.setattr(mesh, "resolve_mesh", AsyncMock(return_value=info))
+    captured: dict[str, str] = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        await router.search_page(client, query="q", disease="foo", sources=["zenodo"])
+    # stray quote neutralized → balanced quotes, no injected boolean tokens
+    assert captured["query"].count('"') % 2 == 0
+    assert "bar baz" in captured["query"]
+
+
 async def test_search_expands_disease_synonyms(monkeypatch) -> None:
     monkeypatch.setattr(mesh, "resolve_mesh", AsyncMock(return_value=_mesh_info()))
     captured = {}

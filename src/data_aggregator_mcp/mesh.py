@@ -41,7 +41,7 @@ def _parse_mesh(docs: list[dict[str, Any]]) -> MeshInfo | None:
     doc = docs[0]
     if doc.get("ds_recordtype") != "descriptor":
         return None
-    terms = doc.get("ds_meshterms") or []
+    terms = [t for t in (doc.get("ds_meshterms") or []) if isinstance(t, str) and t.strip()]
     if not terms:
         return None
     ui = doc.get("ds_meshui")
