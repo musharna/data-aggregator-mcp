@@ -41,7 +41,9 @@
 - **P4.1 True semantic RECALL** ✅ **SHIPPED v0.26.0** — server-side, ontology-grounded: `disease=` param resolves via **MeSH** (`mesh.py`) → canonical descriptor + entry-term synonyms AND-ed into the query, mirroring `organism=`. (The big architectural insight: beyond-window recall is largely cedeable to the client; the ONE thing the server does that the client can't is grounded ontology expansion.) [[data-aggregator-mesh-disease-2026-06-10]]
 - **P4.3 Async long-fetch** (`fetch` `mode`/`job_id`) — `fetch.py` has no job model. _Larger; unlocks IPUMS/SWH/GBIF._ **DEFERRED (2026-06-10):** this capability IS the MCP **Tasks** extension (SEP-1686→SEP-2663), only _experimental_ in SDK 1.27.2 and **finalizes 2026-07-28**. Building a bespoke `job_id` now = throwaway. **Revisit after 2026-07-28** on the finalized Tasks extension. With P4.1–P4.4 done, this is the SOLE remaining Phase-4 item.
 
-→ **Recommended next:** P4.4 (retraction trust signal) or P4.2 (resources) — both small, both reinforce the moat/protocol. Full detail in the Phase-4 section below.
+**Beyond-roadmap recall axes (post-P4 additions):** the ontology-grounded expansion pattern from P4.1 was extended past the plan — **UBERON `tissue=` ✅ SHIPPED v0.27.0** (`anatomy.py`, EBI OLS, first non-NCBI client; especially additive for the single-cell sources). Recall axes now = organism (Taxonomy) · disease (MeSH) · tissue (UBERON). Natural further siblings if wanted: assay/method (EDAM/OBI), chemical (ChEBI) — same `_pick`/OLS shape. [[data-aggregator-uberon-tissue-2026-06-10]]
+
+→ **Recommended next:** P4.3 is the sole _planned_ item left, date-blocked to 2026-07-28 (finalized MCP Tasks extension). Otherwise the roadmap is complete — further work is beyond-plan (e.g. more recall axes).
 
 ---
 
