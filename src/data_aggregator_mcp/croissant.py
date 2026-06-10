@@ -78,11 +78,16 @@ def _agent(creator: Creator) -> dict[str, Any]:
 
 
 def _target_id(target_id: str) -> str:
-    """Resolve a link target to a URL @id: bare DOIs get the doi.org prefix;
-    anything already a URL is passed through unchanged."""
+    """Resolve a link target to an @id. A URL passes through; a DOI (``10.…``)
+    gets the doi.org prefix; ANY OTHER identifier (a bare accession like
+    ``GSE12345``, a PMID, …) is emitted verbatim — fabricating a ``doi.org`` URL
+    for a non-DOI would assert a false DOI, the cardinal provenance-honesty
+    failure for a provenance feature."""
     if target_id.startswith(("http://", "https://")):
         return target_id
-    return f"https://doi.org/{target_id}"
+    if target_id.startswith("10."):  # DOI
+        return f"https://doi.org/{target_id}"
+    return target_id
 
 
 def _derived_from(links: list[Link]) -> list[dict[str, str]]:
@@ -114,9 +119,10 @@ def render(r: DataResource) -> dict[str, Any]:
         out["datePublished"] = str(r.year)
     if r.last_updated:
         out["dateModified"] = r.last_updated
-    if r.creators:
-        out["creator"] = [{"@type": "Person", "name": c.name} for c in r.creators]
-        out["prov:wasAttributedTo"] = [_agent(c) for c in r.creators]
+    named = [c for c in r.creators if c.name and c.name.strip()]
+    if named:
+        out["creator"] = [{"@type": "Person", "name": c.name} for c in named]
+        out["prov:wasAttributedTo"] = [_agent(c) for c in named]
     derived = _derived_from(r.links)
     if derived:
         out["prov:wasDerivedFrom"] = derived

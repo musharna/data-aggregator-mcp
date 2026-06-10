@@ -101,6 +101,33 @@ def test_prov_was_derived_from_omitted_for_non_derivation_rels() -> None:
     assert "prov:wasDerivedFrom" not in croissant.render(r)
 
 
+def test_prov_was_derived_from_non_doi_target_not_fabricated_as_doi() -> None:
+    # A derivation target that is a bare accession (not a DOI) must NOT be emitted
+    # as a fabricated https://doi.org/<accession> @id — that asserts a false DOI.
+    r = _resource()
+    r.links = [Link(rel="is_derived_from", target_id="GSE12345")]
+    derived = croissant.render(r)["prov:wasDerivedFrom"]
+    assert derived == [{"@id": "GSE12345"}]
+    # a real DOI target still gets the doi.org prefix
+    r.links = [Link(rel="is_derived_from", target_id="10.5061/dryad.parent")]
+    assert croissant.render(r)["prov:wasDerivedFrom"] == [
+        {"@id": "https://doi.org/10.5061/dryad.parent"}
+    ]
+
+
+def test_empty_name_creators_omitted() -> None:
+    # A creator with a blank name must not leak name:"" into creator or wasAttributedTo.
+    r = _resource()
+    r.creators = [Creator(name="A. Author"), Creator(name="  "), Creator(name="")]
+    out = croissant.render(r)
+    assert [c["name"] for c in out["creator"]] == ["A. Author"]
+    assert [a["name"] for a in out["prov:wasAttributedTo"]] == ["A. Author"]
+    # all-blank → keys omitted entirely
+    r.creators = [Creator(name=""), Creator(name="   ")]
+    out2 = croissant.render(r)
+    assert "creator" not in out2 and "prov:wasAttributedTo" not in out2
+
+
 def test_keywords_from_subjects() -> None:
     r = _resource()
     r.subjects = ["genomics", "rice"]
