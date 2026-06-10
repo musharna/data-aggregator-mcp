@@ -6,6 +6,24 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-06-10
+
+### Added
+
+- **UBERON tissue query-expansion** — `search(tissue=<name>)` resolves a tissue/anatomy
+  name to its canonical UBERON term via the EBI OLS4 search API (`ontology=uberon`,
+  `exact=true`) and expands the query with the canonical label plus its exact synonyms
+  (e.g. `liver` also matches `iecur`/`jecur`). The third ontology-grounded recall axis
+  after `organism=` (NCBI Taxonomy) and `disease=` (MeSH), and the first backed by a
+  non-NCBI client. Especially additive for the single-cell sources (CELLxGENE/DANDI).
+  Two client-side filters are load-bearing (neither OLS param self-enforces): the result
+  must be a real `UBERON:` term (a bare relevance search leaks cross-ontology `PR:` hits)
+  and the input must match the canonical label or an exact synonym (no expansion into a
+  wrong term — a no-match yields no expansion). The expansion is echoed in
+  `tissue_expansion`, composes with `organism=` and `disease=` (three AND-groups stack),
+  and is fail-loud (a UBERON lookup failure surfaces in `errors["uberon"]` and the query
+  runs un-expanded).
+
 ## [0.26.0] - 2026-06-10
 
 ### Added

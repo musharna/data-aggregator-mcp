@@ -19,6 +19,7 @@ import httpx
 
 from data_aggregator_mcp import (
     _cursor,
+    anatomy,
     cellxgene,
     dandi,
     datacite,
@@ -46,6 +47,7 @@ from data_aggregator_mcp.models import (
     SearchResult,
     Taxon,
     TaxonExpansion,
+    TissueExpansion,
     derive_access_modes,
     derive_version_status,
 )
@@ -192,6 +194,38 @@ async def _expand_disease(
     return effective, expansion
 
 
+async def _expand_tissue(
+    client: httpx.AsyncClient, query: str, tissue: str | None, errors: dict[str, str]
+) -> tuple[str, TissueExpansion | None]:
+    """If ``tissue`` resolves to a UBERON term, AND ``query`` with a
+    (canonical OR synonyms) group and return the echo. A UBERON (EBI OLS) lookup
+    failure is recorded in ``errors['uberon']`` and the query is returned
+    un-expanded (fail-loud — exactly like ``_expand_organism``/``_expand_disease``;
+    this is a search-input expansion, NOT a fail-soft resolve enricher). A
+    *no-match* is not an error: the query is returned un-expanded with nothing
+    recorded.
+    """
+    if not tissue or not tissue.strip():
+        return query, None
+    try:
+        info = await anatomy.resolve_uberon(client, tissue)
+    except Exception as exc:  # surfaced, not swallowed
+        errors["uberon"] = f"{type(exc).__name__}: {exc}"
+        return query, None
+    if info is None:
+        return query, None
+    terms = list(dict.fromkeys([info.canonical, *info.synonyms]))
+    or_group = _or_group(terms)
+    effective = f"({query}) AND ({or_group})"
+    expansion = TissueExpansion(
+        input=tissue,
+        uberon_id=info.uberon_id,
+        canonical_name=info.canonical,
+        synonyms=list(info.synonyms),
+    )
+    return effective, expansion
+
+
 async def _enrich_resource(client: httpx.AsyncClient, r: DataResource) -> DataResource:
     """Normalize ``r.organism`` → ``r.taxa`` (taxid+canonical) and append a
     ``described_in`` cross-link to plant-genomics-mcp for Viridiplantae taxa.
@@ -276,6 +310,7 @@ async def search_page(
     sources: list[str] | None = None,
     organism: str | None = None,
     disease: str | None = None,
+    tissue: str | None = None,
     published_after: int | None = None,
     published_before: int | None = None,
     kind: str | None = None,
@@ -305,8 +340,10 @@ async def search_page(
         offsets = st["offsets"]
         rank = st.get("rank", "relevance")
         disease = st.get("disease")
+        tissue = st.get("tissue")
         expansion = None  # frozen on continuation; do not re-expand
         disease_expansion = None  # frozen on continuation; do not re-expand
+        tissue_expansion = None  # frozen on continuation; do not re-expand
         effective_query = query
         errors: dict[str, str] = {}
     else:
@@ -321,6 +358,9 @@ async def search_page(
         effective_query, expansion = await _expand_organism(client, query, organism, errors)
         effective_query, disease_expansion = await _expand_disease(
             client, effective_query, disease, errors
+        )
+        effective_query, tissue_expansion = await _expand_tissue(
+            client, effective_query, tissue, errors
         )
         offsets = {}
 
@@ -411,6 +451,7 @@ async def search_page(
                 "sources": sources,
                 "organism": organism,
                 "disease": disease,
+                "tissue": tissue,
                 "filters": filters,
                 "size": size,
                 "offsets": new_offsets,
@@ -432,6 +473,7 @@ async def search_page(
         next_cursor=next_cursor,
         taxon_expansion=expansion,
         mesh_expansion=disease_expansion,
+        tissue_expansion=tissue_expansion,
     )
 
 

@@ -175,6 +175,38 @@ def test_search_tool_exposes_disease_param() -> None:
     assert "disease" in tool.inputSchema["properties"]
 
 
+def test_search_tool_exposes_tissue_param() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "search")
+    assert "tissue" in tool.inputSchema["properties"]
+
+
+async def test_dispatch_search_passes_tissue_to_router(monkeypatch) -> None:
+    from data_aggregator_mcp.models import SearchResult, TissueExpansion
+
+    captured = {}
+
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(
+            query=kwargs.get("query"),
+            total=0,
+            count=0,
+            results=[],
+            errors={},
+            tissue_expansion=TissueExpansion(
+                input="liver",
+                uberon_id="UBERON:0002107",
+                canonical_name="liver",
+                synonyms=["iecur", "jecur"],
+            ),
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
+    out = await server._dispatch("search", {"query": "rna", "tissue": "liver"})
+    assert captured["tissue"] == "liver"
+    assert out["tissue_expansion"]["uberon_id"] == "UBERON:0002107"
+
+
 async def test_dispatch_search_passes_disease_to_router(monkeypatch) -> None:
     from data_aggregator_mcp.models import MeshExpansion, SearchResult
 

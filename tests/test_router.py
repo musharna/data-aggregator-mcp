@@ -8,7 +8,7 @@ import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from data_aggregator_mcp import mesh, router, taxonomy
+from data_aggregator_mcp import anatomy, mesh, router, taxonomy
 from data_aggregator_mcp.errors import UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import DataResource
 
@@ -662,6 +662,139 @@ async def test_search_disease_round_trips_cursor_without_reexpanding(monkeypatch
 
     assert _cursor.decode(page1.next_cursor)["disease"] == "breast cancer"
     assert page2.mesh_expansion is None
+
+
+def _uberon_info() -> anatomy.UberonInfo:
+    return anatomy.UberonInfo(
+        uberon_id="UBERON:0002107",
+        canonical="liver",
+        synonyms=("iecur", "jecur"),
+    )
+
+
+async def test_search_expands_tissue_synonyms(monkeypatch) -> None:
+    monkeypatch.setattr(anatomy, "resolve_uberon", AsyncMock(return_value=_uberon_info()))
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(client, query="rna", tissue="liver", sources=["zenodo"])
+    assert captured["query"] == '(rna) AND ("liver" OR "iecur" OR "jecur")'
+    assert result.tissue_expansion is not None
+    assert result.tissue_expansion.uberon_id == "UBERON:0002107"
+    assert result.tissue_expansion.canonical_name == "liver"
+    assert result.tissue_expansion.synonyms == ["iecur", "jecur"]
+    assert result.errors == {}
+
+
+async def test_search_tissue_organism_disease_compose_three_stacked_and_groups(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        taxonomy,
+        "resolve_taxon",
+        AsyncMock(
+            return_value=taxonomy.TaxonInfo(
+                taxid=9606,
+                canonical_name="Homo sapiens",
+                synonyms=("human",),
+                is_plant=False,
+            )
+        ),
+    )
+    monkeypatch.setattr(mesh, "resolve_mesh", AsyncMock(return_value=_mesh_info()))
+    monkeypatch.setattr(anatomy, "resolve_uberon", AsyncMock(return_value=_uberon_info()))
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client,
+            query="rna",
+            organism="human",
+            disease="breast cancer",
+            tissue="liver",
+            sources=["zenodo"],
+        )
+    q = captured["query"]
+    # tissue expands the ALREADY organism+disease-expanded query → three stacked groups
+    assert q == (
+        '(((rna) AND ("Homo sapiens" OR "human")) '
+        'AND ("Breast Neoplasms" OR "Breast Cancer")) '
+        'AND ("liver" OR "iecur" OR "jecur")'
+    )
+    assert result.taxon_expansion is not None
+    assert result.mesh_expansion is not None
+    assert result.tissue_expansion is not None
+
+
+async def test_search_tissue_lookup_failure_surfaces_error_and_runs_unexpanded(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        anatomy,
+        "resolve_uberon",
+        AsyncMock(side_effect=UpstreamUnavailableError("EBI OLS down")),
+    )
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(client, query="rna", tissue="liver", sources=["zenodo"])
+    assert captured["query"] == "rna"  # ran un-expanded
+    assert result.tissue_expansion is None
+    assert "uberon" in result.errors
+    assert "UpstreamUnavailableError" in result.errors["uberon"]
+
+
+async def test_search_no_tissue_param_skips_uberon(monkeypatch) -> None:
+    called = AsyncMock()
+    monkeypatch.setattr(anatomy, "resolve_uberon", called)
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(client, query="rna", sources=["zenodo"])
+    called.assert_not_awaited()
+    assert result.tissue_expansion is None
+
+
+async def test_search_tissue_round_trips_cursor_without_reexpanding(monkeypatch) -> None:
+    resolve = AsyncMock(return_value=_uberon_info())
+    monkeypatch.setattr(anatomy, "resolve_uberon", resolve)
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        recs = [_res(f"zenodo:{offset}", "zenodo", None)]
+        return 5, recs
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        page1 = await router.search_page(
+            client, query="rna", tissue="liver", size=1, sources=["zenodo"]
+        )
+        assert page1.next_cursor is not None
+        assert resolve.await_count == 1
+        page2 = await router.search_page(client, cursor=page1.next_cursor)
+    # continuation must NOT re-expand → resolve_uberon still called only once
+    assert resolve.await_count == 1
+    from data_aggregator_mcp import _cursor
+
+    assert _cursor.decode(page1.next_cursor)["tissue"] == "liver"
+    assert page2.tissue_expansion is None
 
 
 def _plant_info() -> taxonomy.TaxonInfo:

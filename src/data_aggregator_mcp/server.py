@@ -323,6 +323,9 @@ TOOLS: list[types.Tool] = [
             " Pass disease=<name> to expand the query with MeSH descriptor "
             "synonyms (e.g. 'breast cancer' also matches 'Breast Neoplasms'); "
             "the expansion is echoed in mesh_expansion."
+            " Pass tissue=<name> to expand the query with UBERON synonyms "
+            "(e.g. 'liver' also matches 'iecur'/'jecur'); the expansion is "
+            "echoed in tissue_expansion."
         ),
         inputSchema={
             "type": "object",
@@ -354,6 +357,13 @@ TOOLS: list[types.Tool] = [
                     "(NCBI E-utilities); the query is expanded with the canonical descriptor "
                     "+ entry-term synonyms (e.g. 'breast cancer' also matches "
                     "'Breast Neoplasms'). The expansion is echoed in mesh_expansion.",
+                },
+                "tissue": {
+                    "type": "string",
+                    "description": "Optional tissue/anatomy name. Resolved via UBERON (EBI OLS); "
+                    "the query is expanded with the canonical term + exact synonyms (e.g. "
+                    "'liver' also matches 'iecur'/'jecur'). "
+                    "The expansion is echoed in tissue_expansion.",
                 },
                 "cursor": {
                     "type": "string",
@@ -671,6 +681,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     sources=args.get("sources"),
                     organism=args.get("organism"),
                     disease=args.get("disease"),
+                    tissue=args.get("tissue"),
                     published_after=args.get("published_after"),
                     published_before=args.get("published_before"),
                     kind=args.get("kind"),

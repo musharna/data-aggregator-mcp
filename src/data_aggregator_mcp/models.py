@@ -130,6 +130,15 @@ class MeshExpansion(BaseModel):
     synonyms: list[str]  # entry terms added to the query (excludes the canonical name)
 
 
+class TissueExpansion(BaseModel):
+    """Echo of UBERON tissue-synonym expansion that fired for a search (transparency)."""
+
+    input: str  # the tissue param as given
+    uberon_id: str  # e.g. "UBERON:0002107"
+    canonical_name: str
+    synonyms: list[str]  # entry synonyms added to the query (excludes the canonical label)
+
+
 class SearchResult(BaseModel):
     query: str
     total: int
@@ -139,6 +148,7 @@ class SearchResult(BaseModel):
     next_cursor: str | None = None
     taxon_expansion: TaxonExpansion | None = None
     mesh_expansion: MeshExpansion | None = None
+    tissue_expansion: TissueExpansion | None = None
 
 
 class FetchResult(BaseModel):
