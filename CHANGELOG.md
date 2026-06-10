@@ -6,6 +6,41 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-06-10
+
+### Added
+
+- **`search(provenance=true)` — a whole-search RO-Crate 1.1 Run Crate.** An opt-in flag that
+  attaches `provenance_crate{}` — a single machine-readable manifest documenting an ENTIRE search
+  page in one call: the run itself (the query, the sources observed to participate, the ontology
+  expansions that fired, and the per-source errors) PLUS per-hit provenance for every result. This
+  is the "why an aggregator" artifact — the AI-Act training-data-manifest moment — and it completes
+  the **B10 flagship** (B10a per-record dossier + B10b whole-search Run Crate).
+  - **Run-level provenance as a `CreateAction`.** The new pure `run_crate.render(result)` emits a
+    flat RO-Crate 1.1 `@graph` whose root `Dataset` (`name "Search run: <query>"`) `hasPart`s the
+    hits and `mentions` a `#search-action` `CreateAction` (`instrument`→the `data-aggregator-mcp`
+    `SoftwareApplication` agent carrying `__version__`, `object`→`./`). The action encodes the
+    `query`, `result_count`/`total`, `sources_queried` (the union of sources that returned a hit and
+    sources that errored — honestly NOT the full configured adapter set, which the result does not
+    recover), the `ontology_expansions` that fired (one object per `taxon`/`mesh`/`tissue`/
+    `chemical`/`assay` axis, naming the input, ontology id, canonical name, and synonyms added), and
+    the per-source `errors` verbatim — a partial search is DISCLOSED, not hidden.
+  - **Per-hit signals reuse the B10a dossier helpers.** Each `#hit-i` `Dataset` carries
+    version-currency (B1), licence + normalized SPDX (B3), and FAIR (B4) assessment entities,
+    composed by REUSING `dossier.assessment_entities(hit, id_prefix=f"hit-{i}-")` — the dossier's
+    five per-signal helpers gained an `id_prefix` parameter (default `""`, so B10a output stays
+    byte-identical) and a public `assessment_entities` reuse seam. FAIR is computed per hit via the
+    pure `fair.assess`, so `render` stays PURE — no network/file I/O.
+  - **No per-hit retraction, no per-hit Crossref.** Search hits carry `trust=None`, so the retraction
+    helper emits NOTHING (an honest absence, never a "not retracted" claim). The run crate does NOT
+    fan out N Crossref calls; per-hit retraction stays a per-record opt-in via
+    `resolve(format=provenance)` (B10a).
+  - **Intra-page boundary.** The crate documents the search page just returned; a paginated search
+    yields one crate per page (stateless, mirroring B7). A cross-page run crate is out of scope.
+  - **Opt-in + additive.** Default off; with the flag off, `search` output is byte-identical to
+    pre-B10b. `conformsTo` stays ONLY on the metadata descriptor (`https://w3id.org/ro/crate/1.1`) —
+    no fabricated profile URI.
+
 ## [0.33.0] - 2026-06-10
 
 ### Added

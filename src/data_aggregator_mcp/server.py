@@ -23,7 +23,7 @@ from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.stdio import stdio_server
 from pydantic import AnyUrl
 
-from data_aggregator_mcp import citation, operate, router, zenodo
+from data_aggregator_mcp import citation, operate, router, run_crate, zenodo
 from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import dossier as dossier_mod
 from data_aggregator_mcp import fair as fair_mod
@@ -439,6 +439,21 @@ TOOLS: list[types.Tool] = [
                         "items; pagination is unaffected."
                     ),
                 },
+                "provenance": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": (
+                        "Opt into a whole-search RO-Crate 1.1 Run Crate (default false). "
+                        "Attaches provenance_crate{} — a machine-readable manifest documenting "
+                        "this search: the query, the sources queried, the ontology expansions "
+                        "that fired, the per-source errors (a partial search is disclosed), and "
+                        "per-hit provenance for every result (version-currency, licence + "
+                        "normalized SPDX, FAIR score). Per-hit RETRACTION is omitted — it would "
+                        "need one Crossref call per hit; use per-record resolve(format=provenance) "
+                        "for that. Covers THIS search page only (intra-page; each page of a "
+                        "paginated search gets its own crate)."
+                    ),
+                },
             },
         },
         outputSchema=SearchResult.model_json_schema(),
@@ -769,6 +784,10 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     rank=args.get("rank", "relevance"),
                     collapse_mirrors=args.get("collapse_mirrors", False),
                 )
+                if args.get("provenance"):
+                    result = result.model_copy(
+                        update={"provenance_crate": run_crate.render(result)}
+                    )
                 return result.model_dump()
             case "resolve":
                 resource = await router.resolve(client, args["id"])

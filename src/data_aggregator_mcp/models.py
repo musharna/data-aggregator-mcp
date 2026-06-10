@@ -222,6 +222,9 @@ class SearchResult(BaseModel):
     tissue_expansion: TissueExpansion | None = None
     chemical_expansion: ChemicalExpansion | None = None
     assay_expansion: AssayExpansion | None = None
+    provenance_crate: dict[str, Any] | None = (
+        None  # whole-search RO-Crate 1.1 Run Crate, populated only on search(provenance=true)
+    )
 
 
 class FetchResult(BaseModel):

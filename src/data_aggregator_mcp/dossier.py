@@ -45,7 +45,7 @@ def _property_value(eid: str, name: str, value: str, **extra: Any) -> dict[str, 
     return ent
 
 
-def _version_result(r: DataResource) -> dict[str, Any] | None:
+def _version_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | None:
     """Version-currency assessment — only when version info is present
     (``is_latest is not None``); absence of version links is NOT a claim of latest."""
     if r.is_latest is None:
@@ -59,10 +59,10 @@ def _version_result(r: DataResource) -> dict[str, Any] | None:
     extra: dict[str, Any] = {"is_latest": r.is_latest}
     if r.superseded_by:
         extra["superseded_by"] = r.superseded_by
-    return _property_value("#version-currency", "version-currency", value, **extra)
+    return _property_value(f"#{id_prefix}version-currency", "version-currency", value, **extra)
 
 
-def _license_result(r: DataResource) -> dict[str, Any] | None:
+def _license_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | None:
     """Licence assessment — only when a licence is stated. Carries the raw value and
     the normalized SPDX id; an unrecognized licence is "unrecognized", never invented."""
     if not r.license:
@@ -71,7 +71,7 @@ def _license_result(r: DataResource) -> dict[str, Any] | None:
     spdx_label = spdx if spdx is not None else "unrecognized"
     value = f"stated licence {r.license!r}; normalized SPDX: {spdx_label}"
     return _property_value(
-        "#licence",
+        f"#{id_prefix}licence",
         "licence",
         value,
         license_raw=r.license,
@@ -79,7 +79,7 @@ def _license_result(r: DataResource) -> dict[str, Any] | None:
     )
 
 
-def _fair_result(r: DataResource) -> dict[str, Any] | None:
+def _fair_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | None:
     """FAIR assessment — only when ``resource.fair`` is attached (by the handler)."""
     fa = r.fair
     if fa is None:
@@ -90,7 +90,7 @@ def _fair_result(r: DataResource) -> dict[str, Any] | None:
         f"{fa.assessed} indicators evaluated"
     )
     return _property_value(
-        "#fair",
+        f"#{id_prefix}fair",
         "FAIRness",
         value,
         score=fa.score,
@@ -103,7 +103,7 @@ def _fair_result(r: DataResource) -> dict[str, Any] | None:
     )
 
 
-def _retraction_result(r: DataResource) -> dict[str, Any] | None:
+def _retraction_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | None:
     """Retraction/integrity assessment — only when ``resource.trust`` is attached.
 
     HONESTY: ``retracted is None`` is reported as "unknown / not checked" and asserts
@@ -133,10 +133,12 @@ def _retraction_result(r: DataResource) -> dict[str, Any] | None:
     extra: dict[str, Any] = {"retracted": trust.retracted, "concern": trust.concern}
     if trust.retraction_doi:
         extra["retraction_doi"] = trust.retraction_doi
-    return _property_value("#retraction", "retraction-status", f"{retr}; {conc}", **extra)
+    return _property_value(
+        f"#{id_prefix}retraction", "retraction-status", f"{retr}; {conc}", **extra
+    )
 
 
-def _identifier_result(r: DataResource) -> dict[str, Any]:
+def _identifier_result(r: DataResource, id_prefix: str = "") -> dict[str, Any]:
     """Source/DOI/ID-chain assessment — always present (every record has a source +
     canonical id). Records the source repo, canonical id, DOI, cross-identifiers,
     accessions, and the qualified version/relation links (rel -> target)."""
@@ -153,7 +155,30 @@ def _identifier_result(r: DataResource) -> dict[str, Any]:
         extra["accessions"] = list(r.accessions)
     if r.links:
         extra["links"] = [{"rel": lnk.rel, "target_id": lnk.target_id} for lnk in r.links]
-    return _property_value("#identifier-chain", "source-identifier-chain", value, **extra)
+    return _property_value(
+        f"#{id_prefix}identifier-chain", "source-identifier-chain", value, **extra
+    )
+
+
+def assessment_entities(resource: DataResource, id_prefix: str = "") -> list[dict[str, Any]]:
+    """The non-None per-signal assessment entities, in fixed order (version, licence,
+    FAIR, retraction, identifier-chain). The single reuse seam: ``dossier.render`` builds
+    the per-record crate with ``id_prefix=""`` (so the @ids stay ``#version-currency`` etc.,
+    B10a byte-identical), while the whole-search Run Crate (``run_crate.render``) calls it
+    per hit with ``id_prefix=f"hit-{i}-"`` for unique @ids. HONESTY is inherited: each
+    helper omits its entity when the underlying signal is absent (e.g. ``trust is None`` →
+    no retraction entity — never a negative claim)."""
+    results: list[dict[str, Any]] = []
+    for ent in (
+        _version_result(resource, id_prefix),
+        _license_result(resource, id_prefix),
+        _fair_result(resource, id_prefix),
+        _retraction_result(resource, id_prefix),
+        _identifier_result(resource, id_prefix),
+    ):
+        if ent is not None:
+            results.append(ent)
+    return results
 
 
 def render(resource: DataResource) -> dict[str, Any]:
@@ -171,16 +196,7 @@ def render(resource: DataResource) -> dict[str, Any]:
         "version": __version__,
     }
 
-    results: list[dict[str, Any]] = []
-    for ent in (
-        _version_result(resource),
-        _license_result(resource),
-        _fair_result(resource),
-        _retraction_result(resource),
-        _identifier_result(resource),
-    ):
-        if ent is not None:
-            results.append(ent)
+    results = assessment_entities(resource, "")
 
     action: dict[str, Any] = {
         "@id": ASSESSMENT_ID,
