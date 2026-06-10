@@ -170,6 +170,38 @@ def test_search_tool_exposes_organism_param() -> None:
     assert "organism" in tool.inputSchema["properties"]
 
 
+def test_search_tool_exposes_disease_param() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "search")
+    assert "disease" in tool.inputSchema["properties"]
+
+
+async def test_dispatch_search_passes_disease_to_router(monkeypatch) -> None:
+    from data_aggregator_mcp.models import MeshExpansion, SearchResult
+
+    captured = {}
+
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(
+            query=kwargs.get("query"),
+            total=0,
+            count=0,
+            results=[],
+            errors={},
+            mesh_expansion=MeshExpansion(
+                input="breast cancer",
+                mesh_ui="D001943",
+                canonical_name="Breast Neoplasms",
+                synonyms=["Breast Cancer"],
+            ),
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
+    out = await server._dispatch("search", {"query": "rna", "disease": "breast cancer"})
+    assert captured["disease"] == "breast cancer"
+    assert out["mesh_expansion"]["mesh_ui"] == "D001943"
+
+
 async def test_dispatch_search_passes_organism_to_router(monkeypatch) -> None:
     from data_aggregator_mcp.models import SearchResult
 

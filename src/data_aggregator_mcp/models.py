@@ -121,6 +121,15 @@ class TaxonExpansion(BaseModel):
     synonyms: list[str]  # names added to the query (excludes the canonical name)
 
 
+class MeshExpansion(BaseModel):
+    """Echo of MeSH-synonym expansion that fired for a search (transparency)."""
+
+    input: str  # the disease param as given
+    mesh_ui: str  # e.g. "D001943"
+    canonical_name: str
+    synonyms: list[str]  # entry terms added to the query (excludes the canonical name)
+
+
 class SearchResult(BaseModel):
     query: str
     total: int
@@ -129,6 +138,7 @@ class SearchResult(BaseModel):
     errors: dict[str, str] = Field(default_factory=dict)  # {source: message}
     next_cursor: str | None = None
     taxon_expansion: TaxonExpansion | None = None
+    mesh_expansion: MeshExpansion | None = None
 
 
 class FetchResult(BaseModel):

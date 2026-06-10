@@ -126,6 +126,28 @@ def test_taxon_expansion_on_search_result() -> None:
     assert sr2.model_dump()["taxon_expansion"]["taxid"] == 99112
 
 
+def test_mesh_expansion_on_search_result() -> None:
+    from data_aggregator_mcp.models import MeshExpansion, SearchResult
+
+    sr = SearchResult(query="q", total=0, count=0)
+    assert sr.mesh_expansion is None  # additive, defaults None
+    sr2 = SearchResult(
+        query="q",
+        total=0,
+        count=0,
+        mesh_expansion=MeshExpansion(
+            input="breast cancer",
+            mesh_ui="D001943",
+            canonical_name="Breast Neoplasms",
+            synonyms=["Breast Cancer"],
+        ),
+    )
+    dumped = sr2.model_dump()["mesh_expansion"]
+    assert dumped["mesh_ui"] == "D001943"
+    assert dumped["canonical_name"] == "Breast Neoplasms"
+    assert dumped["synonyms"] == ["Breast Cancer"]
+
+
 def test_access_and_citation_default_none() -> None:
     r = DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="t")
     assert r.access is None

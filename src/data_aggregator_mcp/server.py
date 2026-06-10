@@ -320,6 +320,9 @@ TOOLS: list[types.Tool] = [
             "a full-text file), then fetch to download files."
             " Pass organism=<name> to expand the query with NCBI-Taxonomy "
             "synonyms; results carry normalized taxa[] + plant cross-links."
+            " Pass disease=<name> to expand the query with MeSH descriptor "
+            "synonyms (e.g. 'breast cancer' also matches 'Breast Neoplasms'); "
+            "the expansion is echoed in mesh_expansion."
         ),
         inputSchema={
             "type": "object",
@@ -344,6 +347,13 @@ TOOLS: list[types.Tool] = [
                     "the query is expanded with the canonical name + synonyms (e.g. "
                     "'Orobanche aegyptiaca' also matches 'Phelipanche aegyptiaca'). The "
                     "expansion is echoed in taxon_expansion.",
+                },
+                "disease": {
+                    "type": "string",
+                    "description": "Optional disease/phenotype name. Resolved via MeSH "
+                    "(NCBI E-utilities); the query is expanded with the canonical descriptor "
+                    "+ entry-term synonyms (e.g. 'breast cancer' also matches "
+                    "'Breast Neoplasms'). The expansion is echoed in mesh_expansion.",
                 },
                 "cursor": {
                     "type": "string",
@@ -660,6 +670,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     size=args.get("size", zenodo.DEFAULT_SIZE),
                     sources=args.get("sources"),
                     organism=args.get("organism"),
+                    disease=args.get("disease"),
                     published_after=args.get("published_after"),
                     published_before=args.get("published_before"),
                     kind=args.get("kind"),

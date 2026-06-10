@@ -8,7 +8,7 @@ import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from data_aggregator_mcp import router, taxonomy
+from data_aggregator_mcp import mesh, router, taxonomy
 from data_aggregator_mcp.errors import UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import DataResource
 
@@ -501,6 +501,141 @@ async def test_search_no_organism_param_skips_taxonomy(monkeypatch) -> None:
         total, results, errors, expansion = await router.search(client, "rna", sources=["zenodo"])
     called.assert_not_awaited()
     assert expansion is None
+
+
+def _mesh_info() -> mesh.MeshInfo:
+    return mesh.MeshInfo(
+        ui="D001943",
+        canonical="Breast Neoplasms",
+        synonyms=("Breast Cancer",),
+    )
+
+
+async def test_search_expands_disease_synonyms(monkeypatch) -> None:
+    monkeypatch.setattr(mesh, "resolve_mesh", AsyncMock(return_value=_mesh_info()))
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client, query="tumor rna", disease="breast cancer", sources=["zenodo"]
+        )
+    assert "tumor rna" in captured["query"]
+    assert "Breast Neoplasms" in captured["query"]
+    assert "Breast Cancer" in captured["query"]
+    assert result.mesh_expansion is not None
+    assert result.mesh_expansion.mesh_ui == "D001943"
+    assert result.mesh_expansion.canonical_name == "Breast Neoplasms"
+    assert result.mesh_expansion.synonyms == ["Breast Cancer"]
+    assert result.errors == {}
+
+
+async def test_search_disease_and_organism_compose_stacked_and_groups(monkeypatch) -> None:
+    monkeypatch.setattr(
+        taxonomy,
+        "resolve_taxon",
+        AsyncMock(
+            return_value=taxonomy.TaxonInfo(
+                taxid=9606,
+                canonical_name="Homo sapiens",
+                synonyms=("human",),
+                is_plant=False,
+            )
+        ),
+    )
+    monkeypatch.setattr(mesh, "resolve_mesh", AsyncMock(return_value=_mesh_info()))
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client,
+            query="rna",
+            organism="human",
+            disease="breast cancer",
+            sources=["zenodo"],
+        )
+    q = captured["query"]
+    # disease expands the ALREADY organism-expanded query → two stacked AND-groups
+    assert (
+        q == '((rna) AND ("Homo sapiens" OR "human")) AND ("Breast Neoplasms" OR "Breast Cancer")'
+    )
+    assert result.taxon_expansion is not None
+    assert result.mesh_expansion is not None
+
+
+async def test_search_disease_lookup_failure_surfaces_error_and_runs_unexpanded(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        mesh, "resolve_mesh", AsyncMock(side_effect=UpstreamUnavailableError("NCBI down"))
+    )
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client, query="tumor rna", disease="breast cancer", sources=["zenodo"]
+        )
+    assert captured["query"] == "tumor rna"  # ran un-expanded
+    assert result.mesh_expansion is None
+    assert "mesh" in result.errors
+    assert "UpstreamUnavailableError" in result.errors["mesh"]
+
+
+async def test_search_no_disease_param_skips_mesh(monkeypatch) -> None:
+    called = AsyncMock()
+    monkeypatch.setattr(mesh, "resolve_mesh", called)
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(client, query="rna", sources=["zenodo"])
+    called.assert_not_awaited()
+    assert result.mesh_expansion is None
+
+
+async def test_search_disease_round_trips_cursor_without_reexpanding(monkeypatch) -> None:
+    resolve = AsyncMock(return_value=_mesh_info())
+    monkeypatch.setattr(mesh, "resolve_mesh", resolve)
+    captured: list[str] = []
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured.append(query)
+        # return more than one page so a next_cursor is emitted
+        recs = [_res(f"zenodo:{offset}", "zenodo", None)]
+        return 5, recs
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        page1 = await router.search_page(
+            client, query="tumor", disease="breast cancer", size=1, sources=["zenodo"]
+        )
+        assert page1.next_cursor is not None
+        assert resolve.await_count == 1
+        page2 = await router.search_page(client, cursor=page1.next_cursor)
+    # continuation must NOT re-expand → resolve_mesh still called only once
+    assert resolve.await_count == 1
+    # disease is carried on the cursor (so a future change could re-expand) but the
+    # echo is frozen to None on continuation, mirroring organism expansion.
+    from data_aggregator_mcp import _cursor
+
+    assert _cursor.decode(page1.next_cursor)["disease"] == "breast cancer"
+    assert page2.mesh_expansion is None
 
 
 def _plant_info() -> taxonomy.TaxonInfo:

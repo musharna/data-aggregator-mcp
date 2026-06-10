@@ -6,6 +6,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-06-10
+
+### Added
+
+- **MeSH disease query-expansion** — `search(disease=<name>)` resolves a disease/phenotype
+  name to its canonical MeSH descriptor (NCBI E-utilities, `db=mesh`) and expands the query
+  with the canonical descriptor name plus entry-term synonyms (e.g. `breast cancer` also
+  matches `Breast Neoplasms`). True added recall the keyword window can't reach, grounded in
+  a real ontology — the same shape as `organism=` taxonomy expansion. The expansion is echoed
+  in `mesh_expansion`, composes with `organism=` (both AND-groups stack), and is fail-loud
+  (a MeSH lookup failure surfaces in `errors["mesh"]` and the query runs un-expanded). The
+  `[MeSH Terms]` field restriction collapses a lay name to its one canonical descriptor.
+
 ## [0.25.0] - 2026-06-10
 
 ### Added
