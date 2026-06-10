@@ -156,6 +156,9 @@ class DataResource(BaseModel):
         None  # file-level Croissant export, on resolve(format=croissant)
     )
     ro_crate: dict[str, Any] | None = None  # RO-Crate export, on resolve(format=ro-crate)
+    provenance: dict[str, Any] | None = (
+        None  # RO-Crate provenance dossier, on resolve(format=provenance)
+    )
     access_modes: list[str] = Field(default_factory=list)  # best-effort: fetch + operate modes
     mirrors: list[Mirror] = Field(
         default_factory=list

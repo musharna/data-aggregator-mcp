@@ -25,6 +25,7 @@ from pydantic import AnyUrl
 
 from data_aggregator_mcp import citation, operate, router, zenodo
 from data_aggregator_mcp import croissant as croissant_mod
+from data_aggregator_mcp import dossier as dossier_mod
 from data_aggregator_mcp import fair as fair_mod
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import health as health_mod
@@ -457,7 +458,10 @@ TOOLS: list[types.Tool] = [
             "sub-scores + actionable gaps) computed from the record under fair{}. "
             "Pass use=<intent> (commercial/redistribute/modify/ml-training) to attach a "
             "licence-compatibility advisory (ALLOW/REVIEW/DENY, not legal advice) under "
-            "license_compat{}."
+            "license_compat{}. "
+            "Pass format=provenance for a one-call RO-Crate 1.1 data-availability dossier "
+            "(under provenance{}) composing version-currency, licence+SPDX, FAIR score, "
+            "retraction status, and the source/DOI/ID chain — it auto-attaches fair + trust."
         ),
         inputSchema={
             "type": "object",
@@ -476,10 +480,15 @@ TOOLS: list[types.Tool] = [
                 },
                 "format": {
                     "type": "string",
-                    "enum": ["croissant", "ro-crate"],
+                    "enum": ["croissant", "ro-crate", "provenance"],
                     "description": "Optional export to render onto the result. 'croissant' "
                     "attaches a file-level Croissant JSON-LD manifest (croissant field); "
-                    "'ro-crate' attaches a minimal RO-Crate 1.1 manifest (ro_crate field).",
+                    "'ro-crate' attaches a minimal RO-Crate 1.1 manifest (ro_crate field); "
+                    "'provenance' attaches a one-call RO-Crate 1.1 data-availability dossier "
+                    "(provenance field) bundling version-currency, licence+SPDX, FAIR score, "
+                    "retraction status, and the source/DOI/ID chain — it auto-attaches fair{} "
+                    "and trust{} so the dossier is complete in one call (unknown signals are "
+                    "reported as unknown, never as a clean claim).",
                 },
                 "trust": {
                     "type": "boolean",
@@ -784,6 +793,16 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 if use := args.get("use"):
                     resource = resource.model_copy(
                         update={"license_compat": license_mod.check(resource.license, use)}
+                    )
+                if fmt == "provenance":
+                    if resource.fair is None:
+                        resource = resource.model_copy(update={"fair": fair_mod.assess(resource)})
+                    if resource.trust is None:
+                        resource = resource.model_copy(
+                            update={"trust": await trust_mod.annotate(client, resource)}
+                        )
+                    resource = resource.model_copy(
+                        update={"provenance": dossier_mod.render(resource)}
                     )
                 return resource.model_dump()
             case "fetch":

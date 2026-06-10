@@ -854,3 +854,80 @@ async def test_read_resource_record_propagates_not_found(monkeypatch) -> None:
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
     with pytest.raises(NotFoundError):
         await server._read_resource(AnyUrl(resources.record_uri("pdb:9999")))
+
+
+# --- B10a: provenance dossier (resolve format=provenance) -------------------
+
+
+def test_resolve_tool_exposes_provenance_format() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "resolve")
+    assert "provenance" in tool.inputSchema["properties"]["format"]["enum"]
+
+
+async def test_dispatch_resolve_provenance_attaches_dossier_and_enrichers(monkeypatch) -> None:
+    async def fake_resolve(client, fid):
+        return DataResource(
+            id="zenodo:1",
+            source="zenodo",
+            kind="dataset",
+            title="t",
+            doi="10.5281/zenodo.1",
+            license="cc-by-4.0",
+            files=[FileEntry(name="a.csv", mime="text/csv", url="https://x/a.csv")],
+        )
+
+    async def fake_annotate(client, resource):
+        return TrustSignals()  # unknown — never a negative claim
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    monkeypatch.setattr("data_aggregator_mcp.trust.annotate", fake_annotate)
+    out = await server._dispatch("resolve", {"id": "zenodo:1", "format": "provenance"})
+    # Dossier attached and well-formed.
+    assert out["provenance"] is not None
+    assert out["provenance"]["@context"] == "https://w3id.org/ro/crate/1.1/context"
+    graph = {e["@id"]: e for e in out["provenance"]["@graph"]}
+    assert graph["#provenance-assessment"]["@type"] == "CreateAction"
+    # format=provenance AUTO-attaches fair + trust.
+    assert out["fair"] is not None
+    assert out["trust"] is not None
+    # Honesty carried through to the dump: unknown retraction makes no negative claim.
+    assert "not retracted" not in graph["#retraction"]["value"].lower()
+
+
+async def test_dispatch_resolve_provenance_reuses_attached_enrichers(monkeypatch) -> None:
+    """When fair/trust already requested, format=provenance reuses them (no double
+    compute that would clobber)."""
+    calls = {"annotate": 0, "assess": 0}
+
+    async def fake_resolve(client, fid):
+        return DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="t")
+
+    async def counting_annotate(client, resource):
+        calls["annotate"] += 1
+        return TrustSignals(retracted=False, concern=False)
+
+    real_assess = fair_mod.assess
+
+    def counting_assess(resource):
+        calls["assess"] += 1
+        return real_assess(resource)
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    monkeypatch.setattr("data_aggregator_mcp.trust.annotate", counting_annotate)
+    monkeypatch.setattr("data_aggregator_mcp.fair.assess", counting_assess)
+    out = await server._dispatch(
+        "resolve", {"id": "zenodo:1", "format": "provenance", "fair": True, "trust": True}
+    )
+    assert out["provenance"] is not None
+    # Each enricher computed exactly once (the provenance block reuses, not recompute).
+    assert calls["annotate"] == 1
+    assert calls["assess"] == 1
+
+
+async def test_dispatch_resolve_no_provenance_leaves_it_none(monkeypatch) -> None:
+    async def fake_resolve(client, fid):
+        return DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="t")
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    out = await server._dispatch("resolve", {"id": "zenodo:1"})
+    assert out["provenance"] is None

@@ -6,6 +6,41 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-06-10
+
+### Added
+
+- **`resolve(format=provenance)` — a one-call RO-Crate 1.1 data-availability dossier.** An opt-in
+  export that renders a single machine-readable artifact COMPOSING every provenance/integrity
+  signal the server already computes for one resolved record: version-currency (B1
+  `is_latest`/`superseded_by`), licence + normalized SPDX (B3), FAIRness (B4 `fair`), retraction /
+  expression-of-concern (`trust`), and the source/DOI/ID chain (`source`, canonical id, `doi`,
+  cross-`identifiers`, `accessions`, qualified `links` rel→target). The dossier is attached under a
+  new `DataResource.provenance` field. This is the "why an aggregator" artifact for the
+  data-provenance moment — we are the single point that holds all of these signals at once.
+  - **Plain RO-Crate 1.1, not a Run Crate.** The new pure `dossier.render(resource)` REUSES
+    `ro_crate.render` as the base graph (metadata descriptor + root `Dataset` + file entities) so the
+    base crate can't drift, then EXTENDS `@graph` with a schema.org `CreateAction`
+    (`#provenance-assessment`, `instrument`→the `data-aggregator-mcp` `SoftwareApplication` agent
+    carrying `__version__`, `object`→`./`, `result`→the assessment entities) plus one `PropertyValue`
+    per PRESENT signal. `conformsTo` stays ONLY on the metadata descriptor
+    (`https://w3id.org/ro/crate/1.1`) — no fabricated profile URI. (The "Provenance Run Crate" term
+    is the Workflow-Run-Crate profile for workflow executions — the wrong shape for a per-record
+    data-availability dossier.)
+  - **Unknown is NEVER a negative claim (the honesty contract).** Only signals actually present are
+    represented. An unknown retraction (`trust.retracted is None`) is reported as
+    "unknown / not checked", NEVER "not retracted"; a definitive `False` may state "no retraction on
+    record (Crossref)". An unrecognized licence is "unrecognized", never an invented SPDX. A missing
+    version/FAIR/trust signal is OMITTED, not fabricated. `render` is PURE/deterministic — no
+    network or file I/O.
+  - **One-call completeness.** `format=provenance` AUTO-attaches `fair` (pure local assess) and
+    `trust` (one Crossref call) before rendering, so the dossier is whole in one call — REUSING any
+    enricher already attached via `fair=true`/`trust=true` (idempotent, no double-compute). It does
+    NOT set the `croissant`/`ro_crate` fields; those stay opt-in via their own format values.
+  - **Follow-up:** the whole-search **Run Crate** (one call documenting every source queried +
+    per-hit provenance for an entire result set) is the chosen next wave, **B10b**. B10a stays
+    per-record so each wave is tight and reviewable.
+
 ## [0.32.0] - 2026-06-10
 
 ### Added
