@@ -6,6 +6,36 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-06-10
+
+### Added
+
+- **`resolve(use=<intent>)` — licence-compatibility preflight.** A new opt-in enricher
+  attaches a `license_compat{}` advisory to a resolved record: an **ALLOW / REVIEW / DENY**
+  verdict for an intended use, naming the governing licence clause and the normalized SPDX
+  id. Supported intents are `commercial`, `redistribute`, `modify`, and `ml-training`
+  (training is treated as a derivative + commercial use — `commercial-use` + `modifications`
+  — which is **our stated interpretation**, documented in the module). The verdict is a
+  **pure, local function** (no network call, unlike `trust`) over a **bundled licence
+  matrix** whose permission/condition/limitation flags are drawn verbatim from the
+  [choosealicense.com](https://github.com/github/choosealicense.com) flag vocabulary
+  (vendored into Licensee → GitHub's Licenses API), fetched 2026-06-10, keyed on SPDX id.
+  `normalize_spdx` maps bare SPDX ids, spaced/cased prose ("Apache License 2.0", "CC BY 4.0")
+  and Creative-Commons / Open-Data-Commons URLs to a canonical SPDX id. **Honest coverage:**
+  an unrecognized or absent licence yields `REVIEW` with `spdx_id=null` (defaults to
+  all-rights-reserved) — never a fabricated ALLOW/DENY; a `DENY` always names the missing
+  permission and its human clause (e.g. "commercial-use not granted (NonCommercial)"); a
+  copyleft `same-license`/`disclose-source` obligation downgrades an otherwise-ALLOW
+  `redistribute`/`ml-training` to `REVIEW`. An unknown intent fails **loud** (`ValueError`).
+  Every verdict carries a **not-legal-advice** disclaimer: it is a metadata-derived
+  compatibility _advisory_, not a legal determination. Resolve-only for v1 (parity with
+  `trust`/`fair`).
+  - **Deferred follow-ups (noted, out of scope):** (1) Croissant `usageInfo` → full
+    `odrl:Offer` upgrade — the `LICENSE_MATRIX` built here is the reusable backend, but
+    emitting structured ODRL triples would reverse B2's `test_no_odrl_permission_keys_in_b2_output`
+    pin and belongs with the B10 dossier; (2) a search-time `use=` filter / advisory column
+    across a whole result set (a `strict_license` enforced-fetch gate is B12).
+
 ## [0.29.0] - 2026-06-10
 
 ### Added

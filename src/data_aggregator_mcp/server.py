@@ -28,6 +28,7 @@ from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import fair as fair_mod
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import health as health_mod
+from data_aggregator_mcp import license_compat as license_mod
 from data_aggregator_mcp import resources as resources_mod
 from data_aggregator_mcp import ro_crate as ro_crate_mod
 from data_aggregator_mcp import trust as trust_mod
@@ -412,7 +413,10 @@ TOOLS: list[types.Tool] = [
             "citation onto the result (citation field); omitted means no citation. "
             "Pass trust=true to attach retraction status (via Crossref) under trust{}. "
             "Pass fair=true to attach an RDA-grounded FAIRness score (0–100 + F/A/I/R "
-            "sub-scores + actionable gaps) computed from the record under fair{}."
+            "sub-scores + actionable gaps) computed from the record under fair{}. "
+            "Pass use=<intent> (commercial/redistribute/modify/ml-training) to attach a "
+            "licence-compatibility advisory (ALLOW/REVIEW/DENY, not legal advice) under "
+            "license_compat{}."
         ),
         inputSchema={
             "type": "object",
@@ -451,6 +455,18 @@ TOOLS: list[types.Tool] = [
                     "its RDA FAIR Data Maturity Model indicator id. Pure/local — no network call. "
                     "Only the machine-evaluable subset is scored (never fabricates what the "
                     "metadata cannot show).",
+                },
+                "use": {
+                    "type": "string",
+                    "description": "When set, attach a licence-compatibility advisory under "
+                    "license_compat{} for an intended use of the record. Supported intents: "
+                    "'commercial', 'redistribute', 'modify', 'ml-training' (training = a "
+                    "derivative+commercial use, our stated interpretation). The verdict is "
+                    "ALLOW/REVIEW/DENY computed from a bundled choosealicense.com licence "
+                    "matrix keyed on the normalized SPDX id, naming the governing clause — a "
+                    "metadata-derived advisory, NOT legal advice. An unrecognized or absent "
+                    "licence yields REVIEW (never a fabricated ALLOW/DENY); an unknown intent "
+                    "is an error.",
                 },
             },
             "required": ["id"],
@@ -721,6 +737,10 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     resource = resource.model_copy(update={"trust": signals})
                 if args.get("fair"):
                     resource = resource.model_copy(update={"fair": fair_mod.assess(resource)})
+                if use := args.get("use"):
+                    resource = resource.model_copy(
+                        update={"license_compat": license_mod.check(resource.license, use)}
+                    )
                 return resource.model_dump()
             case "fetch":
                 fid = args["id"].strip()

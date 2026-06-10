@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -97,6 +97,22 @@ class FairAssessment(BaseModel):
     gaps: list[str] = Field(default_factory=list)
 
 
+class LicenseVerdict(BaseModel):
+    """Licence-compatibility advisory attached on resolve(use=<intent>). PURE-function
+    output: an ALLOW / REVIEW / DENY verdict for an intended use of the resolved record,
+    computed from a bundled licence matrix (choosealicense.com flag vocabulary) keyed on
+    the normalized SPDX id. ``spdx_id`` is None exactly when the licence was unrecognized
+    or absent (→ REVIEW, never a fabricated ALLOW/DENY). ``reason`` names the governing
+    clause; ``disclaimer`` states this is a metadata-derived advisory, not legal advice."""
+
+    use: str  # the intended-use intent checked (commercial/redistribute/modify/ml-training)
+    verdict: Literal["ALLOW", "REVIEW", "DENY"]
+    spdx_id: str | None  # canonical SPDX id of the matched licence; None if unrecognized/absent
+    license_raw: str | None  # the input licence string, verbatim
+    reason: str  # human-readable, names the governing clause / why REVIEW
+    disclaimer: str  # constant not-legal-advice advisory
+
+
 class DataResource(BaseModel):
     id: str  # source-prefixed canonical id, e.g. "zenodo:123"
     source: str
@@ -120,6 +136,9 @@ class DataResource(BaseModel):
     metrics: Metrics | None = None  # usage/impact signals, source-dependent
     trust: TrustSignals | None = None  # integrity signals (retraction), on resolve(trust=True)
     fair: FairAssessment | None = None  # RDA-grounded FAIRness score, on resolve(fair=True)
+    license_compat: LicenseVerdict | None = (
+        None  # licence-compatibility preflight, on resolve(use=<intent>)
+    )
     is_latest: bool | None = None  # None = no version info in links[]
     superseded_by: str | None = None  # id of the newer version, when known
     last_updated: str | None = None  # source's modified/updated timestamp (ISO 8601)
