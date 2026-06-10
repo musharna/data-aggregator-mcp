@@ -26,6 +26,7 @@ from data_aggregator_mcp import (
     literature,
     omics,
     omicsdi,
+    openml,
     operate,
     taxonomy,
     zenodo,
@@ -57,6 +58,7 @@ _ADAPTERS: dict[str, Any] = {
     "literature": literature,
     "huggingface": huggingface,
     "omicsdi": omicsdi,
+    "openml": openml,
 }
 
 
@@ -414,6 +416,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = await dataone.resolve(client, rid)
     elif prefix in omicsdi.PREFIXES:
         resource = await omicsdi.resolve(client, rid)
+    elif prefix in openml.PREFIXES:
+        resource = await openml.resolve(client, rid)
     elif rid.startswith("datacite:"):
         resource = await datacite.resolve(client, rid)
     elif rid.startswith("zenodo:") or rid.isdigit():

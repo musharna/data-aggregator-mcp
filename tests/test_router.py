@@ -51,6 +51,7 @@ def test_available_sources_lists_all_adapters() -> None:
         "literature",
         "huggingface",
         "omicsdi",
+        "openml",
     ]
 
 
@@ -318,6 +319,11 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     httpx_mock.add_response(
         url=re.compile(r"https://www\.omicsdi\.org/ws/dataset/search.*"),
         json={"datasets": []},
+    )
+    # openml is also a default source: returns empty here
+    httpx_mock.add_response(
+        url=re.compile(r"https://www\.openml\.org/api/v1/json/data/list/.*"),
+        json={"data": {"dataset": []}},
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "rna")
@@ -970,9 +976,11 @@ async def test_resolve_sets_version_status(monkeypatch) -> None:
 def test_dataone_and_omicsdi_registered_in_precedence_order():
     names = list(router._ADAPTERS)
     assert "dataone" in names and "omicsdi" in names
-    # dataone before datacite (keep the verified copy on a DOI tie); omicsdi last
+    # dataone before datacite (keep the verified copy on a DOI tie); omicsdi after
+    # the DOI-bearing backends; openml registered last.
     assert names.index("dataone") < names.index("datacite")
-    assert names[-1] == "omicsdi"
+    assert names.index("datacite") < names.index("omicsdi")
+    assert names[-1] == "openml"
 
 
 @pytest.mark.asyncio

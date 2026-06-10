@@ -40,6 +40,7 @@ _FETCHABLE_SOURCES = (
     "hf:",
     "dataone:",
     "omicsdi:",
+    "openml:",
 )  # id prefixes with a working fetch backend
 
 
@@ -219,6 +220,20 @@ _SOURCES: list[dict[str, Any]] = [
         "fetchable_notes": "PRIDE + MetaboLights records are fetchable (unverified - no upstream checksum); MassIVE/Metabolomics Workbench/GNPS/PeptideAtlas are discovery-only.",
         "id_example": "omicsdi:pride:PXD000001",
         "description": "Omics Discovery Index - proteomics & metabolomics studies; restricted to the mass-spec modality repos not already covered by the omics leg.",
+    },
+    {
+        "name": "openml",
+        "layer": "archives",
+        "kinds": ["dataset"],
+        "filters_supported": ["query", "size"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (name-substring discovery, first page only; ARFF + Parquet fetch on resolve)",
+        "fetchable": True,
+        "operable": True,
+        "fetchable_notes": "ARFF fetch is md5-verified; the auto-converted Parquet is operable (schema/preview/head/sql).",
+        "id_example": "openml:61",
+        "description": "OpenML machine-learning datasets — name-substring search; resolve attaches an md5-verified ARFF and an operable Parquet.",
     },
 ]
 
