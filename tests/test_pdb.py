@@ -100,6 +100,18 @@ async def test_resolve_malformed_id_raises():
             await pdb.resolve(c, "pdb:")
 
 
+@pytest.mark.asyncio
+async def test_resolve_rejects_injection_id_before_network():
+    # An id with GraphQL-breaking chars must fail loud on the format guard, never
+    # reaching the network (the handler would raise if hit).
+    def boom(request):
+        raise AssertionError("network must not be touched for a malformed id")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(boom)) as c:
+        with pytest.raises(NotFoundError):
+            await pdb.resolve(c, 'pdb:1BG2"]}')
+
+
 def test_registered_in_router_and_server():
     from data_aggregator_mcp import router, server
 

@@ -9,6 +9,7 @@ upstream checksum -> fetch is unverified, not operable. kind="dataset".
 from __future__ import annotations
 
 import json
+import re
 
 import httpx
 
@@ -21,6 +22,9 @@ GRAPHQL = "https://data.rcsb.org/graphql"
 _DOWNLOAD = "https://files.rcsb.org/download/{id}.{ext}"
 _LANDING = "https://www.rcsb.org/structure/{id}"
 PREFIXES = {"pdb"}
+# PDB entry ids are 4-char alphanumeric (classic) or extended `pdb_########`; this
+# charset also guards resolve's user-supplied id from breaking the GraphQL string.
+_PDB_ID_RE = re.compile(r"^[A-Za-z0-9_]{4,12}$")
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 DEFAULT_TIMEOUT = 30.0
@@ -113,7 +117,7 @@ async def search(
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     pid = resource_id.split(":", 1)[1].strip().upper() if ":" in resource_id else ""
-    if not pid:
+    if not _PDB_ID_RE.match(pid):
         raise NotFoundError(f"malformed PDB id {resource_id!r}")
     meta = await _hydrate(client, [pid])
     entry = meta.get(pid)
