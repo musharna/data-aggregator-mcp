@@ -34,12 +34,12 @@
 
 **Distribution (Q1, pulled forward): ✅** registry/Glama/awesome-mcp listings shipped (see MEMORY.md da-mcp section).
 
-**Phase 4 — Frontier: ☐ THE ACTUAL OPEN WORK.** All four are genuinely unbuilt (0 code, live-confirmed 06-10):
+**Phase 4 — Frontier: ✅ 3 of 4 SHIPPED; only P4.3 left (deferred).** Updated 2026-06-10 as each wave landed:
 
-- **P4.2 MCP resources** (`data://record/{source}/{id}`) — no `list_resources`/`read_resource` registered. _Smallest, protocol catch-up._
-- **P4.4 Trust signals tier-2** — Crossref Retraction-Watch flag + CoreTrustSeal `host_certified`. _Cheapest moat-reinforcer (anti-hallucination narrative); verify the retraction field on a real retracted DOI first._
-- **P4.3 Async long-fetch** (`fetch` `mode`/`job_id`) — `fetch.py` has no job model. _Larger; unlocks IPUMS/SWH/GBIF._ **DEFERRED (decided 2026-06-10):** this capability IS the MCP **Tasks** extension (SEP-1686→SEP-2663), which is only _experimental_ in SDK 1.27.2 ("may change without notice") and **finalizes 2026-07-28**. Building a bespoke `job_id` now = throwaway; building on the experimental surface = churn risk. **Revisit after 2026-07-28** and build on the finalized Tasks extension (confirms the line-210 lock). Do P4.1 first.
-- **P4.1 True semantic RECALL** — only the v0.16 window re-rank exists (`embeddings.py`); beyond-window retrieval is the big lift. _Largest; partially cedeable to openalex._
+- **P4.2 MCP resources** ✅ **SHIPPED v0.25.0** — `dataresource://catalog` + `dataresource://record/{id}` (`resources.py` + 3 server handlers; scheme deviated from `data://` to avoid the RFC-2397 collision). [[data-aggregator-mcp-resources-2026-06-10]]
+- **P4.4 Trust signals** ✅ **SHIPPED v0.24.0** — retraction flag via Crossref `updated-by[]` (`trust.py`, opt-in `trust=` resolve enricher, fail-soft per §8). CoreTrustSeal `host_certified` deferred. [[data-aggregator-retraction-trust-2026-06-10]]
+- **P4.1 True semantic RECALL** ✅ **SHIPPED v0.26.0** — server-side, ontology-grounded: `disease=` param resolves via **MeSH** (`mesh.py`) → canonical descriptor + entry-term synonyms AND-ed into the query, mirroring `organism=`. (The big architectural insight: beyond-window recall is largely cedeable to the client; the ONE thing the server does that the client can't is grounded ontology expansion.) [[data-aggregator-mesh-disease-2026-06-10]]
+- **P4.3 Async long-fetch** (`fetch` `mode`/`job_id`) — `fetch.py` has no job model. _Larger; unlocks IPUMS/SWH/GBIF._ **DEFERRED (2026-06-10):** this capability IS the MCP **Tasks** extension (SEP-1686→SEP-2663), only _experimental_ in SDK 1.27.2 and **finalizes 2026-07-28**. Building a bespoke `job_id` now = throwaway. **Revisit after 2026-07-28** on the finalized Tasks extension. With P4.1–P4.4 done, this is the SOLE remaining Phase-4 item.
 
 → **Recommended next:** P4.4 (retraction trust signal) or P4.2 (resources) — both small, both reinforce the moat/protocol. Full detail in the Phase-4 section below.
 
