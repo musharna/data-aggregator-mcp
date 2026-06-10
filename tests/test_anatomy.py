@@ -104,6 +104,21 @@ def test_pick_uberon_drops_blank_synonyms() -> None:
     assert info.synonyms == ("iecur", "jecur")
 
 
+def test_pick_uberon_scalar_synonym_not_char_exploded() -> None:
+    # OLS (Solr) can return a single-valued `synonym` as a bare string. Iterating
+    # it would explode "iecur" into ('i','e','c','u','r') AND break the synonym
+    # match. Build the doc directly (bypass the list-typed _doc helper).
+    docs = [{"obo_id": "UBERON:0002107", "label": "liver", "synonym": "iecur"}]
+    # (a) synonyms tuple is the whole string, not its characters
+    by_label = anatomy._pick_uberon(docs, "liver")
+    assert by_label is not None
+    assert by_label.synonyms == ("iecur",)
+    # (b) a synonym-input still matches (membership not destroyed)
+    by_syn = anatomy._pick_uberon(docs, "iecur")
+    assert by_syn is not None
+    assert by_syn.uberon_id == "UBERON:0002107"
+
+
 def test_pick_uberon_empty_docs_returns_none() -> None:
     assert anatomy._pick_uberon([], "liver") is None
 

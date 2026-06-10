@@ -67,7 +67,14 @@ def _pick_uberon(docs: list[dict[str, Any]], key: str) -> UberonInfo | None:
         label = doc.get("label")
         if not isinstance(label, str):
             continue
-        raw_synonyms = doc.get("synonym") or []
+        # OLS is Solr-backed: a single-valued ``synonym`` can come back as a bare
+        # string, not a list. Iterating a string would explode it into characters
+        # (and break the exact-synonym match), so normalize scalar → [scalar].
+        raw_synonyms = doc.get("synonym")
+        if isinstance(raw_synonyms, str):
+            raw_synonyms = [raw_synonyms]
+        elif not isinstance(raw_synonyms, list):
+            raw_synonyms = []
         synonyms = tuple(s for s in raw_synonyms if isinstance(s, str) and s.strip())
         synset = {s.lower() for s in synonyms}
         if label.lower() != key and key not in synset:
