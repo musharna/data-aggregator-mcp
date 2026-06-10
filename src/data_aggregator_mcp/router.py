@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 from collections import Counter
 from typing import Any
 
@@ -44,6 +45,7 @@ from data_aggregator_mcp.models import (
     DataResource,
     Link,
     MeshExpansion,
+    Mirror,
     SearchResult,
     Taxon,
     TaxonExpansion,
@@ -122,6 +124,128 @@ def _dedup(resources: list[DataResource]) -> list[DataResource]:
         elif existing.id.startswith("datacite:") and not r.id.startswith("datacite:"):
             by_doi[key] = r
     return [by_doi[k] for k in order] + no_doi
+
+
+_PUNCT_RE = re.compile(r"[^\w\s]", re.UNICODE)
+_WS_RE = re.compile(r"\s+")
+
+
+def _normalize_title(title: str) -> str:
+    """Lowercase, drop punctuation, collapse whitespace. Compared for EXACT
+    normalized equality (never substring, never fuzzy) — the conservative
+    content-dedup title key."""
+    lowered = _PUNCT_RE.sub(" ", title.lower())
+    return _WS_RE.sub(" ", lowered).strip()
+
+
+def _first_author_surname(r: DataResource) -> str | None:
+    """Lowercased last whitespace token of the first creator's name, or None if
+    the record has no creators (then the title+author+year path cannot fire)."""
+    if not r.creators:
+        return None
+    name = r.creators[0].name.strip()
+    if not name:
+        return None
+    return name.split()[-1].lower()
+
+
+def _fingerprint_key(r: DataResource) -> tuple[str, str, int] | None:
+    """``(normalized_title, first_author_surname, year)`` ONLY when all three are
+    present/non-empty; else None (so a missing field can never satisfy the title
+    path). Conservative content-identity key."""
+    title = _normalize_title(r.title) if r.title else ""
+    surname = _first_author_surname(r)
+    if not title or not surname or r.year is None:
+        return None
+    return (title, surname, r.year)
+
+
+def _checksums(r: DataResource) -> set[str]:
+    """Full ``algo:hex`` checksum strings present on a record's files (byte-level
+    identity signal)."""
+    return {f.checksum for f in r.files if f.checksum}
+
+
+def _survivor_rank(r: DataResource) -> tuple[int, int]:
+    """Lower sorts first = better survivor. DOI-bearing beats DOI-less; among
+    DOI-bearing, a native id (not ``datacite:``-prefixed) beats a ``datacite:``
+    one — same precedence spirit as ``_dedup``. Ties fall through to first-seen
+    order (stable sort on the group's encounter order)."""
+    has_doi = 0 if r.doi else 1
+    is_datacite = 1 if r.id.startswith("datacite:") else 0
+    return (has_doi, is_datacite)
+
+
+def _collapse_mirrors(records: list[DataResource]) -> list[DataResource]:
+    """Conservative, PURE content-dedup ON TOP OF exact-DOI dedup. Groups records
+    that are the SAME dataset under different/no DOIs (a cross-repo mirror), folds
+    each group to one survivor, and annotates the survivor's ``mirrors[]`` with the
+    other members.
+
+    A record joins a group iff it shares ANY full ``algo:hex`` file checksum with a
+    member (byte-identical → definitional identity, source-agnostic) OR has the same
+    ``_fingerprint_key`` (normalized-title + first-author-surname + year, all present)
+    as a member AND comes from a DIFFERENT source than every member already in that
+    group. Title-only or partial matches never merge.
+
+    The CROSS-SOURCE requirement on the fingerprint path is load-bearing: B7 is
+    *cross-repo* dedup. Two same-source records that share title+author+year are
+    almost always VERSION SIBLINGS (e.g. Zenodo record v1/v2), a relationship already
+    modeled by ``is_latest``/``superseded_by`` (B1) — folding them as "mirrors" would
+    be wrong. Only a copy in a DIFFERENT repository is a mirror. (Byte-identical
+    checksums still fold regardless of source: identical bytes are the same data, and
+    version siblings differ in bytes so they do not collide on the checksum path.)
+
+    Survivor selection is deterministic (``_survivor_rank`` + first-seen order). The
+    survivor's ``mirrors`` lists every OTHER group member as ``Mirror(source,id,doi)``;
+    a record is never its own mirror. First-seen order of survivors is preserved.
+    Deterministic, no I/O.
+    """
+
+    class _Group:
+        __slots__ = ("members", "keys", "checksums", "sources", "order")
+
+        def __init__(self, order: int) -> None:
+            self.members: list[DataResource] = []
+            self.keys: set[tuple[str, str, int]] = set()
+            self.checksums: set[str] = set()
+            self.sources: set[str] = set()
+            self.order = order
+
+    groups: list[_Group] = []
+    for r in records:
+        key = _fingerprint_key(r)
+        sums = _checksums(r)
+        target: _Group | None = None
+        for g in groups:
+            checksum_hit = bool(sums & g.checksums)
+            # Fingerprint match only counts CROSS-source — a same-source title+author+
+            # year match is a version sibling (B1's domain), not a cross-repo mirror.
+            fingerprint_hit = key is not None and key in g.keys and r.source not in g.sources
+            if checksum_hit or fingerprint_hit:
+                target = g
+                break
+        if target is None:
+            target = _Group(len(groups))
+            groups.append(target)
+        target.members.append(r)
+        if key is not None:
+            target.keys.add(key)
+        target.checksums |= sums
+        target.sources.add(r.source)
+
+    out: list[DataResource] = []
+    for g in groups:
+        if len(g.members) == 1:
+            out.append(g.members[0])
+            continue
+        # Stable pick: best rank wins, first-seen order breaks ties.
+        survivor = min(enumerate(g.members), key=lambda im: (_survivor_rank(im[1]), im[0]))[1]
+        mirrors = [
+            Mirror(source=m.source, id=m.id, doi=m.doi) for m in g.members if m is not survivor
+        ]
+        out.append(survivor.model_copy(update={"mirrors": mirrors}))
+    return out
 
 
 def _or_group(terms: list[str]) -> str:
@@ -316,6 +440,7 @@ async def search_page(
     kind: str | None = None,
     cursor: str | None = None,
     rank: str = "relevance",
+    collapse_mirrors: bool = False,
 ) -> SearchResult:
     """Fan out a search, merge + dedup, filter, and walk to a cut point that
     advances per-adapter offsets — returning a ``SearchResult`` whose
@@ -341,6 +466,7 @@ async def search_page(
         rank = st.get("rank", "relevance")
         disease = st.get("disease")
         tissue = st.get("tissue")
+        collapse_mirrors = st.get("collapse_mirrors", False)
         expansion = None  # frozen on continuation; do not re-expand
         disease_expansion = None  # frozen on continuation; do not re-expand
         tissue_expansion = None  # frozen on continuation; do not re-expand
@@ -456,6 +582,7 @@ async def search_page(
                 "size": size,
                 "offsets": new_offsets,
                 "rank": rank,
+                "collapse_mirrors": collapse_mirrors,
             }
         )
         if more
@@ -464,6 +591,11 @@ async def search_page(
 
     enriched = await _enrich(client, emitted, errors)
     enriched = [_with_version_status(r) for r in enriched]
+    # Presentation-layer fold ONLY: collapse runs after offset/cursor accounting
+    # (computed from `consumed`/`new_offsets` above) so it can never corrupt
+    # pagination — a folded mirror just makes this page return fewer than `size`.
+    if collapse_mirrors:
+        enriched = _collapse_mirrors(enriched)
     return SearchResult(
         query=query,
         total=total,

@@ -51,6 +51,16 @@ class Link(BaseModel):
     target_id: str
 
 
+class Mirror(BaseModel):
+    """A same-dataset copy folded into this record by content dedup (resolve the
+    mirror's id to reach the original deposit). Only populated when a search ran
+    with the opt-in ``collapse_mirrors`` flag."""
+
+    source: str
+    id: str
+    doi: str | None = None
+
+
 class Taxon(BaseModel):
     taxid: int
     name: str  # canonical NCBI ScientificName
@@ -147,6 +157,9 @@ class DataResource(BaseModel):
     )
     ro_crate: dict[str, Any] | None = None  # RO-Crate export, on resolve(format=ro-crate)
     access_modes: list[str] = Field(default_factory=list)  # best-effort: fetch + operate modes
+    mirrors: list[Mirror] = Field(
+        default_factory=list
+    )  # same-dataset copies folded by opt-in search collapse_mirrors; empty otherwise
 
 
 class TaxonExpansion(BaseModel):

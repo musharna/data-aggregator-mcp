@@ -6,6 +6,49 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-06-10
+
+### Added
+
+- **`search(collapse_mirrors=true)` — opt-in cross-repo content dedup beyond DOI.** On top of
+  the always-on exact-DOI dedup (`router._dedup`), this folds records that are the **same
+  dataset deposited under different (or no) DOIs** — e.g. a Zenodo mirror of a figshare
+  deposit, GEO↔ArrayExpress — into **one** record, annotating the survivor with the folded
+  copies under a new **`mirrors[]`** field (`Mirror{source, id, doi}`). This is the
+  aggregator-native moat extension: only possible because we fan out across 12 sources, so a
+  cross-repo mirror is structurally invisible to any single-source tool.
+  - **Conservative by design (the load-bearing safety decision).** A false merge silently
+    hides a genuinely distinct dataset — worse than a missed merge — so collapse is **opt-in**
+    (default `false`; DOI dedup unchanged) and the fingerprint is **high-confidence only**.
+    Two records merge **iff** they share ANY full `algo:hex` `files[].checksum` (byte-identical
+    → definitional identity) **OR** have an identical fingerprint key =
+    `(normalized-title, first-author-surname, year)` with **all three present and non-empty**.
+    `_normalize_title` lowercases, drops punctuation and collapses whitespace, then compares
+    for **exact** normalized equality (never substring, never fuzzy). A title-only match, a
+    missing year, or absent creators on either side does **not** merge. When in doubt, no merge.
+    - **The fingerprint path requires DIFFERENT sources** (the checksum path stays
+      source-agnostic). B7 is _cross-repo_ dedup: two SAME-source records sharing
+      title+author+year are almost always **version siblings** (e.g. Zenodo record v1/v2),
+      already modeled by version-currency (`is_latest`/`superseded_by`) — folding them as
+      mirrors would be wrong. Only a copy in a different repository is a mirror. (Borne out on
+      live data: the dominant real fingerprint collision is consecutive same-source Zenodo
+      deposits, correctly left unfolded.)
+  - **Annotate, never silently drop.** Every folded copy appears in the survivor's `mirrors[]`
+    with its `source`+`id`(+`doi`); no record is ever its own mirror. Survivor selection is
+    deterministic: DOI-bearing beats DOI-less; among DOI-bearing, a native id beats a
+    `datacite:`-prefixed one (same precedence spirit as `_dedup`); first-seen order breaks ties.
+  - **Pagination untouched.** `_collapse_mirrors` is a **pure** presentation-layer fold over the
+    already-emitted page, run **after** the `consumed`/offset/`next_cursor` accounting, so it
+    cannot corrupt offsets or stall pagination — a folded mirror merely makes a page return
+    fewer than `size` items. The flag round-trips through the pagination cursor so continuation
+    pages keep collapsing.
+  - **Honest scope = intra-page, best-effort.** A mirror that lands on a different page (or past
+    the `size` cut) is not collapsed — the stateless server holds no cross-page index.
+  - **Deferred follow-ups (noted, out of scope):** (1) fuzzy / shingle / near-duplicate title
+    matching (false-merge risk; v1 stays exact-normalized-title + author + year, or shared
+    checksum); (2) cross-page mirror collapse (needs state the stateless server doesn't hold);
+    (3) default-on collapse (stays opt-in until the fingerprint proves low-false-merge in the field).
+
 ## [0.30.0] - 2026-06-10
 
 ### Added

@@ -328,6 +328,10 @@ TOOLS: list[types.Tool] = [
             " Pass tissue=<name> to expand the query with UBERON synonyms "
             "(e.g. 'liver' also matches 'iecur'/'jecur'); the expansion is "
             "echoed in tissue_expansion."
+            " Pass collapse_mirrors=true to opt into conservative cross-repo "
+            "mirror collapse: same-dataset copies under different/no DOIs are "
+            "folded into one record, with the folded copies annotated under "
+            "mirrors[]."
         ),
         inputSchema={
             "type": "object",
@@ -395,6 +399,22 @@ TOOLS: list[types.Tool] = [
                         "query (needs EMBEDDING_API_BASE; degrades to relevance order with an "
                         "errors['semantic'] note if unconfigured). In semantic mode pagination "
                         "is window-based (each page consumes its full fetched window)."
+                    ),
+                },
+                "collapse_mirrors": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": (
+                        "Opt into conservative cross-repo content dedup (default false). "
+                        "On top of the always-on exact-DOI dedup, folds records that are the "
+                        "SAME dataset deposited under different (or no) DOIs — e.g. a Zenodo "
+                        "mirror of a figshare deposit, GEO<->ArrayExpress — into one record, "
+                        "annotating the survivor with the folded copies under mirrors[]. "
+                        "Conservative: a merge needs a shared file checksum OR identical "
+                        "(normalized-title, first-author-surname, year); title-only or partial "
+                        "matches never merge. Intra-page / best-effort only (a mirror on a "
+                        "different page is not collapsed), so a page may return fewer than size "
+                        "items; pagination is unaffected."
                     ),
                 },
             },
@@ -715,6 +735,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     kind=args.get("kind"),
                     cursor=args.get("cursor"),
                     rank=args.get("rank", "relevance"),
+                    collapse_mirrors=args.get("collapse_mirrors", False),
                 )
                 return result.model_dump()
             case "resolve":
