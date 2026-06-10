@@ -22,6 +22,7 @@ from data_aggregator_mcp import (
     datacite,
     dataone,
     embeddings,
+    gwas,
     huggingface,
     literature,
     omics,
@@ -61,6 +62,7 @@ _ADAPTERS: dict[str, Any] = {
     "omicsdi": omicsdi,
     "openml": openml,
     "pdb": pdb,
+    "gwas": gwas,
 }
 
 
@@ -422,6 +424,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = await openml.resolve(client, rid)
     elif prefix in pdb.PREFIXES:
         resource = await pdb.resolve(client, rid)
+    elif prefix in gwas.PREFIXES:
+        resource = await gwas.resolve(client, rid)
     elif rid.startswith("datacite:"):
         resource = await datacite.resolve(client, rid)
     elif rid.startswith("zenodo:") or rid.isdigit():
@@ -434,7 +438,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise ValueError(
             f"cannot route id {resource_id!r}: expected 'zenodo:<id>', 'datacite:<doi>', "
             "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', 'dataone:<pid>', "
-            "'omicsdi:<source>:<acc>', 'openml:<id>', 'pdb:<id>', a bare Zenodo id, or a DOI"
+            "'omicsdi:<source>:<acc>', 'openml:<id>', 'pdb:<id>', 'gwas:<acc>', "
+            "a bare Zenodo id, or a DOI"
         )
     if resource.organism:
         try:

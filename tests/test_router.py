@@ -53,6 +53,7 @@ def test_available_sources_lists_all_adapters() -> None:
         "omicsdi",
         "openml",
         "pdb",
+        "gwas",
     ]
 
 
@@ -330,6 +331,13 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     httpx_mock.add_response(
         url=re.compile(r"https://search\.rcsb\.org/rcsbsearch/v2/query.*"),
         json={"total_count": 0, "result_set": []},
+    )
+    # gwas is also a default source (discovery-only): returns empty here
+    httpx_mock.add_response(
+        url=re.compile(
+            r"https://www\.ebi\.ac\.uk/gwas/rest/api/studies/search/findByDiseaseTrait.*"
+        ),
+        json={"_embedded": {"studies": []}, "page": {"totalElements": 0}},
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "rna")
@@ -983,10 +991,10 @@ def test_dataone_and_omicsdi_registered_in_precedence_order():
     names = list(router._ADAPTERS)
     assert "dataone" in names and "omicsdi" in names
     # dataone before datacite (keep the verified copy on a DOI tie); omicsdi after
-    # the DOI-bearing backends; openml + pdb registered last.
+    # the DOI-bearing backends; openml + pdb + gwas registered last.
     assert names.index("dataone") < names.index("datacite")
     assert names.index("datacite") < names.index("omicsdi")
-    assert names[-1] == "pdb"
+    assert names[-1] == "gwas"
 
 
 @pytest.mark.asyncio

@@ -250,6 +250,19 @@ _SOURCES: list[dict[str, Any]] = [
         "id_example": "pdb:1BG2",
         "description": "RCSB Protein Data Bank — macromolecular structures; full-text search, DOI/PMID-rich, .cif/.pdb fetch.",
     },
+    {
+        "name": "gwas",
+        "layer": "omics",
+        "kinds": ["study"],
+        "filters_supported": ["query", "size"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (disease-trait discovery; PubMed cross-link). Fetch not supported.",
+        "fetchable": False,
+        "fetchable_notes": "Discovery-only: study metadata + PMID bridge. Summary-statistics fetch is a future wave.",
+        "id_example": "gwas:GCST000028",
+        "description": "GWAS Catalog (EBI) — genome-wide association studies keyed by disease trait; DOI/PMID-rich, reinforces the paper-data bridge.",
+    },
 ]
 
 TOOLS: list[types.Tool] = [
