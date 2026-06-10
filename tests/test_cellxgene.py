@@ -197,6 +197,37 @@ async def test_resolve_malformed_id_raises():
             await cellxgene.resolve(c, "cellxgene:")
 
 
+@pytest.mark.asyncio
+async def test_resolve_non_dict_body_raises_not_found():
+    # a structurally valid but wrong-shaped 200 (a JSON array) must fail loud as
+    # NotFoundError, not leak an AttributeError from list.get(...).
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=[{"x": 1}]))
+    ) as c:
+        with pytest.raises(NotFoundError):
+            await cellxgene.resolve(c, "cellxgene:col-x")
+
+
+@pytest.mark.asyncio
+async def test_search_tolerates_non_dict_author_entry():
+    # a malformed author entry (bare string) must be skipped, not raise.
+    collections = [
+        {
+            "collection_id": "col-z",
+            "name": "Zebrafish gut atlas",
+            "doi": "10.1/z",
+            "datasets": [],
+            "publisher_metadata": {"authors": ["Malformed", {"family": "Real", "given": "Author"}]},
+        }
+    ]
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=collections))
+    ) as c:
+        _, recs = await cellxgene.search(c, "zebrafish")
+    assert [cr.name for cr in recs[0].creators] == ["Real, Author"]
+
+
 def test_registered_in_router_and_server():
     from data_aggregator_mcp import router, server
 

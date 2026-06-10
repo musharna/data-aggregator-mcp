@@ -81,6 +81,8 @@ def _searchable(collection: dict) -> str:
 def _creators(pm: dict) -> list[Creator]:
     out: list[Creator] = []
     for a in pm.get("authors") or []:
+        if not isinstance(a, dict):
+            continue
         name = a.get("name") or ", ".join(p for p in (a.get("family"), a.get("given")) if p)
         if name:
             out.append(Creator(name=name))
@@ -192,7 +194,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         max_retries=MAX_RETRIES,
         not_found_returns=None,
     )
-    if not collection or not collection.get("collection_id"):
+    if not isinstance(collection, dict) or not collection.get("collection_id"):
         raise NotFoundError(f"CELLxGENE has no collection {cid}")
     record = _normalize(collection)
     record.files = _file_manifest(collection)
