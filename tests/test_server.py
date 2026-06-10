@@ -485,12 +485,16 @@ async def test_dispatch_resolve_attaches_trust_when_requested(monkeypatch) -> No
             doi="10.1016/S0140-6736(97)11096-0",
         )
 
+    seen = {}
+
     async def fake_annotate(client, resource):
+        seen["doi"] = resource.doi  # prove the resolved resource (with its DOI) reaches annotate
         return TrustSignals(retracted=True, retraction_doi="10.1/notice", concern=False)
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
     monkeypatch.setattr("data_aggregator_mcp.trust.annotate", fake_annotate)
     out = await server._dispatch("resolve", {"id": "pub:1", "trust": True})
+    assert seen["doi"] == "10.1016/S0140-6736(97)11096-0"
     assert out["trust"]["retracted"] is True
     assert out["trust"]["retraction_doi"] == "10.1/notice"
     assert out["trust"]["concern"] is False

@@ -99,6 +99,17 @@ async def test_annotate_non_dict_body_is_unknown():
     assert t.retracted is None
 
 
+@pytest.mark.asyncio
+async def test_annotate_crossref_5xx_is_unknown_not_raised():
+    # spec §8: enrichment never raises into a valid resolve. A Crossref outage
+    # (exhausted retries) must degrade to unknown (all-None), not abort resolve.
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(503, json={}))
+    ) as c:
+        t = await trust.annotate(c, _resource(doi="10.1/x"))
+    assert t.retracted is None and t.retraction_doi is None and t.concern is None
+
+
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
