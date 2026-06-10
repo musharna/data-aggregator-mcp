@@ -46,6 +46,7 @@ def test_available_sources_lists_all_adapters() -> None:
     assert router.available_sources() == [
         "zenodo",
         "dataone",
+        "cellxgene",
         "datacite",
         "dandi",
         "omics",
@@ -327,6 +328,11 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     httpx_mock.add_response(
         url=re.compile(r"https://api\.dandiarchive\.org/api/dandisets/.*"),
         json={"count": 0, "results": []},
+    )
+    # cellxgene is also a default source: empty collections list → no matches
+    httpx_mock.add_response(
+        url=re.compile(r"https://api\.cellxgene\.cziscience\.com/curation/v1/collections.*"),
+        json=[],
     )
     # openml is also a default source: returns empty here
     httpx_mock.add_response(

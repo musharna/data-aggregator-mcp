@@ -41,6 +41,7 @@ _FETCHABLE_SOURCES = (
     "dataone:",
     "omicsdi:",
     "dandi:",
+    "cellxgene:",
     "openml:",
     "pdb:",
 )  # id prefixes with a working fetch backend
@@ -277,6 +278,20 @@ _SOURCES: list[dict[str, Any]] = [
         "fetchable_notes": "Discovery-only: study metadata + PMID bridge. Summary-statistics fetch is a future wave.",
         "id_example": "gwas:GCST000028",
         "description": "GWAS Catalog (EBI) — genome-wide association studies keyed by disease trait; DOI/PMID-rich, reinforces the paper-data bridge.",
+    },
+    {
+        "name": "cellxgene",
+        "layer": "omics",
+        "kinds": ["dataset"],
+        "filters_supported": ["query", "size"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (CZ CELLxGENE Discover collections search/resolve; asset manifest on resolve)",
+        "fetchable": True,
+        "operable": False,
+        "fetchable_notes": "H5AD/RDS assets stream from datasets.cellxgene.cziscience.com (direct URLs, unverified — no checksum in the API); the per-collection manifest is capped at 200 files for large atlases.",
+        "id_example": "cellxgene:col-lung-1",
+        "description": "CZ CELLxGENE Discover — single-cell datasets grouped by collection (one publication DOI per collection); search filters on tissue/disease/organism/assay, resolve attaches the H5AD/RDS download manifest.",
     },
 ]
 
