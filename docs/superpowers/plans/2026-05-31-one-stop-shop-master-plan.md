@@ -14,6 +14,37 @@
 
 ---
 
+## ⚠ BUILD STATUS as of 2026-06-10 (live-audited; AUTHORITATIVE — read this FIRST)
+
+> **This plan ran ~3 weeks ahead of itself: most of it is already shipped.** The repo (v0.23.0) is far
+> ahead of the prose below — the prose preserves the original rationale/sequence, but for "what's left"
+> trust THIS table, then re-audit live `src/` before scoping anything. (A 2026-06-10 session recommended
+> DataONE as "next" straight off the stale sequence — it had shipped 05-31. Don't repeat that.)
+
+**Phase 1 — Complete MCP citizen: ✅ DONE.** schema/output-gate (`tests/test_output_schema_gate.py`); `Metrics`/`is_latest`/`superseded_by`/`last_updated` (`models.py`); tool **annotations** (`server.py` `ToolAnnotations` on all tools); **prompts** (`server.py` `_PROMPTS`); **Croissant** file-subset (`croissant.py`) + **RO-Crate** (`ro_crate.py`); **Scholix**/relationType (`scholix.py`); OpenAIRE (`openaire.py`). _Only residual:_ ROR affiliation enrichment (not built — minor).
+
+**Phase 2 — Operate-on-data: ✅ DONE (v0.19.0).** 5th tool `operate` (DuckDB SQL over remote Parquet, `operate.py`/`duckquery.py`). Tools now = `search, resolve, fetch, operate, search_resolve_fetch` (5).
+
+**Phase 3 — Source breadth: ✅ DONE** (all evidence-picked legs shipped):
+
+- P3.1 DataCite refinements — `resourceTypeGeneral` filter ✅ + per-repo fetch resolvers (figshare/osf/dataverse/zenodo/dryad/openneuro) ✅
+- P3.2 DataONE federation ✅ (`dataone.py`, checksummed fetch; **PANGAEA + KNB + Arctic + TERN reachable through this federation** — P3.4 PANGAEA needs no standalone adapter)
+- P3.3 OmicsDI + PRIDE + MetaboLights ✅ — P3.5 PDB/GWAS/OpenML ✅ — P3.6 OpenNeuro/DANDI ✅ — single-cell **CELLxGENE** ✅ (v0.23.0)
+- P3.7 non-research (EDGAR/patents/legal) — **carved to a sibling server** per decision Q2; NOT core.
+
+**Distribution (Q1, pulled forward): ✅** registry/Glama/awesome-mcp listings shipped (see MEMORY.md da-mcp section).
+
+**Phase 4 — Frontier: ☐ THE ACTUAL OPEN WORK.** All four are genuinely unbuilt (0 code, live-confirmed 06-10):
+
+- **P4.2 MCP resources** (`data://record/{source}/{id}`) — no `list_resources`/`read_resource` registered. _Smallest, protocol catch-up._
+- **P4.4 Trust signals tier-2** — Crossref Retraction-Watch flag + CoreTrustSeal `host_certified`. _Cheapest moat-reinforcer (anti-hallucination narrative); verify the retraction field on a real retracted DOI first._
+- **P4.3 Async long-fetch** (`fetch` `mode`/`job_id`) — `fetch.py` has no job model. _Larger; unlocks IPUMS/SWH/GBIF._
+- **P4.1 True semantic RECALL** — only the v0.16 window re-rank exists (`embeddings.py`); beyond-window retrieval is the big lift. _Largest; partially cedeable to openalex._
+
+→ **Recommended next:** P4.4 (retraction trust signal) or P4.2 (resources) — both small, both reinforce the moat/protocol. Full detail in the Phase-4 section below.
+
+---
+
 ## Current-state corrections (verified live this session — supersede the research memos where they conflict)
 
 The research agents made two assumptions that the live code contradicts. The plan is written to the code, not the memos:
@@ -145,7 +176,6 @@ Phase 1 (no scope-call) ──┬─ P1.1–P1.3 MCP polish        (independent,
 
 **Each tier above gets its own detailed `docs/superpowers/plans/` spec (bite-sized TDD steps) at build time — this master plan is the program-level contract, not the step-level one.**
 
-
 ---
 
 ## Gap-Analysis Addendum (post-review, 2026-05-31) — amends the tiers above
@@ -153,12 +183,14 @@ Phase 1 (no scope-call) ──┬─ P1.1–P1.3 MCP polish        (independent,
 A 3-agent adversarial review (completeness/web · technical/architecture-code-grounded · scope/strategy) produced the following. Memo: `~/.claude/projects/-home-mjarnold/memory/data_aggregator_master_plan_gap_analysis_2026-05-31.md`.
 
 ### Verified corrections (override the tiers where they conflict)
+
 - **htsget is NOT available on NCBI-SRA** (refuted, strong). P2.5 region-slicing = **EGA/ENA-only**; EGA is controlled-access (largely non-redistributable). Do not advertise `region` for SRA. The bio region-slice win is real but smaller.
 - **structuredContent is SDK-VALIDATED** (mcp 1.27.2): the dict return is validated against the published `outputSchema` on every call. Additive `DataResource`/`SearchResult` fields are therefore **contract changes that can hard-fail the tool**, not free. The existing `test_all_tool_outputs_validate_against_schemas` does NOT validate against the schema. **P1.1 is upgraded to a standing CI gate: a `model_dump()`↔`model_json_schema()` round-trip validation test, landed BEFORE any new field.**
 - **Croissant 1.1 = ODRL + PROV-O + DUO** (not 1.0 JSON-LD), and a full `RecordSet`/`Field` manifest needs per-column structure = the **P2.4 footer-introspection capability**. **P1.8 is re-scoped to a file-level Croissant subset** (FileObjects + dataset props, documented as such); full RecordSet export moves to AFTER P2.4. Add **RO-Crate** as a sibling export (research-output packaging — fits our Zenodo/Dryad/omics corpus better than Croissant's ML focus; same render pattern).
 - **DataCite inline metrics CONFIRMED** (P1.4 sound, keep nullable). **Crossref retraction** = `update-to[].type == "retraction"` (P4.4).
 
 ### Missed prerequisites (ordered into the phases)
+
 1. dump↔schema round-trip CI test — before ANY new field (Phase 1, item 0).
 2. Single-source `kind` enum: derive the `search` inputSchema enum (`server.py`) from `_VALID_KINDS` (`router.py`); a test pins the literal — refactor before P3.7.
 3. Per-source precedence RANK replacing the `datacite`-vs-rest boolean in `_dedup` — before DataONE/PANGAEA/PRIDE.
@@ -168,10 +200,12 @@ A 3-agent adversarial review (completeness/web · technical/architecture-code-gr
 7. Croissant conformance-level decision (file-level vs full RecordSet) — settled above (file-level first).
 
 ### access_modes & operate (P2) hardening
-- `compact()` strips `files[]` from search results, and `mime` is often `None` → format-dependent modes (sql/region/schema) are NOT reliably knowable at search/resolve time. Make `access_modes` **two-tier**: a source-level capability *claim* (best-effort), with format-dependent modes verified by a cheap HEAD/footer probe inside `operate` and failed loud if the claim doesn't hold.
+
+- `compact()` strips `files[]` from search results, and `mime` is often `None` → format-dependent modes (sql/region/schema) are NOT reliably knowable at search/resolve time. Make `access_modes` **two-tier**: a source-level capability _claim_ (best-effort), with format-dependent modes verified by a cheap HEAD/footer probe inside `operate` and failed loud if the claim doesn't hold.
 - `operate` needs its OWN resource limits — `fetch`'s `max_bytes` does not transfer to DuckDB/fsspec. Specify: row cap, result-byte cap, statement + wall-clock timeout.
 
 ### Other missed items to fold in
+
 - **DCAT-US generic harvester** for the US-gov long tail (one adapter, DataCite-firehose-style leverage) — relevant to P3.7's sources.
 - **MCP 2026-07-28 RC** (locked 2026-05-21): build P4.3 async-fetch on the RC **Tasks** extension (not a bespoke `job_id`); adopt **Server Cards (`.well-known`)** for distribution; confirm nothing built on deprecated sampling/logging/**Roots**; **MCP Apps** could render operate previews. Re-evaluate Phase 4 against the RC.
 - **Single-cell atlases (CELLxGENE Census / HCA)** — add to Phase 3 (on-moat bio modality the plan dropped).
@@ -179,12 +213,12 @@ A 3-agent adversarial review (completeness/web · technical/architecture-code-gr
 - **Retraction-propagation across the paper↔data bridge** — the differentiated version of P4.4.
 
 ### Strategic amendments (pending user decision — see Open Questions)
+
 - **C1:** distribution (P4.5/E1-E2 + directory listings) is the competitive memo's #1 gap and is sequenced LAST under a "demand-driven" thesis with ~0 users — **pull it forward to run parallel with Phase 1.**
 - **C2:** non-research records (P3.7 EDGAR/patents/legal) dilute the bio identity + force the irreversible kind-enum break — **recommend carving to a sibling server** that reuses `DataResource` as a library.
 - **C3:** the thesis's strongest evidence is fetch-failure/hallucination → **fetchable-source breadth (DataONE/OmicsDI) is the better-evidenced first bet; operate-on-data is a strong SECOND**, validated by the usage signal distribution generates.
 
 ### Open questions for the user (recommendations in the memo): Q1 distribution timing · Q2 non-research home · Q3 first-build-after-Phase-1 · Q4 kind-enum · Q5 metrics shape · Q6 superseded down-rank · Q7 5th-tool timing · Q8 PID one-hop.
-
 
 ---
 
@@ -199,12 +233,14 @@ The gap-analysis open questions were resolved by the user. This section override
 **Q3 — First deep bet after Phase 1: FETCH-BREADTH (DataONE + OmicsDI), BEFORE P2 operate-on-data.** DataONE = the only federation hub with checksummed fetch; OmicsDI broadens omics discovery. This attacks the fetch-failure/hallucination evidence directly at lower technical risk. P2 (operate-on-data / DuckDB / region-slice) is RESEQUENCED to AFTER fetch-breadth, gated on the usage signal that distribution produces. operate-on-data remains the strong second bet, not the first build.
 
 **Smaller defaults applied (Q5–Q8):**
+
 - Q5 metrics shape → a typed `Metrics` model with **separate axes** (citations/views/downloads), **no blended score** by default.
 - Q6 superseded records → add `is_latest`/`superseded_by` **fields only**; **no change to default ranking** (down-ranking is opt-in later, if at all).
 - Q7 5th tool (operate verb) → **approved in principle**, built only after Phase 1 + distribution + a usage signal justifies it (i.e. with Q3's reseq).
 - Q8 PID one-hop traversal (S5) → **stays ceded** (camel's-nose toward the citation-graph we deliberately gave to the openalex MCP).
 
 ### Resulting build order
+
 1. **NOW (parallel):** (a) Distribution — listings + positioning writeup; (b) Phase 1 — schema round-trip CI gate (item 0) → metrics/`is_latest`/`last_updated` fields → annotations/prompts → Croissant **file-level** subset + RO-Crate → relationType/Scholix/ROR.
 2. **Next deep bet:** fetch-breadth — per-source dedup **rank** prereq → DataONE (checksummed) → OmicsDI.
 3. **Then, usage-gated:** P2 operate-on-data (optional-extras packaging + `asyncio.to_thread` + own resource limits + claim-then-probe `access_modes` prereqs first), full Croissant RecordSet after the P2.4 footer capability.
