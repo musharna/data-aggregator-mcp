@@ -12,18 +12,22 @@ literature ids fail loud.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from typing import Any
 
 import httpx
 from mcp import types
 from mcp.server import Server
+from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.stdio import stdio_server
+from pydantic import AnyUrl
 
 from data_aggregator_mcp import citation, operate, router, zenodo
 from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import health as health_mod
+from data_aggregator_mcp import resources as resources_mod
 from data_aggregator_mcp import ro_crate as ro_crate_mod
 from data_aggregator_mcp import trust as trust_mod
 from data_aggregator_mcp.errors import FetchNotSupportedError
@@ -615,6 +619,29 @@ async def _get_prompt(name: str, arguments: dict[str, str] | None) -> types.GetP
             types.PromptMessage(role="user", content=types.TextContent(type="text", text=text)),
         ],
     )
+
+
+@server.list_resources()
+async def _list_resources() -> list[types.Resource]:
+    return resources_mod.static_resources()
+
+
+@server.list_resource_templates()
+async def _list_resource_templates() -> list[types.ResourceTemplate]:
+    return resources_mod.templates()
+
+
+@server.read_resource()
+async def _read_resource(uri: AnyUrl) -> list[ReadResourceContents]:
+    if resources_mod.is_catalog(uri):
+        payload = json.dumps({"sources": _SOURCES})
+        return [ReadResourceContents(content=payload, mime_type="application/json")]
+    rid = resources_mod.parse_record_id(uri)
+    if rid is None:
+        raise ValueError(f"not a readable data-aggregator resource: {uri}")
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        resource = await router.resolve(client, rid)
+    return [ReadResourceContents(content=resource.model_dump_json(), mime_type="application/json")]
 
 
 async def _dispatch(name: str, args: dict[str, Any]) -> Any:

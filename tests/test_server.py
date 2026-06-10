@@ -612,3 +612,60 @@ async def test_list_sources_advertises_operable():
     assert by_name["omicsdi"].get("operable") in (False, None)
     assert by_name["omics"].get("operable") in (False, None)
     assert by_name["literature"].get("operable") in (False, None)
+
+
+# ---------------------------------------------------------------------------
+# MCP resources primitive (P4.2) — list/read resource handlers
+# ---------------------------------------------------------------------------
+
+
+async def test_list_resources_returns_catalog() -> None:
+    from data_aggregator_mcp import resources
+
+    res = await server._list_resources()
+    assert [str(r.uri) for r in res] == [resources.CATALOG_URI]
+
+
+async def test_list_resource_templates_returns_record_template() -> None:
+    tmpls = await server._list_resource_templates()
+    assert tmpls[0].uriTemplate == "dataresource://record/{id}"
+
+
+async def test_read_resource_catalog_returns_sources_json() -> None:
+    import json
+
+    from pydantic import AnyUrl
+
+    from data_aggregator_mcp import resources
+
+    contents = await server._read_resource(AnyUrl(resources.CATALOG_URI))
+    item = list(contents)[0]
+    assert item.mime_type == "application/json"
+    payload = json.loads(item.content)
+    assert "sources" in payload and any(s["name"] == "zenodo" for s in payload["sources"])
+
+
+async def test_read_resource_record_routes_through_resolve(monkeypatch) -> None:
+    import json
+
+    from pydantic import AnyUrl
+
+    from data_aggregator_mcp import resources
+
+    async def fake_resolve(client, rid):
+        assert rid == "datacite:10.5061/dryad.x"  # decoded from the URI path
+        return DataResource(id=rid, source="datacite", kind="dataset", title="Probe set")
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    uri = AnyUrl(resources.record_uri("datacite:10.5061/dryad.x"))
+    contents = await server._read_resource(uri)
+    item = list(contents)[0]
+    assert item.mime_type == "application/json"
+    assert json.loads(item.content)["id"] == "datacite:10.5061/dryad.x"
+
+
+async def test_read_resource_unknown_uri_raises() -> None:
+    from pydantic import AnyUrl
+
+    with pytest.raises(ValueError):
+        await server._read_resource(AnyUrl("dataresource://nope/x"))
