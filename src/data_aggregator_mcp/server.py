@@ -54,7 +54,7 @@ def _is_fetchable(fid: str) -> bool:
 # DataCite ids all share the `datacite:` prefix, so fetchability is decided
 # post-resolve from the detected host repo. Dryad is manifest-only (downloads are
 # token/bot-challenge gated), so it is NOT here.
-_DATACITE_FETCHABLE = ("figshare", "dataverse", "osf", "zenodo")
+_DATACITE_FETCHABLE = ("figshare", "dataverse", "osf", "zenodo", "openneuro")
 
 
 def _ensure_repo_fetchable(fid: str, resource: DataResource) -> None:
@@ -134,7 +134,7 @@ _SOURCES: list[dict[str, Any]] = [
         "status": "live (discovery; fetch on resolve for Figshare/Dataverse/OSF/Zenodo, manifest-only for Dryad)",
         "fetchable": "per-repo",
         "operable": True,
-        "fetchable_notes": "Figshare/Dataverse/OSF/Zenodo fetchable; Dryad manifest-only (token/bot-gated); Mendeley + other repos discovery-only.",
+        "fetchable_notes": "Figshare/Dataverse/OSF/Zenodo fetchable; OpenNeuro (10.18112/openneuro.*) datasets fetchable via the snapshot manifest; Dryad manifest-only (token/bot-gated); Mendeley + other repos discovery-only.",
         "id_example": "datacite:10.5061/dryad.x",
     },
     {

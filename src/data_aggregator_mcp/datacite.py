@@ -18,7 +18,7 @@ from typing import Any
 
 import httpx
 
-from data_aggregator_mcp import _http, dataverse, dryad, figshare, osf, zenodo
+from data_aggregator_mcp import _http, dataverse, dryad, figshare, openneuro, osf, zenodo
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import (
     Creator,
@@ -65,6 +65,7 @@ _SOURCE_RULES = (
     ("gdcc", "dataverse"),  # Harvard etc. surface as gdcc.* (no "dataverse" substring)
     ("osf", "osf"),
     ("mendeley", "mendeley"),
+    ("openneuro", "openneuro"),
 )
 
 
@@ -83,6 +84,7 @@ _FILE_RESOLVERS = {
     "figshare": figshare.files,
     "dataverse": dataverse.files,
     "osf": osf.files,
+    "openneuro": openneuro.files,
 }
 
 

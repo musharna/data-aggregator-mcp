@@ -8,7 +8,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import datacite
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import Creator, FundingRef
+from data_aggregator_mcp.models import Creator, FileEntry, FundingRef
 
 
 def _item() -> dict:
@@ -421,3 +421,38 @@ def test_normalize_populates_last_updated() -> None:
         }
     }
     assert _normalize(item).last_updated == "2025-03-04T00:00:00Z"
+
+
+@pytest.mark.asyncio
+async def test_resolve_openneuro_doi_dispatches_to_openneuro_files(monkeypatch):
+    from data_aggregator_mcp import datacite
+
+    # A minimal DataCite record whose client id maps to source="openneuro".
+    record = {
+        "data": {
+            "id": "10.18112/openneuro.ds000001.v1.0.0",
+            "attributes": {
+                "doi": "10.18112/openneuro.ds000001.v1.0.0",
+                "titles": [{"title": "Balloon Analog Risk-taking Task"}],
+                "publisher": "OpenNeuro",
+                "types": {"resourceTypeGeneral": "Dataset"},
+            },
+            "relationships": {"client": {"data": {"id": "sul.openneuro"}}},
+        }
+    }
+
+    async def fake_files(client, doi):
+        assert doi == "10.18112/openneuro.ds000001.v1.0.0"
+        return [FileEntry(name="README", url="https://openneuro.org/x", source="openneuro")]
+
+    # _FILE_RESOLVERS captures the function object at import time, so rebinding
+    # openneuro.files would not reach the dispatch dict — patch the entry directly.
+    monkeypatch.setitem(datacite._FILE_RESOLVERS, "openneuro", fake_files)
+
+    async def handler(request):
+        return httpx.Response(200, json=record)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        r = await datacite.resolve(c, "datacite:10.18112/openneuro.ds000001.v1.0.0")
+    assert r.source == "openneuro"
+    assert [f.name for f in r.files] == ["README"]
