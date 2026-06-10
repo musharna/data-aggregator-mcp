@@ -38,7 +38,7 @@
 
 - **P4.2 MCP resources** (`data://record/{source}/{id}`) — no `list_resources`/`read_resource` registered. _Smallest, protocol catch-up._
 - **P4.4 Trust signals tier-2** — Crossref Retraction-Watch flag + CoreTrustSeal `host_certified`. _Cheapest moat-reinforcer (anti-hallucination narrative); verify the retraction field on a real retracted DOI first._
-- **P4.3 Async long-fetch** (`fetch` `mode`/`job_id`) — `fetch.py` has no job model. _Larger; unlocks IPUMS/SWH/GBIF._
+- **P4.3 Async long-fetch** (`fetch` `mode`/`job_id`) — `fetch.py` has no job model. _Larger; unlocks IPUMS/SWH/GBIF._ **DEFERRED (decided 2026-06-10):** this capability IS the MCP **Tasks** extension (SEP-1686→SEP-2663), which is only _experimental_ in SDK 1.27.2 ("may change without notice") and **finalizes 2026-07-28**. Building a bespoke `job_id` now = throwaway; building on the experimental surface = churn risk. **Revisit after 2026-07-28** and build on the finalized Tasks extension (confirms the line-210 lock). Do P4.1 first.
 - **P4.1 True semantic RECALL** — only the v0.16 window re-rank exists (`embeddings.py`); beyond-window retrieval is the big lift. _Largest; partially cedeable to openalex._
 
 → **Recommended next:** P4.4 (retraction trust signal) or P4.2 (resources) — both small, both reinforce the moat/protocol. Full detail in the Phase-4 section below.
