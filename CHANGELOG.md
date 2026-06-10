@@ -6,6 +6,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-06-10
+
+### Added
+
+- **Retraction trust signal** — `resolve(trust=true)` now attaches a `trust{}` block
+  (`retracted` / `retraction_doi` / `concern`) derived from a single Crossref
+  `/works/{doi}` lookup of the record's DOI. A DOI Crossref does not register (e.g. a
+  DataCite data DOI) leaves `retracted=null` (unknown — never a false "clean" claim);
+  a found-but-clean work is `retracted=false`. As an opt-in resolve enricher it is
+  fail-soft (a Crossref outage degrades to unknown, never aborts the resolve). First of
+  the Phase-4 trust signals (CoreTrustSeal / FAIR proxy deferred); reinforces the
+  verified-fetch / anti-hallucination posture — callers can flag retracted records
+  before handing them downstream.
+
 ## [0.23.0] - 2026-06-10
 
 ### Added
