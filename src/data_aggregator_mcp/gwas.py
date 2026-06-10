@@ -67,7 +67,10 @@ async def search(
         not_found_returns={},
     )
     studies = ((body or {}).get("_embedded") or {}).get("studies") or []
-    total = ((body or {}).get("page") or {}).get("totalElements", len(studies))
+    # `.get(k, default)` only falls back on an ABSENT key, not an explicit null —
+    # coerce a None totalElements to the page length so total stays an int.
+    reported = ((body or {}).get("page") or {}).get("totalElements")
+    total = reported if isinstance(reported, int) else len(studies)
     return total, [compact(_normalize(s)) for s in studies]
 
 

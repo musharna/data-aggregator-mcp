@@ -59,6 +59,20 @@ async def test_search_normalizes_studies():
 
 
 @pytest.mark.asyncio
+async def test_search_null_total_falls_back_to_page_length():
+    payload = {
+        "_embedded": {"studies": _SEARCH["_embedded"]["studies"]},
+        "page": {"totalElements": None},
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload))
+    ) as c:
+        total, recs = await gwas.search(c, "asthma", size=2)
+    assert total == 2 and len(recs) == 2  # int, not None
+
+
+@pytest.mark.asyncio
 async def test_search_paginates_by_page_number():
     captured = {}
 
