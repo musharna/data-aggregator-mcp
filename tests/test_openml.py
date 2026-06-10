@@ -47,6 +47,20 @@ async def test_search_normalizes_name_substring_hits():
 
 
 @pytest.mark.asyncio
+async def test_search_url_encodes_query():
+    seen = {}
+
+    async def handler(request):
+        # .raw_path keeps percent-encoding; .path decodes it back (lossy)
+        seen["path"] = request.url.raw_path.decode()
+        return httpx.Response(200, json={"data": {"dataset": []}})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        await openml.search(c, "iris flower", size=5)
+    assert "iris%20flower" in seen["path"] and " " not in seen["path"]
+
+
+@pytest.mark.asyncio
 async def test_search_offset_returns_empty():
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json=_LIST))

@@ -9,6 +9,8 @@ auto-converted Parquet (operable: schema/preview/head/sql via the [operate] extr
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 import httpx
 
 from data_aggregator_mcp import _http
@@ -51,7 +53,7 @@ async def search(
     body = await _http.request_json(
         client,
         "GET",
-        LIST.format(q=query, n=min(size, MAX_SIZE)),
+        LIST.format(q=quote(query, safe=""), n=min(size, MAX_SIZE)),
         service="OpenML search",
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
@@ -113,7 +115,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     if isinstance(creator, str) and creator:
         creators = [Creator(name=creator)]
     elif isinstance(creator, list):
-        creators = [Creator(name=c) for c in creator]
+        creators = [Creator(name=str(c)) for c in creator if c]
     else:
         creators = []
     year = None

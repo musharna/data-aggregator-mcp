@@ -430,7 +430,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise ValueError(
             f"cannot route id {resource_id!r}: expected 'zenodo:<id>', 'datacite:<doi>', "
             "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', 'dataone:<pid>', "
-            "'omicsdi:<source>:<acc>', a bare Zenodo id, or a DOI"
+            "'omicsdi:<source>:<acc>', 'openml:<id>', a bare Zenodo id, or a DOI"
         )
     if resource.organism:
         try:
