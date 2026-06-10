@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-06-10
+
+### Added
+
+- **CZ CELLxGENE Discover** source — single-cell datasets via the Discover curation
+  REST API. The collection is the resource unit (one publication DOI per collection);
+  search filters client-side on each collection's tissue/disease/organism/assay
+  ontology labels, and `resolve` attaches the H5AD/RDS download manifest (capped at
+  200 files; direct URLs, unverified — the API exposes filesize but no checksum).
+  `kind="dataset"`.
+
 ## [0.22.0] - 2026-06-10
 
 ### Added
