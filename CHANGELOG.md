@@ -6,6 +6,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-06-10
+
+### Added
+
+- **RCSB PDB** source — macromolecular-structure discovery via the RCSB full-text
+  search API, hydrated with title + primary-citation DOI/PubMed in one GraphQL
+  batch call; `.cif`/`.pdb` structure files stream from files.rcsb.org (unverified —
+  no upstream checksum). `kind="dataset"`.
+- **GWAS Catalog** source — genome-wide association studies keyed by disease trait
+  (EBI REST), carrying the PubMed cross-link for the paper↔data bridge.
+  Discovery-only this wave (summary-statistics fetch deferred). `kind="study"`.
+- **OpenML** source — machine-learning datasets via name-substring search; resolve
+  attaches an md5-verified ARFF and the auto-converted Parquet, which is operable
+  (schema/preview/head/sql via the `[operate]` extra). `kind="dataset"`.
+
 ### Changed
 
 - **mypy is now a blocking CI gate.** Added mypy (dev dep + `[tool.mypy]` config) and a blocking `Types (mypy)` step to CI. Cleared the existing type debt with real `None`-handling fixes (narrowing asserts that match documented invariants + a walrus binding); no `# type: ignore` needed. No runtime change.
