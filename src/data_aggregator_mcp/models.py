@@ -66,6 +66,20 @@ class Metrics(BaseModel):
     likes: int | None = None
 
 
+class TrustSignals(BaseModel):
+    """Integrity/provenance signals attached on resolve(trust=True). All nullable:
+    None = not checked or not determinable (e.g. a DOI Crossref doesn't register) —
+    NEVER a negative claim. A *found* Crossref work yields definitive booleans."""
+
+    retracted: bool | None = (
+        None  # True = a Crossref retraction is on record; None = unchecked / not a Crossref work
+    )
+    retraction_doi: str | None = None  # DOI of the retraction notice, when retracted
+    concern: bool | None = (
+        None  # True = an expression-of-concern is on record (weaker integrity flag)
+    )
+
+
 class DataResource(BaseModel):
     id: str  # source-prefixed canonical id, e.g. "zenodo:123"
     source: str
@@ -87,6 +101,7 @@ class DataResource(BaseModel):
     links: list[Link] = Field(default_factory=list)
     citation: str | None = None  # rendered on resolve when cite= is requested
     metrics: Metrics | None = None  # usage/impact signals, source-dependent
+    trust: TrustSignals | None = None  # integrity signals (retraction), on resolve(trust=True)
     is_latest: bool | None = None  # None = no version info in links[]
     superseded_by: str | None = None  # id of the newer version, when known
     last_updated: str | None = None  # source's modified/updated timestamp (ISO 8601)

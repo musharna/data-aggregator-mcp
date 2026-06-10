@@ -5,7 +5,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import server
 from data_aggregator_mcp.errors import FetchNotSupportedError
-from data_aggregator_mcp.models import DataResource, FileEntry, Link
+from data_aggregator_mcp.models import DataResource, FileEntry, Link, TrustSignals
 
 
 def test_catalog_exposes_core_tools() -> None:
@@ -473,6 +473,51 @@ async def test_dispatch_resolve_renders_ro_crate(monkeypatch) -> None:
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
     out = await server._dispatch("resolve", {"id": "zenodo:1", "format": "ro-crate"})
     assert out["ro_crate"]["@context"] == "https://w3id.org/ro/crate/1.1/context"
+
+
+async def test_dispatch_resolve_attaches_trust_when_requested(monkeypatch) -> None:
+    async def fake_resolve(client, fid):
+        return DataResource(
+            id="pub:1",
+            source="literature",
+            kind="publication",
+            title="t",
+            doi="10.1016/S0140-6736(97)11096-0",
+        )
+
+    async def fake_annotate(client, resource):
+        return TrustSignals(retracted=True, retraction_doi="10.1/notice", concern=False)
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    monkeypatch.setattr("data_aggregator_mcp.trust.annotate", fake_annotate)
+    out = await server._dispatch("resolve", {"id": "pub:1", "trust": True})
+    assert out["trust"]["retracted"] is True
+    assert out["trust"]["retraction_doi"] == "10.1/notice"
+    assert out["trust"]["concern"] is False
+
+
+async def test_dispatch_resolve_no_trust_leaves_trust_none(monkeypatch) -> None:
+    async def fake_resolve(client, fid):
+        return DataResource(
+            id="pub:1",
+            source="literature",
+            kind="publication",
+            title="t",
+            doi="10.1016/S0140-6736(97)11096-0",
+        )
+
+    async def boom_annotate(client, resource):
+        raise AssertionError("annotate must not be called without trust=True")
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    monkeypatch.setattr("data_aggregator_mcp.trust.annotate", boom_annotate)
+    out = await server._dispatch("resolve", {"id": "pub:1"})
+    assert out["trust"] is None
+
+
+def test_resolve_tool_exposes_trust_param() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "resolve")
+    assert "trust" in tool.inputSchema["properties"]
 
 
 def test_dataone_and_omicsdi_are_fetchable_prefixes():

@@ -25,6 +25,7 @@ from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import health as health_mod
 from data_aggregator_mcp import ro_crate as ro_crate_mod
+from data_aggregator_mcp import trust as trust_mod
 from data_aggregator_mcp.errors import FetchNotSupportedError
 from data_aggregator_mcp.models import DataResource, FetchResult, SearchResult
 
@@ -383,7 +384,8 @@ TOOLS: list[types.Tool] = [
             "including the complete files[] manifest. Publication resolve also attaches "
             "normalized identifiers (pmid/pmcid/doi) and, when open access, a full-text file. "
             "Pass cite=<format> to render a "
-            "citation onto the result (citation field); omitted means no citation."
+            "citation onto the result (citation field); omitted means no citation. "
+            "Pass trust=true to attach retraction status (via Crossref) under trust{}."
         ),
         inputSchema={
             "type": "object",
@@ -406,6 +408,13 @@ TOOLS: list[types.Tool] = [
                     "description": "Optional export to render onto the result. 'croissant' "
                     "attaches a file-level Croissant JSON-LD manifest (croissant field); "
                     "'ro-crate' attaches a minimal RO-Crate 1.1 manifest (ro_crate field).",
+                },
+                "trust": {
+                    "type": "boolean",
+                    "description": "When true, attach trust signals (retraction status via "
+                    "Crossref) to the result under trust{}. One extra Crossref call; only "
+                    "meaningful for DOI-bearing records (a DataCite data DOI Crossref does not "
+                    "register leaves retracted=null = unknown, never a false clean claim).",
                 },
             },
             "required": ["id"],
@@ -646,6 +655,9 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     resource = resource.model_copy(
                         update={"ro_crate": ro_crate_mod.render(resource)}
                     )
+                if args.get("trust"):
+                    signals = await trust_mod.annotate(client, resource)
+                    resource = resource.model_copy(update={"trust": signals})
                 return resource.model_dump()
             case "fetch":
                 fid = args["id"].strip()
