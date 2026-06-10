@@ -6,6 +6,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-06-10
+
+### Changed
+
+- **Croissant export upgraded to Croissant 1.1** — the `format=croissant` manifest now
+  carries the `conformsTo` version marker (`http://mlcommons.org/croissant/1.1`) and a
+  `@context` that declares the `dct`/`prov`/`odrl` namespace prefixes. The export gains
+  dataset-level **PROV-O provenance** populated from our cross-source enrichment:
+  `prov:wasAttributedTo` (creators, with an ORCID `@id` when known) and
+  `prov:wasDerivedFrom` mapped **conservatively** from only true-derivation link rels
+  (`is_derived_from`/`is_version_of`/`is_new_version_of`) — `is_supplement_to`/`cites`/
+  `part_of` are deliberately NOT mapped, so the manifest never overstates provenance.
+  Also now emits the schema.org fields we already hold: `keywords` (subjects),
+  `dateModified` (last-updated), `publisher` (source display-name), and `citeAs` (only
+  when the record was resolved with a bibtex citation). A minimal honest `usageInfo`
+  license pointer is added when a license is present; the full ODRL `odrl:Offer` policy
+  is deferred to B3 (license-compatibility) — B2 asserts no permissions. The renderer
+  stays a pure transform (no I/O). Still file-level: no RecordSet/Field structures.
+
 ## [0.27.0] - 2026-06-10
 
 ### Added
