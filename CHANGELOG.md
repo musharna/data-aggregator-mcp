@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-06-10
+
+### Added
+
+- **DANDI Archive** source — neurophysiology dandisets (NWB) via the DANDI REST API:
+  search + resolve, with a per-asset download manifest (capped at the first 100
+  assets; 302→S3, unverified). DOI is attached from the published version's
+  metadata (drafts have none). `kind="dataset"`.
+- **OpenNeuro** fetch — OpenNeuro datasets (`10.18112/openneuro.*`) are now
+  fetchable: discovery rides the existing DataCite firehose, and `resolve` attaches
+  the snapshot's top-level file manifest via the OpenNeuro GraphQL API.
+
 ## [0.21.0] - 2026-06-10
 
 ### Added

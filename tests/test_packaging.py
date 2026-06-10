@@ -11,9 +11,9 @@ _ROOT = Path(__file__).resolve().parent.parent
 _PYPROJECT = tomllib.loads((_ROOT / "pyproject.toml").read_text())
 
 
-def test_version_is_0210_and_synced() -> None:
-    assert data_aggregator_mcp.__version__ == "0.21.0"
-    assert _PYPROJECT["project"]["version"] == "0.21.0"
+def test_version_is_0220_and_synced() -> None:
+    assert data_aggregator_mcp.__version__ == "0.22.0"
+    assert _PYPROJECT["project"]["version"] == "0.22.0"
 
 
 def test_pyproject_has_urls_and_keywords() -> None:
@@ -42,7 +42,7 @@ def test_license_is_spdx_with_file_and_no_classifier() -> None:
 def test_server_json_matches_package_identity() -> None:
     sj = json.loads((_ROOT / "server.json").read_text())
     assert sj["name"] == "io.github.musharna/data-aggregator-mcp"
-    assert sj["version"] == "0.21.0"
+    assert sj["version"] == "0.22.0"
     assert sj["$schema"].endswith("/server.schema.json")
     pkg = sj["packages"][0]
     assert pkg["registryType"] == "pypi"
