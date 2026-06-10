@@ -11,7 +11,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 _PYPROJECT = tomllib.loads((_ROOT / "pyproject.toml").read_text())
 
 
-def test_version_is_0320_and_synced() -> None:
+def test_version_is_0340_and_synced() -> None:
     assert data_aggregator_mcp.__version__ == "0.34.0"
     assert _PYPROJECT["project"]["version"] == "0.34.0"
 
