@@ -52,6 +52,7 @@ def test_available_sources_lists_all_adapters() -> None:
         "huggingface",
         "omicsdi",
         "openml",
+        "pdb",
     ]
 
 
@@ -324,6 +325,11 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     httpx_mock.add_response(
         url=re.compile(r"https://www\.openml\.org/api/v1/json/data/list/.*"),
         json={"data": {"dataset": []}},
+    )
+    # pdb is also a default source: empty result_set → no GraphQL hydration call
+    httpx_mock.add_response(
+        url=re.compile(r"https://search\.rcsb\.org/rcsbsearch/v2/query.*"),
+        json={"total_count": 0, "result_set": []},
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "rna")
@@ -977,10 +983,10 @@ def test_dataone_and_omicsdi_registered_in_precedence_order():
     names = list(router._ADAPTERS)
     assert "dataone" in names and "omicsdi" in names
     # dataone before datacite (keep the verified copy on a DOI tie); omicsdi after
-    # the DOI-bearing backends; openml registered last.
+    # the DOI-bearing backends; openml + pdb registered last.
     assert names.index("dataone") < names.index("datacite")
     assert names.index("datacite") < names.index("omicsdi")
-    assert names[-1] == "openml"
+    assert names[-1] == "pdb"
 
 
 @pytest.mark.asyncio

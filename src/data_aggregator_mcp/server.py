@@ -41,6 +41,7 @@ _FETCHABLE_SOURCES = (
     "dataone:",
     "omicsdi:",
     "openml:",
+    "pdb:",
 )  # id prefixes with a working fetch backend
 
 
@@ -234,6 +235,20 @@ _SOURCES: list[dict[str, Any]] = [
         "fetchable_notes": "ARFF fetch is md5-verified; the auto-converted Parquet is operable (schema/preview/head/sql).",
         "id_example": "openml:61",
         "description": "OpenML machine-learning datasets — name-substring search; resolve attaches an md5-verified ARFF and an operable Parquet.",
+    },
+    {
+        "name": "pdb",
+        "layer": "archives",
+        "kinds": ["dataset"],
+        "filters_supported": ["query", "size"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (full-text discovery; .cif/.pdb structure fetch on resolve)",
+        "fetchable": True,
+        "operable": False,
+        "fetchable_notes": "Structure files (.cif/.pdb) stream from files.rcsb.org (unverified — no upstream checksum).",
+        "id_example": "pdb:1BG2",
+        "description": "RCSB Protein Data Bank — macromolecular structures; full-text search, DOI/PMID-rich, .cif/.pdb fetch.",
     },
 ]
 
