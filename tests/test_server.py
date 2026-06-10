@@ -3,9 +3,10 @@ from __future__ import annotations
 import pytest
 from pytest_httpx import HTTPXMock
 
+from data_aggregator_mcp import fair as fair_mod
 from data_aggregator_mcp import server
 from data_aggregator_mcp.errors import FetchNotSupportedError
-from data_aggregator_mcp.models import DataResource, FileEntry, Link, TrustSignals
+from data_aggregator_mcp.models import Creator, DataResource, FileEntry, Link, TrustSignals
 
 
 def test_catalog_exposes_core_tools() -> None:
@@ -586,6 +587,42 @@ async def test_dispatch_resolve_no_trust_leaves_trust_none(monkeypatch) -> None:
 def test_resolve_tool_exposes_trust_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "resolve")
     assert "trust" in tool.inputSchema["properties"]
+
+
+async def test_dispatch_resolve_attaches_fair_when_requested(monkeypatch) -> None:
+    async def fake_resolve(client, fid):
+        return DataResource(
+            id="zenodo:1",
+            source="zenodo",
+            kind="dataset",
+            title="t",
+            description="d",
+            creators=[Creator(name="A")],
+            subjects=["x"],
+            doi="10.5281/zenodo.1",
+            license="cc-by-4.0",
+            files=[FileEntry(name="a.csv", mime="text/csv", url="https://x/a.csv")],
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    out = await server._dispatch("resolve", {"id": "zenodo:1", "fair": True})
+    assert out["fair"] is not None
+    assert isinstance(out["fair"]["score"], int)
+    assert out["fair"]["assessed"] == len(fair_mod.INDICATORS)
+
+
+async def test_dispatch_resolve_no_fair_leaves_fair_none(monkeypatch) -> None:
+    async def fake_resolve(client, fid):
+        return DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="t")
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    out = await server._dispatch("resolve", {"id": "zenodo:1"})
+    assert out["fair"] is None
+
+
+def test_resolve_tool_exposes_fair_param() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "resolve")
+    assert "fair" in tool.inputSchema["properties"]
 
 
 def test_dataone_and_omicsdi_are_fetchable_prefixes():

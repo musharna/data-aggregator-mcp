@@ -6,6 +6,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-06-10
+
+### Added
+
+- **`resolve(fair=true)` — RDA-grounded FAIRness score.** A new opt-in enricher attaches
+  a `fair{}` assessment to a resolved record: a 0–100 overall score plus
+  `findable`/`accessible`/`interoperable`/`reusable` sub-scores, an `assessed` count, and
+  a list of actionable `gaps`. Scoring is a **pure, local function** over the normalized
+  `DataResource` (no network call), grounded in the machine-evaluable subset of the
+  [RDA FAIR Data Maturity Model](https://doi.org/10.15497/rda00050) (Specification &
+  Guidelines v0.90). Each gap names its RDA indicator id (e.g. `RDA-R1.1-03M`) and is
+  framed as a metadata-exposure gap, never a value judgement about the dataset. Only
+  indicators evaluable from the metadata we hold are scored — `assessed` reports exactly
+  how many, so the score never fabricates a pass/fail for what the metadata cannot show.
+  Licence presence (`RDA-R1.1-01M`) and machine-readability (`RDA-R1.1-03M`) are scored
+  as **distinct** indicators: a free-text licence ("see LICENSE.txt") passes the former
+  and fails the latter, while an SPDX/CC id ("cc-by-4.0", "MIT") passes both. Score math:
+  per-dimension = `round(100 * passed-weight / total-weight)` with priority weights
+  Essential=3 / Important=2 / Useful=1; overall = `round(mean of the 4 dimensions)`.
+  Resolve-only for v1 (parity with `trust`); search-time FAIR is a deferred follow-up.
+
 ## [0.28.0] - 2026-06-10
 
 ### Changed

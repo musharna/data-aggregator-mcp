@@ -80,6 +80,23 @@ class TrustSignals(BaseModel):
     )
 
 
+class FairAssessment(BaseModel):
+    """FAIRness assessment attached on resolve(fair=True). PURE-function output:
+    a 0–100 overall score plus 0–100 per-dimension sub-scores, grounded in the
+    machine-evaluable subset of the RDA FAIR Data Maturity Model. ``assessed`` is
+    the count of indicators actually evaluated (transparency — we never score what
+    the metadata can't show). ``gaps`` are failed-indicator reasons, each naming its
+    RDA indicator id and framed as a metadata-exposure gap, not a value judgement."""
+
+    score: int  # 0–100 overall = round(mean of the 4 dimension scores)
+    findable: int  # 0–100
+    accessible: int  # 0–100
+    interoperable: int  # 0–100
+    reusable: int  # 0–100
+    assessed: int  # number of indicators evaluated
+    gaps: list[str] = Field(default_factory=list)
+
+
 class DataResource(BaseModel):
     id: str  # source-prefixed canonical id, e.g. "zenodo:123"
     source: str
@@ -102,6 +119,7 @@ class DataResource(BaseModel):
     citation: str | None = None  # rendered on resolve when cite= is requested
     metrics: Metrics | None = None  # usage/impact signals, source-dependent
     trust: TrustSignals | None = None  # integrity signals (retraction), on resolve(trust=True)
+    fair: FairAssessment | None = None  # RDA-grounded FAIRness score, on resolve(fair=True)
     is_latest: bool | None = None  # None = no version info in links[]
     superseded_by: str | None = None  # id of the newer version, when known
     last_updated: str | None = None  # source's modified/updated timestamp (ISO 8601)
