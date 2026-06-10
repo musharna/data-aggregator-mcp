@@ -214,7 +214,19 @@ def test_machine_readable_licence_passes_both(lic):
     assert "RDA-R1.1-03M" not in ids  # machine-readable
 
 
-@pytest.mark.parametrize("lic", ["see LICENSE.txt", "Contact authors", "All rights reserved"])
+@pytest.mark.parametrize(
+    "lic",
+    [
+        "see LICENSE.txt",
+        "Contact authors",
+        "All rights reserved",
+        # substring traps: a family token appears INSIDE a prose word but is not a
+        # licence id — must NOT pass R1.1b (regression for the substring-match bug).
+        "submitted by the authors",
+        "permitted for non-commercial use",
+        "data transmitted on request",
+    ],
+)
 def test_free_text_licence_passes_a_fails_b(lic):
     fa = fair.assess(_bare().model_copy(update={"license": lic}))
     ids = _gap_ids(fa)

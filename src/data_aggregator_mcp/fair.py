@@ -18,6 +18,7 @@ Crossref), ``assess`` takes only the resource — there is no client argument.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -68,39 +69,47 @@ _KNOWN_EXTS = (
     ".owl",
 )
 
-# License tokens that signal a machine-understandable reuse licence (R1.1b).
-# A free-text licence (e.g. "see LICENSE.txt", "Contact authors") passes R1.1a
-# (a licence IS present) but fails R1.1b (it is not a machine-readable id).
-_LICENSE_TOKENS = (
-    "cc-",
-    "cc0",
-    "cc by",
-    "creativecommons",
-    "public domain",
-    "mit",
-    "apache",
-    "gpl",
-    "lgpl",
-    "agpl",
-    "bsd",
-    "mpl",
-    "epl",
-    "odbl",
-    "odc-",
-    "pddl",
-    "unlicense",
-    "zlib",
+# License-family tokens that signal a machine-understandable reuse licence (R1.1b).
+# Matched as WHOLE tokens, never as substrings — substring matching is the trap
+# ("mit" ⊂ "submitted", "by" ⊂ free prose), which would mark free text as a
+# machine id. A free-text licence ("see LICENSE.txt", "Contact authors") passes
+# R1.1a (a licence IS present) but must fail R1.1b (it is not a machine id).
+_LICENSE_FAMILIES = frozenset(
+    {
+        "cc",
+        "cc0",
+        "mit",
+        "apache",
+        "gpl",
+        "lgpl",
+        "agpl",
+        "bsd",
+        "mpl",
+        "epl",
+        "odbl",
+        "odc",
+        "pddl",
+        "unlicense",
+        "zlib",
+    }
 )
+# Distinctive multi-word/URL signals safe to match as substrings.
+_LICENSE_PHRASES = ("creativecommons", "public domain", "spdx.org")
+# Token split on anything that is not an SPDX id char (keep . and + for "4.0", "gpl+").
+_LICENSE_TOKEN_RE = re.compile(r"[^a-z0-9.+]+")
 
 
 def _machine_readable_license(license_str: str | None) -> bool:
     """True when the licence string looks like a known SPDX/CC machine-readable id
-    rather than free prose. Conservative: a token must appear, OR the string is a
-    short SPDX-shaped token (no spaces, contains a digit or a hyphen)."""
+    or a licence URL, rather than free prose. A family token must appear as a WHOLE
+    token (not a substring), OR the whole string is a compact SPDX-shaped id."""
     if not license_str:
         return False
     low = license_str.strip().lower()
-    if any(tok in low for tok in _LICENSE_TOKENS):
+    if any(p in low for p in _LICENSE_PHRASES):
+        return True
+    tokens = {t for t in _LICENSE_TOKEN_RE.split(low) if t}
+    if tokens & _LICENSE_FAMILIES:
         return True
     # SPDX-shaped: a compact id token with no spaces, carrying a version/variant marker.
     return " " not in low and len(low) <= 40 and ("-" in low or any(c.isdigit() for c in low))
