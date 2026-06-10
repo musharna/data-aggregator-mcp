@@ -17,6 +17,9 @@ def test_is_catalog_only_for_catalog_uri():
     assert resources.is_catalog(AnyUrl(resources.CATALOG_URI)) is True
     assert resources.is_catalog(AnyUrl("dataresource://record/zenodo%3A1")) is False
     assert resources.is_catalog(AnyUrl("https://example.com")) is False
+    assert (
+        resources.is_catalog(AnyUrl("dataresource://catalog/extra")) is False
+    )  # trailing path ≠ catalog
 
 
 def test_parse_record_id_rejects_non_record_uris():

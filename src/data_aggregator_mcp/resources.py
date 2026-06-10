@@ -29,7 +29,8 @@ def record_uri(resolve_id: str) -> str:
 
 
 def is_catalog(uri: AnyUrl) -> bool:
-    return uri.scheme == SCHEME and uri.host == "catalog"
+    # exactly dataresource://catalog — a trailing path (catalog/extra) is NOT the catalog.
+    return uri.scheme == SCHEME and uri.host == "catalog" and not uri.path
 
 
 def parse_record_id(uri: AnyUrl) -> str | None:

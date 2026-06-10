@@ -669,3 +669,19 @@ async def test_read_resource_unknown_uri_raises() -> None:
 
     with pytest.raises(ValueError):
         await server._read_resource(AnyUrl("dataresource://nope/x"))
+
+
+async def test_read_resource_record_propagates_not_found(monkeypatch) -> None:
+    # a valid record URI whose id resolves to nothing must surface NotFoundError
+    # (fail loud), not swallow it into an empty/garbage resource.
+    from pydantic import AnyUrl
+
+    from data_aggregator_mcp import resources
+    from data_aggregator_mcp.errors import NotFoundError
+
+    async def fake_resolve(client, rid):
+        raise NotFoundError(f"no such record: {rid!r}")
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    with pytest.raises(NotFoundError):
+        await server._read_resource(AnyUrl(resources.record_uri("pdb:9999")))
