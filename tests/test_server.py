@@ -181,6 +181,20 @@ def test_search_tool_exposes_tissue_param() -> None:
     assert "tissue" in tool.inputSchema["properties"]
 
 
+def test_search_tool_exposes_chemical_param() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "search")
+    prop = tool.inputSchema["properties"]
+    assert "chemical" in prop
+    assert prop["chemical"]["type"] == "string"
+
+
+def test_search_tool_exposes_assay_param() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "search")
+    prop = tool.inputSchema["properties"]
+    assert "assay" in prop
+    assert prop["assay"]["type"] == "string"
+
+
 async def test_dispatch_search_passes_tissue_to_router(monkeypatch) -> None:
     from data_aggregator_mcp.models import SearchResult, TissueExpansion
 
@@ -206,6 +220,60 @@ async def test_dispatch_search_passes_tissue_to_router(monkeypatch) -> None:
     out = await server._dispatch("search", {"query": "rna", "tissue": "liver"})
     assert captured["tissue"] == "liver"
     assert out["tissue_expansion"]["uberon_id"] == "UBERON:0002107"
+
+
+async def test_dispatch_search_passes_chemical_to_router(monkeypatch) -> None:
+    from data_aggregator_mcp.models import ChemicalExpansion, SearchResult
+
+    captured = {}
+
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(
+            query=kwargs.get("query"),
+            total=0,
+            count=0,
+            results=[],
+            errors={},
+            chemical_expansion=ChemicalExpansion(
+                input="caffeine",
+                chebi_id="CHEBI:27732",
+                canonical_name="caffeine",
+                synonyms=["theine"],
+            ),
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
+    out = await server._dispatch("search", {"query": "rna", "chemical": "caffeine"})
+    assert captured["chemical"] == "caffeine"
+    assert out["chemical_expansion"]["chebi_id"] == "CHEBI:27732"
+
+
+async def test_dispatch_search_passes_assay_to_router(monkeypatch) -> None:
+    from data_aggregator_mcp.models import AssayExpansion, SearchResult
+
+    captured = {}
+
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(
+            query=kwargs.get("query"),
+            total=0,
+            count=0,
+            results=[],
+            errors={},
+            assay_expansion=AssayExpansion(
+                input="ChIP-seq",
+                edam_id="EDAM:topic_3169",
+                canonical_name="ChIP-seq",
+                synonyms=["ChIP-exo"],
+            ),
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
+    out = await server._dispatch("search", {"query": "rna", "assay": "ChIP-seq"})
+    assert captured["assay"] == "ChIP-seq"
+    assert out["assay_expansion"]["edam_id"] == "EDAM:topic_3169"
 
 
 async def test_dispatch_search_passes_disease_to_router(monkeypatch) -> None:

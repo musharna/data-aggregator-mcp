@@ -189,6 +189,24 @@ class TissueExpansion(BaseModel):
     synonyms: list[str]  # entry synonyms added to the query (excludes the canonical label)
 
 
+class ChemicalExpansion(BaseModel):
+    """Echo of ChEBI chemical-synonym expansion that fired for a search (transparency)."""
+
+    input: str  # the chemical param as given
+    chebi_id: str  # e.g. "CHEBI:27732"
+    canonical_name: str
+    synonyms: list[str]  # entry synonyms added to the query (excludes the canonical label)
+
+
+class AssayExpansion(BaseModel):
+    """Echo of EDAM assay-synonym expansion that fired for a search (transparency)."""
+
+    input: str  # the assay param as given
+    edam_id: str  # e.g. "EDAM:topic_3169"
+    canonical_name: str
+    synonyms: list[str]  # entry synonyms added to the query (excludes the canonical label)
+
+
 class SearchResult(BaseModel):
     query: str
     total: int
@@ -199,6 +217,8 @@ class SearchResult(BaseModel):
     taxon_expansion: TaxonExpansion | None = None
     mesh_expansion: MeshExpansion | None = None
     tissue_expansion: TissueExpansion | None = None
+    chemical_expansion: ChemicalExpansion | None = None
+    assay_expansion: AssayExpansion | None = None
 
 
 class FetchResult(BaseModel):

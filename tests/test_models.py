@@ -148,6 +148,50 @@ def test_mesh_expansion_on_search_result() -> None:
     assert dumped["synonyms"] == ["Breast Cancer"]
 
 
+def test_chemical_expansion_on_search_result() -> None:
+    from data_aggregator_mcp.models import ChemicalExpansion, SearchResult
+
+    sr = SearchResult(query="q", total=0, count=0)
+    assert sr.chemical_expansion is None  # additive, defaults None
+    sr2 = SearchResult(
+        query="q",
+        total=0,
+        count=0,
+        chemical_expansion=ChemicalExpansion(
+            input="caffeine",
+            chebi_id="CHEBI:27732",
+            canonical_name="caffeine",
+            synonyms=["theine"],
+        ),
+    )
+    dumped = sr2.model_dump()["chemical_expansion"]
+    assert dumped["chebi_id"] == "CHEBI:27732"
+    assert dumped["canonical_name"] == "caffeine"
+    assert dumped["synonyms"] == ["theine"]
+
+
+def test_assay_expansion_on_search_result() -> None:
+    from data_aggregator_mcp.models import AssayExpansion, SearchResult
+
+    sr = SearchResult(query="q", total=0, count=0)
+    assert sr.assay_expansion is None  # additive, defaults None
+    sr2 = SearchResult(
+        query="q",
+        total=0,
+        count=0,
+        assay_expansion=AssayExpansion(
+            input="ChIP-seq",
+            edam_id="EDAM:topic_3169",
+            canonical_name="ChIP-seq",
+            synonyms=["ChIP-exo"],
+        ),
+    )
+    dumped = sr2.model_dump()["assay_expansion"]
+    assert dumped["edam_id"] == "EDAM:topic_3169"
+    assert dumped["canonical_name"] == "ChIP-seq"
+    assert dumped["synonyms"] == ["ChIP-exo"]
+
+
 def test_access_and_citation_default_none() -> None:
     r = DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="t")
     assert r.access is None

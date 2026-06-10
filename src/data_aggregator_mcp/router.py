@@ -22,6 +22,7 @@ from data_aggregator_mcp import (
     _cursor,
     anatomy,
     cellxgene,
+    chemistry,
     dandi,
     datacite,
     dataone,
@@ -38,10 +39,13 @@ from data_aggregator_mcp import (
     taxonomy,
     zenodo,
 )
+from data_aggregator_mcp import assay as assay_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import (
+    AssayExpansion,
+    ChemicalExpansion,
     DataResource,
     Link,
     MeshExpansion,
@@ -350,6 +354,70 @@ async def _expand_tissue(
     return effective, expansion
 
 
+async def _expand_chemical(
+    client: httpx.AsyncClient, query: str, chemical: str | None, errors: dict[str, str]
+) -> tuple[str, ChemicalExpansion | None]:
+    """If ``chemical`` resolves to a ChEBI term, AND ``query`` with a
+    (canonical OR synonyms) group and return the echo. A ChEBI (EBI OLS) lookup
+    failure is recorded in ``errors['chebi']`` and the query is returned
+    un-expanded (fail-loud — exactly like ``_expand_organism``/``_expand_tissue``;
+    this is a search-input expansion, NOT a fail-soft resolve enricher). A
+    *no-match* is not an error: the query is returned un-expanded with nothing
+    recorded.
+    """
+    if not chemical or not chemical.strip():
+        return query, None
+    try:
+        info = await chemistry.resolve_chebi(client, chemical)
+    except Exception as exc:  # surfaced, not swallowed
+        errors["chebi"] = f"{type(exc).__name__}: {exc}"
+        return query, None
+    if info is None:
+        return query, None
+    terms = list(dict.fromkeys([info.canonical, *info.synonyms]))
+    or_group = _or_group(terms)
+    effective = f"({query}) AND ({or_group})"
+    expansion = ChemicalExpansion(
+        input=chemical,
+        chebi_id=info.chebi_id,
+        canonical_name=info.canonical,
+        synonyms=list(info.synonyms),
+    )
+    return effective, expansion
+
+
+async def _expand_assay(
+    client: httpx.AsyncClient, query: str, assay: str | None, errors: dict[str, str]
+) -> tuple[str, AssayExpansion | None]:
+    """If ``assay`` resolves to an EDAM-topic term, AND ``query`` with a
+    (canonical OR synonyms) group and return the echo. An EDAM (EBI OLS) lookup
+    failure is recorded in ``errors['edam']`` and the query is returned
+    un-expanded (fail-loud — exactly like ``_expand_organism``/``_expand_tissue``;
+    this is a search-input expansion, NOT a fail-soft resolve enricher). A
+    *no-match* is not an error: the query is returned un-expanded with nothing
+    recorded.
+    """
+    if not assay or not assay.strip():
+        return query, None
+    try:
+        info = await assay_mod.resolve_edam(client, assay)
+    except Exception as exc:  # surfaced, not swallowed
+        errors["edam"] = f"{type(exc).__name__}: {exc}"
+        return query, None
+    if info is None:
+        return query, None
+    terms = list(dict.fromkeys([info.canonical, *info.synonyms]))
+    or_group = _or_group(terms)
+    effective = f"({query}) AND ({or_group})"
+    expansion = AssayExpansion(
+        input=assay,
+        edam_id=info.edam_id,
+        canonical_name=info.canonical,
+        synonyms=list(info.synonyms),
+    )
+    return effective, expansion
+
+
 async def _enrich_resource(client: httpx.AsyncClient, r: DataResource) -> DataResource:
     """Normalize ``r.organism`` → ``r.taxa`` (taxid+canonical) and append a
     ``described_in`` cross-link to plant-genomics-mcp for Viridiplantae taxa.
@@ -435,6 +503,8 @@ async def search_page(
     organism: str | None = None,
     disease: str | None = None,
     tissue: str | None = None,
+    chemical: str | None = None,
+    assay: str | None = None,
     published_after: int | None = None,
     published_before: int | None = None,
     kind: str | None = None,
@@ -466,10 +536,14 @@ async def search_page(
         rank = st.get("rank", "relevance")
         disease = st.get("disease")
         tissue = st.get("tissue")
+        chemical = st.get("chemical")
+        assay = st.get("assay")
         collapse_mirrors = st.get("collapse_mirrors", False)
         expansion = None  # frozen on continuation; do not re-expand
         disease_expansion = None  # frozen on continuation; do not re-expand
         tissue_expansion = None  # frozen on continuation; do not re-expand
+        chemical_expansion = None  # frozen on continuation; do not re-expand
+        assay_expansion = None  # frozen on continuation; do not re-expand
         effective_query = query
         errors: dict[str, str] = {}
     else:
@@ -487,6 +561,12 @@ async def search_page(
         )
         effective_query, tissue_expansion = await _expand_tissue(
             client, effective_query, tissue, errors
+        )
+        effective_query, chemical_expansion = await _expand_chemical(
+            client, effective_query, chemical, errors
+        )
+        effective_query, assay_expansion = await _expand_assay(
+            client, effective_query, assay, errors
         )
         offsets = {}
 
@@ -578,6 +658,8 @@ async def search_page(
                 "organism": organism,
                 "disease": disease,
                 "tissue": tissue,
+                "chemical": chemical,
+                "assay": assay,
                 "filters": filters,
                 "size": size,
                 "offsets": new_offsets,
@@ -606,6 +688,8 @@ async def search_page(
         taxon_expansion=expansion,
         mesh_expansion=disease_expansion,
         tissue_expansion=tissue_expansion,
+        chemical_expansion=chemical_expansion,
+        assay_expansion=assay_expansion,
     )
 
 

@@ -8,7 +8,7 @@ import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from data_aggregator_mcp import anatomy, mesh, router, taxonomy
+from data_aggregator_mcp import anatomy, assay, chemistry, mesh, router, taxonomy
 from data_aggregator_mcp.errors import UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import DataResource
 
@@ -795,6 +795,198 @@ async def test_search_tissue_round_trips_cursor_without_reexpanding(monkeypatch)
 
     assert _cursor.decode(page1.next_cursor)["tissue"] == "liver"
     assert page2.tissue_expansion is None
+
+
+# --- chemical (ChEBI) + assay (EDAM) expansion axes --------------------------
+
+
+def _chebi_info() -> chemistry.ChebiInfo:
+    return chemistry.ChebiInfo(
+        chebi_id="CHEBI:27732",
+        canonical="caffeine",
+        synonyms=("theine", "guaranine"),
+    )
+
+
+def _edam_info() -> assay.EdamInfo:
+    return assay.EdamInfo(
+        edam_id="EDAM:topic_3169",
+        canonical="ChIP-seq",
+        synonyms=("ChIP-exo", "ChIP-sequencing"),
+    )
+
+
+async def test_search_expands_chemical_synonyms(monkeypatch) -> None:
+    monkeypatch.setattr(chemistry, "resolve_chebi", AsyncMock(return_value=_chebi_info()))
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client, query="rna", chemical="caffeine", sources=["zenodo"]
+        )
+    assert captured["query"] == '(rna) AND ("caffeine" OR "theine" OR "guaranine")'
+    assert result.chemical_expansion is not None
+    assert result.chemical_expansion.chebi_id == "CHEBI:27732"
+    assert result.chemical_expansion.canonical_name == "caffeine"
+    assert result.chemical_expansion.synonyms == ["theine", "guaranine"]
+    assert result.errors == {}
+
+
+async def test_search_expands_assay_synonyms(monkeypatch) -> None:
+    monkeypatch.setattr(assay, "resolve_edam", AsyncMock(return_value=_edam_info()))
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(client, query="rna", assay="ChIP-seq", sources=["zenodo"])
+    assert captured["query"] == '(rna) AND ("ChIP-seq" OR "ChIP-exo" OR "ChIP-sequencing")'
+    assert result.assay_expansion is not None
+    assert result.assay_expansion.edam_id == "EDAM:topic_3169"
+    assert result.assay_expansion.canonical_name == "ChIP-seq"
+    assert result.assay_expansion.synonyms == ["ChIP-exo", "ChIP-sequencing"]
+    assert result.errors == {}
+
+
+async def test_search_chemical_assay_chain_after_tissue(monkeypatch) -> None:
+    monkeypatch.setattr(anatomy, "resolve_uberon", AsyncMock(return_value=_uberon_info()))
+    monkeypatch.setattr(chemistry, "resolve_chebi", AsyncMock(return_value=_chebi_info()))
+    monkeypatch.setattr(assay, "resolve_edam", AsyncMock(return_value=_edam_info()))
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client,
+            query="rna",
+            tissue="liver",
+            chemical="caffeine",
+            assay="ChIP-seq",
+            sources=["zenodo"],
+        )
+    # tissue → chemical → assay, each ANDing onto the prior expansion (stacked groups)
+    assert captured["query"] == (
+        '(((rna) AND ("liver" OR "iecur" OR "jecur")) '
+        'AND ("caffeine" OR "theine" OR "guaranine")) '
+        'AND ("ChIP-seq" OR "ChIP-exo" OR "ChIP-sequencing")'
+    )
+    assert result.tissue_expansion is not None
+    assert result.chemical_expansion is not None
+    assert result.assay_expansion is not None
+
+
+async def test_search_chemical_lookup_failure_surfaces_error_and_runs_unexpanded(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        chemistry,
+        "resolve_chebi",
+        AsyncMock(side_effect=UpstreamUnavailableError("EBI OLS down")),
+    )
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client, query="rna", chemical="caffeine", sources=["zenodo"]
+        )
+    assert captured["query"] == "rna"  # ran un-expanded
+    assert result.chemical_expansion is None
+    assert "chebi" in result.errors
+    assert "UpstreamUnavailableError" in result.errors["chebi"]
+
+
+async def test_search_assay_lookup_failure_surfaces_error_and_runs_unexpanded(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        assay,
+        "resolve_edam",
+        AsyncMock(side_effect=UpstreamUnavailableError("EBI OLS down")),
+    )
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(client, query="rna", assay="ChIP-seq", sources=["zenodo"])
+    assert captured["query"] == "rna"  # ran un-expanded
+    assert result.assay_expansion is None
+    assert "edam" in result.errors
+    assert "UpstreamUnavailableError" in result.errors["edam"]
+
+
+async def test_search_no_chemical_assay_params_skip_lookups(monkeypatch) -> None:
+    chebi = AsyncMock()
+    edam = AsyncMock()
+    monkeypatch.setattr(chemistry, "resolve_chebi", chebi)
+    monkeypatch.setattr(assay, "resolve_edam", edam)
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(client, query="rna", sources=["zenodo"])
+    chebi.assert_not_awaited()
+    edam.assert_not_awaited()
+    assert result.chemical_expansion is None
+    assert result.assay_expansion is None
+
+
+async def test_search_chemical_assay_round_trip_cursor_without_reexpanding(monkeypatch) -> None:
+    chebi = AsyncMock(return_value=_chebi_info())
+    edam = AsyncMock(return_value=_edam_info())
+    monkeypatch.setattr(chemistry, "resolve_chebi", chebi)
+    monkeypatch.setattr(assay, "resolve_edam", edam)
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        recs = [_res(f"zenodo:{offset}", "zenodo", None)]
+        return 5, recs
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        page1 = await router.search_page(
+            client,
+            query="rna",
+            chemical="caffeine",
+            assay="ChIP-seq",
+            size=1,
+            sources=["zenodo"],
+        )
+        assert page1.next_cursor is not None
+        assert chebi.await_count == 1
+        assert edam.await_count == 1
+        page2 = await router.search_page(client, cursor=page1.next_cursor)
+    # continuation must NOT re-expand → resolvers still called only once
+    assert chebi.await_count == 1
+    assert edam.await_count == 1
+    from data_aggregator_mcp import _cursor
+
+    decoded = _cursor.decode(page1.next_cursor)
+    assert decoded["chemical"] == "caffeine"
+    assert decoded["assay"] == "ChIP-seq"
+    assert page2.chemical_expansion is None
+    assert page2.assay_expansion is None
 
 
 def _plant_info() -> taxonomy.TaxonInfo:

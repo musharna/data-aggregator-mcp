@@ -6,6 +6,39 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-06-10
+
+### Added
+
+- **`search(chemical=…)` + `search(assay=…)` — recall axes 4 & 5: ChEBI compounds and EDAM
+  assays/methods.** Two more ontology-grounded search-input expansion axes, cloning the proven
+  `organism=`/`disease=`/`tissue=` shape: a resolved term ANDs its canonical name + exact
+  synonyms into the query as an OR-group, so a single keyword recalls every surface form a
+  single-source tool would miss. `chemical=caffeine` ANDs in `1,3,7-trimethylxanthine` (…);
+  `assay=ChIP-seq` ANDs in `ChIP-sequencing`/`ChIP-exo` (…). Both are echoed for transparency in
+  the new `SearchResult.chemical_expansion` / `assay_expansion` fields and round-trip through the
+  pagination cursor (a continuation page does **not** re-expand — the echoes are frozen).
+  - **ChEBI backs `chemical=`** (EBI OLS `ontology=chebi`). As with UBERON, two client-side
+    filters are load-bearing because the OLS params do not self-enforce: `obo_id` must start with
+    `CHEBI:` (cross-ontology leak guard), and an **exact** case-insensitive match of the input to
+    the label OR a synonym is required (`exact=true` does not hard-filter — `q=aspirin` surfaces
+    "aspirin-triggered protectin D1" before the real `aspirin`/`CHEBI:15365`). No exact match →
+    no expansion (conservative; never guess a term).
+  - **ChEBI synonyms are capped** to `_MAX_SYNONYMS = 12` (canonical always retained). ChEBI
+    synonym lists are large (many IUPAC variants); the cap keeps the ANDed OR-group a sane query
+    size. UBERON/MeSH need no cap.
+  - **EDAM backs `assay=`** (EBI OLS `ontology=edam`, NOT OBI — OBI returns the term with an
+    empty `synonym`, i.e. zero recall value). EDAM mixes id-classes (`topic_`/`data_`/`format_`/
+    `operation_`); the filter restricts to **`obo_id.startswith("EDAM:topic_")`** — assay/method
+    concepts are EDAM _topics_, so `data_`/`format_`/`operation_` ids are rejected.
+  - **Fail-LOUD on an OLS error**, in parity with the organism/disease/tissue axes: a ChEBI
+    lookup failure is recorded under `errors["chebi"]`, an EDAM failure under `errors["edam"]`,
+    and the query runs **un-expanded** (these are search-input expansions, the opposite of a
+    fail-soft resolve enricher — a silently-dropped expansion would make the model conclude the
+    synonyms found nothing). A _no-match_ is not an error: the query is returned un-expanded with
+    nothing recorded. The pure `_pick_*` matchers are deterministic; HTTP failures propagate and
+    are NOT cached.
+
 ## [0.31.0] - 2026-06-10
 
 ### Added

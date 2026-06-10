@@ -328,6 +328,11 @@ TOOLS: list[types.Tool] = [
             " Pass tissue=<name> to expand the query with UBERON synonyms "
             "(e.g. 'liver' also matches 'iecur'/'jecur'); the expansion is "
             "echoed in tissue_expansion."
+            " Pass chemical=<name> to expand the query with ChEBI compound "
+            "synonyms (e.g. 'caffeine' also matches '1,3,7-trimethylxanthine'); "
+            "the expansion is echoed in chemical_expansion. Pass assay=<name> "
+            "to expand the query with EDAM assay/method synonyms (e.g. 'ChIP-seq' "
+            "also matches 'ChIP-sequencing'); echoed in assay_expansion."
             " Pass collapse_mirrors=true to opt into conservative cross-repo "
             "mirror collapse: same-dataset copies under different/no DOIs are "
             "folded into one record, with the folded copies annotated under "
@@ -370,6 +375,22 @@ TOOLS: list[types.Tool] = [
                     "the query is expanded with the canonical term + exact synonyms (e.g. "
                     "'liver' also matches 'iecur'/'jecur'). "
                     "The expansion is echoed in tissue_expansion.",
+                },
+                "chemical": {
+                    "type": "string",
+                    "description": "Optional chemical/compound name. Resolved via ChEBI (EBI OLS); "
+                    "the query is expanded with the canonical name + exact synonyms (e.g. "
+                    "'caffeine' also matches '1,3,7-trimethylxanthine'), capped to a bounded "
+                    "number of synonyms. An unknown term yields no expansion; an OLS failure "
+                    "surfaces in errors. The expansion is echoed in chemical_expansion.",
+                },
+                "assay": {
+                    "type": "string",
+                    "description": "Optional assay/method name. Resolved via EDAM topics (EBI OLS); "
+                    "the query is expanded with the canonical name + exact synonyms (e.g. "
+                    "'ChIP-seq' also matches 'ChIP-sequencing'/'ChIP-exo'). An unknown term "
+                    "yields no expansion; an OLS failure surfaces in errors. The expansion is "
+                    "echoed in assay_expansion.",
                 },
                 "cursor": {
                     "type": "string",
@@ -730,6 +751,8 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     organism=args.get("organism"),
                     disease=args.get("disease"),
                     tissue=args.get("tissue"),
+                    chemical=args.get("chemical"),
+                    assay=args.get("assay"),
                     published_after=args.get("published_after"),
                     published_before=args.get("published_before"),
                     kind=args.get("kind"),
