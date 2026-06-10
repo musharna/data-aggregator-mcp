@@ -445,6 +445,9 @@ async def test_resolve_openneuro_doi_dispatches_to_openneuro_files(monkeypatch):
         assert doi == "10.18112/openneuro.ds000001.v1.0.0"
         return [FileEntry(name="README", url="https://openneuro.org/x", source="openneuro")]
 
+    # Prove the wiring is actually present before we replace it — setitem would
+    # otherwise insert the key and green-pass even on an un-wired build.
+    assert "openneuro" in datacite._FILE_RESOLVERS
     # _FILE_RESOLVERS captures the function object at import time, so rebinding
     # openneuro.files would not reach the dispatch dict — patch the entry directly.
     monkeypatch.setitem(datacite._FILE_RESOLVERS, "openneuro", fake_files)

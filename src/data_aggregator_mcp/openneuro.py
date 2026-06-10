@@ -46,7 +46,9 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
         headers={"Content-Type": "application/json", "Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
-        not_found_returns={"data": {"snapshot": None}},
+        # No not_found_returns: this GraphQL endpoint answers 200 with
+        # data.snapshot=null for a missing snapshot (handled below); a real
+        # HTTP 404 means the endpoint itself moved and should fail loud.
     )
     snapshot = ((body or {}).get("data") or {}).get("snapshot") or {}
     out: list[FileEntry] = []

@@ -50,11 +50,12 @@ async def test_files_builds_manifest_from_doi():
 
 @pytest.mark.asyncio
 async def test_files_non_openneuro_doi_returns_empty():
-    async with httpx.AsyncClient(
-        transport=httpx.MockTransport(
-            lambda r: httpx.Response(200, json={"data": {"snapshot": None}})
-        )
-    ) as c:
+    # A non-OpenNeuro DOI must short-circuit BEFORE any network call: the
+    # transport raises so the test fails loudly if files() ever reaches out.
+    def _never(request):
+        raise AssertionError("files() made a network call for an unparseable DOI")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_never)) as c:
         assert await openneuro.files(c, "10.5061/dryad.xyz") == []  # no parse → no network → []
 
 
