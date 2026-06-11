@@ -4,6 +4,16 @@
 DataResources and returns evidence-backed JoinHints for four strong structural signals.
 NO network, NO file I/O, NO executed joins — it names a shared value and stops (the
 HINTS-only boundary). The handler (`router.relate`) does the resolve fan-out.
+
+Known limitations (matching is exact-string on normalized ids, by design):
+- A version edge whose `superseded_by` / `links[].target_id` is a URL-form
+  identifier (e.g. ``https://doi.org/10.5281/zenodo.1``) rather than a bare DOI or
+  source-prefixed id will not match the address map, so the lineage/link hint is
+  silently skipped — a best-effort false negative, never a wrong hint. (Zenodo
+  emits bare DOIs and matches; some DataCite relatedIdentifiers are URLs.)
+- A mutual `superseded_by` cycle (A→B and B→A — contradictory upstream metadata)
+  yields a single hint whose [newer, older] direction is whichever resource is
+  iterated first; the direction is not meaningful for a true cycle.
 """
 
 from __future__ import annotations

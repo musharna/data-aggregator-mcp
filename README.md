@@ -52,6 +52,10 @@ records:
   runs a read-only SQL `SELECT` against a remote Parquet/CSV/TSV **without
   downloading it** (Parquet footer + DuckDB httpfs range reads). Optional
   `[operate]` extra; base install is unchanged.
+- **Relate across records** — `relate` takes a handful of resolved ids and
+  reports how they connect — shared accession, shared cross-identifier, an
+  explicit link, or version lineage — naming the literal shared value as
+  evidence. Metadata hints only: it never reads files or executes a join.
 
 → Full rationale and a comparison vs. single-source servers, breadth gateways, and
 ML-dataset tools: **[docs/POSITIONING.md](docs/POSITIONING.md)**.
