@@ -453,6 +453,20 @@ TOOLS: list[types.Tool] = [
                         "it in errors['understand']."
                     ),
                 },
+                "multi_query": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": (
+                        "Opt into diverse multi-query recall expansion: an LLM generates up to a "
+                        "few deliberately-diverse reformulations of your query, each is fanned out "
+                        "across all sources, and the deduped union is re-ranked against your "
+                        "original query — surfacing relevant records a single keyword query would "
+                        "miss. Costs N× the upstream calls (bounded). Requires an LLM endpoint "
+                        "(LLM_API_BASE); with none configured the search runs as a normal single "
+                        "query and notes it in errors['multi_query']. The variants used are echoed "
+                        "in query_expansion. Composes with understand=."
+                    ),
+                },
                 "provenance": {
                     "type": "boolean",
                     "default": False,
@@ -801,6 +815,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     rank=args.get("rank", "relevance"),
                     collapse_mirrors=args.get("collapse_mirrors", False),
                     understand=args.get("understand", False),
+                    multi_query=args.get("multi_query", False),
                 )
                 if args.get("provenance"):
                     result = result.model_copy(

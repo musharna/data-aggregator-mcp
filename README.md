@@ -168,6 +168,16 @@ dropped.
   win, and the full interpretation is echoed in `query_understanding`. Needs an
   LLM endpoint (`LLM_API_BASE`); with none configured the search runs unchanged
   and notes it in `errors['understand']`.
+- `multi_query` — opt into diverse multi-query recall expansion (default false).
+  An LLM generates up to a few deliberately-diverse reformulations of your query
+  (different facets/synonyms/framings, not paraphrases), each is fanned out across
+  every source, and the deduped union is re-ranked against your **original** query —
+  surfacing relevant records a single keyword query would miss. Bounded at
+  `MAX_QUERY_VARIANTS` (4, incl. the original, which is always kept so recall never
+  drops below baseline), so it costs at most N× the upstream calls. Composes with
+  `understand=` (which structures variant 0). The variants used are echoed in
+  `query_expansion`. Needs an LLM endpoint (`LLM_API_BASE`); with none configured
+  the search runs as a normal single query and notes it in `errors['multi_query']`.
 - `cursor` — opaque token from a prior result's `next_cursor`; pages forward
   across every source. In `cursor` mode the other params are read from the
   token, so `query` is optional.
@@ -270,20 +280,24 @@ Both optional, set via environment variables:
   servers supported); model defaults to `text-embedding-3-small`.
 - `LLM_API_BASE` / `LLM_API_KEY` / `LLM_MODEL` — an OpenAI-compatible
   `/chat/completions` endpoint enabling `search(understand=true)` (NL→structured
-  query rewriting). Absent ⇒ `understand=true` runs the raw query unchanged and
-  notes it in `errors['understand']`. Key is optional (keyless local servers
-  supported); model defaults to `gpt-4o-mini` (a passthrough string — set it to
-  whatever your endpoint serves).
+  query rewriting) **and** `search(multi_query=true)` (diverse multi-query recall
+  expansion). Absent ⇒ both run the raw query unchanged and note it in
+  `errors['understand']` / `errors['multi_query']`. Key is optional (keyless local
+  servers supported); model defaults to `gpt-4o-mini` (a passthrough string — set
+  it to whatever your endpoint serves). `multi_query` fans out at most
+  `MAX_QUERY_VARIANTS` (4, incl. the original) variants, bounding the N× cost.
 
-To measure the recall lift of `understand=true` on a small labeled set, run the
-gated eval harness (needs a live LLM endpoint):
+To measure the recall lift of `understand=true` / `multi_query=true` on a small
+labeled set, run the gated eval harnesses (need a live LLM endpoint):
 
 ```bash
 DATA_AGGREGATOR_MCP_LIVE=1 LLM_API_BASE=... python scripts/eval_understand.py
+DATA_AGGREGATOR_MCP_LIVE=1 LLM_API_BASE=... python scripts/eval_multi_query.py
 ```
 
-It prints per-query and mean recall@20 with understand off vs. on. See the
-fixture at `scripts/eval_understand_fixture.json`.
+They print per-query and mean recall@20 (understand / multi-query off vs. on). See
+the fixtures at `scripts/eval_understand_fixture.json` and
+`scripts/eval_multi_query_fixture.json`.
 
 ## 🧪 Develop
 

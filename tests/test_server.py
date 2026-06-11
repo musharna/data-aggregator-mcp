@@ -544,6 +544,54 @@ async def test_search_dispatch_passes_rank(monkeypatch):  # IRON_LAW_OK
     assert captured["rank"] == "semantic"
 
 
+def test_search_tool_exposes_multi_query_param() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "search")
+    prop = tool.inputSchema["properties"]
+    assert "multi_query" in prop
+    assert prop["multi_query"]["type"] == "boolean"
+    assert prop["multi_query"]["default"] is False
+    assert "multi_query" not in tool.inputSchema.get("required", [])
+
+
+async def test_dispatch_search_passes_multi_query_to_router(monkeypatch) -> None:
+    from data_aggregator_mcp.models import QueryExpansion, SearchResult
+
+    captured = {}
+
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(
+            query=kwargs.get("query"),
+            total=0,
+            count=0,
+            results=[],
+            errors={},
+            query_expansion=QueryExpansion(input="orig", variants=["orig", "alt"]),
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
+    out = await server._dispatch("search", {"query": "orig", "multi_query": True})
+    assert captured["multi_query"] is True
+    # model_dump() carries the query_expansion echo through the dispatch boundary.
+    assert out["query_expansion"]["input"] == "orig"
+    assert out["query_expansion"]["variants"] == ["orig", "alt"]
+
+
+async def test_dispatch_search_multi_query_defaults_false(monkeypatch) -> None:
+    from data_aggregator_mcp.models import SearchResult
+
+    captured = {}
+
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(query=kwargs.get("query"), total=0, count=0, results=[], errors={})
+
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
+    out = await server._dispatch("search", {"query": "orig"})
+    assert captured["multi_query"] is False
+    assert out["query_expansion"] is None
+
+
 def test_read_only_tools_are_annotated() -> None:
     from data_aggregator_mcp import server
 

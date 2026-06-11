@@ -51,6 +51,7 @@ from data_aggregator_mcp.models import (
     Link,
     MeshExpansion,
     Mirror,
+    QueryExpansion,
     QueryUnderstanding,
     SearchResult,
     Taxon,
@@ -62,7 +63,28 @@ from data_aggregator_mcp.models import (
 
 _VALID_KINDS = {"dataset", "sequencing_run", "study", "publication", "software"}
 
+# A2.P2: hard cap on the number of query variants fanned out (incl. the original as
+# variant 0). The upstream fan-out is N variants × M sources × size, so this bounds the
+# N× cost. The original query is ALWAYS variant 0, so recall never drops below baseline.
+MAX_QUERY_VARIANTS = 4
+
 logger = logging.getLogger(__name__)
+
+
+def _dedup_ci(queries: list[str]) -> list[str]:
+    """Case-insensitively dedup a list of query strings, preserving first-seen order.
+    Used to assemble the multi-query variant list (the original is always first, so it
+    survives dedup and stays variant 0)."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for q in queries:
+        key = q.strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(q)
+    return out
+
 
 # Registration order = merge precedence: native fetch backends first so that on
 # a DOI collision the fetchable record is encountered before the DataCite one.
@@ -496,6 +518,192 @@ def _with_version_status(r: DataResource) -> DataResource:
     return r.model_copy(update={"is_latest": is_latest, "superseded_by": superseded_by})
 
 
+def _comp_key(vi: int, name: str) -> str:
+    """Serialize a composite ``(variant_index, source)`` offset key for the multi-query
+    cursor. JSON object keys must be strings, so we join with a separator that cannot
+    appear in a variant index (digits) — the source name follows the first colon."""
+    return f"{vi}:{name}"
+
+
+def _comp_unkey(key: str) -> tuple[int, str]:
+    """Inverse of :func:`_comp_key`. The variant index is the prefix before the first
+    colon; the source name (which may itself contain no colon for our adapters) follows."""
+    vi_str, name = key.split(":", 1)
+    return int(vi_str), name
+
+
+async def _build_search_result(
+    client: httpx.AsyncClient,
+    *,
+    query: str,
+    total: int,
+    emitted: list[DataResource],
+    errors: dict[str, str],
+    next_cursor: str | None,
+    collapse_mirrors: bool,
+    taxon_expansion: TaxonExpansion | None = None,
+    mesh_expansion: MeshExpansion | None = None,
+    tissue_expansion: TissueExpansion | None = None,
+    chemical_expansion: ChemicalExpansion | None = None,
+    assay_expansion: AssayExpansion | None = None,
+    query_understanding: QueryUnderstanding | None = None,
+    query_expansion: QueryExpansion | None = None,
+) -> SearchResult:
+    """Shared TAIL for both the single-query and multi-query paths: enrich → version
+    status → optional mirror-collapse → assemble the ``SearchResult``. Offset/cursor
+    accounting is done by the caller (so collapse can never corrupt pagination)."""
+    enriched = await _enrich(client, emitted, errors)
+    enriched = [_with_version_status(r) for r in enriched]
+    # Presentation-layer fold ONLY: collapse runs after offset/cursor accounting so it
+    # can never corrupt pagination — a folded mirror just makes this page return fewer
+    # than `size`.
+    if collapse_mirrors:
+        enriched = _collapse_mirrors(enriched)
+    return SearchResult(
+        query=query,
+        total=total,
+        count=len(enriched),
+        results=enriched,
+        errors=errors,
+        next_cursor=next_cursor,
+        taxon_expansion=taxon_expansion,
+        mesh_expansion=mesh_expansion,
+        tissue_expansion=tissue_expansion,
+        chemical_expansion=chemical_expansion,
+        assay_expansion=assay_expansion,
+        query_understanding=query_understanding,
+        query_expansion=query_expansion,
+    )
+
+
+async def _multi_query_page(
+    client: httpx.AsyncClient,
+    *,
+    original_query: str,
+    variants: list[str],
+    size: int,
+    sources: list[str] | None,
+    filters: dict[str, Any],
+    comp_offsets: dict[str, int],
+    collapse_mirrors: bool,
+    errors: dict[str, str],
+    query_expansion: QueryExpansion | None,
+    taxon_expansion: TaxonExpansion | None = None,
+    mesh_expansion: MeshExpansion | None = None,
+    tissue_expansion: TissueExpansion | None = None,
+    chemical_expansion: ChemicalExpansion | None = None,
+    assay_expansion: AssayExpansion | None = None,
+    query_understanding: QueryUnderstanding | None = None,
+) -> SearchResult:
+    """A2.P2 parallel multi-query fan-out keyed by a composite ``(variant_index, source)``
+    label. ``variants`` are the ALREADY-EXPANDED effective query strings (variant 0 is the
+    post-understand/post-expansion original). Fans every variant × source at its composite
+    offset, merges + dedups the union (cross-variant duplicates collapse to one), and
+    re-ranks the WHOLE window against ``original_query`` before emitting the top ``size``.
+    Pagination advances per composite key and the cursor stores the expanded variants, so a
+    continuation re-fans the frozen variants with NO LLM / NO re-expand."""
+    adapters = _select(sources)
+    names = list(adapters)
+    keys = [(vi, name) for vi in range(len(variants)) for name in names]
+    outcomes = await asyncio.gather(
+        *(
+            adapters[name].search(
+                client, variants[vi], size=size, offset=comp_offsets.get(_comp_key(vi, name), 0)
+            )
+            for (vi, name) in keys
+        ),
+        return_exceptions=True,
+    )
+
+    origin: dict[int, str] = {}  # id(record) -> composite key string
+    per_stream: list[list[DataResource]] = []
+    comp_totals: dict[str, int] = {}
+    total = 0
+    for (vi, name), outcome in zip(keys, outcomes, strict=False):
+        ckey = _comp_key(vi, name)
+        if isinstance(outcome, Exception):
+            # Surface a per-variant×source failure without clobbering another variant's
+            # error for the same source.
+            errors[f"{name}#v{vi}"] = f"{type(outcome).__name__}: {outcome}"
+            comp_totals[ckey] = 0
+            continue
+        assert isinstance(outcome, tuple)
+        adapter_total, recs = outcome
+        total += adapter_total
+        comp_totals[ckey] = adapter_total
+        for r in recs:
+            origin[id(r)] = ckey
+        per_stream.append(recs)
+
+    merged = _dedup(interleave(per_stream))
+
+    # Window-rank ALWAYS for multi-query: the union has no single coherent upstream order,
+    # so re-rank the whole window against the ORIGINAL pre-expansion query and consume all
+    # of it. No embedding endpoint → interleaved order + errors["semantic"] (still a recall
+    # win, just unranked).
+    reordered, reason = await embeddings.rerank(client, original_query, merged)
+    if reason:
+        errors["semantic"] = reason
+    merged = reordered
+    emitted: list[DataResource] = []
+    for r in merged:
+        if _passes_filters(r, filters):
+            emitted.append(r)
+            if len(emitted) == size:
+                break
+    consumed = merged
+    cut = len(merged) - 1
+
+    consumed_per_stream: Counter[str] = Counter(origin[id(r)] for r in consumed)
+    new_comp_offsets = {
+        _comp_key(vi, name): comp_offsets.get(_comp_key(vi, name), 0)
+        + consumed_per_stream.get(_comp_key(vi, name), 0)
+        for (vi, name) in keys
+    }
+
+    # `bool(merged)` guard mirrors the single-query path: an empty window consumed nothing,
+    # so a replayed cursor would loop forever.
+    more = bool(merged) and (
+        (cut < len(merged) - 1)
+        or any(
+            new_comp_offsets.get(_comp_key(vi, name), 0) < comp_totals.get(_comp_key(vi, name), 0)
+            for (vi, name) in keys
+        )
+    )
+    next_cursor = (
+        _cursor.encode(
+            {
+                "q": original_query,
+                "sources": sources,
+                "variants": variants,
+                "filters": filters,
+                "size": size,
+                "offsets": new_comp_offsets,
+                "collapse_mirrors": collapse_mirrors,
+            }
+        )
+        if more
+        else None
+    )
+
+    return await _build_search_result(
+        client,
+        query=original_query,
+        total=total,
+        emitted=emitted,
+        errors=errors,
+        next_cursor=next_cursor,
+        collapse_mirrors=collapse_mirrors,
+        taxon_expansion=taxon_expansion,
+        mesh_expansion=mesh_expansion,
+        tissue_expansion=tissue_expansion,
+        chemical_expansion=chemical_expansion,
+        assay_expansion=assay_expansion,
+        query_understanding=query_understanding,
+        query_expansion=query_expansion,
+    )
+
+
 async def search_page(
     client: httpx.AsyncClient,
     *,
@@ -514,6 +722,7 @@ async def search_page(
     rank: str = "relevance",
     collapse_mirrors: bool = False,
     understand: bool = False,
+    multi_query: bool = False,
 ) -> SearchResult:
     """Fan out a search, merge + dedup, filter, and walk to a cut point that
     advances per-adapter offsets — returning a ``SearchResult`` whose
@@ -530,6 +739,23 @@ async def search_page(
 
     if cursor is not None:
         st = _cursor.decode(cursor)
+        # Multi-query cursor (A2.P2): identified by a `variants` key. The stored variants
+        # are already-EXPANDED effective query strings, so the continuation re-fans them
+        # with NO LLM and NO re-expand. Single-query cursors (no `variants`) fall through
+        # to the byte-identical path below.
+        if "variants" in st:
+            return await _multi_query_page(
+                client,
+                original_query=st["q"],
+                variants=st["variants"],
+                size=st["size"],
+                sources=st.get("sources"),
+                filters=st.get("filters") or {},
+                comp_offsets=st["offsets"],
+                collapse_mirrors=st.get("collapse_mirrors", False),
+                errors={},
+                query_expansion=None,  # echo is page-1 only; frozen None on continuation
+            )
         query = st["q"]
         sources = st.get("sources")
         organism = st.get("organism")
@@ -555,6 +781,9 @@ async def search_page(
             raise ValidationError("search requires either 'query' or 'cursor'")
         errors = {}
         query_understanding = None
+        # Capture the ORIGINAL user query BEFORE understand/expansion mutate `query`. This
+        # is the multi-query re-rank anchor and the `query_expansion.input` echo.
+        original_query = query
         if understand:
             raw_query = query  # echo the original query, captured before any rewrite
             ru = await query_understanding_mod.rewrite(client, query)
@@ -653,6 +882,55 @@ async def search_page(
         effective_query, assay_expansion = await _expand_assay(
             client, effective_query, assay, errors
         )
+
+        if multi_query:
+            # A2.P2 parallel path. Variant 0 = the post-understand/post-expansion
+            # `effective_query` (so recall never drops below the single-query baseline).
+            # Ask the LLM for diverse reformulations; on failure, fall through to the
+            # byte-identical single-query path below with a transparency note.
+            variants_raw = await query_understanding_mod.expand(client, query, n=MAX_QUERY_VARIANTS)
+            if variants_raw is None:
+                errors["multi_query"] = (
+                    "multi-query expansion unavailable "
+                    "(no LLM endpoint configured or expansion failed)"
+                )
+            else:
+                # Raw variant list for the echo: original (post-understand) query first,
+                # ci-deduped, capped. Variant 0 is always the original.
+                raw_variants = _dedup_ci([query, *variants_raw])[:MAX_QUERY_VARIANTS]
+                # Effective (ontology-expanded) string per variant. Variant 0 reuses the
+                # already-computed `effective_query`; the rest run the SAME expansion chain
+                # (resolver lookups are cached → cheap). Echoes were captured once above.
+                eff_variants = [effective_query]
+                for raw in raw_variants[1:]:
+                    eff, _ = await _expand_organism(client, raw, organism, errors)
+                    eff, _ = await _expand_disease(client, eff, disease, errors)
+                    eff, _ = await _expand_tissue(client, eff, tissue, errors)
+                    eff, _ = await _expand_chemical(client, eff, chemical, errors)
+                    eff, _ = await _expand_assay(client, eff, assay, errors)
+                    eff_variants.append(eff)
+                return await _multi_query_page(
+                    client,
+                    original_query=original_query,
+                    variants=eff_variants,
+                    size=size,
+                    sources=sources,
+                    filters={
+                        "published_after": published_after,
+                        "published_before": published_before,
+                        "kind": kind,
+                    },
+                    comp_offsets={},
+                    collapse_mirrors=collapse_mirrors,
+                    errors=errors,
+                    query_expansion=QueryExpansion(input=original_query, variants=raw_variants),
+                    taxon_expansion=expansion,
+                    mesh_expansion=disease_expansion,
+                    tissue_expansion=tissue_expansion,
+                    chemical_expansion=chemical_expansion,
+                    assay_expansion=assay_expansion,
+                    query_understanding=query_understanding,
+                )
         offsets = {}
 
     adapters = _select(sources)

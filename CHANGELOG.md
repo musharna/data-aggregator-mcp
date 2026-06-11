@@ -6,6 +6,48 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-06-10
+
+### Added
+
+- **`search(multi_query=true)` — opt-in diverse multi-query recall expansion (A2.P2).** When
+  enabled AND an LLM endpoint is configured, the LLM generates up to a few DELIBERATELY-DIVERSE
+  reformulations of the query (different facets/synonyms/framings, not paraphrases), each is
+  fanned out across every source, and the deduped union is re-ranked against your ORIGINAL
+  query — surfacing relevant records a single keyword query would miss. This is phase 2 of A2
+  (the biggest query-side recall lever); it composes with `understand=` (P1 structures one
+  query, P2 fans out N variants). P3 (OpenAlex semantic federation) is optional next.
+  - **The original query is ALWAYS variant 0.** Recall can only go UP — multi-query adds
+    candidates on top of the (post-`understand`, post-ontology-expansion) single-query
+    baseline; it never drops below it. Variants are case-insensitively deduped and capped at
+    `MAX_QUERY_VARIANTS` (4, incl. the original), bounding the N× upstream cost.
+  - **Composite-key window-paginated fan-out.** The single-query offset/cursor model keys by
+    `source` and is left BYTE-IDENTICAL; multi-query runs a PARALLEL fan-out keyed by a
+    composite `(variant_index, source)` label. Cross-variant duplicates (the same record
+    surfaced by two variants) dedup to ONE — recall without duplication. Pagination advances
+    per composite key; the cursor stores the EXPANDED variant strings so a continuation
+    re-fans the frozen variants with NO LLM call and NO re-expansion.
+  - **Re-rank anchored on the ORIGINAL query.** The union has no single coherent upstream
+    order, so multi-query always engages the window-rank consumption model and re-ranks the
+    whole window against the user's original pre-expansion query via the shipped
+    `embeddings.rerank`. No embedding endpoint → interleaved order + an `errors['semantic']`
+    note (still a recall win, just unranked — honest).
+  - **Opt-in, fail-soft, zero new required deps.** A new `query_understanding.expand` mirrors
+    the existing `rewrite`/`embeddings` fail-soft discipline exactly: enabled only by
+    `LLM_API_BASE`. With no endpoint configured — or on ANY LLM/parse failure — the search
+    degrades to a normal single-query search (variant 0) with a transparency note in
+    `errors['multi_query']`; the LLM call can NEVER raise into the search path.
+  - **Transparent echo.** A new `SearchResult.query_expansion` echoes the original `input` and
+    the raw `variants` actually fanned out (original first); per-variant ontology expansion is
+    still shown by the `*_expansion` echoes (the same params apply to every variant).
+  - **Byte-identical single-query path.** With the flag off (the default) search is
+    byte-identical and no LLM call is attempted; the entire pre-existing search + cursor suite
+    passes untouched. Embedding-distance variant diversity is deferred (v1 uses
+    prompt-demanded diversity + case-insensitive dedup).
+  - **Eval harness shipped.** A gated (`DATA_AGGREGATOR_MCP_LIVE=1` + `LLM_API_BASE`)
+    `scripts/eval_multi_query.py` + labeled JSON fixture runs each query with multi-query off
+    vs on and prints per-query + mean recall@20 lift.
+
 ## [0.36.0] - 2026-06-10
 
 ### Added

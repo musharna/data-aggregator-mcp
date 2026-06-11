@@ -35,6 +35,13 @@ _SYSTEM_PROMPT = (
     "Do not add keys. Do not explain."
 )
 
+_EXPAND_SYSTEM_PROMPT = (
+    "Generate up to {n} ALTERNATIVE search queries that capture DIFFERENT facets, "
+    "synonyms, and framings of the user's intent — genuinely diverse reformulations, "
+    'NOT paraphrases. Return STRICT JSON {{"variants": [string, ...]}}. '
+    "Omit the original query. Do not explain."
+)
+
 
 @dataclass
 class ParsedRewrite:
@@ -119,3 +126,26 @@ async def rewrite(client: httpx.AsyncClient, query: str) -> ParsedRewrite | None
     ):
         return None
     return parsed
+
+
+async def expand(client: httpx.AsyncClient, query: str, *, n: int) -> list[str] | None:
+    """Generate up to ``n - 1`` deliberately-diverse ALTERNATIVE reformulations of ``query``
+    via the configured LLM endpoint (A2.P2 multi-query recall expansion).
+
+    The prompt demands genuinely diverse reformulations (different facets/synonyms/framings,
+    not paraphrases); we parse the LLM's ``variants`` list defensively (non-empty strings
+    only). Returns None when no endpoint is configured, on any LLM/parse failure, or when the
+    expansion yields nothing usable. The CALLER prepends the original query as variant 0,
+    case-insensitively dedups, and caps to ``MAX_QUERY_VARIANTS``. NEVER raises into the
+    search path (same fail-soft discipline as ``rewrite``)."""
+    if llm._config() is None:
+        return None
+    system = _EXPAND_SYSTEM_PROMPT.format(n=max(n - 1, 1))
+    data = await llm.complete_json(client, system=system, user=query)
+    if data is None:
+        return None
+    raw = data.get("variants")
+    if not isinstance(raw, list):
+        return None
+    variants = [s for s in (_clean_str(v) for v in raw) if s is not None]
+    return variants or None

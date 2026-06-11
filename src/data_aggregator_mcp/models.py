@@ -231,6 +231,21 @@ class QueryUnderstanding(BaseModel):
     overridden: list[str] = Field(default_factory=list)  # fields the explicit caller param won
 
 
+class QueryExpansion(BaseModel):
+    """Transparency echo of A2.P2 multi-query recall expansion (search multi_query=true).
+
+    When enabled and an LLM endpoint is configured, the LLM generates deliberately-diverse
+    reformulations of the query; each variant is fanned out across all sources, and the
+    deduped union is re-ranked against the ORIGINAL query. ``variants`` lists the RAW variants
+    actually fanned out, the original query first. Each variant received the same ontology
+    expansion (shown by the ``*_expansion`` echoes); results are the deduped union re-ranked
+    against ``input``.
+    """
+
+    input: str  # the original user query (the re-rank anchor + variant 0)
+    variants: list[str]  # the raw variants fanned out, original first
+
+
 class SearchResult(BaseModel):
     query: str
     total: int
@@ -245,6 +260,9 @@ class SearchResult(BaseModel):
     assay_expansion: AssayExpansion | None = None
     query_understanding: QueryUnderstanding | None = (
         None  # LLM rewrite echo (search understand=true)
+    )
+    query_expansion: QueryExpansion | None = (
+        None  # multi-query variant echo (search multi_query=true)
     )
     provenance_crate: dict[str, Any] | None = (
         None  # whole-search RO-Crate 1.1 Run Crate, populated only on search(provenance=true)
