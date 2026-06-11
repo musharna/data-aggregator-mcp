@@ -29,15 +29,14 @@ The first OIDC publish (step 3) creates the project automatically.
 
 ### 3. Cut the release (fires `.github/workflows/publish.yml`)
 
-Set the version in **all three** places to the release value —
+Set the version in **all four** places to the release value —
 `pyproject.toml`, `src/data_aggregator_mcp/__init__.py`, and `server.json`
-(both top-level `version` and `packages[0].version`). The tree is already at
-`0.11.0` for the first release, so no bump is needed there — just tag. Then:
+(both top-level `version` **and** `packages[0].version`). Then:
 
 ```bash
-git tag v0.11.0
+git tag vX.Y.Z
 git push origin main --tags
-gh release create v0.11.0 --title v0.11.0 --notes-from-tag
+gh release create vX.Y.Z --title vX.Y.Z --notes-from-tag
 ```
 
 The publish workflow verifies the tag matches the package version, builds the

@@ -285,7 +285,7 @@ _SOURCES: list[dict[str, Any]] = [
         "fetchable": False,
         "fetchable_notes": "Discovery-only: study metadata + PMID bridge. Summary-statistics fetch is a future wave.",
         "id_example": "gwas:GCST000028",
-        "description": "GWAS Catalog (EBI) — genome-wide association studies keyed by disease trait; DOI/PMID-rich, reinforces the paper-data bridge.",
+        "description": "GWAS Catalog (EBI) — genome-wide association studies keyed by disease trait; DOI/PMID-rich, reinforces the paper-data bridge. NOTE: query must be an exact GWAS Catalog disease-trait vocabulary term (e.g. 'Type 2 diabetes'), not free text — the EBI findByDiseaseTrait API performs case-insensitive exact trait matching.",
     },
     {
         "name": "cellxgene",
@@ -354,7 +354,8 @@ TOOLS: list[types.Tool] = [
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Restrict fan-out to these sources (default: all). "
-                    "Available: zenodo, datacite, omics, literature, huggingface, dataone, omicsdi",
+                    "Available: zenodo, dataone, cellxgene, datacite, dandi, omics, "
+                    "literature, huggingface, omicsdi, openml, pdb, gwas",
                 },
                 "organism": {
                     "type": "string",
@@ -464,7 +465,9 @@ TOOLS: list[types.Tool] = [
                         "miss. Costs N× the upstream calls (bounded). Requires an LLM endpoint "
                         "(LLM_API_BASE); with none configured the search runs as a normal single "
                         "query and notes it in errors['multi_query']. The variants used are echoed "
-                        "in query_expansion. Composes with understand=."
+                        "in query_expansion. Composes with understand=. "
+                        "NOTE: multi_query=true ALWAYS applies semantic re-ranking of the window "
+                        "internally regardless of rank=; the rank= param has no effect in this mode."
                     ),
                 },
                 "provenance": {
@@ -571,12 +574,23 @@ TOOLS: list[types.Tool] = [
         name="fetch",
         description=(
             "Download a resource's files to local disk and return the PATHS (never "
-            "the file contents). Fetchable: Zenodo, SRA (ENA FASTQ), GEO supplementary files, "
-            "DataCite-discovered Figshare/Dataverse/OSF deposits (md5-verified), "
-            "open-access literature full text (EuropePMC XML / Unpaywall PDF, unverified), "
-            "and HuggingFace datasets (via the HF resolve URL, unverified); "
-            "a DataCite Dryad id is manifest-only (resolve lists its files but fetch fails loud), "
-            "and other DataCite repos plus paywalled/non-OA literature ids fail loud. "
+            "the file contents). Fetchable backends: "
+            "Zenodo (md5-verified); "
+            "SRA via ENA FASTQ (md5-verified); "
+            "GEO supplementary files (unverified); "
+            "DataCite sub-repos — Figshare/Dataverse/OSF (md5-verified), "
+            "OpenNeuro (snapshot manifest, unverified), "
+            "Dryad is manifest-only (resolve lists files, fetch fails loud), "
+            "Mendeley + other DataCite repos fail loud; "
+            "PubMed/OpenAIRE open-access full text (EuropePMC XML / Unpaywall PDF, unverified); "
+            "HuggingFace Hub (unverified); "
+            "DataONE Member-Node objects (md5/SHA-256-verified); "
+            "OmicsDI — PRIDE + MetaboLights only (unverified), "
+            "MassIVE/GNPS/PeptideAtlas/Metabolomics Workbench fail loud; "
+            "DANDI dandisets (302→S3, unverified); "
+            "CZ CELLxGENE H5AD/RDS assets (unverified); "
+            "OpenML ARFF (md5-verified); "
+            "RCSB PDB .cif/.pdb structure files (unverified). "
             "Fails loud if selected files exceed max_bytes unless force=true. "
             "Verifies checksums; writes a .dataresource.json sidecar."
         ),
@@ -621,9 +635,11 @@ TOOLS: list[types.Tool] = [
                 "check_health": {
                     "type": "boolean",
                     "description": (
-                        "When true, probe each source's base endpoint and attach a "
-                        "'health' field ({status: up|down, latency_ms, detail}) to each "
-                        "source. Default false: returns the static catalog with no network."
+                        "When true, probe 5 sources (zenodo, datacite, omics, literature, "
+                        "huggingface) and attach a 'health' field "
+                        "({status: up|down, latency_ms, detail}) to those entries; the "
+                        "remaining 7 sources get health: null. "
+                        "Default false: returns the static catalog with no network."
                     ),
                     "default": False,
                 },

@@ -145,7 +145,7 @@ page served in place of a binary).
 
 ## 🛠️ Tools
 
-### `search(query?, size?, sources?, organism?, kind?, published_after?, published_before?, rank?, cursor?)`
+### `search(query?, size?, sources?, organism?, disease?, tissue?, chemical?, assay?, kind?, published_after?, published_before?, rank?, cursor?, collapse_mirrors?, understand?, multi_query?, provenance?)`
 
 Fan out across all wired sources in parallel and return compact `DataResource`
 records, deduped by DOI. Per-source failures land in `errors{}` — never silently
@@ -193,7 +193,7 @@ dropped.
   across every source. In `cursor` mode the other params are read from the
   token, so `query` is optional.
 
-### `resolve(id, cite?, format?)`
+### `resolve(id, cite?, format?, trust?, fair?, use?)`
 
 Full record + files manifest. Routes by id shape — `zenodo:7654321`, a bare DOI,
 `datacite:10.5061/dryad.x`, an omics id (`sra:SRX079566`, `geo:GSE332789`,
@@ -217,9 +217,20 @@ or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
 - **trust signals** — `metrics` (citations / views / downloads / likes),
   `is_latest` / `superseded_by` (derived from version links), and `last_updated`
   freshness, where the source provides them.
-- **`format`** — pass `format="croissant"` (file-level Croissant JSON-LD) or
-  `"ro-crate"` (minimal RO-Crate 1.1) to attach a standard manifest under the
-  matching field, for ML or research-packaging pipelines.
+- **`trust=true`** — attach retraction status (via Crossref) under `trust{}`.
+  One extra Crossref call; meaningful for DOI-bearing records only.
+- **`fair=true`** — attach an RDA-grounded FAIRness score (0–100 + F/A/I/R
+  sub-scores + actionable gaps) computed from the record metadata under `fair{}`.
+  Pure/local — no extra network call.
+- **`use=<intent>`** — attach a licence-compatibility advisory under
+  `license_compat{}` for the intended use (`commercial` / `redistribute` /
+  `modify` / `ml-training`). Returns ALLOW/REVIEW/DENY with the governing clause.
+  Metadata-derived advisory, **not legal advice**; an absent/unrecognized licence
+  yields REVIEW.
+- **`format`** — pass `format="croissant"` (file-level Croissant JSON-LD),
+  `"ro-crate"` (minimal RO-Crate 1.1), or `"provenance"` (one-call RO-Crate 1.1
+  data-availability dossier bundling version-currency, licence+SPDX, FAIR score,
+  and retraction status) to attach a standard manifest under the matching field.
 
 ### `fetch(id, dest?, files?, max_bytes?, force?, extract?)`
 
@@ -255,6 +266,10 @@ first tabular file on the resolved record). Ops:
 - `head` — the first `n` rows (default 20), optionally restricted to `columns`.
 - `sql` — a read-only `SELECT` (the file is the view `data`), e.g.
   `SELECT col, count(*) FROM data GROUP BY 1`.
+- `peek` — per-column profile via DuckDB `SUMMARIZE` (type, null-rate,
+  approximate distinct count, min/max, numeric quartiles) **without
+  downloading** the file. Like `head`/`sql`, reads the whole file and honors
+  the source-size ceiling.
 
 Backed by the Parquet footer reader + DuckDB `httpfs` range reads. `sql` runs in
 a locked-down DuckDB (read-only, local filesystem disabled, single-SELECT

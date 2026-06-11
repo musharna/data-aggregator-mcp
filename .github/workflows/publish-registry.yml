@@ -16,7 +16,7 @@ jobs:
       id-token: write # required for mcp-publisher login github-oidc
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Wait for the PyPI release to be queryable
         # publish.yml uploads to PyPI in a parallel run; the registry validates
         # the PyPI package + its mcp-name marker, so block until it is live.
@@ -30,8 +30,12 @@ jobs:
           done
           echo "PyPI $VER did not appear within 5 minutes"; exit 1
       - name: Install mcp-publisher
-        # Pinned; bump alongside registry server.json schema changes.
-        run: curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/v1.7.9/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+        # Pinned to v1.7.9; bump alongside registry server.json schema changes.
+        # sha256 verified: ab128162b0616090b47cf245afe0a23f3ef08936fdce19074f5ba0a4469281ac
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/v1.7.9/mcp-publisher_linux_amd64.tar.gz" -o /tmp/mcp-publisher.tar.gz
+          echo "ab128162b0616090b47cf245afe0a23f3ef08936fdce19074f5ba0a4469281ac  /tmp/mcp-publisher.tar.gz" | sha256sum -c -
+          tar xz -f /tmp/mcp-publisher.tar.gz mcp-publisher
       - name: Log in to the MCP registry via GitHub Actions OIDC
         run: ./mcp-publisher login github-oidc
       - name: Publish server.json

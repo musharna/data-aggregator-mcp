@@ -11,9 +11,19 @@ _ROOT = Path(__file__).resolve().parent.parent
 _PYPROJECT = tomllib.loads((_ROOT / "pyproject.toml").read_text())
 
 
-def test_version_is_0391_and_synced() -> None:
-    assert data_aggregator_mcp.__version__ == "0.39.1"
-    assert _PYPROJECT["project"]["version"] == "0.39.1"
+def test_version_is_synced_across_all_sources() -> None:
+    pyproject_version = _PYPROJECT["project"]["version"]
+    module_version = data_aggregator_mcp.__version__
+    sj = json.loads((_ROOT / "server.json").read_text())
+    assert module_version == pyproject_version, (
+        f"__version__ {module_version!r} != pyproject version {pyproject_version!r}"
+    )
+    assert sj["version"] == pyproject_version, (
+        f"server.json top-level version {sj['version']!r} != pyproject version {pyproject_version!r}"
+    )
+    assert sj["packages"][0]["version"] == pyproject_version, (
+        f"server.json packages[0].version {sj['packages'][0]['version']!r} != pyproject version {pyproject_version!r}"
+    )
 
 
 def test_pyproject_has_urls_and_keywords() -> None:
@@ -42,7 +52,7 @@ def test_license_is_spdx_with_file_and_no_classifier() -> None:
 def test_server_json_matches_package_identity() -> None:
     sj = json.loads((_ROOT / "server.json").read_text())
     assert sj["name"] == "io.github.musharna/data-aggregator-mcp"
-    assert sj["version"] == "0.39.1"
+    assert sj["version"] == _PYPROJECT["project"]["version"]
     assert sj["$schema"].endswith("/server.schema.json")
     pkg = sj["packages"][0]
     assert pkg["registryType"] == "pypi"

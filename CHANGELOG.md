@@ -6,6 +6,75 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **NCBI rate limit no longer over-claims on `NCBI_EMAIL` alone.** The limiter granted
+  10 req/s when either `NCBI_API_KEY` or `NCBI_EMAIL` was set; NCBI only raises the
+  ceiling for an API key (email is identification). Email-only configs now correctly
+  stay at 3 req/s instead of inviting 429s across omics/literature/taxonomy.
+- **Search fan-out survives sub-task cancellation.** Both fan-out paths checked
+  `isinstance(outcome, Exception)`, so an `asyncio.CancelledError` (a `BaseException`)
+  fell through to an assert and destroyed all sources' results. Both now guard on
+  `BaseException`, matching `relate`'s handling — a cancelled adapter degrades to a
+  per-source error with partial results returned.
+- **Cursor decode validates field types.** A crafted cursor (e.g. `variants` as a
+  string) previously fanned out garbage one-character queries; `decode` now rejects
+  non-list `variants`, non-dict `offsets`, and non-positive `size` as corrupt.
+- **`collapse_mirrors` finds transitive merges.** Greedy single-pass grouping could
+  strand a byte-identical copy depending on arrival order (A↔C via md5, B↔C via
+  sha — B stranded); groups sharing any checksum or fingerprint key are now unioned
+  to a fixpoint. Survivor selection unchanged.
+- **DataONE Solr queries escape user input.** A query could restructure the boolean
+  and strip the `formatType:METADATA` filter; pids with embedded quotes broke the
+  phrase query. Lucene specials are now escaped in `search`, and `resolve` escapes
+  pid/resourceMap values.
+- **GWAS pagination uses the capped page size.** `size>50` computed the page number
+  from the raw size while requesting capped pages, skipping result windows.
+- **OSF file listing is page-capped** (10 pages ≈ 500 files), matching the DANDI/
+  CELLxGENE manifest-cap pattern, instead of following `links.next` unboundedly.
+- **DataCite/Scholix error-taxonomy escapes closed.** A 200 without `data` raised a
+  bare `KeyError` from DataCite resolve (now a typed `NotFoundError`); a non-JSON
+  Scholix body raised `JSONDecodeError` through the resolve path (links are
+  enrichment — now degrades to no links).
+- **EuropePMC lookups phrase-quote PMCID/DOI values** (second-order injection guard
+  for identifier values arriving from upstream APIs).
+- **OpenNeuro snapshot queries use GraphQL variables** instead of f-string
+  interpolation into the query text.
+
+### Security
+
+- **Archive extraction streams in 64 KiB chunks** counting actual bytes (not declared
+  header sizes) against the ceiling, unlinking partials mid-stream on overrun — and no
+  longer loads whole members into RAM.
+- **Extraction shares the fetch byte budget.** `extract=true` previously granted the
+  full `max_bytes` again after the download consumed it (up to 2× disk write); the
+  archive now extracts into the remaining headroom and debits what it writes.
+- **URL scheme allowlist on fetch and operate.** `FileEntry.url` values from upstream
+  metadata are rejected unless `http(s)`; `operate` additionally allows `file://` only
+  with `DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS=1` (test fixtures), closing a poisoned-
+  metadata local-file read via the fsspec schema/preview paths.
+- **Registry publish workflow hardened**: `actions/checkout` SHA-pinned like every
+  other workflow, and the `mcp-publisher` binary install is sha256-verified instead
+  of `curl | tar`.
+
+### Changed
+
+- **Tool descriptions now tell the whole truth.** `search`'s `sources` list names all
+  12 adapters (dandi/openml/pdb/gwas/cellxgene were hidden); `fetch`'s fetchable list
+  covers every wired backend with its verification status; `list_sources` health
+  probing is scoped to the 5 actually-probed sources; `multi_query`'s always-on
+  semantic re-rank is documented; the GWAS catalog entry states its exact
+  disease-trait matching.
+- **`server.json` documents the full env surface** (`LLM_API_BASE`/`LLM_API_KEY`/
+  `LLM_MODEL`, `EMBEDDING_API_BASE`/`EMBEDDING_API_KEY`/`EMBEDDING_MODEL`,
+  `UNPAYWALL_EMAIL` — previously only `NCBI_API_KEY`), so registry/deployment tooling
+  can surface the knobs behind `understand=`, `multi_query=`, `rank=semantic`, and the
+  Unpaywall full-text leg.
+- README tool signatures updated to the live parameter surface (search filters,
+  resolve `trust`/`fair`/`use`, operate `peek`); `PUBLISH.md` made version-agnostic
+  (was frozen at the v0.11.0 instructions); the packaging test asserts version sync
+  without a hardcoded literal.
+
 ## [0.39.1] - 2026-06-11
 
 ### Fixed
