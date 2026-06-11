@@ -11,7 +11,7 @@ from data_aggregator_mcp.models import Creator, DataResource, FileEntry, Link, T
 
 def test_catalog_exposes_core_tools() -> None:
     names = {t.name for t in server.TOOLS}
-    assert names == {"search", "resolve", "fetch", "list_sources", "operate"}
+    assert names == {"search", "resolve", "fetch", "list_sources", "operate", "relate"}
 
 
 def test_list_sources_reports_zenodo() -> None:
@@ -1038,3 +1038,25 @@ async def test_dispatch_search_understand_defaults_false(monkeypatch) -> None:
     monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
     await server._dispatch("search", {"query": "q"})
     assert captured["understand"] is False
+
+
+async def test_relate_tool_dispatch(monkeypatch) -> None:
+    from data_aggregator_mcp import server
+    from data_aggregator_mcp.models import DataResource as DR
+
+    async def fake_resolve(client, rid):
+        return DR(id=rid, source="geo", kind="dataset", title="t", accessions=["PRJNA9"])
+
+    monkeypatch.setattr(server.router, "resolve", fake_resolve)
+    out = await server._dispatch("relate", {"ids": ["geo:GSE1", "sra:SRP1"]})
+    assert out["resolved"] == ["geo:GSE1", "sra:SRP1"]
+    assert out["hints"][0]["kind"] == "shared_accession"
+
+
+def test_relate_is_registered() -> None:
+    from data_aggregator_mcp import server
+
+    tool = next(t for t in server.TOOLS if t.name == "relate")
+    assert tool.inputSchema["required"] == ["ids"]
+    assert tool.inputSchema["properties"]["ids"]["minItems"] == 2
+    assert tool.inputSchema["properties"]["ids"]["maxItems"] == 10
