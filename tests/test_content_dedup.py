@@ -326,6 +326,26 @@ def test_collapse_module_makes_no_http_calls() -> None:
     assert "await" not in src
 
 
+def test_transitive_checksum_merge_a_b_c_ordering() -> None:
+    """Transitive merge via shared checksums must work regardless of arrival order.
+
+    A has md5:X, B has sha256:Y, C has both md5:X and sha256:Y.
+    Arriving in order A, B, C:
+    - C should join A's group (shares md5:X), and B should then be merged in
+      because it shares sha256:Y with C (now part of A's group).
+    All three must end up in one group — B must NOT be stranded.
+    """
+    a = _res("zenodo:A", "zenodo", title="Shared Dataset A", checksums=["md5:XXXX"])
+    b = _res("hf:B", "huggingface", title="Shared Dataset B", checksums=["sha256:YYYY"])
+    c = _res(
+        "datacite:C", "datacite", title="Shared Dataset C", checksums=["md5:XXXX", "sha256:YYYY"]
+    )
+    out = router._collapse_mirrors([a, b, c])
+    assert len(out) == 1, f"Expected 1 merged group but got {len(out)}: {[r.id for r in out]}"
+    all_ids = {out[0].id} | {m.id for m in out[0].mirrors}
+    assert all_ids == {"zenodo:A", "hf:B", "datacite:C"}
+
+
 # ---------------------------------------------------------------------------
 # DataResource.mirrors field
 # ---------------------------------------------------------------------------

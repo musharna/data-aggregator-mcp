@@ -1843,3 +1843,28 @@ async def test_relate_count_guards(monkeypatch) -> None:
             await router.relate(client, ["only:1"])
         with pytest.raises(ValidationError):
             await router.relate(client, [f"x:{i}" for i in range(11)])
+
+
+@pytest.mark.asyncio
+async def test_search_page_cancelled_adapter_surfaces_in_errors_not_crash(monkeypatch) -> None:
+    """asyncio.CancelledError is a BaseException (not Exception) since Python 3.8.
+    A cancelled adapter sub-task must be captured in errors{} rather than falling
+    through to the ``assert isinstance(outcome, tuple)`` guard (which would destroy
+    all other sources' results, and is a no-op under python -O anyway)."""
+    import asyncio
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        raise asyncio.CancelledError("simulated cancellation")
+
+    async def fake_datacite_search(client, query, *, size=10, offset=0):
+        return 1, [_res("datacite:ok", "datacite", "10.x/ok")]
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    monkeypatch.setattr("data_aggregator_mcp.datacite.search", fake_datacite_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(client, query="rna", sources=["zenodo", "datacite"])
+    # The cancelled adapter must appear in errors, not crash the whole fan-out.
+    assert "zenodo" in result.errors
+    assert "CancelledError" in result.errors["zenodo"]
+    # The healthy adapter's results must still be present.
+    assert any(r.id == "datacite:ok" for r in result.results)

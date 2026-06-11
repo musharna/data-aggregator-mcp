@@ -51,6 +51,16 @@ def test_ncbi_rate_responds_to_api_key(monkeypatch):
     assert _rate_for("ncbi") == 10.0
 
 
+def test_ncbi_rate_email_only_is_still_3(monkeypatch):
+    """NCBI grants 10 req/s only with an API key; email alone is identification,
+    not elevated access, so the rate must stay at 3 req/s."""
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    monkeypatch.setenv("NCBI_EMAIL", "user@example.com")
+    from data_aggregator_mcp._ratelimit import _ncbi_rate
+
+    assert _ncbi_rate() == 3.0
+
+
 @pytest.mark.asyncio
 async def test_acquire_shares_one_bucket_across_ncbi_services():
     await _ratelimit.acquire("NCBI esearch (geo)")

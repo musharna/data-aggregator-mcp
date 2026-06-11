@@ -264,6 +264,38 @@ def _collapse_mirrors(records: list[DataResource]) -> list[DataResource]:
         target.checksums |= sums
         target.sources.add(r.source)
 
+    # Post-pass: union groups that share any checksum or fingerprint key, iterating
+    # to fixpoint. The forward pass above uses greedy first-match, which misses
+    # transitive connections: e.g. A(md5:X), B(sha:Y), C(md5:X + sha:Y) arriving
+    # in order A,B,C — C joins A's group via md5:X, but B is stranded even though
+    # it shares sha:Y with C. The union pass merges those stranded groups.
+    changed = True
+    while changed:
+        changed = False
+        merged_groups: list[_Group] = []
+        for g in groups:
+            absorbed = False
+            for mg in merged_groups:
+                checksum_overlap = bool(g.checksums & mg.checksums)
+                # Fingerprint merge: any shared key where NOT all members share the
+                # same source (the cross-source guard still applies globally — if two
+                # groups have the same fingerprint key but all members come from the
+                # same source, they are version siblings and must not be merged).
+                key_overlap = bool(g.keys & mg.keys) and not (
+                    g.sources <= mg.sources and len(g.sources) == 1 and g.sources == mg.sources
+                )
+                if checksum_overlap or key_overlap:
+                    mg.members.extend(g.members)
+                    mg.keys |= g.keys
+                    mg.checksums |= g.checksums
+                    mg.sources |= g.sources
+                    absorbed = True
+                    changed = True
+                    break
+            if not absorbed:
+                merged_groups.append(g)
+        groups = merged_groups
+
     out: list[DataResource] = []
     for g in groups:
         if len(g.members) == 1:
@@ -623,9 +655,9 @@ async def _multi_query_page(
     total = 0
     for (vi, name), outcome in zip(keys, outcomes, strict=False):
         ckey = _comp_key(vi, name)
-        if isinstance(outcome, Exception):
-            # Surface a per-variant×source failure without clobbering another variant's
-            # error for the same source.
+        if isinstance(outcome, BaseException):
+            # Surface a per-variant×source failure (including asyncio.CancelledError)
+            # without clobbering another variant's error for the same source.
             errors[f"{name}#v{vi}"] = f"{type(outcome).__name__}: {outcome}"
             comp_totals[ckey] = 0
             continue
@@ -653,8 +685,10 @@ async def _multi_query_page(
             emitted.append(r)
             if len(emitted) == size:
                 break
+    # Multi-query always window-consumes the full merged+reranked window (no partial
+    # consume), so every fetched record advances its stream offset. More results
+    # remain iff any stream still has rows past the new offset.
     consumed = merged
-    cut = len(merged) - 1
 
     consumed_per_stream: Counter[str] = Counter(origin[id(r)] for r in consumed)
     new_comp_offsets = {
@@ -665,12 +699,9 @@ async def _multi_query_page(
 
     # `bool(merged)` guard mirrors the single-query path: an empty window consumed nothing,
     # so a replayed cursor would loop forever.
-    more = bool(merged) and (
-        (cut < len(merged) - 1)
-        or any(
-            new_comp_offsets.get(_comp_key(vi, name), 0) < comp_totals.get(_comp_key(vi, name), 0)
-            for (vi, name) in keys
-        )
+    more = bool(merged) and any(
+        new_comp_offsets.get(_comp_key(vi, name), 0) < comp_totals.get(_comp_key(vi, name), 0)
+        for (vi, name) in keys
     )
     next_cursor = (
         _cursor.encode(
@@ -929,13 +960,13 @@ async def search_page(
     totals: dict[str, int] = {}
     total = 0
     for name, outcome in zip(names, outcomes, strict=False):
-        if isinstance(outcome, Exception):
+        if isinstance(outcome, BaseException):
             errors[name] = f"{type(outcome).__name__}: {outcome}"
             totals[name] = 0
             continue
-        # gather(return_exceptions=True) types outcome as tuple | BaseException; the
-        # Exception guard above can't subtract the BaseException supertype, so narrow
-        # positively to the success tuple before unpacking.
+        # gather(return_exceptions=True) delivers either a BaseException instance or
+        # the success value; the BaseException guard above handles all error cases
+        # (including asyncio.CancelledError which is not an Exception since Python 3.8).
         assert isinstance(outcome, tuple)
         adapter_total, recs = outcome
         total += adapter_total
