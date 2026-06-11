@@ -59,3 +59,23 @@ def test_no_self_identifier_hint() -> None:
     # one resource carrying its own doi in both `doi` and `identifiers` must not self-hint
     rs = [_res("zenodo:2", doi="10.1/x", identifiers={"doi": "10.1/x"})]
     assert [h for h in relate_mod.detect(rs) if h.kind == "shared_identifier"] == []
+
+
+def test_explicit_link_target_matches_another_resource() -> None:
+    from data_aggregator_mcp.models import Link
+
+    rs = [
+        _res("pubmed:1", links=[Link(rel="describes", target_id="zenodo:2")]),
+        _res("zenodo:2"),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "explicit_link"]
+    assert len(hints) == 1
+    assert set(hints[0].resources) == {"pubmed:1", "zenodo:2"}
+    assert hints[0].key == "describes"
+
+
+def test_explicit_link_to_outside_id_is_ignored() -> None:
+    from data_aggregator_mcp.models import Link
+
+    rs = [_res("pubmed:1", links=[Link(rel="describes", target_id="zenodo:999")]), _res("zenodo:2")]
+    assert [h for h in relate_mod.detect(rs) if h.kind == "explicit_link"] == []

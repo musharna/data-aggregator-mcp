@@ -24,6 +24,7 @@ def detect(resources: list[DataResource]) -> list[JoinHint]:
     hints: list[JoinHint] = []
     hints.extend(_shared_accession(resources))
     hints.extend(_shared_identifier(resources))
+    hints.extend(_explicit_link(resources))
     return hints
 
 
@@ -82,6 +83,50 @@ def _shared_accession(resources: list[DataResource]) -> list[JoinHint]:
                     key=display[n],
                     evidence=f"accession {display[n]!r} present on {len(ids)} resources",
                     suggestion=f"joinable on accession {display[n]}",
+                )
+            )
+    return hints
+
+
+def _address_map(resources: list[DataResource], *, include_accessions: bool) -> dict[str, str]:
+    """Map each resource's addressable ids (id, doi, optionally accessions), normalized,
+    to the OWNING resource id. First writer wins on a collision (shared doi is handled by
+    the identifier detector, not here)."""
+    addr: dict[str, str] = {}
+    for r in resources:
+        candidates = [r.id, r.doi]
+        if include_accessions:
+            candidates += list(r.accessions)
+        for c in candidates:
+            n = _norm(c)
+            if n:
+                addr.setdefault(n, r.id)
+    return addr
+
+
+def _explicit_link(resources: list[DataResource]) -> list[JoinHint]:
+    addr = _address_map(resources, include_accessions=True)
+    hints: list[JoinHint] = []
+    seen: set[tuple[str, str, str]] = set()
+    for r in resources:
+        for link in r.links:
+            n = _norm(link.target_id)
+            if not n:
+                continue
+            target = addr.get(n)
+            if not target or target == r.id:
+                continue
+            dedup = (r.id, target, link.rel)
+            if dedup in seen:
+                continue
+            seen.add(dedup)
+            hints.append(
+                JoinHint(
+                    kind="explicit_link",
+                    resources=[r.id, target],
+                    key=link.rel,
+                    evidence=f"{r.id} links to {target} via {link.rel!r} (target_id={link.target_id!r})",
+                    suggestion=f"{r.id} {link.rel} {target} (declared in source metadata)",
                 )
             )
     return hints
