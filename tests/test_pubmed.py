@@ -109,7 +109,7 @@ async def test_resolve_attaches_geo_link_via_elink(httpx_mock: HTTPXMock, monkey
     )
     # full-text discovery: no PMCID on this doc, so EuropePMC is queried by DOI → not in EPMC.
     httpx_mock.add_response(
-        url="https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:10.1056/NEJMoa2109072&format=json&resultType=core&pageSize=1",
+        url='https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:"10.1056/NEJMoa2109072"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "N"}]}},
     )
     # abstract enrichment via efetch (no AbstractText → description stays None).
@@ -137,7 +137,7 @@ async def test_resolve_no_links_when_no_edges(httpx_mock: HTTPXMock, monkeypatch
         )
     # full-text discovery: no PMCID on this doc, so EuropePMC is queried by DOI → not in EPMC.
     httpx_mock.add_response(
-        url="https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:10.1056/NEJMoa2109072&format=json&resultType=core&pageSize=1",
+        url='https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:"10.1056/NEJMoa2109072"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "N"}]}},
     )
     # abstract enrichment via efetch (no AbstractText → description stays None).
@@ -313,7 +313,7 @@ async def test_resolve_attaches_oa_fulltext(httpx_mock, monkeypatch) -> None:
     )
     # EuropePMC existence check → in EPMC.
     httpx_mock.add_response(
-        url="https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=PMCID:PMC3463246&format=json&resultType=core&pageSize=1",
+        url='https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=PMCID:"PMC3463246"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "Y", "pmcid": "PMC3463246"}]}},
     )
     # abstract enrichment via efetch (no AbstractText → description stays None).
@@ -357,7 +357,7 @@ async def test_resolve_pubmed_access_from_europepmc(httpx_mock, monkeypatch) -> 
         text="<PubmedArticleSet/>",
     )
     httpx_mock.add_response(
-        url="https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=PMCID:PMC7&format=json&resultType=core&pageSize=1",
+        url='https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=PMCID:"PMC7"&format=json&resultType=core&pageSize=1',
         json={
             "resultList": {
                 "result": [{"inEPMC": "Y", "pmcid": "PMC7", "isOpenAccess": "Y", "license": "cc0"}]

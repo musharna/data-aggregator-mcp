@@ -54,13 +54,14 @@ def _normalize(s: dict) -> DataResource:
 async def search(
     client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
 ) -> tuple[int, list[DataResource]]:
-    page = offset // size if size else 0
+    capped = min(size, MAX_SIZE)
+    page = offset // capped if capped else 0
     body = await _http.request_json(
         client,
         "GET",
         SEARCH,
         service="GWAS Catalog search",
-        params={"diseaseTrait": query, "size": min(size, MAX_SIZE), "page": page},
+        params={"diseaseTrait": query, "size": capped, "page": page},
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,

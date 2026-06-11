@@ -66,6 +66,30 @@ async def test_osf_malformed_body_raises_upstream(httpx_mock, monkeypatch) -> No
             await osf.files(client, "10.17605/osf.io/5pfej")
 
 
+# ---------------------------------------------------------------------------
+# Fix — file-listing loop must cap at _MAX_FILE_PAGES
+# ---------------------------------------------------------------------------
+
+
+async def test_files_page_cap_limits_requests(httpx_mock, monkeypatch) -> None:
+    """With _MAX_FILE_PAGES monkeypatched to 2, only 2 pages should be fetched
+    even when the second page advertises a third via links.next."""
+    monkeypatch.setattr(osf, "_MAX_FILE_PAGES", 2)
+
+    base = "https://api.osf.io/v2/nodes/abc12/files/osfstorage/"
+    page2 = base + "?page=2"
+    page3 = base + "?page=3"
+
+    httpx_mock.add_response(url=base, json=_page([_file("a.csv", 100, "f1")], page2))
+    httpx_mock.add_response(url=page2, json=_page([_file("b.csv", 200, "f2")], page3))
+    # page3 should never be fetched — if it is, httpx_mock will raise
+
+    async with httpx.AsyncClient() as client:
+        files = await osf.files(client, "10.17605/osf.io/abc12")
+
+    assert {f.name for f in files} == {"a.csv", "b.csv"}
+
+
 @live_only
 async def test_live_osf_files_have_md5() -> None:
     async with httpx.AsyncClient(follow_redirects=True, timeout=60) as client:

@@ -156,7 +156,7 @@ async def test_resolve_fetches_entity_and_attaches_scholix_links(
         },
     )
     httpx_mock.add_response(
-        url="https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:10.1101/844522&format=json&resultType=core&pageSize=1",
+        url='https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:"10.1101/844522"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "N"}]}},
     )
     async with httpx.AsyncClient() as client:
@@ -251,7 +251,7 @@ async def test_resolve_attaches_identifiers_and_fulltext(httpx_mock, monkeypatch
         },
     )
     httpx_mock.add_response(
-        url="https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=PMCID:PMC3463246&format=json&resultType=core&pageSize=1",
+        url='https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=PMCID:"PMC3463246"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "Y", "pmcid": "PMC3463246"}]}},
     )
     async with httpx.AsyncClient() as client:
@@ -283,7 +283,7 @@ async def test_resolve_fills_access_license_from_fulltext_when_absent(
         },
     )
     httpx_mock.add_response(
-        url="https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=PMCID:PMC3463246&format=json&resultType=core&pageSize=1",
+        url='https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=PMCID:"PMC3463246"&format=json&resultType=core&pageSize=1',
         json={
             "resultList": {
                 "result": [

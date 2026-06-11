@@ -141,6 +141,28 @@ def test_registered_discovery_only():
     assert any(s["name"] == "gwas" for s in server._SOURCES)
 
 
+# ---------------------------------------------------------------------------
+# Fix — page math must use capped size, not raw size
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_search_page_math_uses_capped_size():
+    """size=100 (>MAX_SIZE=50) with offset=100 → page=2 (100//50), size param=50."""
+    captured: dict = {}
+
+    async def handler(request):
+        captured["page"] = request.url.params.get("page")
+        captured["size"] = request.url.params.get("size")
+        return httpx.Response(200, json=_SEARCH)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        await gwas.search(c, "asthma", size=100, offset=100)
+
+    assert captured["size"] == "50", f"expected size=50, got {captured['size']!r}"
+    assert captured["page"] == "2", f"expected page=2, got {captured['page']!r}"
+
+
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 

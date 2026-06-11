@@ -37,8 +37,15 @@ _GQL = {
 async def test_files_builds_manifest_from_doi():
     async def handler(request):
         assert request.url.host == "openneuro.org" and request.url.path.endswith("/graphql")
-        body = request.content.decode()
-        assert "ds000001" in body and "1.0.0" in body  # parsed from the DOI
+        import json
+
+        parsed = json.loads(request.content.decode())
+        # Must use GraphQL variables — ds/tag must be in "variables", not inlined
+        assert "variables" in parsed, "request body must contain a 'variables' key"
+        assert parsed["variables"].get("ds") == "ds000001"
+        assert parsed["variables"].get("tag") == "1.0.0"
+        # The query string must use $ds / $tag variable placeholders
+        assert "$ds" in parsed["query"] and "$tag" in parsed["query"]
         return httpx.Response(200, json=_GQL)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:

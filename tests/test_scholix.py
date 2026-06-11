@@ -69,6 +69,24 @@ async def test_links_for_404_returns_empty(httpx_mock: HTTPXMock) -> None:
         assert await scholix.links_for(client, "10.5061/dryad.x") == []
 
 
+# ---------------------------------------------------------------------------
+# Fix — links_for must degrade to [] on non-JSON body (e.g. HTML error page)
+# ---------------------------------------------------------------------------
+
+
+async def test_links_for_html_body_returns_empty(httpx_mock: HTTPXMock) -> None:
+    """A 200 response with an HTML body (e.g. a WAF error page) must return []
+    without raising — Scholix links are enrichment only."""
+    httpx_mock.add_response(
+        url=_URL,
+        text="<html><body>Service Unavailable</body></html>",
+        headers={"Content-Type": "text/html"},
+    )
+    async with httpx.AsyncClient() as client:
+        result = await scholix.links_for(client, "10.5061/dryad.x")
+    assert result == []
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 

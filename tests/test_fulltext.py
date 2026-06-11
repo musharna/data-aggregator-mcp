@@ -15,7 +15,7 @@ _SEARCH = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 
 async def test_find_europepmc_xml_when_in_epmc(httpx_mock) -> None:
     httpx_mock.add_response(
-        url=f"{_SEARCH}?query=PMCID:PMC3463246&format=json&resultType=core&pageSize=1",
+        url=f'{_SEARCH}?query=PMCID:"PMC3463246"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "Y", "pmcid": "PMC3463246"}]}},
     )
     async with httpx.AsyncClient() as client:
@@ -28,7 +28,7 @@ async def test_find_europepmc_xml_when_in_epmc(httpx_mock) -> None:
 
 async def test_find_europepmc_returns_access_and_license(httpx_mock) -> None:
     httpx_mock.add_response(
-        url=f"{_SEARCH}?query=PMCID:PMC3463246&format=json&resultType=core&pageSize=1",
+        url=f'{_SEARCH}?query=PMCID:"PMC3463246"&format=json&resultType=core&pageSize=1',
         json={
             "resultList": {
                 "result": [
@@ -46,7 +46,7 @@ async def test_find_europepmc_returns_access_and_license(httpx_mock) -> None:
 async def test_find_falls_through_to_unpaywall(httpx_mock, monkeypatch) -> None:
     monkeypatch.setenv("UNPAYWALL_EMAIL", "x@y.z")
     httpx_mock.add_response(
-        url=f"{_SEARCH}?query=DOI:10.1/x&format=json&resultType=core&pageSize=1",
+        url=f'{_SEARCH}?query=DOI:"10.1/x"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "N"}]}},
     )
     httpx_mock.add_response(
@@ -64,7 +64,7 @@ async def test_find_falls_through_to_unpaywall(httpx_mock, monkeypatch) -> None:
 async def test_find_none_when_no_oa_and_no_email(httpx_mock, monkeypatch) -> None:
     monkeypatch.delenv("UNPAYWALL_EMAIL", raising=False)
     httpx_mock.add_response(
-        url=f"{_SEARCH}?query=DOI:10.1/x&format=json&resultType=core&pageSize=1",
+        url=f'{_SEARCH}?query=DOI:"10.1/x"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "N"}]}},
     )
     async with httpx.AsyncClient() as client:
@@ -75,7 +75,7 @@ async def test_find_none_when_no_oa_and_no_email(httpx_mock, monkeypatch) -> Non
 async def test_find_unpaywall_landing_only_returns_none(httpx_mock, monkeypatch) -> None:
     monkeypatch.setenv("UNPAYWALL_EMAIL", "x@y.z")
     httpx_mock.add_response(
-        url=f"{_SEARCH}?query=DOI:10.1/g&format=json&resultType=core&pageSize=1",
+        url=f'{_SEARCH}?query=DOI:"10.1/g"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "N"}]}},
     )
     httpx_mock.add_response(
@@ -94,7 +94,7 @@ async def test_find_fails_soft_on_transport_error(httpx_mock) -> None:
     for _ in range(3):  # request_with_retry retries transport errors max_retries times
         httpx_mock.add_exception(
             httpx.ConnectError("boom"),
-            url=f"{_SEARCH}?query=PMCID:PMC9&format=json&resultType=core&pageSize=1",
+            url=f'{_SEARCH}?query=PMCID:"PMC9"&format=json&resultType=core&pageSize=1',
         )
     async with httpx.AsyncClient() as client:
         ft = await fulltext.find(client, pmcid="PMC9", doi=None)
@@ -104,7 +104,7 @@ async def test_find_fails_soft_on_transport_error(httpx_mock) -> None:
 async def test_find_europepmc_off_contract_body_fails_soft(httpx_mock) -> None:
     # A 2xx body whose result[0] is not a dict must not raise (.get on a str) — spec §8.
     httpx_mock.add_response(
-        url=f"{_SEARCH}?query=PMCID:PMC1&format=json&resultType=core&pageSize=1",
+        url=f'{_SEARCH}?query=PMCID:"PMC1"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": ["not-a-dict"]}},
     )
     async with httpx.AsyncClient() as client:
@@ -116,7 +116,7 @@ async def test_find_unpaywall_off_contract_body_fails_soft(httpx_mock, monkeypat
     # A 2xx Unpaywall body that is a JSON array (not an object) must not raise — spec §8.
     monkeypatch.setenv("UNPAYWALL_EMAIL", "x@y.z")
     httpx_mock.add_response(
-        url=f"{_SEARCH}?query=DOI:10.3/x&format=json&resultType=core&pageSize=1",
+        url=f'{_SEARCH}?query=DOI:"10.3/x"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "N"}]}},
     )
     httpx_mock.add_response(
@@ -126,6 +126,34 @@ async def test_find_unpaywall_off_contract_body_fails_soft(httpx_mock, monkeypat
     async with httpx.AsyncClient() as client:
         ft = await fulltext.find(client, pmcid=None, doi="10.3/x")
     assert ft.file is None
+
+
+# ---------------------------------------------------------------------------
+# Fix — EuropePMC query values must be phrase-quoted
+# ---------------------------------------------------------------------------
+
+
+async def test_europepmc_query_uses_phrase_quotes_for_pmcid(httpx_mock) -> None:
+    """The outgoing EuropePMC query must wrap the PMCID value in double quotes.
+    pytest-httpx's URL matcher confirms the query param has the quoted form."""
+    httpx_mock.add_response(
+        url=f'{_SEARCH}?query=PMCID:"PMC3463246"&format=json&resultType=core&pageSize=1',
+        json={"resultList": {"result": []}},
+    )
+    async with httpx.AsyncClient() as client:
+        ft = await fulltext.find(client, pmcid="PMC3463246", doi=None)
+    assert ft.file is None  # no inEPMC hit, but the key assertion is the URL match above
+
+
+async def test_europepmc_query_uses_phrase_quotes_for_doi(httpx_mock) -> None:
+    """DOI values must also be phrase-quoted in the EuropePMC query."""
+    httpx_mock.add_response(
+        url=f'{_SEARCH}?query=DOI:"10.1/x"&format=json&resultType=core&pageSize=1',
+        json={"resultList": {"result": []}},
+    )
+    async with httpx.AsyncClient() as client:
+        ft = await fulltext.find(client, pmcid=None, doi="10.1/x")
+    assert ft.file is None  # no inEPMC hit, but the key assertion is the URL match above
 
 
 @live_only

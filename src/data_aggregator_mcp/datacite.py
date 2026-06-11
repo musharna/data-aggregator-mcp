@@ -223,7 +223,12 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         )
     except NotFoundError:
         raise NotFoundError(f"DataCite has no DOI {doi!r}") from None
-    resource = _normalize(body["data"])
+    data = body.get("data")
+    if not isinstance(data, dict):
+        raise NotFoundError(
+            f"DataCite returned a malformed response for {doi!r} (missing 'data' key)"
+        )
+    resource = _normalize(data)
     if resource.source == "zenodo" and resource.doi and "zenodo." in resource.doi:
         recid = resource.doi.rsplit("zenodo.", 1)[-1]
         if recid.isdigit():

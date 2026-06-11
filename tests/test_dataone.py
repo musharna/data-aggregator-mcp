@@ -282,3 +282,56 @@ def test_normalize_doi_none_for_uuid_pid():
 def test_normalize_doi_none_for_plain_ark():
     r = dataone._normalize({"identifier": "knb-lter-jrn.20050360.9823", "title": "Z"})
     assert r.doi is None
+
+
+# ---------------------------------------------------------------------------
+# Fix — Lucene injection: search() and resolve() must escape special chars
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_search_escapes_lucene_special_chars_in_query():
+    """A user query with Lucene specials must not restructure the Solr boolean.
+    The structural AND formatType:METADATA must remain intact and the user
+    query must appear backslash-escaped inside the outer parens."""
+    captured_q: list[str] = []
+
+    async def handler(request):
+        captured_q.append(request.url.params.get("q", ""))
+        return httpx.Response(200, json={"response": {"numFound": 0, "docs": []}})
+
+    # Injection attempt: close the grouping, add a fake OR, reopen
+    evil_query = ") AND formatType:DATA AND (*"
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        await dataone.search(c, evil_query, size=5)
+
+    assert captured_q, "no request made"
+    q = captured_q[0]
+    # The structural suffix must survive verbatim
+    assert q.endswith(" AND formatType:METADATA"), f"structural suffix missing in: {q!r}"
+    # The literal closing paren from the evil query must be escaped
+    assert "\\)" in q, f"unescaped ) in: {q!r}"
+    # The structural opening paren must still be present (first char or near start)
+    assert q.startswith("("), f"outer group paren missing in: {q!r}"
+
+
+@pytest.mark.asyncio
+async def test_resolve_escapes_double_quote_in_pid():
+    """A PID containing a double-quote must be backslash-escaped in the phrase query."""
+    captured_q: list[str] = []
+
+    async def handler(request):
+        captured_q.append(request.url.params.get("q", ""))
+        return httpx.Response(200, json={"response": {"numFound": 0, "docs": []}})
+
+    pid_with_quote = 'evil"pid'
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        with pytest.raises(NotFoundError):
+            await dataone.resolve(c, f"dataone:{pid_with_quote}")
+
+    assert captured_q, "no request made"
+    q = captured_q[0]
+    # The embedded " must be escaped as \"
+    assert '\\"' in q, f"unescaped double-quote in: {q!r}"
+    # The phrase query wrapper must still be intact (outer quotes present)
+    assert 'identifier:"' in q, f"identifier phrase prefix missing in: {q!r}"

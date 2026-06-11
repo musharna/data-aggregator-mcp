@@ -14,6 +14,7 @@ from data_aggregator_mcp import _http
 from data_aggregator_mcp.models import FileEntry
 
 API = "https://api.osf.io/v2"
+_MAX_FILE_PAGES = 10  # max paginated file-listing requests; ~500 files at OSF's page size
 
 
 def _guid(doi: str) -> str | None:
@@ -27,8 +28,10 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
         return []
     url: str | None = f"{API}/nodes/{guid}/files/osfstorage/"
     out: list[FileEntry] = []
-    while url:
+    pages_fetched = 0
+    while url and pages_fetched < _MAX_FILE_PAGES:
         body = await _http.request_json(client, "GET", url, service="OSF files")
+        pages_fetched += 1
         for item in body.get("data") or []:
             attrs = item.get("attributes") or {}
             if attrs.get("kind") != "file":

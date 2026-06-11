@@ -22,7 +22,7 @@ from data_aggregator_mcp.models import FileEntry
 GRAPHQL = "https://openneuro.org/crn/graphql"
 # 10.18112/openneuro.ds000001.v1.0.0 → ("ds000001", "1.0.0")
 _DOI_RE = re.compile(r"openneuro\.(ds\d+)\.v([\w.]+)", re.IGNORECASE)
-_QUERY = '{{snapshot(datasetId:"{ds}",tag:"{tag}"){{files{{filename size directory urls}}}}}}'
+_QUERY = "query($ds:String!,$tag:String!){snapshot(datasetId:$ds,tag:$tag){files{filename size directory urls}}}"
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
 
@@ -42,7 +42,7 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
         "POST",
         GRAPHQL,
         service="OpenNeuro snapshot files",
-        content=json.dumps({"query": _QUERY.format(ds=ds, tag=tag)}),
+        content=json.dumps({"query": _QUERY, "variables": {"ds": ds, "tag": tag}}),
         headers={"Content-Type": "application/json", "Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,

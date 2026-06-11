@@ -36,7 +36,14 @@ class FullText:
 
 
 async def _europepmc(client: httpx.AsyncClient, pmcid: str | None, doi: str | None) -> FullText:
-    query = f"PMCID:{pmcid}" if pmcid else (f"DOI:{doi}" if doi else None)
+    # Phrase-quote the value so embedded specials can't restructure the query.
+    # Strip any embedded double-quotes from the value first (second-order guard).
+    if pmcid:
+        query = f'PMCID:"{pmcid.replace(chr(34), "")}"'
+    elif doi:
+        query = f'DOI:"{doi.replace(chr(34), "")}"'
+    else:
+        query = None
     if not query:
         return FullText()
     try:

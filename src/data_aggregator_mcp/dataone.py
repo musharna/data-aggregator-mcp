@@ -26,11 +26,30 @@ MAX_SIZE = 50
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 3
 
+# Lucene special characters that must be backslash-escaped when user-supplied
+# strings are interpolated into a Solr query (boolean operators && and || are
+# handled by escaping & and | which already appear in the set below).
+_LUCENE_SPECIALS = r'\+-&&||!(){}[]^"~*?:/'
+
 _SEARCH_FL = (
     "identifier,title,author,origin,formatId,dateUploaded,datePublished,dateModified,resourceMap"
 )
 _RESOLVE_FL = "identifier,title,author,origin,dateUploaded,datePublished,dateModified,resourceMap"
 _DATA_FL = "identifier,fileName,size,checksum,checksumAlgorithm"
+
+
+def _escape_lucene(value: str) -> str:
+    """Backslash-escape Lucene/Solr special characters in a user-supplied string.
+
+    This prevents a caller-controlled value from restructuring a boolean query
+    when the escaped value is interpolated into a Solr ``q`` expression.
+    """
+    out: list[str] = []
+    for ch in value:
+        if ch in _LUCENE_SPECIALS:
+            out.append("\\")
+        out.append(ch)
+    return "".join(out)
 
 
 def _year(*vals: str | None) -> int | None:
@@ -85,7 +104,7 @@ async def search(
     client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
 ) -> tuple[int, list[DataResource]]:
     capped = min(size, MAX_SIZE)
-    q = f"({query}) AND formatType:METADATA"
+    q = f"({_escape_lucene(query)}) AND formatType:METADATA"
     total, docs = await _solr(client, q, rows=capped, start=offset, fl=_SEARCH_FL)
     return total, [compact(_normalize(d)) for d in docs]
 
@@ -151,7 +170,8 @@ async def _file_entry(client: httpx.AsyncClient, doc: dict) -> FileEntry | None:
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     pid = resource_id.split(":", 1)[1] if resource_id.startswith("dataone:") else resource_id
-    _total, docs = await _solr(client, f'identifier:"{pid}"', rows=1, fl=_RESOLVE_FL)
+    _escaped_pid = _escape_lucene(pid)
+    _total, docs = await _solr(client, f'identifier:"{_escaped_pid}"', rows=1, fl=_RESOLVE_FL)
     if not docs:
         raise NotFoundError(f"DataONE has no object {pid!r}")
     resource = _normalize(docs[0])
@@ -159,8 +179,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     rmap = rmaps[0] if isinstance(rmaps, list) and rmaps else None
     if not rmap:
         return resource  # metadata-only package
+    _escaped_rmap = _escape_lucene(rmap)
     _t, data_docs = await _solr(
-        client, f'resourceMap:"{rmap}" AND formatType:DATA', rows=MAX_SIZE, fl=_DATA_FL
+        client, f'resourceMap:"{_escaped_rmap}" AND formatType:DATA', rows=MAX_SIZE, fl=_DATA_FL
     )
     entries = await asyncio.gather(*[_file_entry(client, d) for d in data_docs])
     return resource.model_copy(update={"files": [e for e in entries if e is not None]})

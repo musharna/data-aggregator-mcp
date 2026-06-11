@@ -63,8 +63,14 @@ async def links_for(client: httpx.AsyncClient, doi: str | None) -> list[Link]:
     )
     if resp is None:  # 404 — no entry for this PID
         return []
+    try:
+        payload = resp.json()
+    except ValueError:
+        # Non-JSON body (e.g. HTML error page from a WAF/proxy) — Scholix links
+        # are enrichment only; degrade gracefully rather than surface a parse error.
+        return []
     out: list[Link] = []
-    for rec in resp.json().get("result", []) or []:
+    for rec in payload.get("result", []) or []:
         target = rec.get("target", {}) or {}
         if (target.get("Type") or "").lower() in _DROP_TYPES:
             continue
