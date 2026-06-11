@@ -5,27 +5,49 @@ DataResources and returns evidence-backed JoinHints for four strong structural s
 NO network, NO file I/O, NO executed joins — it names a shared value and stops (the
 HINTS-only boundary). The handler (`router.relate`) does the resolve fan-out.
 
-Known limitations (matching is exact-string on normalized ids, by design):
-- A version edge whose `superseded_by` / `links[].target_id` is a URL-form
-  identifier (e.g. ``https://doi.org/10.5281/zenodo.1``) rather than a bare DOI or
-  source-prefixed id will not match the address map, so the lineage/link hint is
-  silently skipped — a best-effort false negative, never a wrong hint. (Zenodo
-  emits bare DOIs and matches; some DataCite relatedIdentifiers are URLs.)
-- A mutual `superseded_by` cycle (A→B and B→A — contradictory upstream metadata)
-  yields a single hint whose [newer, older] direction is whichever resource is
-  iterated first; the direction is not meaningful for a true cycle.
+Matching is exact-string on `_norm`-canonicalized ids. `_norm` folds DOI resolver/
+scheme forms (``https://doi.org/10.x``, ``doi:10.x``, bare ``10.x``) together, so a
+DOI matches across representations. A `superseded_by` cycle (contradictory upstream
+metadata) is detected and reported as a contradiction rather than an asserted order.
+
+Remaining limitation: a target id given only as a source-specific *record* URL
+(e.g. ``https://zenodo.org/record/2`` instead of ``zenodo:2`` or its DOI) is not
+mapped to the owning resource — that needs per-source URL parsing, out of scope here.
+A miss is a best-effort false negative, never a wrong hint.
 """
 
 from __future__ import annotations
 
 from data_aggregator_mcp.models import DataResource, JoinHint
 
+# DOI resolver / scheme forms that all denote the same DOI. Stripped (after
+# lower-casing) so a bare DOI, a `doi:`-scheme DOI, and a resolver-URL DOI compare
+# equal. No source uses `doi:` as an id prefix (ids are `<source>:<localpart>`, e.g.
+# `zenodo:2`, `datacite:10.x`), so this never collides with ids or accessions.
+_DOI_PREFIXES = (
+    "https://doi.org/",
+    "http://doi.org/",
+    "https://dx.doi.org/",
+    "http://dx.doi.org/",
+    "doi.org/",
+    "dx.doi.org/",
+    "doi:",
+)
+
 
 def _norm(value: str | None) -> str | None:
-    """Case-insensitive, stripped key for exact-match comparison; None if empty."""
+    """Case-insensitive, stripped, DOI-canonicalized key for exact-match comparison;
+    None if empty. DOI resolver/scheme prefixes are removed so the same DOI matches
+    across its bare / `doi:` / `https://doi.org/` representations."""
     if not value:
         return None
     s = value.strip().lower()
+    if not s:
+        return None
+    for prefix in _DOI_PREFIXES:
+        if s.startswith(prefix):
+            s = s[len(prefix) :]
+            break
     return s or None
 
 
@@ -145,8 +167,12 @@ def _explicit_link(resources: list[DataResource]) -> list[JoinHint]:
 
 def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
     addr = _address_map(resources, include_accessions=False)
-    hints: list[JoinHint] = []
-    seen: set[tuple[str, str]] = set()
+    # Collect resolved directed edges older -> newer (newer is claimed newer than older,
+    # via older.superseded_by). A well-formed version graph is a DAG; a cycle means
+    # contradictory upstream metadata, which we report as such rather than inventing a
+    # direction.
+    edges: list[tuple[str, str, str]] = []  # (older, newer, raw_key)
+    succ: dict[str, set[str]] = {}
     for r in resources:
         raw = r.superseded_by
         if not raw:
@@ -157,17 +183,53 @@ def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
         newer = addr.get(n)  # the resource r.superseded_by points to
         if not newer or newer == r.id:
             continue
-        dedup: tuple[str, str] = (r.id, newer) if r.id <= newer else (newer, r.id)
-        if dedup in seen:
+        edges.append((r.id, newer, raw))
+        succ.setdefault(newer, set())
+        succ.setdefault(r.id, set()).add(newer)
+
+    def _reaches(start: str, target: str) -> bool:
+        """True if `target` is reachable from `start` following superseded_by edges —
+        i.e. start's lineage loops back to target, so the pair sits on a cycle."""
+        stack = [start]
+        visited: set[str] = set()
+        while stack:
+            node = stack.pop()
+            if node == target:
+                return True
+            if node in visited:
+                continue
+            visited.add(node)
+            stack.extend(succ.get(node, ()))
+        return False
+
+    hints: list[JoinHint] = []
+    seen: set[tuple[str, str]] = set()
+    for older, newer, raw in edges:
+        pair = (older, newer) if older <= newer else (newer, older)
+        if pair in seen:
             continue
-        seen.add(dedup)
-        hints.append(
-            JoinHint(
-                kind="version_lineage",
-                resources=[newer, r.id],  # [newer, older]
-                key=raw,
-                evidence=f"{r.id}.superseded_by -> {newer}",
-                suggestion=f"{newer} is a newer version of {r.id} - dedupe, don't join, these",
+        seen.add(pair)
+        if _reaches(newer, older):  # newer transitively claims older is newer -> cycle
+            a, b = pair
+            hints.append(
+                JoinHint(
+                    kind="version_lineage",
+                    resources=[a, b],  # sorted; no direction is meaningful in a cycle
+                    key=raw,
+                    evidence=f"{older} and {newer} sit on a superseded_by cycle "
+                    "(each is transitively claimed newer than the other)",
+                    suggestion=f"contradictory version metadata linking {a} and {b} - "
+                    "resolve upstream; a newer/older direction cannot be inferred",
+                )
             )
-        )
+        else:
+            hints.append(
+                JoinHint(
+                    kind="version_lineage",
+                    resources=[newer, older],  # [newer, older]
+                    key=raw,
+                    evidence=f"{older}.superseded_by -> {newer}",
+                    suggestion=f"{newer} is a newer version of {older} - dedupe, don't join, these",
+                )
+            )
     return hints

@@ -108,13 +108,72 @@ def test_version_lineage_matches_doi_target() -> None:
     assert hints[0].resources == ["zenodo:2", "zenodo:1"]  # [newer, older]
 
 
-def test_version_lineage_mutual_cycle_dedupes_to_one() -> None:
+def test_version_lineage_matches_url_form_doi_target() -> None:
+    # superseded_by as a DOI resolver URL must still match the target's bare doi
+    # (L1: _norm canonicalizes DOI scheme/URL forms).
+    rs = [
+        _res("zenodo:1", superseded_by="https://doi.org/10.5281/zenodo.2"),
+        _res("zenodo:2", doi="10.5281/zenodo.2"),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "version_lineage"]
+    assert len(hints) == 1
+    assert hints[0].resources == ["zenodo:2", "zenodo:1"]  # [newer, older]
+
+
+def test_shared_identifier_canonicalizes_doi_url_and_scheme_forms() -> None:
+    # the same DOI expressed as bare, doi:-scheme, and resolver-URL must collapse to
+    # one shared_identifier hint (L1).
+    rs = [
+        _res("a:1", doi="10.9/z"),
+        _res("b:2", identifiers={"doi": "doi:10.9/z"}),
+        _res("c:3", identifiers={"doi": "https://doi.org/10.9/Z"}),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "shared_identifier"]
+    assert len(hints) == 1
+    assert set(hints[0].resources) == {"a:1", "b:2", "c:3"}
+
+
+def test_explicit_link_matches_url_form_doi_target() -> None:
+    from data_aggregator_mcp.models import Link
+
+    # a link whose target_id is a resolver-URL DOI must match a resource's bare doi (L1).
+    rs = [
+        _res("c:3", links=[Link(rel="describes", target_id="https://doi.org/10.1/d")]),
+        _res("a:1", doi="10.1/d"),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "explicit_link"]
+    assert len(hints) == 1
+    assert set(hints[0].resources) == {"c:3", "a:1"}
+
+
+def test_version_lineage_mutual_cycle_reports_contradiction() -> None:
+    # L2: a mutual superseded_by cycle is contradictory metadata — report it as a
+    # contradiction, never as an asserted [newer, older] direction.
     rs = [
         _res("zenodo:1", superseded_by="zenodo:2"),
         _res("zenodo:2", superseded_by="zenodo:1"),
     ]
     hints = [h for h in relate_mod.detect(rs) if h.kind == "version_lineage"]
     assert len(hints) == 1
+    h = hints[0]
+    assert set(h.resources) == {"zenodo:1", "zenodo:2"}
+    assert "newer version" not in h.suggestion  # no direction asserted
+    assert "contradict" in (h.evidence + h.suggestion).lower()
+
+
+def test_version_lineage_three_cycle_reports_contradictions_only() -> None:
+    # L2: a 3-cycle (A->B->C->A) must not assert any direction; every hint is a
+    # contradiction (mechanism removed for all cycle lengths, not just 2-cycles).
+    rs = [
+        _res("zenodo:1", superseded_by="zenodo:2"),
+        _res("zenodo:2", superseded_by="zenodo:3"),
+        _res("zenodo:3", superseded_by="zenodo:1"),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "version_lineage"]
+    assert len(hints) == 3
+    for h in hints:
+        assert "newer version" not in h.suggestion
+        assert "contradict" in (h.evidence + h.suggestion).lower()
 
 
 def test_explicit_link_address_map_first_writer_wins_on_shared_doi() -> None:
