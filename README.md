@@ -26,7 +26,7 @@ mcp-name: io.github.musharna/data-aggregator-mcp
 
 ## ✨ Why this
 
-Most data MCPs wrap a single source. This one **unifies** them behind five tools
+Most data MCPs wrap a single source. This one **unifies** them behind six tools
 and one `DataResource` model, so an agent searches once and gets back comparable
 records:
 
@@ -263,6 +263,21 @@ Any HuggingFace dataset with a datasets-server converted view is operable
 Parquet files (`source="hf-datasets-server"`) even for datasets stored as
 JSON/JSONL/arrow, so pass `file=<config>/<split>/...parquet` to pick a split when
 there are several.
+
+### `relate(ids)`
+
+Cross-resource join/harmonization **hints**. Given 2–10 resource ids, `relate` resolves
+each (TTL-cached) and reports how they relate and on what key they could be joined:
+
+- **`shared_accession`** — same BioProject/SRA/GEO accession on ≥2 records → joinable key.
+- **`shared_identifier`** — same doi/pmid/pmcid across records → same work / paper↔data link.
+- **`explicit_link`** — one record's `links[]` points at another input record.
+- **`version_lineage`** — one record supersedes another (dedupe, don't join, those).
+
+**Hints only.** `relate` never reads file columns, fetches files, or executes a
+join/merge/conversion — every hint names the shared value as evidence. Per-id resolve
+failures are reported in `errors`, not fatal; an empty result carries an explanatory
+`note`.
 
 ### Prompts
 
