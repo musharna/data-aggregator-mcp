@@ -90,3 +90,57 @@ async def run_sql(url: str, file: str, query: str, *, row_cap: int = DEFAULT_ROW
 async def run_head(url: str, file: str, *, n: int, columns: list[str] | None) -> dict:
     proj = ", ".join('"' + c.replace('"', '""') + '"' for c in columns) if columns else "*"
     return await asyncio.to_thread(_run, url, file, f"SELECT {proj} FROM data", n)
+
+
+def _normalize_summary_row(d: dict) -> dict:
+    """Map one DuckDB ``SUMMARIZE`` row to a JSON-safe, honestly-named column profile.
+
+    SUMMARIZE hands back ``column_name, column_type, min, max, approx_unique, avg, std,
+    q25, q50, q75, count, null_percentage``. We surface a normalized subset:
+
+    - ``null_percentage`` is coerced to a real ``float`` (DuckDB returns a Decimal).
+    - ``approx_unique`` keeps its name — it is an APPROXIMATE distinct count (HyperLogLog),
+      never an exact ``distinct``/``unique``.
+    - ``min``/``max`` are stringified (column-type-dependent) for a uniform wire type;
+      ``None`` stays ``None``.
+    - ``avg``/``std``/``q25``/``q50``/``q75`` are present (as str) for numeric columns and
+      ``None`` for text columns — a ``None`` honestly means "not applicable", never a
+      fabricated ``0``.
+    - the per-column ``count`` is OMITTED: SUMMARIZE ``count`` is the TOTAL row count (same
+      for every column), NOT the non-null count, so surfacing it as "count" would mislead.
+      The top-level ``row_count`` plus ``null_percentage`` already give non-null counts.
+    """
+
+    def _s(v: object) -> str | None:
+        return None if v is None else str(v)
+
+    return {
+        "column_name": str(d["column_name"]),
+        "column_type": str(d["column_type"]),
+        "null_percentage": float(d["null_percentage"]),
+        "approx_unique": None if d["approx_unique"] is None else int(d["approx_unique"]),
+        "min": _s(d["min"]),
+        "max": _s(d["max"]),
+        "avg": _s(d["avg"]),
+        "std": _s(d["std"]),
+        "q25": _s(d["q25"]),
+        "q50": _s(d["q50"]),
+        "q75": _s(d["q75"]),
+    }
+
+
+def _peek(url: str, file: str) -> dict:
+    con = _connect(url, file)  # REUSE the hardened lockdown engine (no FS re-enable)
+    try:
+        rel = con.execute("SUMMARIZE data")
+        names = [d[0] for d in rel.description]
+        raw = [dict(zip(names, r, strict=False)) for r in rel.fetchall()]
+        row_count = con.execute("SELECT COUNT(*) FROM data").fetchone()[0]
+    finally:
+        con.close()
+    profile = [_normalize_summary_row(d) for d in raw]
+    return {"row_count": int(row_count), "columns": profile}
+
+
+async def run_peek(url: str, file: str) -> dict:
+    return await asyncio.to_thread(_peek, url, file)

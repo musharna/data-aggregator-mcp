@@ -756,7 +756,13 @@ def test_operate_tool_registered():
     assert "operate" in names
     op = next(t for t in server.TOOLS if t.name == "operate")
     assert op.inputSchema["required"] == ["op", "id"]
-    assert set(op.inputSchema["properties"]["op"]["enum"]) == {"schema", "preview", "head", "sql"}
+    assert set(op.inputSchema["properties"]["op"]["enum"]) == {
+        "schema",
+        "preview",
+        "head",
+        "sql",
+        "peek",
+    }
 
 
 @pytest.mark.asyncio

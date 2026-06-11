@@ -32,7 +32,7 @@ except ImportError:
     OPERATE_AVAILABLE = False
 
 TABULAR_EXTS = (".parquet", ".pq", ".csv", ".tsv")
-OPERATE_MODES = ("schema", "preview", "head", "sql")
+OPERATE_MODES = ("schema", "preview", "head", "sql", "peek")
 
 
 def _operable(f: FileEntry) -> bool:
@@ -124,10 +124,11 @@ async def run(
     url = target.url
     n = min(n, ROW_CAP)
 
-    # head/sql eager-load the whole remote file into memory (DuckDB materializes it
-    # before locking down the local FS), so guard the source size. schema/preview use
-    # the footer/CSV-sniff (range reads only) and are intentionally NOT gated.
-    if op in ("head", "sql"):
+    # head/sql/peek eager-load the whole remote file into memory (DuckDB materializes it
+    # before locking down the local FS; peek's SUMMARIZE scans the materialized table), so
+    # guard the source size. schema/preview use the footer/CSV-sniff (range reads only) and
+    # are intentionally NOT gated.
+    if op in ("head", "sql", "peek"):
         size = await asyncio.to_thread(_source_size, url)
         if size is not None and size > SOURCE_BYTE_CEILING:
             raise OperateNotSupportedError(
@@ -142,6 +143,9 @@ async def run(
             return await tabular.preview(url, target.name, n=n)
         if op == "head":
             return await duckquery.run_head(url, target.name, n=n, columns=columns)
+        if op == "peek":
+            # peek takes no user SQL and ignores query/n/columns.
+            return await duckquery.run_peek(url, target.name)
         # reached only when op == "sql", which the line-113 guard requires a query for.
         assert query is not None
         return await duckquery.run_sql(url, target.name, query, row_cap=ROW_CAP)

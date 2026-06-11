@@ -122,6 +122,51 @@ async def test_source_over_ceiling_rejected(patch_resolve, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_peek_op_end_to_end(patch_resolve):
+    patch_resolve(_res([FileEntry(name="sample.parquet", url=PARQUET_URL)]))
+    async with httpx.AsyncClient() as c:
+        out = await operate.run(c, "zenodo:1", "peek")
+    assert out["file"] == "sample.parquet" and out["op"] == "peek"
+    assert out["row_count"] == 3
+    cols = {col["column_name"]: col for col in out["columns"]}
+    assert set(cols) == {"id", "name", "temp"}
+    # honesty contract surfaces through the integration boundary unchanged.
+    assert isinstance(cols["temp"]["null_percentage"], float)
+    assert "approx_unique" in cols["temp"]
+    assert all("count" not in col for col in out["columns"])
+
+
+@pytest.mark.asyncio
+async def test_peek_non_tabular_file_fails_loud(patch_resolve):
+    patch_resolve(_res([FileEntry(name="img.png", url="https://h/img.png")]))
+    async with httpx.AsyncClient() as c:
+        with pytest.raises(OperateNotSupportedError):
+            await operate.run(c, "zenodo:1", "peek")
+
+
+@pytest.mark.asyncio
+async def test_peek_source_over_ceiling_rejected(patch_resolve, monkeypatch):
+    # peek's SUMMARIZE scans the whole materialized table, so it is size-gated like head/sql.
+    patch_resolve(_res([FileEntry(name="sample.parquet", url=PARQUET_URL)]))
+    monkeypatch.setattr(operate, "SOURCE_BYTE_CEILING", 10)  # fixture is ~1KB > 10
+    async with httpx.AsyncClient() as c:
+        with pytest.raises(OperateNotSupportedError):
+            await operate.run(c, "zenodo:1", "peek")
+
+
+def test_operate_tool_enum_agrees_with_modes():
+    # Guard against op-enum / OPERATE_MODES drift (the source of "tool advertises an op the
+    # dispatcher rejects" bugs). The server tool enum must equal OPERATE_MODES exactly.
+    from data_aggregator_mcp import server
+
+    tool = next(t for t in server.TOOLS if t.name == "operate")
+    enum = tool.inputSchema["properties"]["op"]["enum"]
+    assert "peek" in enum
+    assert "peek" in operate.OPERATE_MODES
+    assert set(enum) == set(operate.OPERATE_MODES)
+
+
+@pytest.mark.asyncio
 async def test_schema_op_not_size_gated(patch_resolve, monkeypatch):
     # schema/preview use the footer/sniff (no full load), so the ceiling must NOT block them.
     patch_resolve(_res([FileEntry(name="sample.parquet", url=PARQUET_URL)]))
@@ -161,3 +206,31 @@ async def test_live_operate_sql_no_full_download(monkeypatch):
         assert sch["columns"]
         rows = await operate.run(c, "hf:live", "sql", query="SELECT * FROM data LIMIT 5")
         assert len(rows["rows"]) == 5
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_operate_peek_real_remote_parquet(monkeypatch):
+    # Real remote-Parquet shape a local fixture hides: peek must return a well-formed
+    # profile with a real null-rate and approximate distinct count for >=1 column.
+    res = DataResource(
+        id="hf:live",
+        source="huggingface",
+        kind="dataset",
+        title="t",
+        files=[FileEntry(name="0000.parquet", url=_LIVE_PARQUET)],
+    )
+
+    async def fake_resolve(client, rid):
+        return res
+
+    monkeypatch.setattr(router, "resolve", fake_resolve)
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        out = await operate.run(c, "hf:live", "peek")
+    assert out["op"] == "peek" and out["file"] == "0000.parquet"
+    assert out["row_count"] > 0
+    assert out["columns"]
+    col = out["columns"][0]
+    assert isinstance(col["null_percentage"], float)
+    assert isinstance(col["approx_unique"], int)
+    assert "count" not in col

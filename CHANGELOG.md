@@ -6,6 +6,40 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-06-10
+
+### Added
+
+- **`operate(op="peek")` — a pre-download, normalized column profile.** A new mode on the
+  existing `operate` tool that profiles every column of a remote tabular file WITHOUT
+  downloading it: per-column type, null-rate, approximate distinct count, min/max, and
+  numeric quartiles. This turns `operate` into a discovery-time advantage — a gateway that
+  only proxies bytes can't answer "what does this file actually contain?" before a fetch.
+  - **One DuckDB `SUMMARIZE`, reusing the hardened engine.** `peek` routes through the same
+    `duckquery._connect` lockdown path as head/sql — the source is materialized into the
+    in-memory `data` table while the local FS is still enabled, then the FS is sealed
+    (`disabled_filesystems='LocalFileSystem'`) and config locked, and `SUMMARIZE data` runs
+    against the in-memory table AFTER the lock. `peek` takes NO user SQL, so it adds no
+    injection surface; the lockdown sequence is untouched.
+  - **Honest naming.** The approximate distinct count is surfaced as `approx_unique` (a
+    HyperLogLog estimate — never a bare `distinct`/`unique` implying exactness);
+    `null_percentage` is a real computed `float` (e.g. one null in three → `33.33`);
+    numeric stats (`avg`/`std`/`q25`/`q50`/`q75`) are `None` for text columns rather than a
+    fabricated `0`. The per-column SUMMARIZE `count` is OMITTED: it is the TOTAL row count
+    (identical for every column), NOT a non-null count, so surfacing it as "count" would
+    mislead — the top-level `row_count` plus `null_percentage` give non-null counts honestly.
+  - **Normalized across formats.** Parquet and CSV yield the same profile keys, so a caller
+    gets one uniform answer regardless of source format.
+  - **Size-gated like head/sql.** `SUMMARIZE` scans the whole materialized table, so `peek`
+    has the same RAM profile as head/sql and honors `SOURCE_BYTE_CEILING` (100 MB) — an
+    oversized source fails loud instead of OOMing. `schema`/`preview` stay ungated.
+  - **Additive.** The four existing ops (`schema`/`preview`/`head`/`sql`) are byte-identical;
+    `peek` is purely new (one enum value + one engine function).
+  - **Deferred (noted for the future):** a Parquet-footer fast path could read null_count/
+    min/max from the footer (range-reads only, skipping the full load and the size gate for
+    Parquet), but it splits Parquet vs CSV into two fidelity paths and breaks the "one
+    normalized answer" property — SUMMARIZE-for-both is the honest, uniform v1.
+
 ## [0.34.0] - 2026-06-10
 
 ### Added

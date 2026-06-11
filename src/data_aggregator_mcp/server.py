@@ -614,14 +614,17 @@ TOOLS: list[types.Tool] = [
             "Inspect or query a remote tabular file (Parquet/CSV/TSV) WITHOUT downloading "
             "it. op='schema' returns columns+types; 'preview' a small sample; 'head' the "
             "first n rows; 'sql' a read-only SELECT against the file (exposed as the view "
-            "'data', e.g. \"SELECT * FROM data WHERE x > 1\"). Addresses a file by catalog "
+            "'data', e.g. \"SELECT * FROM data WHERE x > 1\"). op='peek' profiles every "
+            "column WITHOUT downloading — type, null-rate, approximate distinct count, "
+            "min/max, and numeric quartiles (a DuckDB SUMMARIZE; like head/sql it reads the "
+            "whole file, so it honors the source-size ceiling). Addresses a file by catalog "
             "id + file name (resolve the id first to see files[] and access_modes). Requires "
             "the [operate] extra; fails loud if the file is not an operable tabular file."
         ),
         inputSchema={
             "type": "object",
             "properties": {
-                "op": {"type": "string", "enum": ["schema", "preview", "head", "sql"]},
+                "op": {"type": "string", "enum": ["schema", "preview", "head", "sql", "peek"]},
                 "id": {"type": "string", "description": "DataResource id (e.g. 'zenodo:7654321')"},
                 "file": {
                     "type": "string",
