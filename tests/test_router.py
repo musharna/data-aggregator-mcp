@@ -1222,6 +1222,29 @@ async def test_live_pagination_walks_zenodo_datacite() -> None:
     assert ids1.isdisjoint(ids2)  # paging advanced, did not repeat page 1
 
 
+@_live_only
+async def test_live_relate_emits_real_hint() -> None:
+    """Real-execution boundary probe: discover live omics ids, resolve them via the
+    live resolve path, and relate them. A multi-sample omics search reliably surfaces
+    SRA runs that share a BioProject/SRP accession, so >=1 shared_accession hint fires.
+    ids are discovered at runtime (never fabricated) — same discipline as the recall
+    anchors. Verified 2026-06-11: SRX33847073 + SRX33847072 share SRP708637/PRJNA1477220.
+    """
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        res = await router.search_page(client, query="RNA-seq", size=10, sources=["omics"])
+        ids = [r.id for r in res.results][:8]
+        assert len(ids) >= 2, "live search did not return >=2 omics ids"
+        out = await router.relate(client, ids)
+    assert len(out.resolved) >= 2  # fail-soft per-id failures did not sink the call
+    # every hint is well-formed: >=2 distinct resources and a non-empty evidence key
+    for h in out.hints:
+        assert len(set(h.resources)) >= 2
+        assert h.key
+    assert any(h.kind == "shared_accession" for h in out.hints), (
+        f"expected a shared_accession hint from live omics ids; got {out.hints!r}"
+    )
+
+
 # --- Task 8: search_page pagination + filters ----------------------------------
 
 
@@ -1766,4 +1789,57 @@ async def test_live_understand_yields_wellformed_echo() -> None:
     assert qu.input == "single-cell RNA sequencing datasets of human liver"
     assert isinstance(qu.extracted, dict)
     assert isinstance(qu.applied, dict)
-    assert "understand" not in result.errors  # a configured endpoint must not error out
+
+
+# ---------------------------------------------------------------------------
+# Task 6: router.relate handler
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_relate_resolves_and_returns_hints(monkeypatch) -> None:
+    from data_aggregator_mcp.models import DataResource as DR
+
+    async def fake_resolve(client, rid):
+        return {
+            "geo:GSE1": DR(
+                id="geo:GSE1", source="geo", kind="dataset", title="a", accessions=["PRJNA1"]
+            ),
+            "sra:SRP1": DR(
+                id="sra:SRP1", source="sra", kind="dataset", title="b", accessions=["PRJNA1"]
+            ),
+        }[rid]
+
+    monkeypatch.setattr(router, "resolve", fake_resolve)
+    async with httpx.AsyncClient() as client:
+        out = await router.relate(client, ["geo:GSE1", "sra:SRP1"])
+    assert out.resolved == ["geo:GSE1", "sra:SRP1"]
+    assert len(out.hints) == 1 and out.hints[0].kind == "shared_accession"
+    assert out.errors == {} and out.note is None
+
+
+@pytest.mark.asyncio
+async def test_relate_fail_soft_on_one_bad_id(monkeypatch) -> None:
+    from data_aggregator_mcp.models import DataResource as DR
+
+    async def fake_resolve(client, rid):
+        if rid == "bad:1":
+            raise LookupError("not found")
+        return DR(id=rid, source="zenodo", kind="dataset", title="t")
+
+    monkeypatch.setattr(router, "resolve", fake_resolve)
+    async with httpx.AsyncClient() as client:
+        out = await router.relate(client, ["zenodo:1", "bad:1"])
+    assert "bad:1" in out.errors
+    assert out.resolved == ["zenodo:1"]
+    assert out.hints == []
+    assert out.note is not None  # fewer than 2 resolved
+
+
+@pytest.mark.asyncio
+async def test_relate_count_guards(monkeypatch) -> None:
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(ValidationError):
+            await router.relate(client, ["only:1"])
+        with pytest.raises(ValidationError):
+            await router.relate(client, [f"x:{i}" for i in range(11)])

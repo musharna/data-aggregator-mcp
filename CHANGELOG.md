@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`relate(ids)` — cross-resource join/harmonization hints (B9).** A 6th tool: given
+  2–10 resource ids, it resolves each (cached) and emits evidence-backed, metadata-level
+  hints — shared accession (BioProject/SRA/GEO), shared cross-identifier (doi/pmid/pmcid),
+  explicit link between inputs, and version lineage. HINTS ONLY: no file reads, no column
+  comparison, no executed joins. Per-id resolve failures are reported, not fatal.
+
 ## [0.38.0] - 2026-06-11
 
 ### Fixed

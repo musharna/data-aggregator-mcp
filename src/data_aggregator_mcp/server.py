@@ -34,7 +34,7 @@ from data_aggregator_mcp import resources as resources_mod
 from data_aggregator_mcp import ro_crate as ro_crate_mod
 from data_aggregator_mcp import trust as trust_mod
 from data_aggregator_mcp.errors import FetchNotSupportedError
-from data_aggregator_mcp.models import DataResource, FetchResult, SearchResult
+from data_aggregator_mcp.models import DataResource, FetchResult, RelateResult, SearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -675,6 +675,33 @@ TOOLS: list[types.Tool] = [
         },
         annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
+    types.Tool(
+        name="relate",
+        description=(
+            "Given 2-10 resource ids, return metadata-level join/harmonization HINTS: how "
+            "the datasets relate and on what key they could be joined. Detects shared "
+            "accessions (BioProject/SRA/GEO), shared cross-identifiers (doi/pmid/pmcid), "
+            "explicit links between the inputs, and version lineage. HINTS ONLY — it does "
+            "not read file columns, fetch files, or execute any join/merge/conversion; each "
+            "hint names the shared value as evidence. Resolve ids first if you only have a "
+            "search result. Per-id resolve failures are reported, not fatal."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "minItems": 2,
+                    "maxItems": 10,
+                    "description": "2-10 source-prefixed resource ids to relate.",
+                },
+            },
+            "required": ["ids"],
+        },
+        outputSchema=RelateResult.model_json_schema(),
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
 ]
 
 
@@ -913,6 +940,9 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     n=args.get("n", 20),
                     columns=args.get("columns"),
                 )
+            case "relate":
+                result = await router.relate(client, args["ids"])
+                return result.model_dump()
             case _:
                 raise ValueError(f"unknown tool: {name}")
 
