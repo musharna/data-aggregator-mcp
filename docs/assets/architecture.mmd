@@ -1,0 +1,10 @@
+flowchart LR
+    A["AI agent<br/>(MCP client)"] -- stdio --> S["data-aggregator-mcp<br/>search · resolve · fetch<br/>operate · relate · list_sources"]
+    S --> R["router<br/>fan-out · DOI dedup<br/>ontology expansion · rank"]
+    R --> AR["Archives<br/>Zenodo · DataCite¹ · HuggingFace<br/>DataONE · OpenML · RCSB PDB"]
+    R --> OM["Omics<br/>GEO · SRA · BioProject · OmicsDI²<br/>DANDI · CELLxGENE · GWAS Catalog"]
+    R --> LI["Literature<br/>PubMed · OpenAIRE<br/>EuropePMC · Unpaywall"]
+    classDef hub fill:#1f6feb,color:#ffffff,stroke:#388bfd
+    classDef layer fill:#21262d,color:#e6edf3,stroke:#8b949e
+    class S,R hub
+    class A,AR,OM,LI layer

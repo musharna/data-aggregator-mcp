@@ -5,21 +5,25 @@ registries, and literature — behind a single normalized model.**
 
 [![PyPI](https://img.shields.io/pypi/v/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
 [![Python](https://img.shields.io/pypi/pyversions/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/musharna/data-aggregator-mcp/blob/main/LICENSE)
 [![CI](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml)
 [![Glama](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp/badges/score.svg)](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp)
 
-`search` one query across **Zenodo, DataCite** (Dryad / Figshare / Dataverse /
-OSF / Mendeley), **NCBI omics** (GEO / SRA / BioProject), **DataONE** (eco /
-environmental), **literature** (PubMed / OpenAIRE), **OmicsDI** (proteomics /
-metabolomics), and **HuggingFace** datasets — deduplicated, normalized, and
-cross-linked. `resolve` any hit to its file manifest, citation, trust signals,
-and the data it points at. `fetch` it to disk with checksum verification.
+`search` one query across **12 sources** — **Zenodo, DataCite** (Dryad /
+Figshare / Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics**
+(GEO / SRA / BioProject), **literature** (PubMed / OpenAIRE), **HuggingFace**
+datasets, **DataONE** (eco / environmental), **OmicsDI** (proteomics /
+metabolomics), **DANDI** (neurophysiology), **CZ CELLxGENE** (single-cell),
+**OpenML** (ML datasets), **RCSB PDB** (structures), and the **GWAS Catalog** —
+deduplicated, normalized, and cross-linked. `resolve` any hit to its file
+manifest, citation, trust signals, and the data it points at. `fetch` it to
+disk with checksum verification.
 
 mcp-name: io.github.musharna/data-aggregator-mcp
 
 <p align="center">
-  <img src="examples/assets/demo.svg"
+  <img src="https://raw.githubusercontent.com/musharna/data-aggregator-mcp/main/examples/assets/demo.svg"
        alt="data-aggregator-mcp stdio demo — initialize, tools/list (search, resolve, fetch, operate, relate, list_sources), and a live list_sources call showing the wired sources across archives, omics, and literature"
        width="820">
 </p>
@@ -58,7 +62,13 @@ records:
   evidence. Metadata hints only: it never reads files or executes a join.
 
 → Full rationale and a comparison vs. single-source servers, breadth gateways, and
-ML-dataset tools: **[docs/POSITIONING.md](docs/POSITIONING.md)**.
+ML-dataset tools: **[docs/POSITIONING.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/POSITIONING.md)**.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/musharna/data-aggregator-mcp/main/docs/assets/architecture.svg"
+       alt="Architecture: an MCP client speaks stdio to data-aggregator-mcp's six tools, which fan out through one router (DOI dedup, ontology expansion, ranking) to archives (Zenodo, DataCite, HuggingFace, DataONE, OpenML, RCSB PDB), omics (GEO, SRA, BioProject, OmicsDI, DANDI, CELLxGENE, GWAS Catalog), and literature (PubMed, OpenAIRE, EuropePMC, Unpaywall)"
+       width="760">
+</p>
 
 ## ⚡ Quickstart
 
@@ -137,6 +147,12 @@ Add to a client's MCP config (e.g. Claude Desktop `claude_desktop_config.json`):
 | OmicsDI → PRIDE              |    ✅    |  ✅ (HTTPS FTP)   |    size only     |
 | OmicsDI → MetaboLights       |    ✅    |  ✅ (HTTPS FTP)   |       none       |
 | OmicsDI → other MS repos     |    ✅    |         —         |        —         |
+| DataCite → OpenNeuro         |    ✅    |   ✅ (snapshot)   |      none²       |
+| DANDI (neurophysiology)      |    ✅    |    ✅ (302→S3)    |      none²       |
+| CZ CELLxGENE (single-cell)   |    ✅    |   ✅ (H5AD/RDS)   |      none²       |
+| OpenML (ML datasets)         |    ✅    |     ✅ (ARFF)     |       md5        |
+| RCSB PDB (structures)        |    ✅    |  ✅ (.cif/.pdb)   |      none²       |
+| GWAS Catalog                 |    ✅    |   → PMID bridge   |        —         |
 
 ¹ Dryad downloads are token / bot-challenge gated, so `fetch` fails loud;
 `resolve` still lists the files.
@@ -354,4 +370,4 @@ The README demo (`examples/assets/demo.svg`) is recorded network-free from
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](https://github.com/musharna/data-aggregator-mcp/blob/main/LICENSE).
