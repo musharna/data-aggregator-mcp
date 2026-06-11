@@ -41,20 +41,34 @@ def extract_archive(path: Path, dest: Path, *, max_bytes: int) -> list[Path]:
     written: list[Path] = []
     total = 0
 
+    _CHUNK = 1 << 16  # 64 KiB
+
     if zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as zf:
             for info in zf.infolist():
                 if info.is_dir():
                     continue
-                total += info.file_size
-                if total > max_bytes:
-                    raise FetchTooLargeError(
-                        f"extracted size exceeds max_bytes={max_bytes} for {path.name}"
-                    )
                 out = _safe_dest(dest, info.filename)
                 out.parent.mkdir(parents=True, exist_ok=True)
-                with zf.open(info) as src, out.open("wb") as fh:
-                    fh.write(src.read())
+                try:
+                    with zf.open(info) as src, out.open("wb") as fh:
+                        while True:
+                            chunk = src.read(_CHUNK)
+                            if not chunk:
+                                break
+                            total += len(chunk)
+                            if total > max_bytes:
+                                fh.close()
+                                out.unlink(missing_ok=True)
+                                raise FetchTooLargeError(
+                                    f"extracted size exceeds max_bytes={max_bytes} for {path.name}"
+                                )
+                            fh.write(chunk)
+                except FetchTooLargeError:
+                    raise
+                except BaseException:
+                    out.unlink(missing_ok=True)
+                    raise
                 written.append(out)
         return written
 
@@ -67,18 +81,30 @@ def extract_archive(path: Path, dest: Path, *, max_bytes: int) -> list[Path]:
                             f"archive member {member.name!r} is a link — refusing"
                         )
                     continue
-                total += member.size
-                if total > max_bytes:
-                    raise FetchTooLargeError(
-                        f"extracted size exceeds max_bytes={max_bytes} for {path.name}"
-                    )
                 out = _safe_dest(dest, member.name)
                 out.parent.mkdir(parents=True, exist_ok=True)
                 extracted = tf.extractfile(member)
                 if extracted is None:
                     continue
-                with extracted, out.open("wb") as fh:
-                    fh.write(extracted.read())
+                try:
+                    with extracted, out.open("wb") as fh:
+                        while True:
+                            chunk = extracted.read(_CHUNK)
+                            if not chunk:
+                                break
+                            total += len(chunk)
+                            if total > max_bytes:
+                                fh.close()
+                                out.unlink(missing_ok=True)
+                                raise FetchTooLargeError(
+                                    f"extracted size exceeds max_bytes={max_bytes} for {path.name}"
+                                )
+                            fh.write(chunk)
+                except FetchTooLargeError:
+                    raise
+                except BaseException:
+                    out.unlink(missing_ok=True)
+                    raise
                 written.append(out)
         return written
 

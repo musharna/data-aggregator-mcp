@@ -69,3 +69,37 @@ def test_extract_rejects_oversize(tmp_path: Path) -> None:
 def test_is_archive_false_for_plain_file() -> None:
     assert archive.is_archive("data.csv") is False
     assert archive.is_archive("notes.txt") is False
+
+
+def test_extract_zip_midstream_oversize_unlinks_partial(tmp_path: Path) -> None:
+    """When a zip member's ACTUAL written bytes push the running total over max_bytes
+    mid-stream, FetchTooLargeError is raised and the partial output file is removed.
+
+    The first member fits (200 bytes < 400 budget); the second member starts writing
+    and would push the total to 600 > 400, so extraction must stop mid-member, unlink
+    the partial second file, and raise.
+    """
+    arc = tmp_path / "two.zip"
+    with zipfile.ZipFile(arc, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("first.bin", b"A" * 200)  # fits within 400-byte budget
+        zf.writestr("second.bin", b"B" * 400)  # pushes cumulative to 600 > 400
+    dest = tmp_path / "out"
+    with pytest.raises(FetchTooLargeError):
+        archive.extract_archive(arc, dest, max_bytes=400)
+    # The partial second file must not exist after the mid-stream abort
+    assert not (dest / "second.bin").exists()
+
+
+def test_extract_tar_midstream_oversize_unlinks_partial(tmp_path: Path) -> None:
+    """Same guarantee for tar: when actual written bytes exceed max_bytes mid-stream,
+    FetchTooLargeError is raised and the partial output file is removed.
+
+    The first member fits; the second starts writing and would push the total over budget.
+    """
+    arc = tmp_path / "two.tar.gz"
+    _make_tar(arc, {"first.bin": b"A" * 200, "second.bin": b"B" * 400})
+    dest = tmp_path / "out"
+    with pytest.raises(FetchTooLargeError):
+        archive.extract_archive(arc, dest, max_bytes=400)
+    # The partial second file must not exist after the mid-stream abort
+    assert not (dest / "second.bin").exists()

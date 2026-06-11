@@ -512,3 +512,115 @@ async def test_fetch_none_on_progress_is_noop(tmp_path: Path) -> None:
             client, _multi_resource(files), dest=str(tmp_path), on_progress=None
         )
     assert len(out.paths) == 1
+
+
+# --- Fix 2: extraction budget shares download budget -------------------------
+
+
+async def test_fetch_extract_budget_shared_with_download(
+    httpx_mock: HTTPXMock, tmp_path: Path
+) -> None:
+    """Extraction max_bytes must be the REMAINING budget after the download, not
+    the original cap. If the download already consumed most of the budget, an
+    archive whose extracted content would exceed the remainder must raise
+    FetchTooLargeError — not silently write up to 2x max_bytes total."""
+    import io
+    import tarfile as tarfile_mod
+
+    # plain_body is 400 bytes (download budget cost: 400).
+    # arc_inner is 500 bytes uncompressed but compresses to ~105 bytes (gzip).
+    # Total download cost: ~505 bytes → well under max_bytes=1000.
+    # Remaining budget after downloads: ~495 bytes.
+    # Extraction needs 500 bytes → must fail with shared budget, but would succeed
+    # if extraction receives the full original cap (1000) instead of the remainder.
+    # size=None on both entries so the pre-flight declared-total check cannot interfere.
+    plain_body = b"P" * 400  # 400-byte plain file; download cost ≈ 400
+    arc_inner = b"I" * 500  # 500 bytes uncompressed; ~105 bytes compressed
+
+    buf = io.BytesIO()
+    with tarfile_mod.open(fileobj=buf, mode="w:gz") as tf:
+        info = tarfile_mod.TarInfo("inner.bin")
+        info.size = len(arc_inner)
+        tf.addfile(info, io.BytesIO(arc_inner))
+    arc_body = buf.getvalue()
+    # Verify the test invariant: downloads fit, extraction alone busts the remainder.
+    assert len(plain_body) + len(arc_body) < 1000, "downloads must fit within budget"
+    assert len(arc_inner) > 1000 - len(plain_body) - len(arc_body), (
+        "extraction must exceed remainder"
+    )
+
+    # size=None on all entries so the pre-flight declared-total check is bypassed;
+    # only the shared runtime budget can enforce the ceiling.
+    resource = DataResource(
+        id="zenodo:99",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        files=[
+            FileEntry(name="plain.bin", size=None, url="https://x/plain.bin"),
+            FileEntry(name="bundle.tar.gz", size=None, url="https://x/bundle.tar.gz"),
+        ],
+    )
+    httpx_mock.add_response(url="https://x/plain.bin", content=plain_body)
+    httpx_mock.add_response(url="https://x/bundle.tar.gz", content=arc_body)
+
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(FetchTooLargeError):
+            await fetch_mod.fetch_files(
+                client, resource, dest=str(tmp_path), max_bytes=1000, extract=True
+            )
+
+
+async def test_fetch_extract_small_archive_within_budget_succeeds(
+    httpx_mock: HTTPXMock, tmp_path: Path
+) -> None:
+    """A small archive whose extracted content fits within the remaining budget
+    must succeed normally — the shared-budget fix must not break the happy path."""
+    import io
+    import tarfile as tarfile_mod
+
+    arc_inner = b"OK" * 10  # 20 bytes extracted
+
+    buf = io.BytesIO()
+    with tarfile_mod.open(fileobj=buf, mode="w:gz") as tf:
+        info = tarfile_mod.TarInfo("inner.txt")
+        info.size = len(arc_inner)
+        tf.addfile(info, io.BytesIO(arc_inner))
+    arc_body = buf.getvalue()
+
+    resource = DataResource(
+        id="zenodo:88",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        files=[FileEntry(name="tiny.tar.gz", size=len(arc_body), url="https://x/tiny.tar.gz")],
+    )
+    httpx_mock.add_response(url="https://x/tiny.tar.gz", content=arc_body)
+
+    async with httpx.AsyncClient() as client:
+        out = await fetch_mod.fetch_files(
+            client, resource, dest=str(tmp_path), max_bytes=10_000, extract=True
+        )
+    assert any(p.endswith("inner.txt") for p in out.paths)
+
+
+# --- Fix 3: URL scheme allowlist for downloads --------------------------------
+
+
+async def test_fetch_rejects_file_scheme_url(tmp_path: Path) -> None:
+    """A FileEntry with a file:// URL must be rejected with UpstreamUnavailableError
+    before any I/O — a poisoned metadata record must not read local files."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    resource = DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        files=[FileEntry(name="passwd", url="file:///etc/passwd")],
+    )
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(UpstreamUnavailableError, match="file://"):
+            await fetch_mod.fetch_files(client, resource, dest=str(tmp_path))
+    # Nothing should have been written
+    assert not list(tmp_path.rglob("passwd"))

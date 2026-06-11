@@ -122,6 +122,21 @@ async def run(
     # type survives into the _go() closure (a captured attribute would widen back).
     assert target.url is not None
     url = target.url
+
+    # Fix 4: scheme allowlist — allow http/https unconditionally; allow file://
+    # only when DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS=1 (test suite sets this via
+    # monkeypatch for its local fixture URLs). Any other scheme is rejected.
+    import os
+    from urllib.parse import urlparse as _urlparse
+
+    _scheme = _urlparse(url).scheme.lower()
+    _allow_file = os.environ.get("DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS") == "1"
+    if _scheme not in ("http", "https") and not (_scheme == "file" and _allow_file):
+        raise OperateNotSupportedError(
+            f"URL scheme {_scheme!r} is not allowed for operate "
+            f"(only http/https; set DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS=1 for file://): {url}"
+        )
+
     n = min(n, ROW_CAP)
 
     # head/sql/peek eager-load the whole remote file into memory (DuckDB materializes it

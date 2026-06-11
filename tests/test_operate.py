@@ -39,6 +39,8 @@ def patch_resolve(monkeypatch):
 
         monkeypatch.setattr(router, "resolve", fake_resolve)
         monkeypatch.setattr(operate, "OPERATE_AVAILABLE", True)
+        # Fixture URLs are local file:// paths; allow them through the scheme gate.
+        monkeypatch.setenv("DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS", "1")
 
     return _install
 
@@ -174,6 +176,55 @@ async def test_schema_op_not_size_gated(patch_resolve, monkeypatch):
     async with httpx.AsyncClient() as c:
         out = await operate.run(c, "zenodo:1", "schema")
     assert "columns" in out
+
+
+# --- Fix 4: URL scheme allowlist for operate paths ---------------------------
+
+
+@pytest.mark.asyncio
+async def test_file_scheme_url_blocked_without_env_var(monkeypatch):
+    """A file:// URL must be rejected with OperateNotSupportedError unless the
+    DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS env var is set to '1'. Uses raw monkeypatching
+    (not patch_resolve) so we control the env var without the fixture overriding it."""
+    monkeypatch.delenv("DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS", raising=False)
+    monkeypatch.setattr(operate, "OPERATE_AVAILABLE", True)
+
+    async def fake_resolve(client, rid):
+        return _res([FileEntry(name="secrets.parquet", url="file:///home/user/.ssh/id_rsa")])
+
+    monkeypatch.setattr(router, "resolve", fake_resolve)
+    async with httpx.AsyncClient() as c:
+        with pytest.raises(OperateNotSupportedError, match="file://"):
+            await operate.run(c, "zenodo:1", "schema")
+
+
+@pytest.mark.asyncio
+async def test_file_scheme_url_allowed_with_env_var(patch_resolve, monkeypatch):
+    """With DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS=1 the existing fixture file:// URLs must
+    work — this test acts as the regression guard for the test suite's own fixture URLs."""
+    monkeypatch.setenv("DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS", "1")
+    patch_resolve(_res([FileEntry(name="sample.parquet", url=PARQUET_URL)]))
+    async with httpx.AsyncClient() as c:
+        out = await operate.run(c, "zenodo:1", "schema")
+    assert "columns" in out
+
+
+@pytest.mark.asyncio
+async def test_https_url_unaffected_by_scheme_gate(patch_resolve, monkeypatch):
+    """https:// URLs must pass the scheme gate regardless of the env var."""
+    monkeypatch.delenv("DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS", raising=False)
+    # A non-tabular https URL still hits OperateNotSupportedError for a different reason
+    # (not tabular), proving the scheme gate does NOT reject https.
+    patch_resolve(_res([FileEntry(name="data.parquet", url="https://example.com/data.parquet")]))
+    async with httpx.AsyncClient() as c:
+        # Will fail (network error or similar), but NOT with an OperateNotSupportedError
+        # about the scheme — the scheme gate must let it through.
+        try:
+            await operate.run(c, "zenodo:1", "schema")
+        except OperateNotSupportedError as exc:
+            assert "file://" not in str(exc), f"https URL should not trigger scheme gate: {exc}"
+        except Exception:
+            pass  # any other error (network, etc.) is fine — scheme gate did not fire
 
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"

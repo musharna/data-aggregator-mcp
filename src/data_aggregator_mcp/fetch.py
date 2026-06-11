@@ -81,6 +81,11 @@ class _Budget:
                 raise FetchTooLargeError(f"stream exceeded max_bytes while fetching {name}")
             self.remaining -= n
 
+    async def headroom(self) -> int:
+        """Return remaining bytes under the lock (snapshot for extraction ceiling)."""
+        async with self.lock:
+            return self.remaining
+
 
 @dataclass
 class _Outcome:
@@ -105,6 +110,15 @@ async def _download_one(
     archive. Returns an ``_Outcome`` describing what happened."""
     if not f.url:
         return _Outcome(f.name, state="skipped")
+    # Fix 3: reject non-http/https schemes before any I/O (poisoned metadata guard).
+    from urllib.parse import urlparse as _urlparse
+
+    _scheme = _urlparse(f.url).scheme.lower()
+    if _scheme not in ("http", "https"):
+        raise UpstreamUnavailableError(
+            f"fetch {f.name}: URL scheme {_scheme!r} is not allowed "
+            f"(only http/https); refusing to fetch {f.url}"
+        )
     # Sanitize: f.name is uploader-controlled (Zenodo file key). Reduce to a
     # bare basename so it cannot escape the target dir via path traversal.
     safe_name = Path(f.name).name
@@ -155,7 +169,18 @@ async def _download_one(
             )
         extracted: list[str] = []
         if extract and archive.is_archive(safe_name):
-            members = archive.extract_archive(out, target, max_bytes=budget.cap)
+            # Fix 2: pass the REMAINING budget headroom as the extraction ceiling so
+            # that download + extraction together cannot exceed max_bytes. When force
+            # is set we keep the original cap (unlimited extraction, matching prior
+            # behaviour). Debit the actual extracted bytes from the budget afterward
+            # so subsequent archives in the same fetch share the same ceiling.
+            if force:
+                extract_max = budget.cap
+            else:
+                extract_max = await budget.headroom()
+            members = archive.extract_archive(out, target, max_bytes=extract_max)
+            extracted_bytes = sum(p.stat().st_size for p in members)
+            await budget.debit(extracted_bytes, safe_name)
             extracted = [str(m) for m in members]
         complete = True
         return _Outcome(
