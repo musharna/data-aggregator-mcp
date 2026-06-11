@@ -1559,23 +1559,22 @@ def _mock_rewrite(monkeypatch, parsed: ParsedRewrite | None) -> None:
     monkeypatch.setattr(router.query_understanding_mod, "rewrite", AsyncMock(return_value=parsed))
 
 
-async def test_understand_keyword_core_and_organism_flow(monkeypatch) -> None:
+async def test_understand_keyword_core_applied_entity_facets_echo_only(monkeypatch) -> None:
+    # NEW contract (2026-06-11): understand=true applies the entity-rich keyword_core but does
+    # NOT auto-apply LLM-inferred entity facets (organism/tissue/assay/...). Auto-ANDing them
+    # over-constrained free-text upstreams and regressed recall (mean recall@20 -0.40); they are
+    # now ECHOED in `extracted` for transparency only. keyword_core keeps the entity TERMS.
     _mock_rewrite(
         monkeypatch,
-        ParsedRewrite(keyword_core="rna decay", organism="Zea mays"),
+        ParsedRewrite(keyword_core="maize rna decay", organism="Zea mays"),
     )
-    monkeypatch.setattr(
-        taxonomy,
-        "resolve_taxon",
-        AsyncMock(
-            return_value=taxonomy.TaxonInfo(
-                taxid=4577,
-                canonical_name="Zea mays",
-                synonyms=("maize",),
-                is_plant=True,
-            )
-        ),
+    # If organism were (wrongly) auto-applied this resolver would fire; assert it does NOT.
+    resolve = AsyncMock(
+        return_value=taxonomy.TaxonInfo(
+            taxid=4577, canonical_name="Zea mays", synonyms=("maize",), is_plant=True
+        )
     )
+    monkeypatch.setattr(taxonomy, "resolve_taxon", resolve)
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
@@ -1590,22 +1589,25 @@ async def test_understand_keyword_core_and_organism_flow(monkeypatch) -> None:
             sources=["zenodo"],
             understand=True,
         )
-    # keyword_core replaced the raw query, and organism flowed into _expand_organism
-    assert "rna decay" in captured["query"]
-    assert "Zea mays" in captured["query"]
-    assert result.taxon_expansion is not None
-    assert result.taxon_expansion.taxid == 4577
+    # keyword_core replaced the raw query (entity terms retained); organism was NOT auto-applied
+    assert captured["query"] == "maize rna decay"
+    assert "Zea mays" not in captured["query"]  # no auto-ANDed organism synonym clause
+    resolve.assert_not_awaited()  # the _expand_organism resolver never ran for an LLM-only facet
+    assert result.taxon_expansion is None
     qu = result.query_understanding
     assert qu is not None
     assert qu.input == "where can I find maize rna decay data"
-    assert qu.keyword_core == "rna decay"
-    assert qu.applied["organism"] == "Zea mays"
-    assert qu.applied["keyword_core"] == "rna decay"
+    assert qu.keyword_core == "maize rna decay"
+    assert qu.applied["keyword_core"] == "maize rna decay"
+    assert "organism" not in qu.applied  # echo-only, never applied
+    assert qu.extracted["organism"] == "Zea mays"  # transparency: shows what the LLM proposed
     assert qu.overridden == []
 
 
-async def test_understand_explicit_caller_param_wins(monkeypatch) -> None:
-    _mock_rewrite(monkeypatch, ParsedRewrite(organism="Zea mays"))
+async def test_understand_caller_param_still_drives_expansion(monkeypatch) -> None:
+    # A CALLER-passed facet is still honored (deliberate scoping); the LLM's proposed organism is
+    # echoed but never overrides or competes with it (LLM entity facets are advisory-only now).
+    _mock_rewrite(monkeypatch, ParsedRewrite(keyword_core="rna", organism="Zea mays"))
     seen = {}
 
     async def fake_resolve_taxon(client, name):
@@ -1624,22 +1626,24 @@ async def test_understand_explicit_caller_param_wins(monkeypatch) -> None:
         result = await router.search_page(
             client,
             query="q",
-            organism="Homo sapiens",  # explicit caller param
+            organism="Homo sapiens",  # explicit caller param — still applied
             sources=["zenodo"],
             understand=True,
         )
-    assert seen["organism"] == "Homo sapiens"  # caller value used, not LLM's "Zea mays"
+    assert seen["organism"] == "Homo sapiens"  # caller value drives _expand, not LLM's "Zea mays"
     qu = result.query_understanding
     assert qu is not None
-    assert "organism" in qu.overridden
-    assert "organism" not in qu.applied
+    assert "organism" not in qu.applied  # LLM entity facet never auto-applied
     assert qu.extracted["organism"] == "Zea mays"  # honesty: still echoes what LLM proposed
+    assert qu.overridden == []  # no scalar (year) conflict
 
 
-async def test_understand_hallucination_guardrail(monkeypatch) -> None:
-    # LLM proposes an organism the resolver cannot resolve → no expansion, no crash.
+async def test_understand_hallucinated_facet_never_reaches_resolver(monkeypatch) -> None:
+    # A hallucinated organism is now echo-only and never even reaches the resolver — the strongest
+    # form of the guardrail (previously it was "applied but un-expanded"; now it is never applied).
     _mock_rewrite(monkeypatch, ParsedRewrite(keyword_core="rna", organism="Dragonus imaginarius"))
-    monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=None))
+    resolve = AsyncMock(return_value=None)
+    monkeypatch.setattr(taxonomy, "resolve_taxon", resolve)
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
@@ -1653,12 +1657,11 @@ async def test_understand_hallucination_guardrail(monkeypatch) -> None:
         )
     assert result.taxon_expansion is None  # unresolved → dropped, no fabricated taxonomy
     assert "Dragonus" not in captured["query"]  # query ran un-expanded (just keyword_core)
+    resolve.assert_not_awaited()  # LLM-only facet never triggers the resolver
     qu = result.query_understanding
     assert qu is not None
     assert qu.extracted["organism"] == "Dragonus imaginarius"  # echo still shows the proposal
-    assert (
-        qu.applied["organism"] == "Dragonus imaginarius"
-    )  # applied (attempted), but didn't expand
+    assert "organism" not in qu.applied  # echo-only, never applied
 
 
 async def test_understand_fail_soft_no_llm_is_byte_identical(monkeypatch) -> None:
@@ -1694,7 +1697,10 @@ async def test_understand_false_makes_no_llm_call(monkeypatch) -> None:
     assert result.query_understanding is None
 
 
-async def test_understand_kind_and_year_filled_when_caller_none(monkeypatch) -> None:
+async def test_understand_year_applied_kind_echo_only_when_caller_none(monkeypatch) -> None:
+    # NEW contract (2026-06-11): year scopes are safe scalar bounds → applied; kind is a type
+    # POST-FILTER that drops records whose metadata isn't tagged with the inferred kind (a recall
+    # risk for mixed-kind results), so an LLM-inferred kind is echo-only, never auto-applied.
     _mock_rewrite(
         monkeypatch,
         ParsedRewrite(keyword_core="genomes", kind="dataset", year_min=2018, year_max=2022),
@@ -1710,7 +1716,8 @@ async def test_understand_kind_and_year_filled_when_caller_none(monkeypatch) -> 
         )
     qu = result.query_understanding
     assert qu is not None
-    assert qu.applied["kind"] == "dataset"
+    assert "kind" not in qu.applied  # echo-only (type post-filter → recall risk)
+    assert qu.extracted["kind"] == "dataset"  # transparency: shows what the LLM proposed
     assert qu.applied["year_min"] == 2018
     assert qu.applied["year_max"] == 2022
 

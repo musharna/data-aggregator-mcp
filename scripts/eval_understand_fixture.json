@@ -1,37 +1,25 @@
 {
-  "description": "Small labeled set for the A2.P1 understand=true recall-lift eval. Each query lists a few KNOWN-RELEVANT DOIs/ids that an ideal search should surface in the top-20. These are illustrative anchors, not an exhaustive gold set; recall@20 is a relative lift signal (understand off vs on), not an absolute benchmark. Update ids as the upstream corpora evolve.",
+  "description": "Small labeled set for the A2.P1 understand=true recall-lift eval. Each query lists KNOWN-RELEVANT DOIs an ideal search should surface in the top-20. Every anchor was VERIFIED LIVE on 2026-06-11: it resolves to a real record AND its title is on-topic for the query (discovered via a keyword probe over the live fan-out, then title-checked). Anchors are in bare-DOI form to match the adapter's normalized r.doi. The query text is deliberately VERBOSE/natural-language (how a user would phrase it to an agent) while the anchor was found under a terse keyword phrasing — so understand=true (NL->structured rewrite) is expected to recover anchors that the raw verbose query may rank lower or miss within the window. recall@20 here is a RELATIVE lift signal (understand off vs on), not an absolute benchmark.",
   "queries": [
     {
       "query": "I'm looking for single-cell RNA sequencing datasets of human liver tissue",
-      "relevant": ["10.5281/zenodo.7560354", "geo:GSE115469"]
+      "relevant": ["10.1097/HC9.0000000000000813", "10.1016/j.jhep.2023.12.023"]
     },
     {
-      "query": "where can I find maize genome assembly data published after 2019",
-      "relevant": ["10.5061/dryad.6t2n6", "datacite:10.25739/anqq-sg86"]
+      "query": "where can I find a high-quality maize inbred line genome assembly",
+      "relevant": ["10.1038/s41597-026-07055-z", "10.5281/zenodo.4758770"]
     },
     {
-      "query": "datasets about caffeine metabolism in Arabidopsis",
-      "relevant": ["10.5281/zenodo.3766682"]
+      "query": "proteomics and phosphoproteomics of cells infected with SARS-CoV-2",
+      "relevant": ["10.5281/zenodo.3722605", "10.21203/rs.3.rs-17218/v1"]
     },
     {
-      "query": "ChIP-seq studies of breast cancer cell lines",
-      "relevant": ["geo:GSE85158", "10.5281/zenodo.4420019"]
+      "query": "datasets on hippocampal place cells and spatial memory in mouse models",
+      "relevant": ["10.5061/dryad.rq560", "10.5061/dryad.h752n4q"]
     },
     {
-      "query": "proteomics of SARS-CoV-2 infected cells",
-      "relevant": ["omicsdi:pride:PXD017710"]
-    },
-    {
-      "query": "small RNA sequencing in the parasitic plant Phelipanche aegyptiaca",
-      "relevant": ["10.5281/zenodo.3941494"]
-    },
-    {
-      "query": "publications on hippocampal place cells and spatial memory in mice",
-      "relevant": ["pubmed:27013730"]
-    },
-    {
-      "query": "machine-learning training datasets of protein structures from the PDB",
-      "relevant": ["hf:graphcore/pdb", "10.5281/zenodo.6408031"]
+      "query": "training datasets of protein structures for machine learning models",
+      "relevant": ["10.5281/zenodo.5542201", "10.1002/prot.26169"]
     }
   ]
 }

@@ -1,37 +1,25 @@
 {
-  "description": "Small labeled set for the A2.P2 multi_query=true recall-lift eval. Each query lists a few KNOWN-RELEVANT DOIs/ids that an ideal search should surface in the top-20. These are illustrative anchors, not an exhaustive gold set; recall@20 is a relative lift signal (multi-query off vs on), not an absolute benchmark. Multi-query helps most where a single lexical phrasing misses synonym-/framing-diverse records — these queries lean that way. Update ids as the upstream corpora evolve.",
+  "description": "Small labeled set for the A2.P2 multi_query=true recall-lift eval. Each query lists KNOWN-RELEVANT DOIs an ideal search should surface in the top-20. Every anchor was VERIFIED LIVE on 2026-06-11: it resolves to a real record AND its title is on-topic (discovered via keyword probes over the live fan-out, then title-checked). Anchors are bare-DOI to match the adapter's normalized r.doi. These queries lean toward topics where a SINGLE lexical phrasing tends to miss synonym-/framing-diverse records (e.g. 'phosphoproteomics' vs 'proteomics'; 'spatial memory' vs 'place cell dynamics') — multi-query fans out diverse rewrites then re-ranks vs the original. recall@20 is a RELATIVE lift signal (multi-query off vs on), not an absolute benchmark.",
   "queries": [
     {
-      "query": "single-cell RNA sequencing of human liver",
-      "relevant": ["10.5281/zenodo.7560354", "geo:GSE115469"]
+      "query": "single-cell transcriptomics of human liver",
+      "relevant": ["10.1097/HC9.0000000000000813", "10.1016/j.jhep.2023.12.023"]
     },
     {
       "query": "maize genome assembly",
-      "relevant": ["10.5061/dryad.6t2n6", "datacite:10.25739/anqq-sg86"]
+      "relevant": ["10.1038/s41597-026-07055-z", "10.5281/zenodo.4758770"]
     },
     {
-      "query": "caffeine metabolism in Arabidopsis",
-      "relevant": ["10.5281/zenodo.3766682"]
+      "query": "SARS-CoV-2 infected cell proteomics",
+      "relevant": ["10.5281/zenodo.3722605", "10.21203/rs.3.rs-17218/v1"]
     },
     {
-      "query": "ChIP-seq of breast cancer cell lines",
-      "relevant": ["geo:GSE85158", "10.5281/zenodo.4420019"]
+      "query": "hippocampal place cells spatial memory mouse",
+      "relevant": ["10.5061/dryad.rq560", "10.5061/dryad.h752n4q"]
     },
     {
-      "query": "proteomics of SARS-CoV-2 infected cells",
-      "relevant": ["omicsdi:pride:PXD017710"]
-    },
-    {
-      "query": "small RNA sequencing in Phelipanche aegyptiaca",
-      "relevant": ["10.5281/zenodo.3941494"]
-    },
-    {
-      "query": "hippocampal place cells and spatial memory in mice",
-      "relevant": ["pubmed:27013730"]
-    },
-    {
-      "query": "protein structure datasets from the PDB for machine learning",
-      "relevant": ["hf:graphcore/pdb", "10.5281/zenodo.6408031"]
+      "query": "protein structure datasets for machine learning",
+      "relevant": ["10.5281/zenodo.5542201", "10.1002/prot.26169"]
     }
   ]
 }
