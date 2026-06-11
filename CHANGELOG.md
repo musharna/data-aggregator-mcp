@@ -6,6 +6,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.39.1] - 2026-06-11
+
+### Fixed
+
+- **`relate` now canonicalizes DOI forms (L1).** `relate` matched ids by exact string,
+  so the same DOI in bare (`10.x`), `doi:`-scheme, and resolver-URL
+  (`https://doi.org/10.x`) form failed to match — `version_lineage`, `explicit_link`,
+  and `shared_identifier` silently missed real connections (e.g. a DataCite version
+  edge expressed as a resolver URL). The identifier normalizer now strips DOI
+  resolver/scheme prefixes, symmetrically across all four detectors.
+- **`relate` reports version cycles as contradictions (L2).** A mutual / cyclic
+  `superseded_by` (contradictory upstream metadata) previously yielded a single hint
+  whose newer/older direction was arbitrary. `version_lineage` now reachability-detects
+  cycles of any length and emits a contradiction hint (no asserted direction) for
+  cyclic pairs, the normal directional hint otherwise.
+
+### Changed
+
+- Refreshed `examples/assets/demo.svg` to show all six tools (adds `operate`, `relate`)
+  and the current source roster.
+
 ## [0.39.0] - 2026-06-11
 
 ### Added

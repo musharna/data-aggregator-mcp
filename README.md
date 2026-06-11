@@ -20,7 +20,7 @@ mcp-name: io.github.musharna/data-aggregator-mcp
 
 <p align="center">
   <img src="examples/assets/demo.svg"
-       alt="data-aggregator-mcp stdio demo — initialize, tools/list (search, resolve, fetch, list_sources), and a live list_sources call showing the four wired sources"
+       alt="data-aggregator-mcp stdio demo — initialize, tools/list (search, resolve, fetch, operate, relate, list_sources), and a live list_sources call showing the wired sources across archives, omics, and literature"
        width="820">
 </p>
 

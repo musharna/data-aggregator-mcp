@@ -8,7 +8,7 @@ Re-record with:
     PATH=$HOME/.local/bin:$PATH \
       asciinema rec --overwrite -c "uv run python examples/_demo_stdio.py" /tmp/demo.cast
     svg-term --in /tmp/demo.cast --out examples/assets/demo.svg \
-      --window --width 92 --height 30
+      --window --width 92 --height 34
 """
 
 from __future__ import annotations
@@ -98,10 +98,12 @@ async def main() -> None:
         "search": "fan out across every source, deduped + taxa-normalized",
         "resolve": "full record: files, links, citation, access, full text",
         "fetch": "stream to disk, md5-verified, optional archive extract",
+        "operate": "schema / preview / SQL over a remote table, no download",
+        "relate": "how a set of records connect — shared id, link, lineage",
         "list_sources": "wired sources + capabilities",
     }
     by_name = {t["name"]: t for t in tools}
-    for name in ["search", "resolve", "fetch", "list_sources"]:
+    for name in ["search", "resolve", "fetch", "operate", "relate", "list_sources"]:
         if name in by_name:
             print(
                 f"  {C_YEL}•{C_RST} {C_BOLD}{name}{C_RST} {C_DIM}— {blurb[name]}{C_RST}", flush=True
