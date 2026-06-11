@@ -23,6 +23,40 @@ def detect(resources: list[DataResource]) -> list[JoinHint]:
     """All hints across `resources`. Order: accession, identifier, link, lineage."""
     hints: list[JoinHint] = []
     hints.extend(_shared_accession(resources))
+    hints.extend(_shared_identifier(resources))
+    return hints
+
+
+def _shared_identifier(resources: list[DataResource]) -> list[JoinHint]:
+    by_id: dict[str, list[str]] = {}
+    display: dict[str, str] = {}
+    for r in resources:
+        values: set[str] = set()
+        if r.doi:
+            values.add(r.doi)
+        for v in r.identifiers.values():
+            if v:
+                values.add(v)
+        for v in values:
+            n = _norm(v)
+            if not n:
+                continue
+            display.setdefault(n, v)
+            ids = by_id.setdefault(n, [])
+            if r.id not in ids:  # one resource counts once per value -> no self-hint
+                ids.append(r.id)
+    hints: list[JoinHint] = []
+    for n, ids in by_id.items():
+        if len(ids) >= 2:
+            hints.append(
+                JoinHint(
+                    kind="shared_identifier",
+                    resources=ids,
+                    key=display[n],
+                    evidence=f"identifier {display[n]!r} shared by {len(ids)} resources",
+                    suggestion=f"same work or paper-data link via {display[n]}",
+                )
+            )
     return hints
 
 
