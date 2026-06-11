@@ -213,16 +213,21 @@ class AssayExpansion(BaseModel):
 class QueryUnderstanding(BaseModel):
     """Echo of the LLM query-understanding rewrite that fired (transparency, A2.P1).
 
-    The LLM proposes; the ontology resolvers validate (see the ``*_expansion`` echoes);
-    explicit caller params win. ``applied`` lists only the fields the caller left None
-    that survived validation and were actually used for this search; ``overridden`` lists
-    fields the LLM proposed but the caller had set explicitly (so they were ignored).
+    The LLM proposes; explicit caller params win; the ontology resolvers then VALIDATE the
+    proposed entities. ``applied`` lists the fields the caller left None that were FED into
+    this search as parameters — for ontology entities (organism/disease/tissue/chemical/
+    assay) this means "passed to the resolver", NOT "resolved": whether it actually expanded
+    is shown by the corresponding ``*_expansion`` echo (None there ⇒ the entity did not
+    resolve, and was never silently treated as a match). ``overridden`` lists fields the LLM
+    proposed but the caller had set explicitly (so the LLM's value was ignored).
     """
 
     input: str  # the raw query as given
     keyword_core: str | None  # the rewritten keyword query actually used, or None if unchanged
     extracted: dict[str, Any] = Field(default_factory=dict)  # full non-null LLM interpretation
-    applied: dict[str, Any] = Field(default_factory=dict)  # subset actually applied to this search
+    applied: dict[str, Any] = Field(
+        default_factory=dict
+    )  # fields fed as params (resolution: see *_expansion)
     overridden: list[str] = Field(default_factory=list)  # fields the explicit caller param won
 
 
