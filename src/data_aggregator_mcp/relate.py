@@ -138,13 +138,16 @@ def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
     hints: list[JoinHint] = []
     seen: set[tuple[str, str]] = set()
     for r in resources:
-        n = _norm(r.superseded_by)
+        raw = r.superseded_by
+        if not raw:
+            continue
+        n = _norm(raw)
         if not n:
             continue
         newer = addr.get(n)  # the resource r.superseded_by points to
         if not newer or newer == r.id:
             continue
-        dedup = tuple(sorted((r.id, newer)))
+        dedup: tuple[str, str] = (r.id, newer) if r.id <= newer else (newer, r.id)
         if dedup in seen:
             continue
         seen.add(dedup)
@@ -152,7 +155,7 @@ def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
             JoinHint(
                 kind="version_lineage",
                 resources=[newer, r.id],  # [newer, older]
-                key=r.superseded_by,
+                key=raw,
                 evidence=f"{r.id}.superseded_by -> {newer}",
                 suggestion=f"{newer} is a newer version of {r.id} - dedupe, don't join, these",
             )

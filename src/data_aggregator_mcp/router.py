@@ -1139,7 +1139,7 @@ async def relate(client: httpx.AsyncClient, ids: list[str]) -> RelateResult:
     resolved_ids: list[str] = []
     errors: dict[str, str] = {}
     for given, res in zip(ids, settled, strict=True):
-        if isinstance(res, Exception):
+        if isinstance(res, BaseException):
             errors[given] = f"{type(res).__name__}: {res}"
         else:
             resolved.append(res)

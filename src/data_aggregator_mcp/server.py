@@ -941,8 +941,8 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     columns=args.get("columns"),
                 )
             case "relate":
-                result = await router.relate(client, args["ids"])
-                return result.model_dump()
+                rel = await router.relate(client, args["ids"])
+                return rel.model_dump()
             case _:
                 raise ValueError(f"unknown tool: {name}")
 
