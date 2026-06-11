@@ -1545,3 +1545,218 @@ async def test_resolve_sets_access_modes(monkeypatch) -> None:
     async with httpx.AsyncClient() as c:
         out = await router.resolve(c, "zenodo:1")
     assert "sql" in out.access_modes and "fetch" in out.access_modes
+
+
+# ---------------------------------------------------------------------------
+# A2.P1: search(understand=true) LLM NL→structured-query rewriting
+# ---------------------------------------------------------------------------
+from data_aggregator_mcp import _cursor  # noqa: E402
+from data_aggregator_mcp.query_understanding import ParsedRewrite  # noqa: E402
+
+
+def _mock_rewrite(monkeypatch, parsed: ParsedRewrite | None) -> None:
+    """Force router's rewriter to return a fixed ParsedRewrite (or None)."""
+    monkeypatch.setattr(router.query_understanding_mod, "rewrite", AsyncMock(return_value=parsed))
+
+
+async def test_understand_keyword_core_and_organism_flow(monkeypatch) -> None:
+    _mock_rewrite(
+        monkeypatch,
+        ParsedRewrite(keyword_core="rna decay", organism="Zea mays"),
+    )
+    monkeypatch.setattr(
+        taxonomy,
+        "resolve_taxon",
+        AsyncMock(
+            return_value=taxonomy.TaxonInfo(
+                taxid=4577,
+                canonical_name="Zea mays",
+                synonyms=("maize",),
+                is_plant=True,
+            )
+        ),
+    )
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client,
+            query="where can I find maize rna decay data",
+            sources=["zenodo"],
+            understand=True,
+        )
+    # keyword_core replaced the raw query, and organism flowed into _expand_organism
+    assert "rna decay" in captured["query"]
+    assert "Zea mays" in captured["query"]
+    assert result.taxon_expansion is not None
+    assert result.taxon_expansion.taxid == 4577
+    qu = result.query_understanding
+    assert qu is not None
+    assert qu.input == "where can I find maize rna decay data"
+    assert qu.keyword_core == "rna decay"
+    assert qu.applied["organism"] == "Zea mays"
+    assert qu.applied["keyword_core"] == "rna decay"
+    assert qu.overridden == []
+
+
+async def test_understand_explicit_caller_param_wins(monkeypatch) -> None:
+    _mock_rewrite(monkeypatch, ParsedRewrite(organism="Zea mays"))
+    seen = {}
+
+    async def fake_resolve_taxon(client, name):
+        seen["organism"] = name
+        return taxonomy.TaxonInfo(
+            taxid=9606, canonical_name="Homo sapiens", synonyms=(), is_plant=False
+        )
+
+    monkeypatch.setattr(taxonomy, "resolve_taxon", fake_resolve_taxon)
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client,
+            query="q",
+            organism="Homo sapiens",  # explicit caller param
+            sources=["zenodo"],
+            understand=True,
+        )
+    assert seen["organism"] == "Homo sapiens"  # caller value used, not LLM's "Zea mays"
+    qu = result.query_understanding
+    assert qu is not None
+    assert "organism" in qu.overridden
+    assert "organism" not in qu.applied
+    assert qu.extracted["organism"] == "Zea mays"  # honesty: still echoes what LLM proposed
+
+
+async def test_understand_hallucination_guardrail(monkeypatch) -> None:
+    # LLM proposes an organism the resolver cannot resolve → no expansion, no crash.
+    _mock_rewrite(monkeypatch, ParsedRewrite(keyword_core="rna", organism="Dragonus imaginarius"))
+    monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=None))
+    captured = {}
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        captured["query"] = query
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client, query="rna dragons", sources=["zenodo"], understand=True
+        )
+    assert result.taxon_expansion is None  # unresolved → dropped, no fabricated taxonomy
+    assert "Dragonus" not in captured["query"]  # query ran un-expanded (just keyword_core)
+    qu = result.query_understanding
+    assert qu is not None
+    assert qu.extracted["organism"] == "Dragonus imaginarius"  # echo still shows the proposal
+    assert (
+        qu.applied["organism"] == "Dragonus imaginarius"
+    )  # applied (attempted), but didn't expand
+
+
+async def test_understand_fail_soft_no_llm_is_byte_identical(monkeypatch) -> None:
+    _mock_rewrite(monkeypatch, None)  # rewrite returns None (no endpoint / failure)
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        on = await router.search_page(client, query="raw q", sources=["zenodo"], understand=True)
+        off = await router.search_page(client, query="raw q", sources=["zenodo"], understand=False)
+    assert on.query_understanding is None
+    assert on.errors.get("understand") is not None
+    # byte-identical apart from the additive understand note + no query_understanding echo
+    on_d = on.model_dump()
+    off_d = off.model_dump()
+    on_d["errors"].pop("understand", None)
+    assert on_d == off_d
+
+
+async def test_understand_false_makes_no_llm_call(monkeypatch) -> None:
+    called = AsyncMock(return_value=None)
+    monkeypatch.setattr(router.query_understanding_mod, "rewrite", called)
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(client, query="q", sources=["zenodo"])  # default False
+    called.assert_not_awaited()
+    assert result.query_understanding is None
+
+
+async def test_understand_kind_and_year_filled_when_caller_none(monkeypatch) -> None:
+    _mock_rewrite(
+        monkeypatch,
+        ParsedRewrite(keyword_core="genomes", kind="dataset", year_min=2018, year_max=2022),
+    )
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client, query="recent genome datasets", sources=["zenodo"], understand=True
+        )
+    qu = result.query_understanding
+    assert qu is not None
+    assert qu.applied["kind"] == "dataset"
+    assert qu.applied["year_min"] == 2018
+    assert qu.applied["year_max"] == 2022
+
+
+async def test_understand_pagination_cursor_carries_rewritten_query(monkeypatch) -> None:
+    _mock_rewrite(monkeypatch, ParsedRewrite(keyword_core="rewritten core"))
+
+    # Return more than `size` so a next_cursor is emitted.
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        recs = [
+            DataResource(id=f"zenodo:{offset + i}", source="zenodo", kind="dataset", title="t")
+            for i in range(size)
+        ]
+        return 100, recs
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(
+            client,
+            query="please find me the long natural language thing",
+            size=2,
+            sources=["zenodo"],
+            understand=True,
+        )
+    assert result.next_cursor is not None
+    decoded = _cursor.decode(result.next_cursor)
+    assert decoded["q"] == "rewritten core"  # POST-rewrite query is what gets paged
+
+
+@_live_only
+async def test_live_understand_yields_wellformed_echo() -> None:
+    """Gated real-execution anchor: a real LLM endpoint rewrites a NL query end-to-end
+    and the search returns a well-formed query_understanding echo + results. Requires
+    LLM_API_BASE in addition to DATA_AGGREGATOR_MCP_LIVE=1."""
+    if not os.environ.get("LLM_API_BASE"):
+        pytest.skip("set LLM_API_BASE to run the live understand probe")
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        result = await router.search_page(
+            client,
+            query="single-cell RNA sequencing datasets of human liver",
+            size=10,
+            understand=True,
+        )
+    qu = result.query_understanding
+    assert qu is not None
+    assert qu.input == "single-cell RNA sequencing datasets of human liver"
+    assert isinstance(qu.extracted, dict)
+    assert isinstance(qu.applied, dict)
+    assert "understand" not in result.errors  # a configured endpoint must not error out

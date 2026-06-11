@@ -937,3 +937,56 @@ async def test_dispatch_resolve_no_provenance_leaves_it_none(monkeypatch) -> Non
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
     out = await server._dispatch("resolve", {"id": "zenodo:1"})
     assert out["provenance"] is None
+
+
+def test_search_tool_exposes_understand_param() -> None:
+    tool = next(t for t in server.TOOLS if t.name == "search")
+    prop = tool.inputSchema["properties"]
+    assert "understand" in prop
+    assert prop["understand"]["type"] == "boolean"
+    assert prop["understand"]["default"] is False
+    # additive: not a required field
+    assert "understand" not in tool.inputSchema.get("required", [])
+
+
+async def test_dispatch_search_threads_understand_and_carries_echo(monkeypatch) -> None:
+    from data_aggregator_mcp.models import QueryUnderstanding, SearchResult
+
+    captured = {}
+
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(
+            query=kwargs.get("query"),
+            total=0,
+            count=0,
+            results=[],
+            errors={},
+            query_understanding=QueryUnderstanding(
+                input="find maize rna data",
+                keyword_core="rna",
+                extracted={"organism": "Zea mays"},
+                applied={"organism": "Zea mays"},
+                overridden=[],
+            ),
+        )
+
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
+    out = await server._dispatch("search", {"query": "find maize rna data", "understand": True})
+    assert captured["understand"] is True
+    assert out["query_understanding"]["input"] == "find maize rna data"
+    assert out["query_understanding"]["applied"]["organism"] == "Zea mays"
+
+
+async def test_dispatch_search_understand_defaults_false(monkeypatch) -> None:
+    from data_aggregator_mcp.models import SearchResult
+
+    captured = {}
+
+    async def fake_search_page(client, **kwargs):
+        captured.update(kwargs)
+        return SearchResult(query=kwargs.get("query"), total=0, count=0)
+
+    monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
+    await server._dispatch("search", {"query": "q"})
+    assert captured["understand"] is False

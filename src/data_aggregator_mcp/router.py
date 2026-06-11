@@ -40,6 +40,7 @@ from data_aggregator_mcp import (
     zenodo,
 )
 from data_aggregator_mcp import assay as assay_mod
+from data_aggregator_mcp import query_understanding as query_understanding_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
 from data_aggregator_mcp.errors import ValidationError
@@ -50,6 +51,7 @@ from data_aggregator_mcp.models import (
     Link,
     MeshExpansion,
     Mirror,
+    QueryUnderstanding,
     SearchResult,
     Taxon,
     TaxonExpansion,
@@ -511,6 +513,7 @@ async def search_page(
     cursor: str | None = None,
     rank: str = "relevance",
     collapse_mirrors: bool = False,
+    understand: bool = False,
 ) -> SearchResult:
     """Fan out a search, merge + dedup, filter, and walk to a cut point that
     advances per-adapter offsets — returning a ``SearchResult`` whose
@@ -544,17 +547,99 @@ async def search_page(
         tissue_expansion = None  # frozen on continuation; do not re-expand
         chemical_expansion = None  # frozen on continuation; do not re-expand
         assay_expansion = None  # frozen on continuation; do not re-expand
+        query_understanding = None  # frozen on continuation; never re-understand
         effective_query = query
         errors: dict[str, str] = {}
     else:
         if query is None:
             raise ValidationError("search requires either 'query' or 'cursor'")
+        errors = {}
+        query_understanding = None
+        if understand:
+            raw_query = query  # echo the original query, captured before any rewrite
+            ru = await query_understanding_mod.rewrite(client, query)
+            if ru is None:
+                errors["understand"] = (
+                    "query understanding unavailable (no LLM endpoint configured or rewrite failed)"
+                )
+            else:
+                # Explicit caller params win; the rewriter only FILLS fields left None.
+                extracted: dict[str, Any] = {}
+                applied: dict[str, Any] = {}
+                overridden: list[str] = []
+                keyword_core = ru.keyword_core
+                if keyword_core:
+                    extracted["keyword_core"] = keyword_core
+                    applied["keyword_core"] = keyword_core
+                    query = keyword_core
+                if ru.organism is not None:
+                    extracted["organism"] = ru.organism
+                    if organism is not None:
+                        overridden.append("organism")
+                    else:
+                        organism = ru.organism
+                        applied["organism"] = ru.organism
+                if ru.disease is not None:
+                    extracted["disease"] = ru.disease
+                    if disease is not None:
+                        overridden.append("disease")
+                    else:
+                        disease = ru.disease
+                        applied["disease"] = ru.disease
+                if ru.tissue is not None:
+                    extracted["tissue"] = ru.tissue
+                    if tissue is not None:
+                        overridden.append("tissue")
+                    else:
+                        tissue = ru.tissue
+                        applied["tissue"] = ru.tissue
+                if ru.chemical is not None:
+                    extracted["chemical"] = ru.chemical
+                    if chemical is not None:
+                        overridden.append("chemical")
+                    else:
+                        chemical = ru.chemical
+                        applied["chemical"] = ru.chemical
+                if ru.assay is not None:
+                    extracted["assay"] = ru.assay
+                    if assay is not None:
+                        overridden.append("assay")
+                    else:
+                        assay = ru.assay
+                        applied["assay"] = ru.assay
+                if ru.kind is not None:
+                    extracted["kind"] = ru.kind
+                    if kind is not None:
+                        overridden.append("kind")
+                    elif ru.kind in _VALID_KINDS:
+                        kind = ru.kind
+                        applied["kind"] = ru.kind
+                if ru.year_min is not None:
+                    extracted["year_min"] = ru.year_min
+                    if published_after is not None:
+                        overridden.append("year_min")
+                    else:
+                        published_after = ru.year_min
+                        applied["year_min"] = ru.year_min
+                if ru.year_max is not None:
+                    extracted["year_max"] = ru.year_max
+                    if published_before is not None:
+                        overridden.append("year_max")
+                    else:
+                        published_before = ru.year_max
+                        applied["year_max"] = ru.year_max
+                query_understanding = QueryUnderstanding(
+                    input=raw_query,
+                    keyword_core=keyword_core,
+                    extracted=extracted,
+                    applied=applied,
+                    overridden=overridden,
+                )
         filters = {
             "published_after": published_after,
             "published_before": published_before,
             "kind": kind,
         }
-        errors = {}
         effective_query, expansion = await _expand_organism(client, query, organism, errors)
         effective_query, disease_expansion = await _expand_disease(
             client, effective_query, disease, errors
@@ -690,6 +775,7 @@ async def search_page(
         tissue_expansion=tissue_expansion,
         chemical_expansion=chemical_expansion,
         assay_expansion=assay_expansion,
+        query_understanding=query_understanding,
     )
 
 

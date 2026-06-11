@@ -6,6 +6,46 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-06-10
+
+### Added
+
+- **`search(understand=true)` — opt-in LLM NL→structured-query rewriting (A2.P1).** When
+  enabled AND an LLM endpoint is configured, a free-text query is rewritten into a keyword
+  core + structured params (organism/disease/tissue/chemical/assay + kind/year) BEFORE the
+  existing fan-out runs — raising recall on the QUERY side without an owned corpus or vector
+  index. Off by default; this is phase 1 of A2 (P2 diverse multi-query expansion is next).
+  - **Propose-validate-dispose guardrail — the LLM proposes, the deterministic resolvers
+    dispose.** The rewriter only PROPOSES entities (`organism="Zea mays"`, etc.); the
+    already-shipped `_expand_organism`/`_disease`/`_tissue`/`_chemical`/`_assay` resolvers
+    (NCBI Taxonomy / MeSH / UBERON / ChEBI / EDAM) and the `kind`/year validators are the
+    sole trust surface. A hallucinated entity that doesn't resolve simply yields no
+    expansion — exactly like a user typo. No new fabricated taxonomy, no new trust surface.
+  - **Opt-in, fail-soft, zero new required deps.** A new `llm.py` mirrors the existing
+    `embeddings.py` pattern exactly: an OpenAI-compatible `/chat/completions` endpoint
+    enabled only by `LLM_API_BASE` (`LLM_API_KEY` optional for keyless local servers,
+    `LLM_MODEL` a passthrough string defaulting to `gpt-4o-mini`). With no endpoint
+    configured — or on ANY LLM/parse error — the search runs byte-identically to before (the
+    raw keyword query) with a transparency note in `errors['understand']`; the LLM call can
+    NEVER raise into the search path.
+  - **Explicit caller params always win.** The rewriter only FILLS fields the caller left
+    None; if the caller passed `organism=`/`kind=`/a year explicitly, the LLM's value for
+    that field is ignored and recorded under `overridden`.
+  - **Transparent echo.** A new `SearchResult.query_understanding` echoes the raw `input`,
+    the `keyword_core` actually used, the full `extracted` interpretation (every non-null
+    field the LLM returned), the `applied` subset, and the `overridden` fields — mirroring
+    the `*_expansion` echo honesty. Nothing the LLM did to the query is hidden; ontology
+    entities still had to resolve to expand, which the `*_expansion` echoes show.
+  - **Pagination stays consistent.** Understanding runs ONCE on the fresh search and mutates
+    query/params BEFORE the cursor is encoded, so a paged understood-search replays the
+    POST-rewrite query/params page-to-page; the continuation branch never re-understands.
+  - **Eval harness shipped.** A gated (`DATA_AGGREGATOR_MCP_LIVE=1` + `LLM_API_BASE`)
+    `scripts/eval_understand.py` + labeled JSON fixture runs each NL query with understand
+    off vs on and prints per-query + mean recall@20 lift (a "show it works" instrument, not
+    a hard assertion — live recall varies).
+  - **Additive.** With the flag off (the default) search is byte-identical and no LLM call is
+    attempted; the entire pre-existing search suite passes untouched.
+
 ## [0.35.0] - 2026-06-10
 
 ### Added

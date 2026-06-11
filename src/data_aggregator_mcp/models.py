@@ -210,6 +210,22 @@ class AssayExpansion(BaseModel):
     synonyms: list[str]  # entry synonyms added to the query (excludes the canonical label)
 
 
+class QueryUnderstanding(BaseModel):
+    """Echo of the LLM query-understanding rewrite that fired (transparency, A2.P1).
+
+    The LLM proposes; the ontology resolvers validate (see the ``*_expansion`` echoes);
+    explicit caller params win. ``applied`` lists only the fields the caller left None
+    that survived validation and were actually used for this search; ``overridden`` lists
+    fields the LLM proposed but the caller had set explicitly (so they were ignored).
+    """
+
+    input: str  # the raw query as given
+    keyword_core: str | None  # the rewritten keyword query actually used, or None if unchanged
+    extracted: dict[str, Any] = Field(default_factory=dict)  # full non-null LLM interpretation
+    applied: dict[str, Any] = Field(default_factory=dict)  # subset actually applied to this search
+    overridden: list[str] = Field(default_factory=list)  # fields the explicit caller param won
+
+
 class SearchResult(BaseModel):
     query: str
     total: int
@@ -222,6 +238,9 @@ class SearchResult(BaseModel):
     tissue_expansion: TissueExpansion | None = None
     chemical_expansion: ChemicalExpansion | None = None
     assay_expansion: AssayExpansion | None = None
+    query_understanding: QueryUnderstanding | None = (
+        None  # LLM rewrite echo (search understand=true)
+    )
     provenance_crate: dict[str, Any] | None = (
         None  # whole-search RO-Crate 1.1 Run Crate, populated only on search(provenance=true)
     )

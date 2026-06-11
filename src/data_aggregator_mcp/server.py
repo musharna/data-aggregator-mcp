@@ -439,6 +439,20 @@ TOOLS: list[types.Tool] = [
                         "items; pagination is unaffected."
                     ),
                 },
+                "understand": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": (
+                        "Opt into LLM query understanding: a free-text query is rewritten into "
+                        "a keyword core + structured params (organism/disease/tissue/chemical/"
+                        "assay, kind, year) before fan-out; extracted entities are validated by "
+                        "the same ontology resolvers (a hallucinated entity that doesn't resolve "
+                        "is simply dropped), explicit params you pass always win, and the "
+                        "interpretation is echoed in query_understanding. Requires an LLM endpoint "
+                        "(LLM_API_BASE); with none configured the search runs unchanged and notes "
+                        "it in errors['understand']."
+                    ),
+                },
                 "provenance": {
                     "type": "boolean",
                     "default": False,
@@ -786,6 +800,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                     cursor=args.get("cursor"),
                     rank=args.get("rank", "relevance"),
                     collapse_mirrors=args.get("collapse_mirrors", False),
+                    understand=args.get("understand", False),
                 )
                 if args.get("provenance"):
                     result = result.model_copy(

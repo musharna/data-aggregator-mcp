@@ -1,0 +1,37 @@
+{
+  "description": "Small labeled set for the A2.P1 understand=true recall-lift eval. Each query lists a few KNOWN-RELEVANT DOIs/ids that an ideal search should surface in the top-20. These are illustrative anchors, not an exhaustive gold set; recall@20 is a relative lift signal (understand off vs on), not an absolute benchmark. Update ids as the upstream corpora evolve.",
+  "queries": [
+    {
+      "query": "I'm looking for single-cell RNA sequencing datasets of human liver tissue",
+      "relevant": ["10.5281/zenodo.7560354", "geo:GSE115469"]
+    },
+    {
+      "query": "where can I find maize genome assembly data published after 2019",
+      "relevant": ["10.5061/dryad.6t2n6", "datacite:10.25739/anqq-sg86"]
+    },
+    {
+      "query": "datasets about caffeine metabolism in Arabidopsis",
+      "relevant": ["10.5281/zenodo.3766682"]
+    },
+    {
+      "query": "ChIP-seq studies of breast cancer cell lines",
+      "relevant": ["geo:GSE85158", "10.5281/zenodo.4420019"]
+    },
+    {
+      "query": "proteomics of SARS-CoV-2 infected cells",
+      "relevant": ["omicsdi:pride:PXD017710"]
+    },
+    {
+      "query": "small RNA sequencing in the parasitic plant Phelipanche aegyptiaca",
+      "relevant": ["10.5281/zenodo.3941494"]
+    },
+    {
+      "query": "publications on hippocampal place cells and spatial memory in mice",
+      "relevant": ["pubmed:27013730"]
+    },
+    {
+      "query": "machine-learning training datasets of protein structures from the PDB",
+      "relevant": ["hf:graphcore/pdb", "10.5281/zenodo.6408031"]
+    }
+  ]
+}

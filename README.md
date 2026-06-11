@@ -159,6 +159,15 @@ dropped.
 - `rank` — `relevance` (default) or `semantic` (re-rank the fetched page by
   embedding similarity to the query; needs `EMBEDDING_API_BASE`, degrades to
   relevance order otherwise).
+- `understand` — opt into LLM query understanding (default false). A free-text
+  query is rewritten into a keyword core + structured params
+  (organism/disease/tissue/chemical/assay, kind, year) before fan-out; the
+  extracted entities are validated by the same ontology resolvers (a hallucinated
+  entity that doesn't resolve is simply dropped — the LLM proposes, the
+  NCBI/MeSH/UBERON/ChEBI/EDAM resolvers dispose), explicit params you pass always
+  win, and the full interpretation is echoed in `query_understanding`. Needs an
+  LLM endpoint (`LLM_API_BASE`); with none configured the search runs unchanged
+  and notes it in `errors['understand']`.
 - `cursor` — opaque token from a prior result's `next_cursor`; pages forward
   across every source. In `cursor` mode the other params are read from the
   token, so `query` is optional.
@@ -255,6 +264,26 @@ Both optional, set via environment variables:
   the omics, literature, and taxonomy lookups.
 - `UNPAYWALL_EMAIL` — enables the Unpaywall fallback leg of literature full-text
   retrieval (the EuropePMC leg works without it).
+- `EMBEDDING_API_BASE` / `EMBEDDING_API_KEY` / `EMBEDDING_MODEL` — an
+  OpenAI-compatible embeddings endpoint enabling `rank=semantic`. Absent ⇒
+  semantic re-rank degrades to relevance order. Key is optional (keyless local
+  servers supported); model defaults to `text-embedding-3-small`.
+- `LLM_API_BASE` / `LLM_API_KEY` / `LLM_MODEL` — an OpenAI-compatible
+  `/chat/completions` endpoint enabling `search(understand=true)` (NL→structured
+  query rewriting). Absent ⇒ `understand=true` runs the raw query unchanged and
+  notes it in `errors['understand']`. Key is optional (keyless local servers
+  supported); model defaults to `gpt-4o-mini` (a passthrough string — set it to
+  whatever your endpoint serves).
+
+To measure the recall lift of `understand=true` on a small labeled set, run the
+gated eval harness (needs a live LLM endpoint):
+
+```bash
+DATA_AGGREGATOR_MCP_LIVE=1 LLM_API_BASE=... python scripts/eval_understand.py
+```
+
+It prints per-query and mean recall@20 with understand off vs. on. See the
+fixture at `scripts/eval_understand_fixture.json`.
 
 ## 🧪 Develop
 
