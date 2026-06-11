@@ -34,7 +34,7 @@ from data_aggregator_mcp import resources as resources_mod
 from data_aggregator_mcp import ro_crate as ro_crate_mod
 from data_aggregator_mcp import trust as trust_mod
 from data_aggregator_mcp.errors import FetchNotSupportedError
-from data_aggregator_mcp.models import DataResource, FetchResult, SearchResult
+from data_aggregator_mcp.models import DataResource, FetchResult, RelateResult, SearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -699,6 +699,7 @@ TOOLS: list[types.Tool] = [
             },
             "required": ["ids"],
         },
+        outputSchema=RelateResult.model_json_schema(),
         annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
 ]
