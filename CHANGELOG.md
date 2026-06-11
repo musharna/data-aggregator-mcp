@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-06-11
+
 ### Fixed
 
 - **NCBI rate limit no longer over-claims on `NCBI_EMAIL` alone.** The limiter granted
@@ -74,6 +76,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   resolve `trust`/`fair`/`use`, operate `peek`); `PUBLISH.md` made version-agnostic
   (was frozen at the v0.11.0 instructions); the packaging test asserts version sync
   without a hardcoded literal.
+- README visual refresh: the intro and sources table cover the full 12-source
+  roster (DANDI, CELLxGENE, OpenML, RCSB PDB, GWAS Catalog, and
+  DataCite→OpenNeuro were missing), a new architecture diagram
+  (`docs/assets/architecture.svg`), and absolute asset/link URLs so the PyPI
+  long description renders the demo and links correctly.
 
 ## [0.39.1] - 2026-06-11
 
