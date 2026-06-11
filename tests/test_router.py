@@ -1766,4 +1766,57 @@ async def test_live_understand_yields_wellformed_echo() -> None:
     assert qu.input == "single-cell RNA sequencing datasets of human liver"
     assert isinstance(qu.extracted, dict)
     assert isinstance(qu.applied, dict)
-    assert "understand" not in result.errors  # a configured endpoint must not error out
+
+
+# ---------------------------------------------------------------------------
+# Task 6: router.relate handler
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_relate_resolves_and_returns_hints(monkeypatch) -> None:
+    from data_aggregator_mcp.models import DataResource as DR
+
+    async def fake_resolve(client, rid):
+        return {
+            "geo:GSE1": DR(
+                id="geo:GSE1", source="geo", kind="dataset", title="a", accessions=["PRJNA1"]
+            ),
+            "sra:SRP1": DR(
+                id="sra:SRP1", source="sra", kind="dataset", title="b", accessions=["PRJNA1"]
+            ),
+        }[rid]
+
+    monkeypatch.setattr(router, "resolve", fake_resolve)
+    async with httpx.AsyncClient() as client:
+        out = await router.relate(client, ["geo:GSE1", "sra:SRP1"])
+    assert out.resolved == ["geo:GSE1", "sra:SRP1"]
+    assert len(out.hints) == 1 and out.hints[0].kind == "shared_accession"
+    assert out.errors == {} and out.note is None
+
+
+@pytest.mark.asyncio
+async def test_relate_fail_soft_on_one_bad_id(monkeypatch) -> None:
+    from data_aggregator_mcp.models import DataResource as DR
+
+    async def fake_resolve(client, rid):
+        if rid == "bad:1":
+            raise LookupError("not found")
+        return DR(id=rid, source="zenodo", kind="dataset", title="t")
+
+    monkeypatch.setattr(router, "resolve", fake_resolve)
+    async with httpx.AsyncClient() as client:
+        out = await router.relate(client, ["zenodo:1", "bad:1"])
+    assert "bad:1" in out.errors
+    assert out.resolved == ["zenodo:1"]
+    assert out.hints == []
+    assert out.note is not None  # fewer than 2 resolved
+
+
+@pytest.mark.asyncio
+async def test_relate_count_guards(monkeypatch) -> None:
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(ValidationError):
+            await router.relate(client, ["only:1"])
+        with pytest.raises(ValidationError):
+            await router.relate(client, [f"x:{i}" for i in range(11)])

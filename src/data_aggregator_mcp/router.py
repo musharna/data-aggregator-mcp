@@ -41,6 +41,7 @@ from data_aggregator_mcp import (
 )
 from data_aggregator_mcp import assay as assay_mod
 from data_aggregator_mcp import query_understanding as query_understanding_mod
+from data_aggregator_mcp import relate as relate_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
 from data_aggregator_mcp.errors import ValidationError
@@ -53,6 +54,7 @@ from data_aggregator_mcp.models import (
     Mirror,
     QueryExpansion,
     QueryUnderstanding,
+    RelateResult,
     SearchResult,
     Taxon,
     TaxonExpansion,
@@ -1119,3 +1121,34 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     )
     _RESOLVE_CACHE.set(rid, resource)
     return resource
+
+
+RELATE_MAX_IDS = 10
+
+
+async def relate(client: httpx.AsyncClient, ids: list[str]) -> RelateResult:
+    """Resolve `ids` (TTL-cached, concurrent, fail-soft) and return metadata-level
+    join/harmonization hints. 2..RELATE_MAX_IDS ids; <2 or >max -> ValidationError."""
+    if not isinstance(ids, list) or len(ids) < 2:
+        raise ValidationError("relate needs at least 2 ids")
+    if len(ids) > RELATE_MAX_IDS:
+        raise ValidationError(f"relate accepts at most {RELATE_MAX_IDS} ids; got {len(ids)}")
+
+    settled = await asyncio.gather(*(resolve(client, i) for i in ids), return_exceptions=True)
+    resolved: list[DataResource] = []
+    resolved_ids: list[str] = []
+    errors: dict[str, str] = {}
+    for given, res in zip(ids, settled, strict=True):
+        if isinstance(res, Exception):
+            errors[given] = f"{type(res).__name__}: {res}"
+        else:
+            resolved.append(res)
+            resolved_ids.append(res.id)
+
+    hints = relate_mod.detect(resolved) if len(resolved) >= 2 else []
+    note: str | None = None
+    if len(resolved) < 2:
+        note = f"fewer than 2 ids resolved ({len(resolved)}); need 2+ to compare"
+    elif not hints:
+        note = f"no structural relationships detected among {len(resolved)} resources"
+    return RelateResult(input_ids=ids, resolved=resolved_ids, hints=hints, errors=errors, note=note)
