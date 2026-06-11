@@ -79,3 +79,19 @@ def test_explicit_link_to_outside_id_is_ignored() -> None:
 
     rs = [_res("pubmed:1", links=[Link(rel="describes", target_id="zenodo:999")]), _res("zenodo:2")]
     assert [h for h in relate_mod.detect(rs) if h.kind == "explicit_link"] == []
+
+
+def test_version_lineage_directed_edge() -> None:
+    rs = [
+        _res("zenodo:1", superseded_by="zenodo:2"),  # 1 is older, points to newer 2
+        _res("zenodo:2"),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "version_lineage"]
+    assert len(hints) == 1
+    assert hints[0].resources == ["zenodo:2", "zenodo:1"]  # [newer, older]
+    assert "newer version" in hints[0].suggestion
+
+
+def test_no_hint_on_shared_organism_only() -> None:
+    rs = [_res("zenodo:1", organism=["human"]), _res("zenodo:2", organism=["human"])]
+    assert relate_mod.detect(rs) == []

@@ -25,6 +25,7 @@ def detect(resources: list[DataResource]) -> list[JoinHint]:
     hints.extend(_shared_accession(resources))
     hints.extend(_shared_identifier(resources))
     hints.extend(_explicit_link(resources))
+    hints.extend(_version_lineage(resources))
     return hints
 
 
@@ -129,4 +130,31 @@ def _explicit_link(resources: list[DataResource]) -> list[JoinHint]:
                     suggestion=f"{r.id} {link.rel} {target} (declared in source metadata)",
                 )
             )
+    return hints
+
+
+def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
+    addr = _address_map(resources, include_accessions=False)
+    hints: list[JoinHint] = []
+    seen: set[tuple[str, str]] = set()
+    for r in resources:
+        n = _norm(r.superseded_by)
+        if not n:
+            continue
+        newer = addr.get(n)  # the resource r.superseded_by points to
+        if not newer or newer == r.id:
+            continue
+        dedup = tuple(sorted((r.id, newer)))
+        if dedup in seen:
+            continue
+        seen.add(dedup)
+        hints.append(
+            JoinHint(
+                kind="version_lineage",
+                resources=[newer, r.id],  # [newer, older]
+                key=newer,
+                evidence=f"{r.id}.superseded_by -> {newer}",
+                suggestion=f"{newer} is a newer version of {r.id} - dedupe, don't join, these",
+            )
+        )
     return hints
