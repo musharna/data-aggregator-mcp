@@ -62,6 +62,15 @@ def test_server_json_matches_package_identity() -> None:
     assert pkg["runtimeHint"] == "uvx"
 
 
+def test_server_json_description_within_registry_limit() -> None:
+    # The MCP registry hard-rejects (422) descriptions longer than 100 chars —
+    # caught live publishing v0.40.0.
+    sj = json.loads((_ROOT / "server.json").read_text())
+    assert len(sj["description"]) <= 100, (
+        f"server.json description is {len(sj['description'])} chars; registry limit is 100"
+    )
+
+
 def test_readme_has_ownership_marker_matching_server_name() -> None:
     sj = json.loads((_ROOT / "server.json").read_text())
     readme = (_ROOT / "README.md").read_text()
