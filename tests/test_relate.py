@@ -95,3 +95,43 @@ def test_version_lineage_directed_edge() -> None:
 def test_no_hint_on_shared_organism_only() -> None:
     rs = [_res("zenodo:1", organism=["human"]), _res("zenodo:2", organism=["human"])]
     assert relate_mod.detect(rs) == []
+
+
+def test_version_lineage_matches_doi_target() -> None:
+    # superseded_by can be a raw DOI; it must match the target resource's doi field
+    rs = [
+        _res("zenodo:1", superseded_by="10.5281/zenodo.2"),
+        _res("zenodo:2", doi="10.5281/zenodo.2"),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "version_lineage"]
+    assert len(hints) == 1
+    assert hints[0].resources == ["zenodo:2", "zenodo:1"]  # [newer, older]
+
+
+def test_version_lineage_mutual_cycle_dedupes_to_one() -> None:
+    rs = [
+        _res("zenodo:1", superseded_by="zenodo:2"),
+        _res("zenodo:2", superseded_by="zenodo:1"),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "version_lineage"]
+    assert len(hints) == 1
+
+
+def test_explicit_link_address_map_first_writer_wins_on_shared_doi() -> None:
+    from data_aggregator_mcp.models import Link
+
+    # two resources share a DOI; a third links to that DOI. The link resolves to the
+    # FIRST resource only (first-writer-wins in _address_map); the shared-DOI pair is
+    # caught separately by shared_identifier.
+    rs = [
+        _res("a:1", doi="10.1/d"),
+        _res("b:2", doi="10.1/d"),
+        _res("c:3", links=[Link(rel="describes", target_id="10.1/d")]),
+    ]
+    hints = relate_mod.detect(rs)
+    link_hints = [h for h in hints if h.kind == "explicit_link"]
+    ident_hints = [h for h in hints if h.kind == "shared_identifier"]
+    assert len(link_hints) == 1
+    assert set(link_hints[0].resources) == {"c:3", "a:1"}
+    assert len(ident_hints) == 1
+    assert set(ident_hints[0].resources) == {"a:1", "b:2"}

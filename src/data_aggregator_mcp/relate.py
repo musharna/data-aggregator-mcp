@@ -152,7 +152,7 @@ def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
             JoinHint(
                 kind="version_lineage",
                 resources=[newer, r.id],  # [newer, older]
-                key=newer,
+                key=r.superseded_by,
                 evidence=f"{r.id}.superseded_by -> {newer}",
                 suggestion=f"{newer} is a newer version of {r.id} - dedupe, don't join, these",
             )
