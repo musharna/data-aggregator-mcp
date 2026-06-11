@@ -246,6 +246,29 @@ class QueryExpansion(BaseModel):
     variants: list[str]  # the raw variants fanned out, original first
 
 
+class JoinHint(BaseModel):
+    """One evidence-backed cross-resource relationship hint (B9 `relate`). Metadata-level
+    only — names a shared value/relation; never an executed join."""
+
+    kind: Literal["shared_accession", "shared_identifier", "explicit_link", "version_lineage"]
+    resources: list[str]  # >=2 distinct input resource ids this hint connects
+    key: str  # the shared value or relation (the accession, the doi/pmid, the link rel)
+    evidence: str  # what was matched and where
+    suggestion: str  # human/agent-readable HINT; never an executed action
+
+
+class RelateResult(BaseModel):
+    """Result of `relate(ids)` — metadata-level join/harmonization hints across a resource
+    set. `note` is set (and `hints` empty) when nothing structural was found, distinguishing
+    'looked and found nothing' from an error."""
+
+    input_ids: list[str]
+    resolved: list[str]  # canonical ids that resolved successfully
+    hints: list[JoinHint] = Field(default_factory=list)
+    errors: dict[str, str] = Field(default_factory=dict)  # input id -> resolve-failure reason
+    note: str | None = None
+
+
 class SearchResult(BaseModel):
     query: str
     total: int
