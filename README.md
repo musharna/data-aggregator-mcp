@@ -160,14 +160,21 @@ dropped.
   embedding similarity to the query; needs `EMBEDDING_API_BASE`, degrades to
   relevance order otherwise).
 - `understand` — opt into LLM query understanding (default false). A free-text
-  query is rewritten into a keyword core + structured params
-  (organism/disease/tissue/chemical/assay, kind, year) before fan-out; the
-  extracted entities are validated by the same ontology resolvers (a hallucinated
-  entity that doesn't resolve is simply dropped — the LLM proposes, the
-  NCBI/MeSH/UBERON/ChEBI/EDAM resolvers dispose), explicit params you pass always
-  win, and the full interpretation is echoed in `query_understanding`. Needs an
-  LLM endpoint (`LLM_API_BASE`); with none configured the search runs unchanged
-  and notes it in `errors['understand']`.
+  query is **normalized** into a focused keyword query: conversational fluff
+  (`"I'm looking for…"`, `"where can I find…"`) is stripped while the scientific
+  and entity terms are kept so they still match by text. The LLM also detects
+  structured entities (organism/disease/tissue/chemical/assay, kind) — these are
+  **echoed in `query_understanding.extracted` for transparency but not
+  auto-applied**, because ANDing LLM-_inferred_ facets across free-text keyword
+  upstreams over-constrains and hurts recall. Only the cleaned `keyword_core` and
+  explicit `year` scopes are applied; the ontology resolvers still run on the
+  facets **you** pass (the LLM proposes, you dispose). Needs an LLM endpoint
+  (`LLM_API_BASE`); with none configured the search runs unchanged and notes it in
+  `errors['understand']`. **Effectiveness is query- and model-dependent — opt-in /
+  default-off; validate the recall lift on your own corpus and LLM (see the eval
+  harness below). On our small verified set `multi_query=` is the stronger,
+  always-safe recall lever; `understand=` is approximately neutral with a weak
+  local model.**
 - `multi_query` — opt into diverse multi-query recall expansion (default false).
   An LLM generates up to a few deliberately-diverse reformulations of your query
   (different facets/synonyms/framings, not paraphrases), each is fanned out across

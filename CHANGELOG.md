@@ -6,6 +6,36 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-06-11
+
+### Fixed
+
+- **`search(understand=true)` no longer regresses recall.** A live recall eval against a
+  verified gold set measured a mean recall@20 lift of **−0.40** for `understand=true`: the
+  rewriter promoted _every_ LLM-inferred facet (organism/disease/tissue/chemical/assay) into a
+  mandatory ANDed clause via the `_expand_*` resolvers, plus a `kind` post-filter — so a
+  multi-facet natural-language query collapsed its result set (e.g. 20 → 2) against free-text
+  keyword upstreams whose metadata can't satisfy every facet. The cross-domain efficacy of
+  query-understanding never transferred to a stateless keyword fan-out.
+  - **Fix (mechanism removal):** `understand=true` now _normalizes_ the query rather than
+    synthesizing a faceted one. `keyword_core` retains the scientific/entity terms (only
+    conversational fluff is stripped), and the entity facets **and `kind`** are **echoed in
+    `query_understanding.extracted` for transparency but never auto-applied**. Only
+    caller-passed facets drive the `_expand_*` resolvers / `kind` filter; explicit `year`
+    scopes are still applied.
+  - **Result:** mean recall@20 lift improved from −0.40 to −0.10 (4/5 verified queries now
+    neutral-or-positive). The remaining variance is per-query keyword-rewrite term-loss
+    (inherent to NL→keyword rewriting), not a structural bug. `understand=true` remains
+    opt-in / default-off and is best validated per-deployment with your own LLM;
+    `multi_query=true` (recall can only go up) is the safer recall lever.
+
+### Changed
+
+- **Verified recall-eval gold sets.** The `scripts/eval_understand_fixture.json` and
+  `scripts/eval_multi_query_fixture.json` anchor sets were rebuilt — the previous fixtures
+  paired real-looking DOIs with unrelated or no-longer-resolving records. Each anchor is now
+  verified live (resolves _and_ on-topic by title). The eval harness code was unchanged.
+
 ## [0.37.0] - 2026-06-10
 
 ### Added
