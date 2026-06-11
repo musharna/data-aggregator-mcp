@@ -1222,6 +1222,29 @@ async def test_live_pagination_walks_zenodo_datacite() -> None:
     assert ids1.isdisjoint(ids2)  # paging advanced, did not repeat page 1
 
 
+@_live_only
+async def test_live_relate_emits_real_hint() -> None:
+    """Real-execution boundary probe: discover live omics ids, resolve them via the
+    live resolve path, and relate them. A multi-sample omics search reliably surfaces
+    SRA runs that share a BioProject/SRP accession, so >=1 shared_accession hint fires.
+    ids are discovered at runtime (never fabricated) — same discipline as the recall
+    anchors. Verified 2026-06-11: SRX33847073 + SRX33847072 share SRP708637/PRJNA1477220.
+    """
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        res = await router.search_page(client, query="RNA-seq", size=10, sources=["omics"])
+        ids = [r.id for r in res.results][:8]
+        assert len(ids) >= 2, "live search did not return >=2 omics ids"
+        out = await router.relate(client, ids)
+    assert len(out.resolved) >= 2  # fail-soft per-id failures did not sink the call
+    # every hint is well-formed: >=2 distinct resources and a non-empty evidence key
+    for h in out.hints:
+        assert len(set(h.resources)) >= 2
+        assert h.key
+    assert any(h.kind == "shared_accession" for h in out.hints), (
+        f"expected a shared_accession hint from live omics ids; got {out.hints!r}"
+    )
+
+
 # --- Task 8: search_page pagination + filters ----------------------------------
 
 
