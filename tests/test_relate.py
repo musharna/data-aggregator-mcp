@@ -194,3 +194,52 @@ def test_explicit_link_address_map_first_writer_wins_on_shared_doi() -> None:
     assert set(link_hints[0].resources) == {"c:3", "a:1"}
     assert len(ident_hints) == 1
     assert set(ident_hints[0].resources) == {"a:1", "b:2"}
+
+
+# --- E4: landing-page URL -> source:id resolution in link/lineage detection ---
+from data_aggregator_mcp.models import Link  # noqa: E402
+
+
+def test_explicit_link_resolves_zenodo_landing_url() -> None:
+    # A link given only as a zenodo record URL must resolve to the owning zenodo:id.
+    rs = [
+        _res(
+            "pubmed:1",
+            links=[Link(rel="is_supplement_to", target_id="https://zenodo.org/records/2")],
+        ),
+        _res("zenodo:2"),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "explicit_link"]
+    assert len(hints) == 1
+    assert set(hints[0].resources) == {"pubmed:1", "zenodo:2"}
+
+
+def test_explicit_link_resolves_hf_two_part_url() -> None:
+    rs = [
+        _res(
+            "pubmed:1",
+            links=[Link(rel="references", target_id="https://huggingface.co/datasets/owner/name")],
+        ),
+        _res("hf:owner/name"),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "explicit_link"]
+    assert len(hints) == 1
+    assert set(hints[0].resources) == {"pubmed:1", "hf:owner/name"}
+
+
+def test_unknown_url_produces_no_false_link() -> None:
+    rs = [
+        _res("pubmed:1", links=[Link(rel="references", target_id="https://example.com/foo/2")]),
+        _res("zenodo:2"),
+    ]
+    assert [h for h in relate_mod.detect(rs) if h.kind == "explicit_link"] == []
+
+
+def test_version_lineage_resolves_landing_url() -> None:
+    rs = [
+        _res("zenodo:1", superseded_by="https://zenodo.org/records/2"),
+        _res("zenodo:2"),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "version_lineage"]
+    assert len(hints) == 1
+    assert hints[0].resources == ["zenodo:2", "zenodo:1"]  # [newer, older]
