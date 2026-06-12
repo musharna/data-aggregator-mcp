@@ -99,6 +99,74 @@ async def test_resolve_non_fetchable_repo_has_empty_files():
     assert r.files == []  # MassIVE is discovery-only this wave
 
 
+_RECORD_PRIDE_RICH = {
+    "accession": "PXD002213",
+    "name": "Gastric cancer ascites proteome",
+    "description": "Comparative proteomics.",
+    "additional": {
+        "submitter": ["Dohyun Han"],
+        "species": ["Homo Sapiens (human)"],
+        "publication": ["29654727 Jin J, Son M. Comparative proteomic analysis."],
+    },
+}
+
+_RECORD_MTBLS_RICH = {
+    "accession": "MTBLS9830",
+    "name": "Medulloblastoma metabolome",
+    "description": "Multiomic profiling.",
+    "additional": {
+        "submitter_name": ["Jane Roe"],
+        "author": ["Jane Roe", "John Doe"],  # present but NOT a creator source
+        "organism": ["Homo sapiens"],
+        "publication": ["Multiomic profiling of medulloblastoma. 10.1101/2023.01.09.523234."],
+    },
+}
+
+
+@pytest.mark.asyncio
+async def test_resolve_enriches_pride_provenance(monkeypatch):
+    """D3: PRIDE additional → creators (submitter), organism (species, verbatim),
+    pmid from a leading-digit publication token."""
+    monkeypatch.setattr("data_aggregator_mcp.pride.files", lambda c, a: _aempty())
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=_RECORD_PRIDE_RICH))
+    ) as c:
+        r = await omicsdi.resolve(c, "omicsdi:pride:PXD002213")
+    assert [cr.name for cr in r.creators] == ["Dohyun Han"]
+    assert r.organism == ["Homo Sapiens (human)"]
+    assert r.identifiers.get("pmid") == "29654727"
+
+
+@pytest.mark.asyncio
+async def test_resolve_enriches_metabolights_doi_and_submitter_fallback():
+    """D3: a repo using `submitter_name`/`organism` keys still yields creators (the
+    depositor, NOT the paper `author` list), organism, and a DOI from publication."""
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=_RECORD_MTBLS_RICH))
+    ) as c:
+        r = await omicsdi.resolve(c, "omicsdi:metabolights_dataset:MTBLS9830")
+    assert [cr.name for cr in r.creators] == ["Jane Roe"]  # submitter_name, not author
+    assert r.organism == ["Homo sapiens"]
+    assert r.doi == "10.1101/2023.01.09.523234"
+    assert r.identifiers.get("pmid") is None  # no leading-digit token
+
+
+@pytest.mark.asyncio
+async def test_resolve_sparse_record_stays_clean(monkeypatch):
+    """A record with no `additional` block adds no fabricated creators/organism."""
+    monkeypatch.setattr("data_aggregator_mcp.pride.files", lambda c, a: _aempty())
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=_RECORD))
+    ) as c:
+        r = await omicsdi.resolve(c, "omicsdi:pride:PXD000001")
+    assert r.creators == [] and r.organism == [] and r.identifiers == {}
+
+
+async def _aempty():
+    return []
+
+
 @pytest.mark.asyncio
 async def test_resolve_malformed_id_raises():
     async with httpx.AsyncClient(
