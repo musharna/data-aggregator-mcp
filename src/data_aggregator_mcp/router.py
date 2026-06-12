@@ -875,6 +875,7 @@ async def search_page(
                     extracted=extracted,
                     applied=applied,
                     overridden=overridden,
+                    confidence=ru.confidence,
                 )
         filters = {
             "published_after": published_after,

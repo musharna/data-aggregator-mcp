@@ -15,7 +15,15 @@ import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import DataResource, FileEntry, Link, compact
+from data_aggregator_mcp.models import (
+    Creator,
+    DataResource,
+    FileEntry,
+    FundingRef,
+    Link,
+    Taxon,
+    compact,
+)
 
 SEARCH = "https://search.rcsb.org/rcsbsearch/v2/query"
 GRAPHQL = "https://data.rcsb.org/graphql"
@@ -34,7 +42,10 @@ _GQL = (
     "{{entries(entry_ids:[{ids}]){{rcsb_id struct{{title}} "
     "rcsb_accession_info{{initial_release_date}} "
     "rcsb_primary_citation{{year pdbx_database_id_DOI pdbx_database_id_PubMed}} "
-    "rcsb_entry_info{{experimental_method}}}}}}"
+    "rcsb_entry_info{{experimental_method}} "
+    "audit_author{{name pdbx_ordinal}} "
+    "pdbx_audit_support{{funding_organization grant_number}} "
+    "polymer_entities{{rcsb_entity_source_organism{{ncbi_taxonomy_id ncbi_scientific_name}}}}}}}}"
 )
 
 
@@ -70,6 +81,38 @@ async def _hydrate(client: httpx.AsyncClient, ids: list[str]) -> dict[str, dict]
     return {e["rcsb_id"]: e for e in entries if e and e.get("rcsb_id")}
 
 
+def _creators(entry: dict) -> list[Creator]:
+    """audit_author rows ordered by pdbx_ordinal → Creator(name). PDB carries no
+    ORCID on the author record, so orcid stays None."""
+    rows = [a for a in (entry.get("audit_author") or []) if a and a.get("name")]
+    rows.sort(key=lambda a: a.get("pdbx_ordinal") or 0)
+    return [Creator(name=a["name"]) for a in rows]
+
+
+def _funding(entry: dict) -> list[FundingRef]:
+    """pdbx_audit_support → FundingRef, keyed on a present funding_organization
+    (nullable list; a sparse classic entry yields nothing — never a blank funder)."""
+    out: list[FundingRef] = []
+    for s in entry.get("pdbx_audit_support") or []:
+        org = (s or {}).get("funding_organization")
+        if org:
+            out.append(FundingRef(funder=org, award=(s or {}).get("grant_number")))
+    return out
+
+
+def _taxa(entry: dict) -> list[Taxon]:
+    """Source organisms across all polymer entities, deduped by taxid (first name
+    wins). Requires both an int taxid and a scientific name."""
+    seen: dict[int, Taxon] = {}
+    for pe in entry.get("polymer_entities") or []:
+        for org in (pe or {}).get("rcsb_entity_source_organism") or []:
+            taxid = (org or {}).get("ncbi_taxonomy_id")
+            name = (org or {}).get("ncbi_scientific_name")
+            if isinstance(taxid, int) and name and taxid not in seen:
+                seen[taxid] = Taxon(taxid=taxid, name=name)
+    return list(seen.values())
+
+
 def _normalize(entry: dict) -> DataResource:
     rid = entry["rcsb_id"]
     cite = entry.get("rcsb_primary_citation") or {}
@@ -83,9 +126,12 @@ def _normalize(entry: dict) -> DataResource:
         source="pdb",
         kind="dataset",
         title=(entry.get("struct") or {}).get("title") or "",
+        creators=_creators(entry),
+        funding=_funding(entry),
         doi=cite.get("pdbx_database_id_DOI"),
         year=cite.get("year"),
         identifiers=identifiers,
+        taxa=_taxa(entry),
         subjects=[method] if method else [],
         last_updated=(entry.get("rcsb_accession_info") or {}).get("initial_release_date"),
         files=[],

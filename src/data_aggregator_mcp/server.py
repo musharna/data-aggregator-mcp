@@ -26,6 +26,7 @@ from pydantic import AnyUrl
 from data_aggregator_mcp import citation, operate, router, run_crate, zenodo
 from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import dossier as dossier_mod
+from data_aggregator_mcp import embeddings as embeddings_mod
 from data_aggregator_mcp import fair as fair_mod
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import health as health_mod
@@ -833,11 +834,15 @@ async def _read_resource(uri: AnyUrl) -> list[ReadResourceContents]:
 
 async def _dispatch(name: str, args: dict[str, Any]) -> Any:
     if name == "list_sources":
+        semantic_available = embeddings_mod.is_configured()
         if not args.get("check_health"):
-            return {"sources": _SOURCES}
+            return {"sources": _SOURCES, "semantic_rank_available": semantic_available}
         async with httpx.AsyncClient(follow_redirects=True) as client:
             probed = {h["name"]: h for h in await health_mod.probe_sources(client)}
-        return {"sources": [{**s, "health": probed.get(s["name"])} for s in _SOURCES]}
+        return {
+            "sources": [{**s, "health": probed.get(s["name"])} for s in _SOURCES],
+            "semantic_rank_available": semantic_available,
+        }
     async with httpx.AsyncClient(follow_redirects=True) as client:
         match name:
             case "search":

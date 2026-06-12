@@ -10,13 +10,16 @@ scheme forms (``https://doi.org/10.x``, ``doi:10.x``, bare ``10.x``) together, s
 DOI matches across representations. A `superseded_by` cycle (contradictory upstream
 metadata) is detected and reported as a contradiction rather than an asserted order.
 
-Remaining limitation: a target id given only as a source-specific *record* URL
-(e.g. ``https://zenodo.org/record/2`` instead of ``zenodo:2`` or its DOI) is not
-mapped to the owning resource — that needs per-source URL parsing, out of scope here.
-A miss is a best-effort false negative, never a wrong hint.
+A target id given only as a source-specific *record* URL (e.g.
+``https://zenodo.org/records/2`` instead of ``zenodo:2`` or its DOI) is mapped to the
+owning resource via ``_url_to_id`` — a deterministic per-source landing-page WHITELIST
+(``_URL_ID_RULES``). A URL from a source not in the whitelist still passes through
+unmatched: a miss is a best-effort false negative, never a wrong hint.
 """
 
 from __future__ import annotations
+
+import re
 
 from data_aggregator_mcp.models import DataResource, JoinHint
 
@@ -49,6 +52,47 @@ def _norm(value: str | None) -> str | None:
             s = s[len(prefix) :]
             break
     return s or None
+
+
+# Deterministic landing-page-URL -> `<source>:<localpart>` rules. A WHITELIST (never a
+# regex-all): each pattern is anchored, bounded, and maps to a confirmed id scheme, so a
+# target id given only as a record URL (e.g. ``https://zenodo.org/records/2``) resolves to
+# the owning resource id (``zenodo:2``). Unknown URLs pass through unchanged (a miss stays a
+# best-effort false negative, never a wrong hint). DOI resolver URLs are intentionally absent
+# here — ``_norm`` already canonicalizes those.
+_URL_ID_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"^(?:https?://)?(?:www\.)?zenodo\.org/records?/(\d+)"), "zenodo:{0}"),
+    (re.compile(r"^(?:https?://)?pubmed\.ncbi\.nlm\.nih\.gov/(\d+)"), "pubmed:{0}"),
+    (
+        re.compile(
+            r"^(?:https?://)?(?:www\.)?ncbi\.nlm\.nih\.gov/geo/query/acc\.cgi\?acc=([A-Za-z0-9]+)"
+        ),
+        "geo:{0}",
+    ),
+    (
+        re.compile(r"^(?:https?://)?(?:www\.)?ncbi\.nlm\.nih\.gov/bioproject/([A-Za-z0-9]+)"),
+        "bioproject:{0}",
+    ),
+    (re.compile(r"^(?:https?://)?(?:www\.)?ncbi\.nlm\.nih\.gov/sra/([A-Za-z0-9]+)"), "sra:{0}"),
+    (re.compile(r"^(?:https?://)?(?:www\.)?ebi\.ac\.uk/gwas/studies/([A-Za-z0-9]+)"), "gwas:{0}"),
+    (re.compile(r"^(?:https?://)?(?:www\.)?openml\.org/d/(\d+)"), "openml:{0}"),
+    (re.compile(r"^(?:https?://)?(?:www\.)?rcsb\.org/structure/([A-Za-z0-9]+)"), "pdb:{0}"),
+    (re.compile(r"^(?:https?://)?(?:www\.)?dandiarchive\.org/dandiset/(\d+)"), "dandi:{0}"),
+    (re.compile(r"^(?:https?://)?huggingface\.co/datasets/([^/\s?#]+)/([^/\s?#]+)"), "hf:{0}/{1}"),
+)
+
+
+def _url_to_id(value: str | None) -> str | None:
+    """Canonicalize a known source landing-page URL to its ``<source>:<localpart>`` id.
+    Non-URL values and unrecognized URLs are returned unchanged."""
+    if not value:
+        return value
+    s = value.strip()
+    for pattern, template in _URL_ID_RULES:
+        m = pattern.match(s)
+        if m:
+            return template.format(*m.groups())
+    return value
 
 
 def detect(resources: list[DataResource]) -> list[JoinHint]:
@@ -143,7 +187,7 @@ def _explicit_link(resources: list[DataResource]) -> list[JoinHint]:
     seen: set[tuple[str, str, str]] = set()
     for r in resources:
         for link in r.links:
-            n = _norm(link.target_id)
+            n = _norm(_url_to_id(link.target_id))
             if not n:
                 continue
             target = addr.get(n)
@@ -177,7 +221,7 @@ def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
         raw = r.superseded_by
         if not raw:
             continue
-        n = _norm(raw)
+        n = _norm(_url_to_id(raw))
         if not n:
             continue
         newer = addr.get(n)  # the resource r.superseded_by points to

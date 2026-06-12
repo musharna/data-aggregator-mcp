@@ -37,7 +37,9 @@ _SYSTEM_PROMPT = (
     "or null - do NOT invent; null if not clearly present. These are ADVISORY LABELS for "
     "transparency; they do NOT remove the term from keyword_core), "
     "kind (one of dataset|sequencing_run|study|publication|software or null), "
-    "year_min, year_max (integers or null). "
+    "year_min, year_max (integers or null), "
+    "confidence (number between 0 and 1 or null: your self-assessed, UNCALIBRATED "
+    "confidence that this structured rewrite matches the user's intent — advisory only). "
     "Do not add keys. Do not explain."
 )
 
@@ -63,6 +65,7 @@ class ParsedRewrite:
     kind: str | None = None
     year_min: int | None = None
     year_max: int | None = None
+    confidence: float | None = None  # advisory, UNCALIBRATED LLM self-confidence in [0, 1]
 
 
 def _clean_str(value: object) -> str | None:
@@ -89,6 +92,23 @@ def _clean_int(value: object) -> int | None:
     return None
 
 
+def _clean_float(value: object) -> float | None:
+    """Coerce to a float clamped to [0, 1], else None. Never raises. Used for the
+    advisory, uncalibrated confidence axis — bool and non-numeric strings → None."""
+    if isinstance(value, bool):  # bool is an int subclass — reject it
+        return None
+    if isinstance(value, (int, float)):
+        f = float(value)
+    elif isinstance(value, str):
+        try:
+            f = float(value.strip())
+        except ValueError:
+            return None
+    else:
+        return None
+    return max(0.0, min(1.0, f))
+
+
 async def rewrite(client: httpx.AsyncClient, query: str) -> ParsedRewrite | None:
     """Rewrite ``query`` into a ``ParsedRewrite`` via the configured LLM endpoint.
 
@@ -110,6 +130,7 @@ async def rewrite(client: httpx.AsyncClient, query: str) -> ParsedRewrite | None
         kind=_clean_str(data.get("kind")),
         year_min=_clean_int(data.get("year_min")),
         year_max=_clean_int(data.get("year_max")),
+        confidence=_clean_float(data.get("confidence")),
     )
     # Drop an invalid kind rather than pass it downstream (the router would reject it).
     if parsed.kind not in _VALID_KINDS:
