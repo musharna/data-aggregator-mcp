@@ -229,6 +229,9 @@ class QueryUnderstanding(BaseModel):
         default_factory=dict
     )  # fields fed as params (resolution: see *_expansion)
     overridden: list[str] = Field(default_factory=list)  # fields the explicit caller param won
+    confidence: float | None = (
+        None  # advisory, UNCALIBRATED LLM self-confidence in [0,1]; None if absent
+    )
 
 
 class QueryExpansion(BaseModel):
