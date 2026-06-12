@@ -202,6 +202,34 @@ def test_normalize_extracts_related_links() -> None:
     assert ("is_part_of", "10.1/x") in {(link.rel, link.target_id) for link in r.links}
 
 
+def test_normalize_maps_metrics_from_stats() -> None:
+    rec = _record()
+    rec["stats"] = {
+        "views": 1234,
+        "unique_views": 1000,
+        "downloads": 56,
+        "unique_downloads": 50,
+    }
+    r = zenodo._normalize(rec)
+    assert r.metrics is not None
+    assert r.metrics.views == 1234
+    assert r.metrics.downloads == 56
+
+
+def test_normalize_metrics_none_when_stats_absent() -> None:
+    # _record() carries no "stats" key -> metrics stays None (not exposed != zero).
+    assert zenodo._normalize(_record()).metrics is None
+
+
+def test_normalize_metrics_coerces_floats_and_skips_nulls() -> None:
+    rec = _record()
+    rec["stats"] = {"views": 12.0, "downloads": None}
+    r = zenodo._normalize(rec)
+    assert r.metrics is not None
+    assert r.metrics.views == 12
+    assert r.metrics.downloads is None
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 

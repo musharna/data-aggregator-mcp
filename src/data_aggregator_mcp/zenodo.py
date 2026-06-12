@@ -19,6 +19,7 @@ from data_aggregator_mcp.models import (
     FileEntry,
     FundingRef,
     Link,
+    Metrics,
     _orcid,
     _rel,
     compact,
@@ -55,6 +56,16 @@ def _normalize(record: dict[str, Any]) -> DataResource:
                 checksum=f.get("checksum"),
             )
         )
+    stats = record.get("stats") or {}
+    views, downloads = stats.get("views"), stats.get("downloads")
+    metrics = (
+        Metrics(
+            views=int(views) if views is not None else None,
+            downloads=int(downloads) if downloads is not None else None,
+        )
+        if (views is not None or downloads is not None)
+        else None
+    )
     return DataResource(
         id=f"zenodo:{record.get('id')}",
         source="zenodo",
@@ -81,6 +92,7 @@ def _normalize(record: dict[str, Any]) -> DataResource:
             if r.get("relation") and r.get("identifier")
         ],
         files=files,
+        metrics=metrics,
     )
 
 
