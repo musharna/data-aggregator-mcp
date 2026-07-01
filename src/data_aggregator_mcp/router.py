@@ -37,6 +37,7 @@ from data_aggregator_mcp import (
     operate,
     pdb,
     taxonomy,
+    uniprot,
     zenodo,
 )
 from data_aggregator_mcp import assay as assay_mod
@@ -102,6 +103,7 @@ _ADAPTERS: dict[str, Any] = {
     "omicsdi": omicsdi,
     "openml": openml,
     "pdb": pdb,
+    "uniprot": uniprot,
     "gwas": gwas,
 }
 
@@ -1132,7 +1134,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             f"cannot route id {resource_id!r}: expected 'zenodo:<id>', 'datacite:<doi>', "
             "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', 'dataone:<pid>', "
             "'omicsdi:<source>:<acc>', 'dandi:<id>', 'cellxgene:<id>', 'openml:<id>', "
-            "'pdb:<id>', 'gwas:<acc>', "
+            "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', "
             "a bare Zenodo id, or a DOI"
         )
     if resource.organism:

@@ -52,6 +52,7 @@ _FETCHABLE_SOURCES = (
     "cellxgene:",
     "openml:",
     "pdb:",
+    "uniprot:",
 )  # id prefixes with a working fetch backend
 
 
@@ -275,6 +276,20 @@ _SOURCES: list[dict[str, Any]] = [
         "description": "RCSB Protein Data Bank — macromolecular structures; full-text search, DOI/PMID-rich, .cif/.pdb fetch.",
     },
     {
+        "name": "uniprot",
+        "layer": "archives",
+        "kinds": ["dataset"],
+        "filters_supported": ["query", "size"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (entry discovery; FASTA sequence fetch on resolve)",
+        "fetchable": True,
+        "operable": False,
+        "fetchable_notes": "FASTA sequence streams from rest.uniprot.org (unverified — no upstream checksum).",
+        "id_example": "uniprot:P01308",
+        "description": "UniProtKB — protein sequences & functional annotation; full-text search, FASTA fetch.",
+    },
+    {
         "name": "gwas",
         "layer": "omics",
         "kinds": ["study"],
@@ -355,7 +370,7 @@ TOOLS: list[types.Tool] = [
                     "items": {"type": "string"},
                     "description": "Restrict fan-out to these sources (default: all). "
                     "Available: zenodo, dataone, cellxgene, datacite, dandi, omics, "
-                    "literature, huggingface, omicsdi, openml, pdb, gwas",
+                    "literature, huggingface, omicsdi, openml, pdb, uniprot, gwas",
                 },
                 "organism": {
                     "type": "string",
