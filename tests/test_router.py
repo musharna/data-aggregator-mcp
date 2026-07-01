@@ -55,6 +55,7 @@ def test_available_sources_lists_all_adapters() -> None:
         "omicsdi",
         "openml",
         "pdb",
+        "uniprot",
         "gwas",
     ]
 
@@ -350,6 +351,11 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
             r"https://www\.ebi\.ac\.uk/gwas/rest/api/studies/search/findByDiseaseTrait.*"
         ),
         json={"_embedded": {"studies": []}, "page": {"totalElements": 0}},
+    )
+    # uniprot is also a default source: empty results here
+    httpx_mock.add_response(
+        url=re.compile(r"https://rest\.uniprot\.org/uniprotkb/search.*"),
+        json={"results": []},
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "rna")
