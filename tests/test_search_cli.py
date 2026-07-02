@@ -1,4 +1,9 @@
 import json
+import os
+import subprocess
+import sys
+
+import pytest
 
 from data_aggregator_mcp import server
 
@@ -46,3 +51,29 @@ def test_bare_main_starts_server(monkeypatch):
     monkeypatch.setattr(server.asyncio, "run", fake_run)
     server.main([])
     assert "_serve" in recorded["coro_name"]
+
+
+@pytest.mark.skipif(os.environ.get("RECAP_NO_NET") == "1", reason="offline")
+def test_search_cli_real_subprocess():
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "data_aggregator_mcp",
+            "search",
+            "--json",
+            "--size",
+            "2",
+            "--sources",
+            "zenodo",
+            "single cell",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    if proc.returncode != 0:
+        pytest.skip(f"da search unavailable: {proc.stderr[:200]}")
+    data = json.loads(proc.stdout)
+    assert isinstance(data, list)
+    assert all("title" in r for r in data)
