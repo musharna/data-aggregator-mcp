@@ -11,9 +11,11 @@ literature ids fail loud.
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import logging
+import sys
 from typing import Any
 
 import httpx
@@ -988,7 +990,30 @@ async def _serve() -> None:
         await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
-def main() -> None:
+def _run_search_cli(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="data-aggregator-mcp search")
+    parser.add_argument("query")
+    parser.add_argument("--json", action="store_true", help="emit JSON (the only format)")
+    parser.add_argument("--size", type=int, default=zenodo.DEFAULT_SIZE)
+    parser.add_argument("--sources", default=None, help="comma-separated sources; default: all")
+    ns = parser.parse_args(argv)
+    sources = [s.strip() for s in ns.sources.split(",") if s.strip()] if ns.sources else None
+    try:
+        page = asyncio.run(
+            _dispatch("search", {"query": ns.query, "size": ns.size, "sources": sources})
+        )
+    except Exception as exc:  # fail loud on stderr, non-zero exit
+        print(f"data-aggregator-mcp search: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    json.dump(page.get("results", []), sys.stdout)
+    sys.stdout.write("\n")
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if args and args[0] == "search":
+        _run_search_cli(args[1:])
+        return
     asyncio.run(_serve())
 
 
