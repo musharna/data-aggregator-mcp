@@ -6,6 +6,32 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-07-03
+
+### Added
+
+- **UniProtKB connector** (#15) — UniProtKB is now a first-class default source:
+  full-text search reads the accurate `x-total-results` header (cursor-paginated,
+  so like huggingface it contributes to page 1 only — `offset>0` returns no rows),
+  `resolve` attaches a FASTA `FileEntry` (unverified — no upstream checksum), and an
+  injection-safe accession guard fails before any network call.
+- **`search --json` one-shot CLI subcommand** (#16) — an explicit `search` first-arg
+  diverts to a one-shot CLI that prints the `SearchResult.results` array as JSON,
+  enabling lightweight non-MCP consumers (e.g. recap's DaProvider). Bare invocation
+  still starts the MCP server unchanged.
+
+### Fixed
+
+- Registry `server.json` description now fits the MCP registry's 100-char limit,
+  with a guard test to keep it there.
+
+### Changed
+
+- Dependency bumps: starlette 1.1.0→1.3.1 (#10), aiohttp 3.14.0→3.14.1 (#11),
+  cryptography 48.0.0→48.0.1 (#12), pydantic-settings 2.14.1→2.14.2 (#13),
+  python-multipart 0.0.29→0.0.31 (#9), actions/checkout 6.0.3→7.0.0 (#14).
+- Re-recorded the stdio demo against the v0.40.0 tool surface.
+
 ## [0.40.0] - 2026-06-11
 
 ### Fixed
