@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.41.1] - 2026-07-03
+
+### Fixed
+
+- **Package `__version__` was left at 0.40.0 in the 0.41.0 release**, so the module
+  attribute (and the version stamped into generated RO-Crate/dossier provenance
+  metadata) disagreed with the distribution version. All four version sources
+  (`__init__.py`, `pyproject.toml`, and both `server.json` fields) are now synced to
+  0.41.1; the `test_version_is_synced_across_all_sources` guard passes.
+
 ## [0.41.0] - 2026-07-03
 
 ### Added
