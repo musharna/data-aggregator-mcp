@@ -10,15 +10,15 @@ registries, and literature — behind a single normalized model.**
 [![CI](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml)
 [![Glama](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp/badges/score.svg)](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp)
 
-`search` one query across **12 sources** — **Zenodo, DataCite** (Dryad /
+`search` one query across **13 sources** — **Zenodo, DataCite** (Dryad /
 Figshare / Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics**
 (GEO / SRA / BioProject), **literature** (PubMed / OpenAIRE), **HuggingFace**
 datasets, **DataONE** (eco / environmental), **OmicsDI** (proteomics /
 metabolomics), **DANDI** (neurophysiology), **CZ CELLxGENE** (single-cell),
-**OpenML** (ML datasets), **RCSB PDB** (structures), and the **GWAS Catalog** —
-deduplicated, normalized, and cross-linked. `resolve` any hit to its file
-manifest, citation, trust signals, and the data it points at. `fetch` it to
-disk with checksum verification.
+**OpenML** (ML datasets), **RCSB PDB** (structures), **UniProtKB** (proteins),
+and the **GWAS Catalog** — deduplicated, normalized, and cross-linked. `resolve`
+any hit to its file manifest, citation, trust signals, and the data it points
+at. `fetch` it to disk with checksum verification.
 
 mcp-name: io.github.musharna/data-aggregator-mcp
 
@@ -50,6 +50,11 @@ records:
 - **Trust signals** — usage `metrics` (citations / views / downloads / likes),
   version status (`is_latest` / `superseded_by`), and `last_updated` freshness,
   surfaced wherever the source exposes them.
+- **FAIR score & provenance dossier** — `resolve(fair=true)` attaches an
+  RDA-grounded FAIRness assessment (Maturity Model v0.90) with per-indicator RDA
+  ids and actionable gaps; `resolve(format="provenance")` composes
+  version-currency, licence/SPDX, FAIRness, and retraction signals into one
+  RO-Crate 1.1 data-availability dossier.
 - **Interop exports** — `resolve(format="croissant")` or `"ro-crate"` hands a
   dataset to an ML or research-packaging pipeline as standard JSON-LD.
 - **Operate on data in place** — `operate` reads the schema, previews rows, or
