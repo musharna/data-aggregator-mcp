@@ -21,6 +21,7 @@ import httpx
 from data_aggregator_mcp import (
     _cursor,
     anatomy,
+    biostudies,
     cellxgene,
     chemistry,
     dandi,
@@ -105,6 +106,7 @@ _ADAPTERS: dict[str, Any] = {
     "pdb": pdb,
     "uniprot": uniprot,
     "gwas": gwas,
+    "biostudies": biostudies,
 }
 
 
@@ -1121,6 +1123,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = await pdb.resolve(client, rid)
     elif prefix in gwas.PREFIXES:
         resource = await gwas.resolve(client, rid)
+    elif prefix in biostudies.PREFIXES:
+        resource = await biostudies.resolve(client, rid)
     elif rid.startswith("datacite:"):
         resource = await datacite.resolve(client, rid)
     elif rid.startswith("zenodo:") or rid.isdigit():
@@ -1134,7 +1138,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             f"cannot route id {resource_id!r}: expected 'zenodo:<id>', 'datacite:<doi>', "
             "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', 'dataone:<pid>', "
             "'omicsdi:<source>:<acc>', 'dandi:<id>', 'cellxgene:<id>', 'openml:<id>', "
-            "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', "
+            "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', 'biostudies:<acc>', "
             "a bare Zenodo id, or a DOI"
         )
     if resource.organism:

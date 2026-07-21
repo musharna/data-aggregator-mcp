@@ -1,0 +1,843 @@
+{
+ "accno": "E-GEOD-30436",
+ "attributes": [
+  {
+   "name": "Title",
+   "value": "Transcriptome profiling of reproductive stage flag leaves of wheat from drought susceptible parent WL711, drought tolerant parent C306 and drought susceptible and drought tolerant RIL bulks in irrigated and drought condition"
+  },
+  {
+   "name": "ReleaseDate",
+   "value": "2012-04-29"
+  },
+  {
+   "name": "RootPath",
+   "value": "E-GEOD-30436"
+  },
+  {
+   "name": "AttachTo",
+   "value": "ArrayExpress"
+  }
+ ],
+ "section": {
+  "accno": "s-E-GEOD-30436",
+  "type": "Study",
+  "attributes": [
+   {
+    "name": "Title",
+    "value": "Transcriptome profiling of reproductive stage flag leaves of wheat from drought susceptible parent WL711, drought tolerant parent C306 and drought susceptible and drought tolerant RIL bulks in irrigated and drought condition"
+   },
+   {
+    "name": "Study type",
+    "value": "transcription profiling by array",
+    "valqual": [
+     {
+      "name": "Ontology",
+      "value": "EFO"
+     },
+     {
+      "name": "TermId",
+      "value": "EFO_0002768"
+     }
+    ]
+   },
+   {
+    "name": "Organism",
+    "value": "Triticum aestivum"
+   },
+   {
+    "name": "Description",
+    "value": "The aim of the study was to identify candidate genes responsible for drought tolerance trait between a pair of wheat varieties ( WL711 and C306) and correspondng progeny bulks (10 drought susceptible RILs  and 10 drought tolerant  RILs) by combining QTLs analysis with expression analysis.   Microarray analysis of RNA extracted from the flag leaves showed large number of differentially expressed genes.  The number of differentially expressed genes was reduced  to 37 on the basis of their occurance in a major QTL region (responcible for drought tolerance) detected in RIL population derived from WL711 and C306. RNA from the reproductive stage flag leaf of wheat in irrigated and drought condition of drought susceptible parent WL711, drought tolerant parent C306 and drought susceptible and drought tolerant RIL bulks were analysed in three different biological replications  (A , B and C) making total twenty four samples"
+   }
+  ],
+  "links": [
+   [
+    {
+     "url": "GSE30436",
+     "attributes": [
+      {
+       "name": "Type",
+       "value": "GEO"
+      }
+     ]
+    }
+   ]
+  ],
+  "subsections": [
+   {
+    "type": "Author",
+    "attributes": [
+     {
+      "name": "Name",
+      "value": "suhas kadam"
+     },
+     {
+      "name": "Email",
+      "value": "suhaskad@gmail.com"
+     },
+     {
+      "name": "Phone",
+      "value": "919968773595"
+     },
+     {
+      "name": "Role",
+      "value": "submitter"
+     },
+     {
+      "name": "affiliation",
+      "value": "o1",
+      "reference": true
+     }
+    ]
+   },
+   {
+    "accno": "22476619",
+    "type": "Publication",
+    "attributes": [
+     {
+      "name": "Title",
+      "value": "Genomic associations for drought tolerance on the short arm of wheat chromosome 4B."
+     },
+     {
+      "name": "Authors",
+      "value": "Kadam S, Singh K, Shukla S, Goel S, Vikram P, Pawar V, Gaikwad K, Khanna-Chopra R, Singh N"
+     },
+     {
+      "name": "DOI",
+      "value": "10.1007/s10142-012-0276-1"
+     }
+    ],
+    "links": [
+     {
+      "url": "10.1007/s10142-012-0276-1",
+      "attributes": [
+       {
+        "name": "Type",
+        "value": "DOI"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "accno": "s-assays-data-E-GEOD-30436",
+    "type": "Assays and Data",
+    "attributes": [
+     {
+      "name": "Technology",
+      "value": "Array assay"
+     },
+     {
+      "name": "Assay by Molecule",
+      "value": "RNA assay"
+     }
+    ],
+    "subsections": [
+     {
+      "accno": "raw-data",
+      "type": "Raw Data",
+      "files": [
+       [
+        {
+         "path": "GSM754898.CEL",
+         "size": 13551986,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754898 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754897.CEL",
+         "size": 13553265,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754897 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754896.CEL",
+         "size": 13552569,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754896 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754895.CEL",
+         "size": 13551346,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754895 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754894.CEL",
+         "size": 13551302,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754894 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754893.CEL",
+         "size": 13551930,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754893 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754892.CEL",
+         "size": 13552482,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754892 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754891.CEL",
+         "size": 13554098,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754891 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754890.CEL",
+         "size": 13554306,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754890 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754889.CEL",
+         "size": 13551290,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754889 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754888.CEL",
+         "size": 13551150,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754888 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754887.CEL",
+         "size": 13551213,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754887 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754886.CEL",
+         "size": 13555185,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754886 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754885.CEL",
+         "size": 13553769,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754885 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754884.CEL",
+         "size": 13553077,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754884 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754883.CEL",
+         "size": 13551166,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754883 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754882.CEL",
+         "size": 13551338,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754882 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754881.CEL",
+         "size": 13551082,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754881 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754880.CEL",
+         "size": 13554710,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754880 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754879.CEL",
+         "size": 13561186,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754879 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754878.CEL",
+         "size": 13554258,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754878 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754877.CEL",
+         "size": 13554234,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754877 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754876.CEL",
+         "size": 13567497,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754876 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754875.CEL",
+         "size": 13551077,
+         "attributes": [
+          {
+           "name": "Samples",
+           "value": "GSM754875 1"
+          },
+          {
+           "name": "Description",
+           "value": "Raw data file"
+          }
+         ],
+         "type": "file"
+        }
+       ]
+      ]
+     },
+     {
+      "accno": "processed-data",
+      "type": "Processed Data",
+      "files": [
+       [
+        {
+         "path": "GSM754896_sample_table.txt",
+         "size": 1618331,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754876_sample_table.txt",
+         "size": 1616448,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754883_sample_table.txt",
+         "size": 1619802,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754875_sample_table.txt",
+         "size": 1617535,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754885_sample_table.txt",
+         "size": 1623143,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754892_sample_table.txt",
+         "size": 1619909,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754890_sample_table.txt",
+         "size": 1616127,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754887_sample_table.txt",
+         "size": 1615934,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754880_sample_table.txt",
+         "size": 1619980,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754886_sample_table.txt",
+         "size": 1621579,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754884_sample_table.txt",
+         "size": 1627150,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754897_sample_table.txt",
+         "size": 1618594,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754898_sample_table.txt",
+         "size": 1624768,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754893_sample_table.txt",
+         "size": 1625104,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754877_sample_table.txt",
+         "size": 1617690,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754894_sample_table.txt",
+         "size": 1619331,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754882_sample_table.txt",
+         "size": 1618975,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754889_sample_table.txt",
+         "size": 1620686,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754879_sample_table.txt",
+         "size": 1620528,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754878_sample_table.txt",
+         "size": 1618381,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754881_sample_table.txt",
+         "size": 1620520,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754891_sample_table.txt",
+         "size": 1622412,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754895_sample_table.txt",
+         "size": 1627433,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "GSM754888_sample_table.txt",
+         "size": 1620676,
+         "attributes": [
+          {
+           "name": "Description",
+           "value": "Processed Data"
+          }
+         ],
+         "type": "file"
+        }
+       ]
+      ]
+     },
+     {
+      "accno": "mt-E-GEOD-30436",
+      "type": "MAGE-TAB Files",
+      "files": [
+       [
+        {
+         "path": "E-GEOD-30436.idf.txt",
+         "size": 4266,
+         "attributes": [
+          {
+           "name": "Type",
+           "value": "IDF File"
+          },
+          {
+           "name": "Format",
+           "value": "tab-delimited text"
+          },
+          {
+           "name": "Description",
+           "value": "Investigation Design Format (IDF)"
+          }
+         ],
+         "type": "file"
+        },
+        {
+         "path": "E-GEOD-30436.sdrf.txt",
+         "size": 18306,
+         "attributes": [
+          {
+           "name": "Type",
+           "value": "SDRF File"
+          },
+          {
+           "name": "Format",
+           "value": "tab-delimited text"
+          },
+          {
+           "name": "Description",
+           "value": "Sample and Data Relationship Format (SDRF)"
+          }
+         ],
+         "type": "file"
+        }
+       ]
+      ]
+     },
+     {
+      "accno": "ad-E-GEOD-30436",
+      "type": "Array Designs",
+      "links": [
+       [
+        {
+         "url": "A-AFFY-57",
+         "attributes": [
+          {
+           "name": "Type",
+           "value": "Array Design"
+          }
+         ]
+        }
+       ]
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "type": "submission"
+}

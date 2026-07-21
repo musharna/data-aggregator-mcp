@@ -6,6 +6,34 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **BioStudies (EBI) connector**, including the **ArrayExpress** collection — EBI's
+  counterpart to GEO, and previously reachable only indirectly through OmicsDI.
+  `search` is free-text across collections (or narrowed with `collection=`) and
+  pages by page number; `resolve` returns the file manifest, the publication DOI,
+  and sibling accessions.
+- **Cross-references feed `relate` and DOI dedup.** A BioStudies study's sibling
+  accessions (GEO `GSE…`, ENA `PRJ…`) land in `accessions`, so resolving
+  `biostudies:E-GEOD-30436` alongside `geo:GSE30436` now yields a
+  `shared_accession` hint naming `GSE30436` as the evidence — a cross-repository
+  link the router could not previously make. Promotion is allowlisted by link
+  type, because `relate` reports an accession as hard evidence and a junk value
+  would manufacture a false connection.
+
+### Notes
+
+- **BioStudies fetch is UNVERIFIED and the catalog says so.** The API publishes no
+  md5/sha256 for study files (checked against the live payload), so
+  `FileEntry.checksum` is None. `fetch` still streams and still fails loud on an
+  HTML error body; it simply cannot make the integrity claim a Zenodo or ENA fetch
+  makes. A test asserts the absence, so if BioStudies ever adds checksums the
+  catalog note gets revisited rather than silently going stale.
+- **`totalHits` is an estimate on the cross-collection search** (the API returns
+  `isTotalHitsExact: false`; consecutive pages reported 1549 then 1550). It is
+  exact within a single collection. The number is passed through as given rather
+  than implying a precision the source does not have.
+
 ## [0.41.1] - 2026-07-03
 
 ### Fixed

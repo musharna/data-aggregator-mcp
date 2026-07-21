@@ -10,12 +10,13 @@ registries, and literature — behind a single normalized model.**
 [![CI](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml)
 [![Glama](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp/badges/score.svg)](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp)
 
-`search` one query across **12 sources** — **Zenodo, DataCite** (Dryad /
+`search` one query across **14 sources** — **Zenodo, DataCite** (Dryad /
 Figshare / Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics**
-(GEO / SRA / BioProject), **literature** (PubMed / OpenAIRE), **HuggingFace**
-datasets, **DataONE** (eco / environmental), **OmicsDI** (proteomics /
-metabolomics), **DANDI** (neurophysiology), **CZ CELLxGENE** (single-cell),
-**OpenML** (ML datasets), **RCSB PDB** (structures), and the **GWAS Catalog** —
+(GEO / SRA / BioProject), **BioStudies** (EBI, incl. ArrayExpress),
+**literature** (PubMed / OpenAIRE), **HuggingFace** datasets, **DataONE**
+(eco / environmental), **OmicsDI** (proteomics / metabolomics), **DANDI**
+(neurophysiology), **CZ CELLxGENE** (single-cell), **OpenML** (ML datasets),
+**RCSB PDB** (structures), **UniProtKB** (proteins), and the **GWAS Catalog** —
 deduplicated, normalized, and cross-linked. `resolve` any hit to its file
 manifest, citation, trust signals, and the data it points at. `fetch` it to
 disk with checksum verification.
