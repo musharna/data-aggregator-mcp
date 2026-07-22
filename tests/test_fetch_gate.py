@@ -23,7 +23,9 @@ def test_is_fetchable_allows_zenodo_and_bare_digits() -> None:
 
 def test_is_fetchable_rejects_unwired_sources() -> None:
     # An id with no allowlisted prefix (and not a bare Zenodo digit) has no backend.
-    assert _is_fetchable("biostudies:S-BSST123") is False
+    # gwas is discovery-only (no summary-statistics fetch backend yet); biostudies
+    # used to sit here and is now wired, so it no longer proves the negative.
+    assert _is_fetchable("gwas:GCST000028") is False
     assert _is_fetchable("nonsense") is False
 
 

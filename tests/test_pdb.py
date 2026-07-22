@@ -41,7 +41,7 @@ _GRAPHQL = {
 
 
 def _route(request):
-    if "search.rcsb.org" in request.url.host:
+    if request.url.host == "search.rcsb.org":
         return httpx.Response(200, json=_SEARCH)
     return httpx.Response(200, json=_GRAPHQL)
 

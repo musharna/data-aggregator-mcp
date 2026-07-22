@@ -1,10 +1,14 @@
 import os
+from urllib.parse import urlsplit
 
 import httpx
 import pytest
 
 from data_aggregator_mcp import cellxgene
 from data_aggregator_mcp.errors import NotFoundError
+
+# Host that CELLxGENE serves dataset assets from.
+_ASSET_HOST = "datasets.cellxgene.cziscience.com"
 
 # Trimmed REAL /curation/v1/collections shape (a bare JSON array).
 _COLLECTIONS = [
@@ -252,4 +256,6 @@ async def test_live_search_then_resolve():
         assert total > 0 and recs and recs[0].id.startswith("cellxgene:")
         full = await cellxgene.resolve(c, recs[0].id)
         assert full.kind == "dataset" and full.files  # asset manifest attached
-        assert all(f.url and f.url.startswith("https://datasets.cellxgene") for f in full.files)
+        # Exact host, not a URL prefix: startswith("https://datasets.cellxgene")
+        # would also accept https://datasets.cellxgene.evil.com/x.h5ad.
+        assert all(f.url and urlsplit(f.url).hostname == _ASSET_HOST for f in full.files)

@@ -1,4 +1,10 @@
-"""MCP server — exposes search/resolve/fetch/list_sources over stdio.
+"""MCP server — exposes search/resolve/fetch/list_sources over stdio or HTTP.
+
+Transport is chosen at the CLI: bare invocation serves stdio (unchanged),
+``--transport http`` serves streamable HTTP via ``http_transport``. Both share
+this module's ``server`` object and every handler below; only the stream pair
+differs. See ``http_transport`` for the HTTP security posture and for how
+``fetch`` semantics change when the server is not a local child of the client.
 
 search/resolve fan out through the multi-source router (Zenodo + DataCite +
 NCBI omics + literature: PubMed/OpenAIRE). fetch streams files for Zenodo,
@@ -11,9 +17,11 @@ literature ids fail loud.
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import logging
+import sys
 from typing import Any
 
 import httpx
@@ -23,7 +31,7 @@ from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.stdio import stdio_server
 from pydantic import AnyUrl
 
-from data_aggregator_mcp import citation, operate, router, run_crate, zenodo
+from data_aggregator_mcp import __version__, citation, operate, router, run_crate, zenodo
 from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import dossier as dossier_mod
 from data_aggregator_mcp import embeddings as embeddings_mod
@@ -34,7 +42,7 @@ from data_aggregator_mcp import license_compat as license_mod
 from data_aggregator_mcp import resources as resources_mod
 from data_aggregator_mcp import ro_crate as ro_crate_mod
 from data_aggregator_mcp import trust as trust_mod
-from data_aggregator_mcp.errors import FetchNotSupportedError
+from data_aggregator_mcp.errors import FetchNotSupportedError, ValidationError
 from data_aggregator_mcp.models import DataResource, FetchResult, RelateResult, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -53,6 +61,8 @@ _FETCHABLE_SOURCES = (
     "cellxgene:",
     "openml:",
     "pdb:",
+    "uniprot:",
+    "biostudies:",
 )  # id prefixes with a working fetch backend
 
 
@@ -106,7 +116,10 @@ def _ensure_fulltext_available(fid: str, resource: DataResource) -> None:
         )
 
 
-server: Server = Server("data-aggregator-mcp")
+# Pass version explicitly: the SDK falls back to reporting ITS OWN version in
+# initialize().serverInfo when this is None, so clients were told the server was
+# "1.28.1" (the mcp SDK) rather than the package version. Affects both transports.
+server: Server = Server("data-aggregator-mcp", version=__version__)
 
 _SOURCES: list[dict[str, Any]] = [
     {
@@ -276,6 +289,20 @@ _SOURCES: list[dict[str, Any]] = [
         "description": "RCSB Protein Data Bank — macromolecular structures; full-text search, DOI/PMID-rich, .cif/.pdb fetch.",
     },
     {
+        "name": "uniprot",
+        "layer": "archives",
+        "kinds": ["dataset"],
+        "filters_supported": ["query", "size"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (entry discovery; FASTA sequence fetch on resolve)",
+        "fetchable": True,
+        "operable": False,
+        "fetchable_notes": "FASTA sequence streams from rest.uniprot.org (unverified — no upstream checksum).",
+        "id_example": "uniprot:P01308",
+        "description": "UniProtKB — protein sequences & functional annotation; full-text search, FASTA fetch.",
+    },
+    {
         "name": "gwas",
         "layer": "omics",
         "kinds": ["study"],
@@ -287,6 +314,20 @@ _SOURCES: list[dict[str, Any]] = [
         "fetchable_notes": "Discovery-only: study metadata + PMID bridge. Summary-statistics fetch is a future wave.",
         "id_example": "gwas:GCST000028",
         "description": "GWAS Catalog (EBI) — genome-wide association studies keyed by disease trait; DOI/PMID-rich, reinforces the paper-data bridge. NOTE: query must be an exact GWAS Catalog disease-trait vocabulary term (e.g. 'Type 2 diabetes'), not free text — the EBI findByDiseaseTrait API performs case-insensitive exact trait matching.",
+    },
+    {
+        "name": "biostudies",
+        "layer": "omics",
+        "kinds": ["study"],
+        "filters_supported": ["query", "size", "offset"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (free-text search across collections; file manifest + DOI/xref on resolve)",
+        "fetchable": True,
+        "operable": False,
+        "fetchable_notes": "Study files stream from www.ebi.ac.uk/biostudies/files (302 -> FIRE). UNVERIFIED: the API publishes no md5/sha256 for study files, so fetch cannot check integrity here the way Zenodo/ENA fetches can.",
+        "id_example": "biostudies:E-MTAB-12595",
+        "description": "BioStudies (EBI) — functional-genomics studies including the ArrayExpress collection; EBI's counterpart to GEO. Resolve surfaces the file manifest, the publication DOI, and sibling accessions (GEO/ENA) that feed relate and cross-source dedup. NOTE: totalHits on the cross-collection search is an ESTIMATE (the API returns isTotalHitsExact=false); it is exact within a single collection.",
     },
     {
         "name": "cellxgene",
@@ -356,7 +397,8 @@ TOOLS: list[types.Tool] = [
                     "items": {"type": "string"},
                     "description": "Restrict fan-out to these sources (default: all). "
                     "Available: zenodo, dataone, cellxgene, datacite, dandi, omics, "
-                    "literature, huggingface, omicsdi, openml, pdb, gwas",
+                    "literature, huggingface, omicsdi, openml, pdb, uniprot, gwas, "
+                    "biostudies",
                 },
                 "organism": {
                     "type": "string",
@@ -978,8 +1020,102 @@ async def _serve() -> None:
         await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
-def main() -> None:
-    asyncio.run(_serve())
+def _run_search_cli(argv: list[str]) -> None:
+    parser = argparse.ArgumentParser(prog="data-aggregator-mcp search")
+    parser.add_argument("query")
+    parser.add_argument("--json", action="store_true", help="emit JSON (the only format)")
+    parser.add_argument("--size", type=int, default=zenodo.DEFAULT_SIZE)
+    parser.add_argument("--sources", default=None, help="comma-separated sources; default: all")
+    ns = parser.parse_args(argv)
+    sources = [s.strip() for s in ns.sources.split(",") if s.strip()] if ns.sources else None
+    try:
+        page = asyncio.run(
+            _dispatch("search", {"query": ns.query, "size": ns.size, "sources": sources})
+        )
+    except Exception as exc:  # fail loud on stderr, non-zero exit
+        print(f"data-aggregator-mcp search: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    json.dump(page.get("results", []), sys.stdout)
+    sys.stdout.write("\n")
+
+
+def _run_serve_cli(argv: list[str]) -> None:
+    """Parse transport flags and serve. Bare invocation keeps serving stdio."""
+    from data_aggregator_mcp import http_transport
+
+    parser = argparse.ArgumentParser(prog="data-aggregator-mcp")
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "http"),
+        default="stdio",
+        help="stdio (default) or streamable HTTP",
+    )
+    parser.add_argument(
+        "--host",
+        default=http_transport.DEFAULT_HOST,
+        help=(
+            "http only; bind address (default %(default)s = this machine only). "
+            "A non-loopback value requires --allow-host."
+        ),
+    )
+    parser.add_argument("--port", type=int, default=http_transport.DEFAULT_PORT, help="http only")
+    parser.add_argument(
+        "--allow-host",
+        action="append",
+        default=None,
+        metavar="HOST:PORT",
+        help="http only; permitted Host header, repeatable. Required off loopback.",
+    )
+    parser.add_argument(
+        "--allow-origin",
+        action="append",
+        default=None,
+        metavar="ORIGIN",
+        help="http only; permitted browser Origin header, repeatable.",
+    )
+    parser.add_argument(
+        "--stateless",
+        action="store_true",
+        help="http only; fresh transport per request, no session affinity",
+    )
+    parser.add_argument(
+        "--json-response",
+        action="store_true",
+        help="http only; plain JSON responses instead of SSE streams",
+    )
+    ns = parser.parse_args(argv)
+
+    if ns.transport == "stdio":
+        asyncio.run(_serve())
+        return
+
+    # fetch(dest=...) writes to THIS process's filesystem. Over stdio that is the
+    # caller's own disk; over HTTP it may not be. Say so rather than surprise them.
+    print(
+        "data-aggregator-mcp: serving over HTTP — note that fetch() writes to this "
+        "server's filesystem, not the client's.",
+        file=sys.stderr,
+    )
+    try:
+        http_transport.serve_http(
+            host=ns.host,
+            port=ns.port,
+            allow_hosts=ns.allow_host,
+            allow_origins=ns.allow_origin,
+            stateless=ns.stateless,
+            json_response=ns.json_response,
+        )
+    except ValidationError as exc:
+        print(f"data-aggregator-mcp: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if args and args[0] == "search":
+        _run_search_cli(args[1:])
+        return
+    _run_serve_cli(args)
 
 
 if __name__ == "__main__":

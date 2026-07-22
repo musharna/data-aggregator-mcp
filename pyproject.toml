@@ -1,6 +1,6 @@
 [project]
 name = "data-aggregator-mcp"
-version = "0.40.0"
+version = "0.41.1"
 description = "Research-data acquisition MCP — find and fetch datasets across archives, omics registries, and literature"
 readme = "README.md"
 license = "MIT"
@@ -29,7 +29,14 @@ keywords = [
     "research-data",
 ]
 dependencies = [
-    "mcp>=1.0",
+    # Floor is a security floor, not a feature floor: <1.28.1 carries
+    # GHSA-vj7q-gjh5-988w (WebSocket transport skips Host/Origin validation),
+    # GHSA-jpw9-pfvf-9f58 (HTTP transports serve session requests without
+    # verifying the authenticated principal), and GHSA-hvrp-rf83-w775 (task
+    # handlers leak across clients). The first two are directly reachable from
+    # the HTTP transport this package now ships. Ceiling keeps us off the 2.0
+    # line until its breaking changes are evaluated.
+    "mcp>=1.28.1,<2",
     "httpx>=0.27",
     "pydantic>=2.6",
 ]

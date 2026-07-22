@@ -6,6 +6,156 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Licence identification is no longer gated on the compatibility matrix.**
+  `normalize_spdx` built the correct SPDX id and then discarded it unless the
+  licence was in `LICENSE_MATRIX`, which carries only the CC **4.0** line — so
+  `CC-BY-SA-3.0` came back as "unrecognized", and the provenance dossier printed
+  `unrecognized` for a licence the code had just named. Identity now follows
+  Creative Commons' own rules (the six combinations CC issues; BY required; ND
+  and SA mutually exclusive), independent of which licences we hold flags for.
+  `check` still answers **REVIEW** when no profile is bundled — but now reports
+  the id and says why: "licence identified as CC-BY-SA-3.0, but no compatibility
+  profile is bundled for it". No flags are invented for unbundled licences.
+
+### Fixed
+
+- **CC versions 1.0 / 2.0 / 2.5 / 3.0 were unidentifiable, and the prose form
+  built a malformed id.** The URL and prose paths each carried their own version
+  regex; both accepted only `[1-4].0` (so `2.5` matched neither), and they
+  disagreed on whether the captured group already included the `.0` — leaving
+  `"CC BY 3.0"` to produce `CC-BY-3.0.0`. Both now derive from one definition of
+  the versions CC actually published. Seen live: a real record carrying
+  `cc-by-3.0` now identifies as `CC-BY-3.0`.
+
+- **Licence domain checks keyed on a substring, so a licence could be spoofed by
+  URL path.** `normalize_spdx` accepted
+  `http://evil.example.com/creativecommons.org/licenses/by/4.0/` as `CC-BY-4.0`,
+  and DataCite's `_access_from_rights` read
+  `http://paywall.example.com/creativecommons.org` as `access="open"` — both from
+  a bare `"creativecommons.org" in uri` test. Upstream `rightsUri` values are not
+  ours, so a malformed or hostile one could mint a permissive verdict that then
+  feeds the compatibility matrix, the access flag, and the FAIR score. Both now
+  compare the parsed URL **host** (`license_compat.host_matches`), which also
+  rejects the suffix trick `creativecommons.org.evil.com`. Prose, bare SPDX ids,
+  scheme-less `creativecommons.org/publicdomain/zero/1.0`, subdomains, and
+  prose-with-an-embedded-URL all still normalize as before.
+
+### Added
+
+- **Streamable HTTP transport** (`--transport http`). The same six tools, prompts,
+  and resources now serve over HTTP as well as stdio; both share one `Server`
+  object and every handler, so there is no second code path to drift. Costs no new
+  dependencies — starlette and uvicorn already ship transitively with `mcp`.
+  Options: `--host`/`--port` (default `127.0.0.1:8000`), `--allow-host`,
+  `--allow-origin`, `--stateless`, `--json-response`. Bare invocation still serves
+  stdio, unchanged.
+- **DNS-rebinding protection is always on for HTTP, and refuses to guess.** The SDK
+  middleware silently disables Host/Origin validation when handed no settings, so
+  the transport never passes none. A loopback bind derives its own allowlist; a
+  non-loopback bind (`--host 0.0.0.0`, a LAN or container address) **requires** an
+  explicit `--allow-host` and exits 2 with an actionable message otherwise. Covered
+  by wire-level tests that assert a spoofed `Host` gets 421 and a spoofed `Origin`
+  gets 403 against a real server on a real port.
+- **BioStudies (EBI) connector**, including the **ArrayExpress** collection — EBI's
+  counterpart to GEO, and previously reachable only indirectly through OmicsDI.
+  `search` is free-text across collections (or narrowed with `collection=`) and
+  pages by page number; `resolve` returns the file manifest, the publication DOI,
+  and sibling accessions.
+- **Cross-references feed `relate` and DOI dedup.** A BioStudies study's sibling
+  accessions (GEO `GSE…`, ENA `PRJ…`) land in `accessions`, so resolving
+  `biostudies:E-GEOD-30436` alongside `geo:GSE30436` now yields a
+  `shared_accession` hint naming `GSE30436` as the evidence — a cross-repository
+  link the router could not previously make. Promotion is allowlisted by link
+  type, because `relate` reports an accession as hard evidence and a junk value
+  would manufacture a false connection.
+
+### Notes
+
+- **BioStudies fetch is UNVERIFIED and the catalog says so.** The API publishes no
+  md5/sha256 for study files (checked against the live payload), so
+  `FileEntry.checksum` is None. `fetch` still streams and still fails loud on an
+  HTML error body; it simply cannot make the integrity claim a Zenodo or ENA fetch
+  makes. A test asserts the absence, so if BioStudies ever adds checksums the
+  catalog note gets revisited rather than silently going stale.
+- **`totalHits` is an estimate on the cross-collection search** (the API returns
+  `isTotalHitsExact: false`; consecutive pages reported 1549 then 1550). It is
+  exact within a single collection. The number is passed through as given rather
+  than implying a precision the source does not have.
+
+### Fixed
+
+- **`initialize()` reported the MCP SDK's version as the server's.** `Server` was
+  constructed without `version=`, and the SDK falls back to its own version in that
+  case — so clients were told `data-aggregator-mcp` was at `1.28.1`. It now reports
+  `__version__` (0.41.1). Affected **both** transports; caught while verifying the
+  HTTP handshake, and now guarded by a test.
+
+### Security
+
+- **`mcp` pinned to `>=1.28.1,<2`** (was the unbounded `>=1.0`), clearing three
+  high-severity advisories: GHSA-vj7q-gjh5-988w (WebSocket transport skips
+  Host/Origin validation), GHSA-jpw9-pfvf-9f58 (HTTP transports serve session
+  requests without verifying the authenticated principal), and GHSA-hvrp-rf83-w775
+  (task handlers let any client access or cancel another's tasks). The first two
+  are directly reachable from the transport added above, so the bump lands in the
+  same change rather than after it. The ceiling keeps us off the 2.0 line until its
+  breaking changes are evaluated.
+
+### Changed
+
+- **Docs corrected against the shipped v0.41.1 surface.** A competitor/gap audit
+  found the public docs describing an older product: `docs/POSITIONING.md` still
+  claimed "four tools" and a v0.18.0 source list, and listed `operate`, MCP
+  resources, and semantic rank as _unshipped gaps_ when all three are live. It is
+  rewritten against the live code — six tools, 13 sources, prompts + resources,
+  a 2026-07-21 competitor sweep, and an honest-gaps section that now names the
+  real ones (no Streamable HTTP transport, no MCP Tasks extension, no
+  BioStudies/ClinicalTrials.gov/GDC/ENCODE, ~90% bio wiring).
+- **Source count 12 → 14** in `README.md` and the `server.json` registry
+  description — UniProtKB landed in 0.41.0 but was never added to either
+  headline, and BioStudies adds the fourteenth.
+- README now surfaces the FAIR score and `resolve(format="provenance")` dossier,
+  which the 2026-07-21 sweep found no other MCP server pairs with
+  checksum-verified fetch.
+
+## [0.41.1] - 2026-07-03
+
+### Fixed
+
+- **Package `__version__` was left at 0.40.0 in the 0.41.0 release**, so the module
+  attribute (and the version stamped into generated RO-Crate/dossier provenance
+  metadata) disagreed with the distribution version. All four version sources
+  (`__init__.py`, `pyproject.toml`, and both `server.json` fields) are now synced to
+  0.41.1; the `test_version_is_synced_across_all_sources` guard passes.
+
+## [0.41.0] - 2026-07-03
+
+### Added
+
+- **UniProtKB connector** (#15) — UniProtKB is now a first-class default source:
+  full-text search reads the accurate `x-total-results` header (cursor-paginated,
+  so like huggingface it contributes to page 1 only — `offset>0` returns no rows),
+  `resolve` attaches a FASTA `FileEntry` (unverified — no upstream checksum), and an
+  injection-safe accession guard fails before any network call.
+- **`search --json` one-shot CLI subcommand** (#16) — an explicit `search` first-arg
+  diverts to a one-shot CLI that prints the `SearchResult.results` array as JSON,
+  enabling lightweight non-MCP consumers (e.g. recap's DaProvider). Bare invocation
+  still starts the MCP server unchanged.
+
+### Fixed
+
+- Registry `server.json` description now fits the MCP registry's 100-char limit,
+  with a guard test to keep it there.
+
+### Changed
+
+- Dependency bumps: starlette 1.1.0→1.3.1 (#10), aiohttp 3.14.0→3.14.1 (#11),
+  cryptography 48.0.0→48.0.1 (#12), pydantic-settings 2.14.1→2.14.2 (#13),
+  python-multipart 0.0.29→0.0.31 (#9), actions/checkout 6.0.3→7.0.0 (#14).
+- Re-recorded the stdio demo against the v0.40.0 tool surface.
+
 ## [0.40.0] - 2026-06-11
 
 ### Fixed
