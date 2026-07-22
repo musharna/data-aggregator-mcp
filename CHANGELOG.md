@@ -6,6 +6,34 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **PDB `resolve` now returns creators, source taxa, and funding.** From the RCSB
+  GraphQL entry: `audit_author` (ordered), `rcsb_entity_source_organism` across all
+  polymer entities (deduped by taxid), and `pdbx_audit_support` (only when a funding
+  organization is actually named). Re-verified live 2026-07-22 — `4HHB` →
+  Fermi/Perutz + `9606 Homo sapiens`; `6VXX` → 7 authors + `NIH/NIGMS GM120553`.
+  Entries with no upstream funding record stay empty rather than fabricating one.
+- **OmicsDI `resolve` now returns the depositor, free-text organism, and PMID/DOI.**
+  Creators come from `submitter`/`submitter_name` — the **depositor**, deliberately
+  not the publication's authors — and `pmid`/`doi` are parsed out of
+  `additional.publication`. Organism stays **free text** rather than structured taxa
+  because the upstream `cross_references.TAXONOMY` list mixes unnamed entries and
+  contaminants; a live record returning `['sea water', 'blank sample']` is exactly
+  why. Re-verified live 2026-07-22 (`pride:PXD002213`,
+  `metabolights_dataset:MTBLS14508`).
+- **Zenodo `search`/`resolve` populate `Metrics(views, downloads)`** from the record
+  `stats` block. Verified live.
+- **`relate` canonicalizes known landing-page URLs to `source:id`** before matching,
+  so a link or version-lineage hint pointing at `zenodo.org/records/456` now joins
+  `zenodo:456`. Covers zenodo, pubmed, geo, sra, bioproject, gwas, openml, pdb,
+  dandi, and owner-namespaced HuggingFace datasets; an unrecognized URL passes
+  through unchanged, so a miss is a false negative and never a wrong hint.
+- **`list_sources` exposes `semantic_rank_available`** so a client can tell whether
+  `rank=semantic` will actually re-rank. Pure environment read, no network.
+- **`QueryUnderstanding` echoes an advisory, uncalibrated `confidence`.** Explicitly
+  not a gate: confidence alone never changes a rewrite.
+
 ### Changed
 
 - **Licence identification is no longer gated on the compatibility matrix.**
