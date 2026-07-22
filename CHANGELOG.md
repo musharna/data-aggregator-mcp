@@ -6,7 +6,28 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Licence identification is no longer gated on the compatibility matrix.**
+  `normalize_spdx` built the correct SPDX id and then discarded it unless the
+  licence was in `LICENSE_MATRIX`, which carries only the CC **4.0** line — so
+  `CC-BY-SA-3.0` came back as "unrecognized", and the provenance dossier printed
+  `unrecognized` for a licence the code had just named. Identity now follows
+  Creative Commons' own rules (the six combinations CC issues; BY required; ND
+  and SA mutually exclusive), independent of which licences we hold flags for.
+  `check` still answers **REVIEW** when no profile is bundled — but now reports
+  the id and says why: "licence identified as CC-BY-SA-3.0, but no compatibility
+  profile is bundled for it". No flags are invented for unbundled licences.
+
 ### Fixed
+
+- **CC versions 1.0 / 2.0 / 2.5 / 3.0 were unidentifiable, and the prose form
+  built a malformed id.** The URL and prose paths each carried their own version
+  regex; both accepted only `[1-4].0` (so `2.5` matched neither), and they
+  disagreed on whether the captured group already included the `.0` — leaving
+  `"CC BY 3.0"` to produce `CC-BY-3.0.0`. Both now derive from one definition of
+  the versions CC actually published. Seen live: a real record carrying
+  `cc-by-3.0` now identifies as `CC-BY-3.0`.
 
 - **Licence domain checks keyed on a substring, so a licence could be spoofed by
   URL path.** `normalize_spdx` accepted

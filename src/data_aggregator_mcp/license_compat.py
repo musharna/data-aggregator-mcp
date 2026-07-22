@@ -289,18 +289,47 @@ _PROSE_ALIASES: dict[str, str] = {
 }
 
 # Creative Commons element ordering for canonical SPDX construction (BY, NC, ND/SA).
-_CC_VERSION_RE = re.compile(r"\b([1-4])\.0\b")
+# Versions CC actually published: 1.0, 2.0, 2.5, 3.0, 4.0. Defined ONCE — the URL
+# form and the prose form both derive from it, so they cannot drift apart (2.5 was
+# previously accepted by neither, and the two sites disagreed on whether the capture
+# included the ".0").
+_CC_VERSION_ALT = r"(?:[1-4]\.0|2\.5)"
+_CC_VERSION_RE = re.compile(rf"\b({_CC_VERSION_ALT})\b")
+_CC_URL_RE = re.compile(rf"/licenses/([a-z-]+)/({_CC_VERSION_ALT})")
+
+# The six element combinations Creative Commons actually issues. ND and SA are
+# mutually exclusive (you cannot both forbid derivatives and dictate their licence),
+# and every CC licence except CC0 carries BY. This is the licence FAMILY's own
+# identity rule — it is deliberately independent of LICENSE_MATRIX, which says only
+# which licences we hold compatibility flags for.
+_CC_VALID_ELEMENTS: frozenset[tuple[str, ...]] = frozenset(
+    {
+        ("by",),
+        ("by", "nc"),
+        ("by", "nd"),
+        ("by", "sa"),
+        ("by", "nc", "nd"),
+        ("by", "nc", "sa"),
+    }
+)
 
 
 def _canonical_spdx_for_cc(elements: list[str], version: str) -> str | None:
     """Build a canonical CC SPDX id from ordered element tokens (by, nc, nd, sa) and a
-    version like '4.0'. Returns None if the combination is not in our matrix."""
+    version like '4.0'. Returns None only when the combination is not one Creative
+    Commons issues — NOT when we merely lack compatibility flags for it.
+
+    Identification and assessment are separate questions: ``check`` decides what a
+    licence permits and answers REVIEW when no profile is bundled, while this
+    function answers only *which licence is this*. Gating identity on
+    ``LICENSE_MATRIX`` previously made ``CC-BY-SA-3.0`` — correctly constructed one
+    line above — come back as "unrecognized".
+    """
     order = ["by", "nc", "nd", "sa"]
-    present = [e for e in order if e in elements]
-    if "by" not in present:
+    present = tuple(e for e in order if e in elements)
+    if present not in _CC_VALID_ELEMENTS:
         return None
-    spdx = "CC-" + "-".join(p.upper() for p in present) + f"-{version}"
-    return spdx if spdx in LICENSE_MATRIX else None
+    return "CC-" + "-".join(p.upper() for p in present) + f"-{version}"
 
 
 # A URL-ish token: optional scheme, a dotted host, optional path. Used to pull the
@@ -370,10 +399,10 @@ def normalize_spdx(license_str: str | None) -> str | None:
             return "CC0-1.0"
         if "publicdomain/mark" in low:
             return None  # public-domain mark is not a licence we model
-        m = re.search(r"/licenses/([a-z-]+)/([1-4])\.0", low)
+        m = _CC_URL_RE.search(low)
         if m:
             elements = [e for e in m.group(1).split("-") if e]
-            return _canonical_spdx_for_cc(elements, f"{m.group(2)}.0")
+            return _canonical_spdx_for_cc(elements, m.group(2))
         return None
 
     # 3. Open Data Commons URLs.
@@ -399,7 +428,7 @@ def normalize_spdx(license_str: str | None) -> str | None:
     ):
         ver = _CC_VERSION_RE.search(collapsed)
         if ver:
-            version = f"{ver.group(1)}.0"
+            version = ver.group(1)
             tokens = re.split(r"[\s-]+", collapsed)
             cc_elements: list[str] = []
             phrase = collapsed
@@ -433,7 +462,7 @@ def check(license_str: str | None, use: str) -> LicenseVerdict:
         raise ValueError(f"unknown use intent {use!r}; supported: {', '.join(sorted(INTENTS))}")
 
     spdx = normalize_spdx(license_str)
-    if spdx is None or spdx not in LICENSE_MATRIX:
+    if spdx is None:
         return LicenseVerdict(
             use=use,
             verdict="REVIEW",
@@ -442,6 +471,22 @@ def check(license_str: str | None, use: str) -> LicenseVerdict:
             reason=(
                 "licence not stated / not recognized; defaults to all-rights-reserved — "
                 "manual review required before this use"
+            ),
+            disclaimer=DISCLAIMER,
+        )
+    if spdx not in LICENSE_MATRIX:
+        # Identified, but we hold no compatibility flags for it. Report the id —
+        # "we know it is CC-BY-SA-3.0 but cannot assess it" is materially more
+        # actionable than "unrecognized", and inventing flags for an unbundled
+        # licence is exactly the fabrication this module refuses to do.
+        return LicenseVerdict(
+            use=use,
+            verdict="REVIEW",
+            spdx_id=spdx,
+            license_raw=license_str,
+            reason=(
+                f"licence identified as {spdx}, but no compatibility profile is bundled "
+                f"for it; manual review required before this use"
             ),
             disclaimer=DISCLAIMER,
         )

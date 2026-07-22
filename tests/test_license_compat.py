@@ -376,11 +376,13 @@ async def test_live_check_on_real_records():
     v2 = lc.check(other.license, "commercial")
     assert v2.verdict in {"ALLOW", "REVIEW", "DENY"}
     assert v2.disclaimer
-    # spdx_id None exactly when unrecognized/absent.
-    assert (v2.spdx_id is None) == (
-        lc.normalize_spdx(other.license) is None
-        or lc.normalize_spdx(other.license) not in lc.LICENSE_MATRIX
-    )
+    # spdx_id is None exactly when the licence could not be IDENTIFIED. Holding no
+    # compatibility profile for an identified licence (e.g. CC-BY-SA-3.0) yields
+    # REVIEW with the id still reported — identification and assessment are separate.
+    assert (v2.spdx_id is None) == (lc.normalize_spdx(other.license) is None)
+    if v2.spdx_id is not None and v2.spdx_id not in lc.LICENSE_MATRIX:
+        assert v2.verdict == "REVIEW"
+        assert "no compatibility profile" in v2.reason
 
     # Surface what we actually saw (visible with -s) for the orchestrator report.
     print(
@@ -448,3 +450,96 @@ def test_url_hosts_survives_malformed_input() -> None:
     """Must not raise on junk — licence fields are arbitrary upstream strings."""
     for junk in ["", "not a url", "http://", "://///", "http://[oops", "a.b" * 500]:
         assert isinstance(lc.url_hosts(junk), list)
+
+
+# IRON_LAW_OK
+
+
+# --------------------------------------------------------------------------
+# Identification is separate from assessment
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("licence", "expected"),
+    [
+        # Every CC version actually published, URL form.
+        ("https://creativecommons.org/licenses/by/1.0/", "CC-BY-1.0"),
+        ("https://creativecommons.org/licenses/by-nc-nd/2.0/", "CC-BY-NC-ND-2.0"),
+        ("creativecommons.org/licenses/by/2.5/", "CC-BY-2.5"),
+        ("https://creativecommons.org/licenses/by-sa/3.0/", "CC-BY-SA-3.0"),
+        ("https://creativecommons.org/licenses/by/4.0/", "CC-BY-4.0"),
+        # Prose form must agree with the URL form on the version string.
+        ("CC BY 3.0", "CC-BY-3.0"),
+        ("CC BY-NC 2.5", "CC-BY-NC-2.5"),
+        ("CC BY-SA 3.0", "CC-BY-SA-3.0"),
+    ],
+)
+def test_all_published_cc_versions_are_identified(licence: str, expected: str) -> None:
+    """Identity must not depend on whether we bundle compatibility flags.
+
+    These previously returned None because `_canonical_spdx_for_cc` gated the id it
+    had just built on LICENSE_MATRIX membership, which carries only the 4.0 line.
+    `2.5` was rejected outright by both the URL and prose regexes, and the two
+    disagreed on whether the captured group already included the ".0" — so the
+    prose path would have produced "CC-BY-3.0.0".
+    """
+    assert lc.normalize_spdx(licence) == expected
+
+
+@pytest.mark.parametrize(
+    "elements",
+    [
+        ["nc"],  # no BY
+        ["sa"],  # no BY
+        ["by", "nd", "sa"],  # ND and SA are mutually exclusive
+        ["by", "nc", "nd", "sa"],  # ditto
+    ],
+)
+def test_combinations_creative_commons_does_not_issue_stay_none(elements: list[str]) -> None:
+    """Loosening the matrix gate must not let us invent licences that do not exist."""
+    assert lc._canonical_spdx_for_cc(elements, "4.0") is None
+
+
+def test_identified_but_unassessed_reports_the_id_and_reviews() -> None:
+    v = lc.check("https://creativecommons.org/licenses/by-sa/3.0/", "redistribute")
+    assert v.verdict == "REVIEW"
+    assert v.spdx_id == "CC-BY-SA-3.0"  # identified...
+    assert "CC-BY-SA-3.0" not in lc.LICENSE_MATRIX  # ...but not assessed
+    assert "no compatibility profile" in v.reason
+    # No flags were invented for it.
+    assert "grants" not in v.reason and "does not grant" not in v.reason
+
+
+def test_truly_unidentifiable_still_reports_no_id() -> None:
+    v = lc.check("some bespoke institutional terms", "redistribute")
+    assert v.verdict == "REVIEW"
+    assert v.spdx_id is None
+    assert "not recognized" in v.reason
+
+
+def test_assessed_licences_are_unaffected() -> None:
+    """The 4.0 line and non-CC licences keep their existing verdicts."""
+    assert (
+        lc.check("https://creativecommons.org/licenses/by/4.0/", "redistribute").verdict == "ALLOW"
+    )
+    assert lc.check("CC0-1.0", "commercial").verdict == "ALLOW"
+    assert lc.check("MIT", "commercial").spdx_id == "MIT"
+    assert lc.check("CC-BY-ND-4.0", "modify").verdict == "DENY"
+
+
+def test_dossier_reports_the_real_id_for_an_unassessed_licence() -> None:
+    """dossier only wants identification, and was collateral damage of the gate."""
+    from data_aggregator_mcp.dossier import _license_result
+
+    r = DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        license="https://creativecommons.org/licenses/by-sa/3.0/",
+    )
+    prop = _license_result(r, "")
+    assert prop is not None
+    assert "CC-BY-SA-3.0" in str(prop)
+    assert "unrecognized" not in str(prop)
