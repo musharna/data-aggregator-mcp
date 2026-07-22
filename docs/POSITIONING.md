@@ -105,9 +105,11 @@ bytes, which is what this server is for.
 
 This is a discovery-and-fetch layer, not the whole stack. Today it does **not**:
 
-- **Run as a hosted endpoint.** It ships stdio-only via `uvx` / PyPI; Streamable
-  HTTP transport is not implemented yet. This is the largest open gap — several
-  single-source servers already ship both transports.
+- **Ship a managed, authenticated deployment.** Streamable HTTP now works
+  (`--transport http`, with DNS-rebinding protection on by default), so a remote
+  MCP client can reach it — but you host it yourself. There is no OAuth/token
+  layer, no multi-tenancy, and `fetch(dest=…)` writes to the _server's_ disk, so
+  a shared instance is not yet a safe default.
 - **Support the MCP Tasks extension.** A multi-GB `fetch` blocks the tool call
   rather than running as a long-lived task. Tracking the 2026-07-28 spec revision.
 - **Reason semantically at index scale.** `rank=semantic` re-ranks an

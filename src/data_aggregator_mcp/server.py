@@ -1,4 +1,10 @@
-"""MCP server — exposes search/resolve/fetch/list_sources over stdio.
+"""MCP server — exposes search/resolve/fetch/list_sources over stdio or HTTP.
+
+Transport is chosen at the CLI: bare invocation serves stdio (unchanged),
+``--transport http`` serves streamable HTTP via ``http_transport``. Both share
+this module's ``server`` object and every handler below; only the stream pair
+differs. See ``http_transport`` for the HTTP security posture and for how
+``fetch`` semantics change when the server is not a local child of the client.
 
 search/resolve fan out through the multi-source router (Zenodo + DataCite +
 NCBI omics + literature: PubMed/OpenAIRE). fetch streams files for Zenodo,
@@ -25,7 +31,7 @@ from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.stdio import stdio_server
 from pydantic import AnyUrl
 
-from data_aggregator_mcp import citation, operate, router, run_crate, zenodo
+from data_aggregator_mcp import __version__, citation, operate, router, run_crate, zenodo
 from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import dossier as dossier_mod
 from data_aggregator_mcp import fair as fair_mod
@@ -35,7 +41,7 @@ from data_aggregator_mcp import license_compat as license_mod
 from data_aggregator_mcp import resources as resources_mod
 from data_aggregator_mcp import ro_crate as ro_crate_mod
 from data_aggregator_mcp import trust as trust_mod
-from data_aggregator_mcp.errors import FetchNotSupportedError
+from data_aggregator_mcp.errors import FetchNotSupportedError, ValidationError
 from data_aggregator_mcp.models import DataResource, FetchResult, RelateResult, SearchResult
 
 logger = logging.getLogger(__name__)
@@ -108,7 +114,10 @@ def _ensure_fulltext_available(fid: str, resource: DataResource) -> None:
         )
 
 
-server: Server = Server("data-aggregator-mcp")
+# Pass version explicitly: the SDK falls back to reporting ITS OWN version in
+# initialize().serverInfo when this is None, so clients were told the server was
+# "1.28.1" (the mcp SDK) rather than the package version. Affects both transports.
+server: Server = Server("data-aggregator-mcp", version=__version__)
 
 _SOURCES: list[dict[str, Any]] = [
     {
@@ -1009,12 +1018,83 @@ def _run_search_cli(argv: list[str]) -> None:
     sys.stdout.write("\n")
 
 
+def _run_serve_cli(argv: list[str]) -> None:
+    """Parse transport flags and serve. Bare invocation keeps serving stdio."""
+    from data_aggregator_mcp import http_transport
+
+    parser = argparse.ArgumentParser(prog="data-aggregator-mcp")
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "http"),
+        default="stdio",
+        help="stdio (default) or streamable HTTP",
+    )
+    parser.add_argument(
+        "--host",
+        default=http_transport.DEFAULT_HOST,
+        help=(
+            "http only; bind address (default %(default)s = this machine only). "
+            "A non-loopback value requires --allow-host."
+        ),
+    )
+    parser.add_argument("--port", type=int, default=http_transport.DEFAULT_PORT, help="http only")
+    parser.add_argument(
+        "--allow-host",
+        action="append",
+        default=None,
+        metavar="HOST:PORT",
+        help="http only; permitted Host header, repeatable. Required off loopback.",
+    )
+    parser.add_argument(
+        "--allow-origin",
+        action="append",
+        default=None,
+        metavar="ORIGIN",
+        help="http only; permitted browser Origin header, repeatable.",
+    )
+    parser.add_argument(
+        "--stateless",
+        action="store_true",
+        help="http only; fresh transport per request, no session affinity",
+    )
+    parser.add_argument(
+        "--json-response",
+        action="store_true",
+        help="http only; plain JSON responses instead of SSE streams",
+    )
+    ns = parser.parse_args(argv)
+
+    if ns.transport == "stdio":
+        asyncio.run(_serve())
+        return
+
+    # fetch(dest=...) writes to THIS process's filesystem. Over stdio that is the
+    # caller's own disk; over HTTP it may not be. Say so rather than surprise them.
+    print(
+        "data-aggregator-mcp: serving over HTTP — note that fetch() writes to this "
+        "server's filesystem, not the client's.",
+        file=sys.stderr,
+    )
+    try:
+        http_transport.serve_http(
+            host=ns.host,
+            port=ns.port,
+            allow_hosts=ns.allow_host,
+            allow_origins=ns.allow_origin,
+            stateless=ns.stateless,
+            json_response=ns.json_response,
+        )
+    except ValidationError as exc:
+        print(f"data-aggregator-mcp: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
+
+
 def main(argv: list[str] | None = None) -> None:
     args = list(sys.argv[1:] if argv is None else argv)
     if args and args[0] == "search":
         _run_search_cli(args[1:])
         return
-    asyncio.run(_serve())
+    _run_serve_cli(args)
 
 
 if __name__ == "__main__":
