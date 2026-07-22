@@ -39,9 +39,10 @@ Six tools, one model:
 Plus MCP **prompts** (`find_data`, `data_behind_paper`, `search_resolve_fetch`)
 and MCP **resources** (`dataresource://catalog`, `dataresource://record/{id}`).
 
-Sources (v0.41.1, 13 wired): **Zenodo**, **DataCite** (Dryad / Figshare /
+Sources (v0.41.1, 14 wired): **Zenodo**, **DataCite** (Dryad / Figshare /
 Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics** (GEO / SRA / BioProject) +
-**ENA**, **literature** (PubMed / OpenAIRE / EuropePMC / Unpaywall),
+**ENA**, **BioStudies** (EBI, incl. ArrayExpress),
+**literature** (PubMed / OpenAIRE / EuropePMC / Unpaywall),
 **HuggingFace** datasets, **DataONE** (eco/environmental federation,
 checksum-verified fetch via Member Nodes), **OmicsDI** (proteomics / metabolomics,
 with direct PRIDE / MetaboLights fetch), **DANDI** (neurophysiology),
@@ -115,11 +116,10 @@ This is a discovery-and-fetch layer, not the whole stack. Today it does **not**:
 - **Reason semantically at index scale.** `rank=semantic` re-ranks an
   already-fetched keyword window against a remote embeddings endpoint; it is not
   embedding recall over a full index.
-- **Cover several major repositories.** BioStudies / ArrayExpress (directly,
-  rather than via OmicsDI), ClinicalTrials.gov, GDC/TCGA, ENCODE, and Ensembl are
-  not wired. Outside the life sciences, Kaggle, data.gov, NASA Earthdata/CMR, and
-  GBIF are absent — the `DataResource` model is domain-general, but the wiring is
-  currently ~90% biological.
+- **Cover several major repositories.** ClinicalTrials.gov, GDC/TCGA, ENCODE, and
+  Ensembl are not wired. Outside the life sciences, Kaggle, data.gov, NASA
+  Earthdata/CMR, and GBIF are absent — the `DataResource` model is domain-general,
+  but the wiring is currently ~90% biological.
 - **Elicit clarification.** An ambiguous query is expanded and searched, not
   queried back to the user.
 

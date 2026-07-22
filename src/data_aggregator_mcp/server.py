@@ -61,6 +61,7 @@ _FETCHABLE_SOURCES = (
     "openml:",
     "pdb:",
     "uniprot:",
+    "biostudies:",
 )  # id prefixes with a working fetch backend
 
 
@@ -314,6 +315,20 @@ _SOURCES: list[dict[str, Any]] = [
         "description": "GWAS Catalog (EBI) — genome-wide association studies keyed by disease trait; DOI/PMID-rich, reinforces the paper-data bridge. NOTE: query must be an exact GWAS Catalog disease-trait vocabulary term (e.g. 'Type 2 diabetes'), not free text — the EBI findByDiseaseTrait API performs case-insensitive exact trait matching.",
     },
     {
+        "name": "biostudies",
+        "layer": "omics",
+        "kinds": ["study"],
+        "filters_supported": ["query", "size", "offset"],
+        "auth_required": False,
+        "rate_limit": "public; courtesy only",
+        "status": "live (free-text search across collections; file manifest + DOI/xref on resolve)",
+        "fetchable": True,
+        "operable": False,
+        "fetchable_notes": "Study files stream from www.ebi.ac.uk/biostudies/files (302 -> FIRE). UNVERIFIED: the API publishes no md5/sha256 for study files, so fetch cannot check integrity here the way Zenodo/ENA fetches can.",
+        "id_example": "biostudies:E-MTAB-12595",
+        "description": "BioStudies (EBI) — functional-genomics studies including the ArrayExpress collection; EBI's counterpart to GEO. Resolve surfaces the file manifest, the publication DOI, and sibling accessions (GEO/ENA) that feed relate and cross-source dedup. NOTE: totalHits on the cross-collection search is an ESTIMATE (the API returns isTotalHitsExact=false); it is exact within a single collection.",
+    },
+    {
         "name": "cellxgene",
         "layer": "omics",
         "kinds": ["dataset"],
@@ -381,7 +396,8 @@ TOOLS: list[types.Tool] = [
                     "items": {"type": "string"},
                     "description": "Restrict fan-out to these sources (default: all). "
                     "Available: zenodo, dataone, cellxgene, datacite, dandi, omics, "
-                    "literature, huggingface, omicsdi, openml, pdb, uniprot, gwas",
+                    "literature, huggingface, omicsdi, openml, pdb, uniprot, gwas, "
+                    "biostudies",
                 },
                 "organism": {
                     "type": "string",

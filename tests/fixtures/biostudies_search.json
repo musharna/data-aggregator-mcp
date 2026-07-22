@@ -1,0 +1,38 @@
+{
+ "page": 1,
+ "pageSize": 2,
+ "totalHits": 1549,
+ "isTotalHitsExact": false,
+ "sortBy": "relevance",
+ "sortOrder": "descending",
+ "hits": [
+  {
+   "accession": "S-EPMC9542112",
+   "type": "study",
+   "title": "Drought legacies and ecosystem responses to subsequent drought.",
+   "author": "Muller LM Bahn M",
+   "links": 3,
+   "files": 1,
+   "release_date": "2022-01-01",
+   "views": 2,
+   "isPublic": true,
+   "content": "S-EPMC9542112 PMC9542112 Drought legacies and ecosystem responses to subsequent drought. Climate change is expected to increase the frequency and severity of droughts. These events, which can cause significant perturbations of terrestrial ecosystems and potentially long-term impacts on ecosystem"
+  },
+  {
+   "accession": "E-GEOD-30436",
+   "type": "study",
+   "title": "Transcriptome profiling of reproductive stage flag leaves of wheat from drought susceptible parent WL711, drought tolerant parent C306 and drought susceptible and drought tolerant RIL bulks in irrigated and drought condition",
+   "author": "suhas kadam Suhas Kadam Vasantrao Pawar Kishor Gaikwad Renu Chopra Nagendra Singh",
+   "links": 3,
+   "files": 50,
+   "release_date": "2012-04-29",
+   "views": 46,
+   "isPublic": true,
+   "content": "E-GEOD-30436 Transcriptome profiling of reproductive stage flag leaves of wheat from drought susceptible parent WL711, drought tolerant parent C306 and drought susceptible and drought tolerant RIL bulks in irrigated and drought condition transcription profiling by array EFO EFO_0002768 Triticum"
+  }
+ ],
+ "expandedEfoTerms": [],
+ "expandedSynonyms": [],
+ "query": "drought",
+ "facets": null
+}

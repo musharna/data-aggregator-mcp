@@ -10,15 +10,16 @@ registries, and literature — behind a single normalized model.**
 [![CI](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml)
 [![Glama](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp/badges/score.svg)](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp)
 
-`search` one query across **13 sources** — **Zenodo, DataCite** (Dryad /
+`search` one query across **14 sources** — **Zenodo, DataCite** (Dryad /
 Figshare / Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics**
-(GEO / SRA / BioProject), **literature** (PubMed / OpenAIRE), **HuggingFace**
-datasets, **DataONE** (eco / environmental), **OmicsDI** (proteomics /
-metabolomics), **DANDI** (neurophysiology), **CZ CELLxGENE** (single-cell),
-**OpenML** (ML datasets), **RCSB PDB** (structures), **UniProtKB** (proteins),
-and the **GWAS Catalog** — deduplicated, normalized, and cross-linked. `resolve`
-any hit to its file manifest, citation, trust signals, and the data it points
-at. `fetch` it to disk with checksum verification.
+(GEO / SRA / BioProject), **BioStudies** (EBI, incl. ArrayExpress),
+**literature** (PubMed / OpenAIRE), **HuggingFace** datasets, **DataONE**
+(eco / environmental), **OmicsDI** (proteomics / metabolomics), **DANDI**
+(neurophysiology), **CZ CELLxGENE** (single-cell), **OpenML** (ML datasets),
+**RCSB PDB** (structures), **UniProtKB** (proteins), and the **GWAS Catalog** —
+deduplicated, normalized, and cross-linked. `resolve` any hit to its file
+manifest, citation, trust signals, and the data it points at. `fetch` it to
+disk with checksum verification.
 
 mcp-name: io.github.musharna/data-aggregator-mcp
 
@@ -50,11 +51,6 @@ records:
 - **Trust signals** — usage `metrics` (citations / views / downloads / likes),
   version status (`is_latest` / `superseded_by`), and `last_updated` freshness,
   surfaced wherever the source exposes them.
-- **FAIR score & provenance dossier** — `resolve(fair=true)` attaches an
-  RDA-grounded FAIRness assessment (Maturity Model v0.90) with per-indicator RDA
-  ids and actionable gaps; `resolve(format="provenance")` composes
-  version-currency, licence/SPDX, FAIRness, and retraction signals into one
-  RO-Crate 1.1 data-availability dossier.
 - **Interop exports** — `resolve(format="croissant")` or `"ro-crate"` hands a
   dataset to an ML or research-packaging pipeline as standard JSON-LD.
 - **Operate on data in place** — `operate` reads the schema, previews rows, or
@@ -88,38 +84,6 @@ Register with Claude Code:
 ```bash
 claude mcp add data-aggregator -- uvx data-aggregator-mcp
 ```
-
-### Remote / HTTP transport
-
-Bare invocation serves **stdio** (unchanged). To serve **streamable HTTP** instead:
-
-```bash
-uvx data-aggregator-mcp --transport http                 # 127.0.0.1:8000/mcp
-uvx data-aggregator-mcp --transport http --port 9000
-```
-
-DNS-rebinding protection is **always on**. On loopback the Host/Origin allowlist is
-derived for you; binding anything else requires naming the hosts explicitly, and the
-server refuses to start otherwise rather than guessing an allowlist:
-
-```bash
-uvx data-aggregator-mcp --transport http \
-    --host 0.0.0.0 --port 9000 --allow-host mcp.example.com:9000
-```
-
-| flag                | effect                                                         |
-| ------------------- | -------------------------------------------------------------- |
-| `--host` / `--port` | bind address (default `127.0.0.1:8000` — this machine only)    |
-| `--allow-host`      | permitted `Host` header, repeatable; **required** off loopback |
-| `--allow-origin`    | permitted browser `Origin` header, repeatable                  |
-| `--stateless`       | fresh transport per request, no session affinity               |
-| `--json-response`   | plain JSON responses instead of SSE streams                    |
-
-> [!IMPORTANT]
-> `fetch(dest=…)` writes to the **server's** filesystem. Over stdio the server is a
-> local child of your client, so that's your own disk. Over HTTP it may be another
-> machine, and you'll get back paths you can't read. `search` / `resolve` /
-> `operate` / `relate` / `list_sources` return data, not paths, and are unaffected.
 
 A typical agent flow:
 

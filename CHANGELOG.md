@@ -22,6 +22,31 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   explicit `--allow-host` and exits 2 with an actionable message otherwise. Covered
   by wire-level tests that assert a spoofed `Host` gets 421 and a spoofed `Origin`
   gets 403 against a real server on a real port.
+- **BioStudies (EBI) connector**, including the **ArrayExpress** collection — EBI's
+  counterpart to GEO, and previously reachable only indirectly through OmicsDI.
+  `search` is free-text across collections (or narrowed with `collection=`) and
+  pages by page number; `resolve` returns the file manifest, the publication DOI,
+  and sibling accessions.
+- **Cross-references feed `relate` and DOI dedup.** A BioStudies study's sibling
+  accessions (GEO `GSE…`, ENA `PRJ…`) land in `accessions`, so resolving
+  `biostudies:E-GEOD-30436` alongside `geo:GSE30436` now yields a
+  `shared_accession` hint naming `GSE30436` as the evidence — a cross-repository
+  link the router could not previously make. Promotion is allowlisted by link
+  type, because `relate` reports an accession as hard evidence and a junk value
+  would manufacture a false connection.
+
+### Notes
+
+- **BioStudies fetch is UNVERIFIED and the catalog says so.** The API publishes no
+  md5/sha256 for study files (checked against the live payload), so
+  `FileEntry.checksum` is None. `fetch` still streams and still fails loud on an
+  HTML error body; it simply cannot make the integrity claim a Zenodo or ENA fetch
+  makes. A test asserts the absence, so if BioStudies ever adds checksums the
+  catalog note gets revisited rather than silently going stale.
+- **`totalHits` is an estimate on the cross-collection search** (the API returns
+  `isTotalHitsExact: false`; consecutive pages reported 1549 then 1550). It is
+  exact within a single collection. The number is passed through as given rather
+  than implying a precision the source does not have.
 
 ### Fixed
 
@@ -52,8 +77,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a 2026-07-21 competitor sweep, and an honest-gaps section that now names the
   real ones (no Streamable HTTP transport, no MCP Tasks extension, no
   BioStudies/ClinicalTrials.gov/GDC/ENCODE, ~90% bio wiring).
-- **Source count 12 → 13** in `README.md` and the `server.json` registry
-  description; UniProtKB landed in 0.41.0 but was never added to either headline.
+- **Source count 12 → 14** in `README.md` and the `server.json` registry
+  description — UniProtKB landed in 0.41.0 but was never added to either
+  headline, and BioStudies adds the fourteenth.
 - README now surfaces the FAIR score and `resolve(format="provenance")` dossier,
   which the 2026-07-21 sweep found no other MCP server pairs with
   checksum-verified fetch.
