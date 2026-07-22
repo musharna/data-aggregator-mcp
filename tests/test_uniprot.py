@@ -28,7 +28,7 @@ _SEARCH = {"results": [_ENTRY_INS, _ENTRY_TREMBL]}
 @pytest.mark.asyncio
 async def test_search_reads_total_header_and_normalizes():
     def handler(request):
-        assert "rest.uniprot.org" in request.url.host
+        assert request.url.host == "rest.uniprot.org"
         return httpx.Response(200, json=_SEARCH, headers={"x-total-results": "1887"})
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:

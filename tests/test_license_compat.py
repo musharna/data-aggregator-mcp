@@ -387,3 +387,64 @@ async def test_live_check_on_real_records():
         f"\nLIVE: cc_by.license={cc_by.license!r} → {v.spdx_id} {v.verdict}; "
         f"other.license={other.license!r} → {v2.spdx_id} {v2.verdict}"
     )
+
+
+# IRON_LAW_OK
+
+
+# --------------------------------------------------------------------------
+# Domain checks must key on the URL HOST, not a substring
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "spoofed",
+    [
+        "http://evil.example.com/creativecommons.org/licenses/by/4.0/",
+        "https://evil.example.com/x?ref=creativecommons.org/licenses/by/4.0",
+        "creativecommons.org.evil.example.com/licenses/by/4.0/",
+        "http://evil.example.com/opendatacommons.org/licenses/odbl/",
+        "opendatacommons.org.evil.example.com/licenses/odbl/",
+    ],
+)
+def test_licence_domain_cannot_be_spoofed_by_substring(spoofed: str) -> None:
+    """A domain appearing in someone else's path/query must not mint a licence.
+
+    `"creativecommons.org" in low` accepted all of these and returned a real SPDX
+    id, which then feeds the compatibility matrix, the access flag, and the FAIR
+    score — a permissive verdict fabricated from attacker-controlled or merely
+    malformed upstream metadata.
+    """
+    assert lc.normalize_spdx(spoofed) is None
+
+
+@pytest.mark.parametrize(
+    ("licence", "expected"),
+    [
+        ("https://creativecommons.org/licenses/by-nc/4.0/", "CC-BY-NC-4.0"),
+        ("http://creativecommons.org/licenses/by/4.0", "CC-BY-4.0"),
+        ("creativecommons.org/publicdomain/zero/1.0", "CC0-1.0"),
+        ("https://opendatacommons.org/licenses/odbl/1-0/", "ODbL-1.0"),
+        # A real host reached via subdomain still counts.
+        ("https://wiki.creativecommons.org/licenses/by/4.0/", "CC-BY-4.0"),
+        # Prose that merely mentions the URL must keep working.
+        ("Licensed under https://creativecommons.org/licenses/by/4.0/ terms", "CC-BY-4.0"),
+    ],
+)
+def test_legitimate_licence_urls_still_normalize(licence: str, expected: str) -> None:
+    assert lc.normalize_spdx(licence) == expected
+
+
+def test_host_matches_rejects_suffix_and_path_collisions() -> None:
+    assert lc.host_matches("https://creativecommons.org/licenses/by/4.0/", "creativecommons.org")
+    assert lc.host_matches("https://wiki.creativecommons.org/x", "creativecommons.org")
+    assert not lc.host_matches("https://evil.com/creativecommons.org", "creativecommons.org")
+    assert not lc.host_matches("https://creativecommons.org.evil.com/x", "creativecommons.org")
+    # No URL at all -> no host, no match.
+    assert not lc.host_matches("CC BY 4.0", "creativecommons.org")
+
+
+def test_url_hosts_survives_malformed_input() -> None:
+    """Must not raise on junk — licence fields are arbitrary upstream strings."""
+    for junk in ["", "not a url", "http://", "://///", "http://[oops", "a.b" * 500]:
+        assert isinstance(lc.url_hosts(junk), list)
