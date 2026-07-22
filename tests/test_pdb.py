@@ -112,6 +112,61 @@ async def test_resolve_rejects_injection_id_before_network():
             await pdb.resolve(c, 'pdb:1BG2"]}')
 
 
+_GRAPHQL_PROVENANCE = {
+    "data": {
+        "entries": [
+            {
+                "rcsb_id": "7XYZ",
+                "struct": {"title": "Mouse complex"},
+                "rcsb_accession_info": {"initial_release_date": "2022-05-04T00:00:00Z"},
+                "rcsb_primary_citation": {"year": 2022},
+                "rcsb_entry_info": {"experimental_method": "X-ray"},
+                "audit_author": [
+                    {"name": "Park, S.H.", "pdbx_ordinal": 1},
+                    {"name": "Song, H.K.", "pdbx_ordinal": 2},
+                ],
+                "pdbx_audit_support": [
+                    {
+                        "funding_organization": "Other government",
+                        "grant_number": None,
+                        "country": "Korea, Republic Of",
+                    }
+                ],
+                "polymer_entities": [
+                    {
+                        "rcsb_entity_source_organism": [
+                            {"ncbi_taxonomy_id": 10090, "ncbi_scientific_name": "Mus musculus"}
+                        ]
+                    }
+                ],
+            }
+        ]
+    }
+}
+
+
+@pytest.mark.asyncio
+async def test_resolve_attaches_provenance():
+    """D5: audit_author -> creators (ordered), source organism -> taxa (deduped),
+    pdbx_audit_support -> funding (only when an organization is present)."""
+
+    async def handler(request):
+        return httpx.Response(200, json=_GRAPHQL_PROVENANCE)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        r = await pdb.resolve(c, "pdb:7XYZ")
+    assert [cr.name for cr in r.creators] == ["Park, S.H.", "Song, H.K."]
+    assert [(t.taxid, t.name) for t in r.taxa] == [(10090, "Mus musculus")]
+    assert [(f.funder, f.award) for f in r.funding] == [("Other government", None)]
+
+
+def test_normalize_provenance_sparse_is_clean():
+    """A classic entry with no support record / no source organism stays empty —
+    no funding row fabricated from a null pdbx_audit_support."""
+    rec = pdb._normalize(_GRAPHQL["data"]["entries"][1])
+    assert rec.funding == [] and rec.taxa == [] and rec.creators == []
+
+
 def test_registered_in_router_and_server():
     from data_aggregator_mcp import router, server
 

@@ -110,3 +110,55 @@ async def test_rewrite_never_raises_on_garbage_types(monkeypatch) -> None:
     assert ru.keyword_core is None  # non-str dropped
     assert ru.year_min is None  # non-coercible dropped
     assert ru.organism == "Homo sapiens"
+
+
+async def test_rewrite_captures_confidence(monkeypatch) -> None:
+    # E2: advisory, uncalibrated self-confidence rides along with a real rewrite.
+    _enable(monkeypatch)
+    monkeypatch.setattr(
+        llm,
+        "complete_json",
+        AsyncMock(return_value={"keyword_core": "liver scRNA", "confidence": 0.8}),
+    )
+    async with httpx.AsyncClient() as client:
+        ru = await query_understanding.rewrite(client, "single cell liver")
+    assert ru is not None
+    assert ru.confidence == 0.8
+
+
+async def test_rewrite_confidence_clamped_to_unit(monkeypatch) -> None:
+    _enable(monkeypatch)
+    monkeypatch.setattr(
+        llm,
+        "complete_json",
+        AsyncMock(return_value={"keyword_core": "x", "confidence": 1.5}),
+    )
+    async with httpx.AsyncClient() as client:
+        ru = await query_understanding.rewrite(client, "x")
+    assert ru is not None
+    assert ru.confidence == 1.0
+
+
+async def test_rewrite_confidence_invalid_is_none(monkeypatch) -> None:
+    _enable(monkeypatch)
+    monkeypatch.setattr(
+        llm,
+        "complete_json",
+        AsyncMock(return_value={"keyword_core": "x", "confidence": "high"}),
+    )
+    async with httpx.AsyncClient() as client:
+        ru = await query_understanding.rewrite(client, "x")
+    assert ru is not None
+    assert ru.confidence is None
+
+
+async def test_rewrite_confidence_alone_is_not_usable(monkeypatch) -> None:
+    # A confidence with no actual rewrite content must stay a no-op rewrite (None).
+    _enable(monkeypatch)
+    monkeypatch.setattr(
+        llm,
+        "complete_json",
+        AsyncMock(return_value={"confidence": 0.9}),
+    )
+    async with httpx.AsyncClient() as client:
+        assert await query_understanding.rewrite(client, "x") is None

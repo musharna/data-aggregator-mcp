@@ -100,6 +100,16 @@ async def test_dispatch_list_sources() -> None:
     assert "sources" in out
 
 
+async def test_list_sources_reports_semantic_rank_available(monkeypatch) -> None:
+    # E1: agents can learn whether rank=semantic is live before spending a search call.
+    monkeypatch.delenv("EMBEDDING_API_BASE", raising=False)
+    out = await server._dispatch("list_sources", {})
+    assert out["semantic_rank_available"] is False
+    monkeypatch.setenv("EMBEDDING_API_BASE", "https://emb.example/v1")
+    out2 = await server._dispatch("list_sources", {})
+    assert out2["semantic_rank_available"] is True
+
+
 def test_list_sources_includes_dataone_and_omicsdi():
     by_name = {s["name"]: s for s in server._SOURCES}
     assert "dataone" in by_name and "omicsdi" in by_name

@@ -13,11 +13,13 @@ contribute first-page results only.
 
 from __future__ import annotations
 
+import re
+
 import httpx
 
 from data_aggregator_mcp import _http, metabolights, pride
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import DataResource, Link, compact
+from data_aggregator_mcp.models import Creator, DataResource, Link, compact
 
 SEARCH = "https://www.omicsdi.org/ws/dataset/search"
 RECORD = "https://www.omicsdi.org/ws/dataset/{source}/{acc}"
@@ -40,6 +42,51 @@ _MODALITY_REPOS = {
     "gnps",
     "peptide_atlas",
 }
+
+
+# OmicsDI `additional` is a free-form, repo-specific dict of string lists; the same
+# concept hides under different keys per source repo (PRIDE uses `submitter`/`species`,
+# MetaboLights uses `submitter_name`/`organism`). These helpers read the first present
+# key and never fabricate — a missing key yields nothing. `creators` = the dataset
+# DEPOSITOR (submitter); we deliberately do NOT fall back to publication `author`, which
+# is paper authorship, not dataset creation.
+_CREATOR_KEYS = ("submitter", "submitter_name")
+_ORGANISM_KEYS = ("species", "organism")
+_DOI_RE = re.compile(r"\b(10\.\d{4,}/[^\s\"<>]+?)[.,;:]*$", re.MULTILINE)
+
+
+def _str_list(additional: dict, keys: tuple[str, ...]) -> list[str]:
+    """First present key whose value is a non-empty list of strings, deduped in
+    order. Skips empty/whitespace entries; never crosses repos to merge keys."""
+    for key in keys:
+        raw = additional.get(key)
+        if isinstance(raw, list):
+            seen: dict[str, None] = {}
+            for v in raw:
+                if isinstance(v, str) and v.strip():
+                    seen.setdefault(v.strip(), None)
+            if seen:
+                return list(seen)
+    return []
+
+
+def _pub_ids(additional: dict) -> tuple[str | None, str | None]:
+    """Best-effort (pmid, doi) from the free-text `additional.publication` strings.
+    pmid = a leading all-digit token (PRIDE convention); doi = first `10.x/...` match
+    anywhere (trailing punctuation trimmed). Either may be None."""
+    pmid = doi = None
+    for entry in additional.get("publication") or []:
+        if not isinstance(entry, str):
+            continue
+        if pmid is None:
+            head = entry.split(None, 1)[0] if entry.split() else ""
+            if head.isdigit():
+                pmid = head
+        if doi is None:
+            m = _DOI_RE.search(entry)
+            if m:
+                doi = m.group(1)
+    return pmid, doi
 
 
 def _normalize(d: dict) -> DataResource:
@@ -92,12 +139,18 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     )
     if body is None:
         raise NotFoundError(f"OmicsDI has no {source}/{acc}")
+    additional = body.get("additional") or {}
+    pmid, doi = _pub_ids(additional)
     resource = DataResource(
         id=resource_id,
         source="omicsdi",
         kind="study",
         title=body.get("name") or "",
         description=body.get("description"),
+        creators=[Creator(name=n) for n in _str_list(additional, _CREATOR_KEYS)],
+        organism=_str_list(additional, _ORGANISM_KEYS),
+        doi=doi,
+        identifiers={"pmid": pmid} if pmid else {},
         links=[Link(rel="landing_page", target_id=_LANDING.format(source=source, acc=acc))],
         files=[],
     )

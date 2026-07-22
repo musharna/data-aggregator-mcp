@@ -34,6 +34,12 @@ def _config() -> tuple[str, str | None, str] | None:
     )
 
 
+def is_configured() -> bool:
+    """True if an embedding endpoint is configured (``EMBEDDING_API_BASE`` set), so
+    ``rank=semantic`` / semantic re-rank can actually run. Pure env read — no network."""
+    return _config() is not None
+
+
 async def embed(client: httpx.AsyncClient, texts: list[str]) -> list[list[float]] | None:
     cfg = _config()
     if cfg is None:
