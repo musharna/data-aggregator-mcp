@@ -42,6 +42,22 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   same change rather than after it. The ceiling keeps us off the 2.0 line until its
   breaking changes are evaluated.
 
+### Changed
+
+- **Docs corrected against the shipped v0.41.1 surface.** A competitor/gap audit
+  found the public docs describing an older product: `docs/POSITIONING.md` still
+  claimed "four tools" and a v0.18.0 source list, and listed `operate`, MCP
+  resources, and semantic rank as _unshipped gaps_ when all three are live. It is
+  rewritten against the live code — six tools, 13 sources, prompts + resources,
+  a 2026-07-21 competitor sweep, and an honest-gaps section that now names the
+  real ones (no Streamable HTTP transport, no MCP Tasks extension, no
+  BioStudies/ClinicalTrials.gov/GDC/ENCODE, ~90% bio wiring).
+- **Source count 12 → 13** in `README.md` and the `server.json` registry
+  description; UniProtKB landed in 0.41.0 but was never added to either headline.
+- README now surfaces the FAIR score and `resolve(format="provenance")` dossier,
+  which the 2026-07-21 sweep found no other MCP server pairs with
+  checksum-verified fetch.
+
 ## [0.41.1] - 2026-07-03
 
 ### Fixed
