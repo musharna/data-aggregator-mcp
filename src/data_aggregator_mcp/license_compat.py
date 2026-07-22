@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from data_aggregator_mcp.models import LicenseVerdict
 
@@ -302,6 +303,47 @@ def _canonical_spdx_for_cc(elements: list[str], version: str) -> str | None:
     return spdx if spdx in LICENSE_MATRIX else None
 
 
+# A URL-ish token: optional scheme, a dotted host, optional path. Used to pull the
+# HOST out of a licence string so domain checks cannot be satisfied by a substring
+# sitting in someone else's path.
+_URLISH_RE = re.compile(
+    r"(?:https?://)?(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:/[^\s,;)\]]*)?", re.I
+)
+
+
+def url_hosts(text: str) -> list[str]:
+    """Lowercased hostnames of every URL-ish token in *text*.
+
+    A licence field is free-form: it may be a bare URL, a bare host+path with no
+    scheme (``creativecommons.org/publicdomain/zero/1.0``), or prose that merely
+    mentions one. All three need to work, which is why this scans for tokens rather
+    than parsing the whole string as a single URL.
+    """
+    hosts: list[str] = []
+    for token in _URLISH_RE.findall(text):
+        candidate = token if "://" in token else "//" + token
+        try:
+            host = urlsplit(candidate).hostname
+        except ValueError:  # malformed IPv6 literal, bad port, etc.
+            continue
+        if host:
+            hosts.append(host.lower())
+    return hosts
+
+
+def host_matches(text: str, domain: str) -> bool:
+    """True when *text* contains a URL whose HOST is *domain* or a subdomain of it.
+
+    The substring test this replaces (``"creativecommons.org" in low``) also accepted
+    ``http://evil.example.com/creativecommons.org/licenses/by/4.0/`` and reported it as
+    ``CC-BY-4.0`` — an attacker-controlled or merely malformed upstream ``rightsUri``
+    could mint a permissive verdict that then feeds the compatibility matrix, the
+    access flag, and the FAIR score.
+    """
+    suffix = "." + domain
+    return any(h == domain or h.endswith(suffix) for h in url_hosts(text))
+
+
 def normalize_spdx(license_str: str | None) -> str | None:
     """Map a free/varied licence string to a canonical SPDX id, or None if unrecognized.
 
@@ -323,7 +365,7 @@ def normalize_spdx(license_str: str | None) -> str | None:
             return key
 
     # 2. Creative Commons URLs.
-    if "creativecommons.org" in low:
+    if host_matches(low, "creativecommons.org"):
         if "publicdomain/zero" in low:
             return "CC0-1.0"
         if "publicdomain/mark" in low:
@@ -335,7 +377,7 @@ def normalize_spdx(license_str: str | None) -> str | None:
         return None
 
     # 3. Open Data Commons URLs.
-    if "opendatacommons.org" in low:
+    if host_matches(low, "opendatacommons.org"):
         if "/odbl" in low:
             return "ODbL-1.0"
         if "/by/" in low or low.endswith("/by"):

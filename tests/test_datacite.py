@@ -478,3 +478,34 @@ async def test_resolve_openneuro_doi_dispatches_to_openneuro_files(monkeypatch):
         r = await datacite.resolve(c, "datacite:10.18112/openneuro.ds000001.v1.0.0")
     assert r.source == "openneuro"
     assert [f.name for f in r.files] == ["README"]
+
+
+# IRON_LAW_OK
+
+
+def test_access_open_requires_a_real_licence_host() -> None:
+    """rightsUri is upstream-controlled; a substring match would flip access to open.
+
+    DataCite has no access field, so `access="open"` is inferred from the licence.
+    Before the host check, `http://paywall.example.com/creativecommons.org` inferred
+    open — mislabelling a closed record as freely reusable.
+    """
+    assert (
+        datacite._access_from_rights(
+            [{"rightsUri": "https://creativecommons.org/licenses/by/4.0/"}]
+        )
+        == "open"
+    )
+    assert datacite._access_from_rights([{"rightsIdentifier": "CC-BY-4.0"}]) == "open"
+    assert (
+        datacite._access_from_rights(
+            [{"rightsUri": "http://paywall.example.com/creativecommons.org"}]
+        )
+        is None
+    )
+    assert (
+        datacite._access_from_rights([{"rightsUri": "https://creativecommons.org.evil.com/by"}])
+        is None
+    )
+    assert datacite._access_from_rights([]) is None
+    assert datacite._access_from_rights(None) is None

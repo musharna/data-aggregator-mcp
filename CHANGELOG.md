@@ -6,6 +6,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Licence domain checks keyed on a substring, so a licence could be spoofed by
+  URL path.** `normalize_spdx` accepted
+  `http://evil.example.com/creativecommons.org/licenses/by/4.0/` as `CC-BY-4.0`,
+  and DataCite's `_access_from_rights` read
+  `http://paywall.example.com/creativecommons.org` as `access="open"` — both from
+  a bare `"creativecommons.org" in uri` test. Upstream `rightsUri` values are not
+  ours, so a malformed or hostile one could mint a permissive verdict that then
+  feeds the compatibility matrix, the access flag, and the FAIR score. Both now
+  compare the parsed URL **host** (`license_compat.host_matches`), which also
+  rejects the suffix trick `creativecommons.org.evil.com`. Prose, bare SPDX ids,
+  scheme-less `creativecommons.org/publicdomain/zero/1.0`, subdomains, and
+  prose-with-an-embedded-URL all still normalize as before.
+
 ### Added
 
 - **Streamable HTTP transport** (`--transport http`). The same six tools, prompts,

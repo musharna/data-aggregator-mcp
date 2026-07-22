@@ -20,6 +20,7 @@ import httpx
 
 from data_aggregator_mcp import _http, dataverse, dryad, figshare, openneuro, osf, zenodo
 from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.license_compat import host_matches
 from data_aggregator_mcp.models import (
     Creator,
     DataResource,
@@ -108,7 +109,14 @@ def _access_from_rights(rights_list: list[dict[str, Any]] | None) -> str | None:
     for r in rights_list or []:
         ident = (r.get("rightsIdentifier") or "").lower()
         uri = (r.get("rightsUri") or "").lower()
-        if ident.startswith("cc") or "creativecommons.org" in uri or "publicdomain" in uri:
+        # Host check, not substring: "creativecommons.org" appearing anywhere in a
+        # URI also matches http://paywall.example.com/creativecommons.org, which
+        # would flip a closed record to access="open".
+        if (
+            ident.startswith("cc")
+            or host_matches(uri, "creativecommons.org")
+            or "publicdomain" in uri
+        ):
             return "open"
     return None
 
