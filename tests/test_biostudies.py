@@ -33,7 +33,9 @@ SEARCH = json.loads((FX / "biostudies_search.json").read_text())
 @pytest.mark.asyncio
 async def test_search_normalizes_real_hits() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        assert "ebi.ac.uk" in request.url.host
+        # Exact host, not a substring: `"ebi.ac.uk" in host` also matches
+        # ebi.ac.uk.evil.com (CodeQL py/incomplete-url-substring-sanitization).
+        assert request.url.host == "www.ebi.ac.uk"
         assert request.url.params["query"] == "drought"
         return httpx.Response(200, json=SEARCH)
 

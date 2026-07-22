@@ -8,6 +8,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Streamable HTTP transport** (`--transport http`). The same six tools, prompts,
+  and resources now serve over HTTP as well as stdio; both share one `Server`
+  object and every handler, so there is no second code path to drift. Costs no new
+  dependencies — starlette and uvicorn already ship transitively with `mcp`.
+  Options: `--host`/`--port` (default `127.0.0.1:8000`), `--allow-host`,
+  `--allow-origin`, `--stateless`, `--json-response`. Bare invocation still serves
+  stdio, unchanged.
+- **DNS-rebinding protection is always on for HTTP, and refuses to guess.** The SDK
+  middleware silently disables Host/Origin validation when handed no settings, so
+  the transport never passes none. A loopback bind derives its own allowlist; a
+  non-loopback bind (`--host 0.0.0.0`, a LAN or container address) **requires** an
+  explicit `--allow-host` and exits 2 with an actionable message otherwise. Covered
+  by wire-level tests that assert a spoofed `Host` gets 421 and a spoofed `Origin`
+  gets 403 against a real server on a real port.
 - **BioStudies (EBI) connector**, including the **ArrayExpress** collection — EBI's
   counterpart to GEO, and previously reachable only indirectly through OmicsDI.
   `search` is free-text across collections (or narrowed with `collection=`) and
@@ -33,6 +47,42 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `isTotalHitsExact: false`; consecutive pages reported 1549 then 1550). It is
   exact within a single collection. The number is passed through as given rather
   than implying a precision the source does not have.
+
+### Fixed
+
+- **`initialize()` reported the MCP SDK's version as the server's.** `Server` was
+  constructed without `version=`, and the SDK falls back to its own version in that
+  case — so clients were told `data-aggregator-mcp` was at `1.28.1`. It now reports
+  `__version__` (0.41.1). Affected **both** transports; caught while verifying the
+  HTTP handshake, and now guarded by a test.
+
+### Security
+
+- **`mcp` pinned to `>=1.28.1,<2`** (was the unbounded `>=1.0`), clearing three
+  high-severity advisories: GHSA-vj7q-gjh5-988w (WebSocket transport skips
+  Host/Origin validation), GHSA-jpw9-pfvf-9f58 (HTTP transports serve session
+  requests without verifying the authenticated principal), and GHSA-hvrp-rf83-w775
+  (task handlers let any client access or cancel another's tasks). The first two
+  are directly reachable from the transport added above, so the bump lands in the
+  same change rather than after it. The ceiling keeps us off the 2.0 line until its
+  breaking changes are evaluated.
+
+### Changed
+
+- **Docs corrected against the shipped v0.41.1 surface.** A competitor/gap audit
+  found the public docs describing an older product: `docs/POSITIONING.md` still
+  claimed "four tools" and a v0.18.0 source list, and listed `operate`, MCP
+  resources, and semantic rank as _unshipped gaps_ when all three are live. It is
+  rewritten against the live code — six tools, 13 sources, prompts + resources,
+  a 2026-07-21 competitor sweep, and an honest-gaps section that now names the
+  real ones (no Streamable HTTP transport, no MCP Tasks extension, no
+  BioStudies/ClinicalTrials.gov/GDC/ENCODE, ~90% bio wiring).
+- **Source count 12 → 14** in `README.md` and the `server.json` registry
+  description — UniProtKB landed in 0.41.0 but was never added to either
+  headline, and BioStudies adds the fourteenth.
+- README now surfaces the FAIR score and `resolve(format="provenance")` dossier,
+  which the 2026-07-21 sweep found no other MCP server pairs with
+  checksum-verified fetch.
 
 ## [0.41.1] - 2026-07-03
 
