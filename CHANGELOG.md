@@ -8,6 +8,38 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`search` reports ontology params that matched nothing, in `unresolved[]`.**
+  The five ontology-typed params (`organism`/`disease`/`tissue`/`chemical`/`assay`)
+  are looked up in NCBI Taxonomy / MeSH / UBERON / ChEBI / EDAM, and a lookup that
+  found no term previously left the query un-expanded with _nothing recorded_ — so
+  `search(query="liver cancer", organism="yeast")` returned a page byte-identical to
+  one where the param was never passed, and the caller could not tell their filter
+  had been dropped. This is common, not exotic: a live probe (2026-07-23) found NCBI
+  Taxonomy indexes none of `yeast`, `oak`, `cedar` or `bass`, and UBERON has no bare
+  `root`, `bulb` or `body`. Kept disjoint from `errors[]`, which continues to mean
+  the lookup _failed_ rather than legitimately returned no match. Frozen to `[]` on a
+  cursor continuation, alongside the other page-1-only echoes.
+- **Elicitation (S1.6): clients that support form mode are asked to fix an
+  unresolvable ontology term before the search runs.** One form covers every
+  unresolved field; a blank answer means "search without it". Runs as a pre-flight
+  rather than a retry, so it costs no extra upstream request (the resolvers are
+  in-process cached) and never a second fan-out. Fail-soft at every rung — no
+  session, no capability, a URL-only client, a transport error, or a user who
+  declines all leave the search exactly as it is today.
+
+  Two things it deliberately does **not** do, both settled by live probe rather than
+  assumption: it does not offer a "did you mean …" candidate list (relaxed lookups
+  return usable suggestions for EDAM but noise elsewhere — `sugar` →
+  _sugar-phosphodiester opine_, `root` → _ventral root of spinal cord_ — with no
+  reliable way to tell the two apart), and it does not prompt on genuinely ambiguous
+  terms (only 2 of 20 probed terms had multiple exact-match candidates, and the
+  existing top-hit heuristic picked correctly in both, so a prompt would interrupt
+  the user to re-ask a question the server already answers right).
+
+  Capability detection deliberately does not use the SDK's `check_client_capability`,
+  which stops at `elicitation is None` (mcp 1.28.1 `server/session.py:153`) and would
+  report a URL-only client as form-capable.
+
 - **PDB `resolve` now returns creators, source taxa, and funding.** From the RCSB
   GraphQL entry: `audit_author` (ordered), `rcsb_entity_source_organism` across all
   polymer entities (deduped by taxid), and `pdbx_audit_support` (only when a funding

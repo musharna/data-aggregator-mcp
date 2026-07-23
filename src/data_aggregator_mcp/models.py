@@ -210,6 +210,27 @@ class AssayExpansion(BaseModel):
     synonyms: list[str]  # entry synonyms added to the query (excludes the canonical label)
 
 
+class UnresolvedEntity(BaseModel):
+    """Echo of an ontology-typed search param that was supplied but matched NO term,
+    so the query ran WITHOUT that expansion.
+
+    Distinct from ``SearchResult.errors``: an entry there means the ontology LOOKUP
+    FAILED (HTTP/parse) and the two are mutually exclusive per field. An entry here
+    means the lookup SUCCEEDED and legitimately returned no match — the common case
+    for a common name the registry does not index (NCBI Taxonomy has no ``yeast``,
+    ``oak`` or ``cedar``; UBERON has no bare ``root``).
+
+    Without this echo the response for a silently-dropped param is byte-identical to
+    one where the param was never passed, so the caller cannot tell that the filter
+    they asked for was not applied.
+    """
+
+    field: str  # organism | disease | tissue | chemical | assay
+    input: str  # the value the caller supplied, verbatim
+    ontology: str  # the registry consulted, e.g. "NCBI Taxonomy"
+    note: str  # human-readable consequence
+
+
 class QueryUnderstanding(BaseModel):
     """Echo of the LLM query-understanding rewrite that fired (transparency, A2.P1).
 
@@ -284,6 +305,9 @@ class SearchResult(BaseModel):
     tissue_expansion: TissueExpansion | None = None
     chemical_expansion: ChemicalExpansion | None = None
     assay_expansion: AssayExpansion | None = None
+    unresolved: list[UnresolvedEntity] = Field(
+        default_factory=list
+    )  # ontology params supplied but matched nothing (query ran WITHOUT that expansion)
     query_understanding: QueryUnderstanding | None = (
         None  # LLM rewrite echo (search understand=true)
     )

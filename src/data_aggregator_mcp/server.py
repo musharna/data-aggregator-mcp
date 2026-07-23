@@ -31,7 +31,15 @@ from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.stdio import stdio_server
 from pydantic import AnyUrl
 
-from data_aggregator_mcp import __version__, citation, operate, router, run_crate, zenodo
+from data_aggregator_mcp import (
+    __version__,
+    citation,
+    elicitation,
+    operate,
+    router,
+    run_crate,
+    zenodo,
+)
 from data_aggregator_mcp import croissant as croissant_mod
 from data_aggregator_mcp import dossier as dossier_mod
 from data_aggregator_mcp import embeddings as embeddings_mod
@@ -380,6 +388,11 @@ TOOLS: list[types.Tool] = [
             "mirror collapse: same-dataset copies under different/no DOIs are "
             "folded into one record, with the folded copies annotated under "
             "mirrors[]."
+            " An ontology param that matches no term in its registry (e.g. "
+            "organism='yeast' — NCBI Taxonomy indexes no such common name) is "
+            "reported in unresolved[] and the search runs WITHOUT that expansion, "
+            "so a dropped filter is never silent. Clients that support form "
+            "elicitation are asked for a replacement term before the search runs."
         ),
         inputSchema={
             "type": "object",
@@ -888,16 +901,36 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
     async with httpx.AsyncClient(follow_redirects=True) as client:
         match name:
             case "search":
+                ontology_args = {
+                    f: args.get(f) for f in ("organism", "disease", "tissue", "chemical", "assay")
+                }
+                # S1.6: give a capable client the chance to fix an ontology term that
+                # matches nothing BEFORE the fan-out, rather than silently dropping the
+                # filter. Skipped on a cursor continuation — those params are replayed
+                # from the cursor, already prompted for on page 1. No-ops (returns {})
+                # for every client that can't or won't answer; never raises.
+                if not args.get("cursor") and any(ontology_args.values()):
+                    try:
+                        ctx = server.request_context
+                    except LookupError:
+                        ctx = None  # called outside an MCP request (e.g. a unit test)
+                    corrections = await elicitation.correct_unresolved(
+                        client,
+                        getattr(ctx, "session", None),
+                        ontology_args,
+                        related_request_id=getattr(ctx, "request_id", None),
+                    )
+                    ontology_args.update(corrections)
                 result = await router.search_page(
                     client,
                     query=args.get("query"),
                     size=args.get("size", zenodo.DEFAULT_SIZE),
                     sources=args.get("sources"),
-                    organism=args.get("organism"),
-                    disease=args.get("disease"),
-                    tissue=args.get("tissue"),
-                    chemical=args.get("chemical"),
-                    assay=args.get("assay"),
+                    organism=ontology_args["organism"],
+                    disease=ontology_args["disease"],
+                    tissue=ontology_args["tissue"],
+                    chemical=ontology_args["chemical"],
+                    assay=ontology_args["assay"],
                     published_after=args.get("published_after"),
                     published_before=args.get("published_before"),
                     kind=args.get("kind"),
