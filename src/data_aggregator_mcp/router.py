@@ -26,6 +26,7 @@ from data_aggregator_mcp import (
     chemistry,
     dandi,
     datacite,
+    datagov,
     dataone,
     embeddings,
     gbif,
@@ -100,6 +101,9 @@ _ADAPTERS: dict[str, Any] = {
     # gbif before datacite: GBIF DOIs use the 10.15468 DataCite prefix, so both index
     # them; native-before-datacite makes the fetchable GBIF record win _dedup.
     "gbif": gbif,
+    # data.gov has no DOIs, so dedup precedence is moot; grouped with the other
+    # non-omics breadth sources.
+    "datagov": datagov,
     "cellxgene": cellxgene,
     "datacite": datacite,
     "dandi": dandi,
@@ -1183,6 +1187,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     - ``pubmed:``/``openaire:``          → literature
     - ``dataone:<pid>``                  → DataONE (verified fetch)
     - ``gbif:<dataset-key>``             → GBIF (unverified DwC-A fetch)
+    - ``datagov:<name-slug>``            → data.gov (CKAN; unverified resource fetch)
     - ``omicsdi:<source>:<acc>``         → OmicsDI (routes fetch to PRIDE/MetaboLights)
     - ``datacite:<doi>``                 → DataCite
     - ``zenodo:<id>`` / bare digits      → Zenodo (native; carries files[])
@@ -1202,6 +1207,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = await dataone.resolve(client, rid)
     elif prefix in gbif.PREFIXES:
         resource = await gbif.resolve(client, rid)
+    elif prefix in datagov.PREFIXES:
+        resource = await datagov.resolve(client, rid)
     elif prefix in dandi.PREFIXES:
         resource = await dandi.resolve(client, rid)
     elif prefix in cellxgene.PREFIXES:
@@ -1228,7 +1235,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise ValueError(
             f"cannot route id {resource_id!r}: expected 'zenodo:<id>', 'datacite:<doi>', "
             "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', 'dataone:<pid>', "
-            "'gbif:<dataset-key>', 'omicsdi:<source>:<acc>', 'dandi:<id>', "
+            "'gbif:<dataset-key>', 'datagov:<name-slug>', 'omicsdi:<source>:<acc>', 'dandi:<id>', "
             "'cellxgene:<id>', 'openml:<id>', "
             "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', 'biostudies:<acc>', "
             "a bare Zenodo id, or a DOI"

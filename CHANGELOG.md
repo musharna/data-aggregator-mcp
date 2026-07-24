@@ -8,6 +8,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **data.gov wired as a source (S3).** The US government open-data catalog: `search` +
+  `resolve` cover CKAN packages (climate, agriculture, economic, civic & scientific
+  data), each with a publishing agency, tags, a (frequently unspecified) licence, and
+  downloadable resources that `fetch` streams. data.gov **retired its keyless CKAN API**
+  in favour of a GSA-hosted Catalog API that requires a free api.data.gov key; the key is
+  read from `DATA_GOV_API_KEY` (mirroring the optional `NCBI_API_KEY` pattern) and sent as
+  `X-Api-Key`, falling back to the rate-limited public `DEMO_KEY` for light use. Fetch is
+  **unverified** — CKAN rarely exposes a usable checksum — so the content sniff guards but
+  no hash is checked; metadata-only packages are discovery-only and fail loud. Most
+  packages carry no DOI, so this leg is breadth, not cross-source dedup.
 - **GBIF (Global Biodiversity Information Facility) wired as a source (S3).** The unit
   is a GBIF _dataset_ (occurrence / checklist / sampling-event / metadata): `search`
   and `resolve` cover the registry, and each dataset carries a DOI, a machine-readable
