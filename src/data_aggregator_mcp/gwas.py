@@ -15,7 +15,7 @@ import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import DataResource, Link, compact
+from data_aggregator_mcp.models import DataResource, Link, compact, local_id
 
 SEARCH = "https://www.ebi.ac.uk/gwas/rest/api/studies/search/findByDiseaseTrait"
 RECORD = "https://www.ebi.ac.uk/gwas/rest/api/studies/{acc}"
@@ -76,7 +76,7 @@ async def search(
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    acc = resource_id.split(":", 1)[1].strip() if ":" in resource_id else ""
+    acc = local_id(resource_id, "gwas", strip=True)
     if not acc:
         raise NotFoundError(f"malformed GWAS id {resource_id!r}")
     body = await _http.request_json(

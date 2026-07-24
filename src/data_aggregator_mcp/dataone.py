@@ -16,7 +16,14 @@ import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import Creator, DataResource, FileEntry, compact, year_from
+from data_aggregator_mcp.models import (
+    Creator,
+    DataResource,
+    FileEntry,
+    compact,
+    local_id,
+    year_from,
+)
 
 SOLR = "https://cn.dataone.org/cn/v2/query/solr/"
 RESOLVE = "https://cn.dataone.org/cn/v2/resolve/{pid}"
@@ -162,7 +169,7 @@ async def _file_entry(client: httpx.AsyncClient, doc: dict) -> FileEntry | None:
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    pid = resource_id.split(":", 1)[1] if resource_id.startswith("dataone:") else resource_id
+    pid = local_id(resource_id, "dataone")
     _escaped_pid = _escape_lucene(pid)
     _total, docs = await _solr(client, f'identifier:"{_escaped_pid}"', rows=1, fl=_RESOLVE_FL)
     if not docs:

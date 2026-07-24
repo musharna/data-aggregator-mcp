@@ -10,10 +10,19 @@ from data_aggregator_mcp.models import (
     _orcid,
     compact,
     derive_access_modes,
+    local_id,
     normalize_access,
     strip_html,
     year_from,
 )
+
+
+def test_local_id():
+    assert local_id("zenodo:123", "zenodo") == "123"
+    assert local_id("bare-no-prefix", "zenodo") == "bare-no-prefix"  # passthrough
+    assert local_id("hf:owner/name", "hf") == "owner/name"  # splits on the FIRST colon only
+    assert local_id("pdb: 1abc ", "pdb", strip=True, upper=True) == "1ABC"
+    assert local_id("gwas:GCST9 ", "gwas", strip=True) == "GCST9"
 
 
 def test_year_from():

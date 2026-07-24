@@ -21,6 +21,7 @@ from data_aggregator_mcp.models import (
     FileEntry,
     Link,
     compact,
+    local_id,
     normalize_access,
 )
 
@@ -70,7 +71,7 @@ def _parquet_name(url: str, did: str) -> str:
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    did = resource_id.split(":", 1)[1].strip() if ":" in resource_id else ""
+    did = local_id(resource_id, "openml", strip=True)
     if not did:
         raise NotFoundError(f"malformed OpenML id {resource_id!r}")
     body = await _http.request_json(

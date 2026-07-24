@@ -27,6 +27,7 @@ from data_aggregator_mcp.models import (
     FileEntry,
     Link,
     compact,
+    local_id,
     normalize_access,
 )
 
@@ -181,7 +182,7 @@ def _file_manifest(collection: dict) -> list[FileEntry]:
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    cid = resource_id.split(":", 1)[1].strip() if ":" in resource_id else ""
+    cid = local_id(resource_id, "cellxgene", strip=True)
     if not cid:
         raise NotFoundError(f"malformed CELLxGENE id {resource_id!r}")
     collection = await _http.request_json(

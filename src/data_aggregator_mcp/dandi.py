@@ -20,6 +20,7 @@ from data_aggregator_mcp.models import (
     FileEntry,
     Link,
     compact,
+    local_id,
     normalize_access,
 )
 
@@ -131,7 +132,7 @@ async def _asset_manifest(client: httpx.AsyncClient, ident: str, version: str) -
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    ident = resource_id.split(":", 1)[1].strip() if ":" in resource_id else ""
+    ident = local_id(resource_id, "dandi", strip=True)
     if not ident:
         raise NotFoundError(f"malformed DANDI id {resource_id!r}")
     detail = await _http.request_json(

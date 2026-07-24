@@ -23,7 +23,7 @@ import httpx
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.license_compat import normalize_spdx
-from data_aggregator_mcp.models import Creator, DataResource, Link, compact, year_from
+from data_aggregator_mcp.models import Creator, DataResource, Link, compact, local_id, year_from
 
 SEARCH = "https://cmr.earthdata.nasa.gov/search/collections.umm_json"
 PREFIXES = {"nasacmr"}
@@ -158,7 +158,7 @@ async def search(
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    cid = resource_id.split(":", 1)[1] if resource_id.startswith("nasacmr:") else resource_id
+    cid = local_id(resource_id, "nasacmr")
     body = await _http.request_json(
         client,
         "GET",

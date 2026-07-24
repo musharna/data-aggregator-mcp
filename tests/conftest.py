@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from data_aggregator_mcp import _ratelimit, router, taxonomy
+from data_aggregator_mcp import _ratelimit, router, taxonomy, zenodo
 
 
 @pytest.fixture(autouse=True)
@@ -22,7 +22,9 @@ def _reset_process_singletons():
     _ratelimit.reset()
     router._RESOLVE_CACHE.clear()
     taxonomy._CACHE.clear()
+    zenodo._SEARCH_CACHE.clear()  # search-seeded record cache (resolve double-fetch skip)
     yield
     _ratelimit.reset()
     router._RESOLVE_CACHE.clear()
     taxonomy._CACHE.clear()
+    zenodo._SEARCH_CACHE.clear()

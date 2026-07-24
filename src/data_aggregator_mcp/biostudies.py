@@ -34,7 +34,7 @@ import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import DataResource, FileEntry, Link, Metrics, compact
+from data_aggregator_mcp.models import DataResource, FileEntry, Link, Metrics, compact, local_id
 
 SEARCH = "https://www.ebi.ac.uk/biostudies/api/v1/search"
 COLLECTION_SEARCH = "https://www.ebi.ac.uk/biostudies/api/v1/{collection}/search"
@@ -261,7 +261,7 @@ async def search(
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    acc = resource_id.split(":", 1)[1].strip() if ":" in resource_id else ""
+    acc = local_id(resource_id, "biostudies", strip=True)
     if not _ACC_RE.match(acc):
         raise NotFoundError(f"malformed BioStudies id {resource_id!r}")
     try:

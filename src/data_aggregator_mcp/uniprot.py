@@ -15,7 +15,7 @@ import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import DataResource, FileEntry, Link, compact
+from data_aggregator_mcp.models import DataResource, FileEntry, Link, compact, local_id
 
 SEARCH = "https://rest.uniprot.org/uniprotkb/search"
 ENTRY = "https://rest.uniprot.org/uniprotkb/{acc}"
@@ -108,7 +108,7 @@ async def search(
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    acc = resource_id.split(":", 1)[1].strip().upper() if ":" in resource_id else ""
+    acc = local_id(resource_id, "uniprot", strip=True, upper=True)
     if not _ACC_RE.match(acc):
         raise NotFoundError(f"malformed UniProt id {resource_id!r}")
     try:

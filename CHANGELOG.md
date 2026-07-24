@@ -27,6 +27,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A `resolve` that follows a `search` on Zenodo no longer re-fetches the record.** Zenodo
+  search already returns the full record (with the file manifest), so `search` now stashes the
+  raw record in a short-TTL cache and `resolve` serves it without a second `GET` — one fewer
+  upstream round-trip on the common search→resolve flow. Also consolidated the id-prefix-strip
+  idiom that had drifted across ~14 adapters into a single `models.local_id` helper.
+
 - **Per-search organism enrichment now runs concurrently instead of serially.** Taxon
   resolution across a result page is `asyncio.gather`-ed (bounded by the shared rate limiter
   and the resolver cache), cutting cold-page latency ~2-3× when an `NCBI_API_KEY` is set; a

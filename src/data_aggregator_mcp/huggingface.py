@@ -9,7 +9,7 @@ import httpx
 
 from data_aggregator_mcp import _http, hf_datasets_server
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import Creator, DataResource, FileEntry, Metrics, compact
+from data_aggregator_mcp.models import Creator, DataResource, FileEntry, Metrics, compact, local_id
 
 API = "https://huggingface.co/api/datasets"
 FILE_BASE = "https://huggingface.co/datasets"
@@ -88,7 +88,7 @@ async def search(
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    ds_id = resource_id.split(":", 1)[1] if resource_id.startswith("hf:") else resource_id
+    ds_id = local_id(resource_id, "hf")
     try:
         body = await _http.request_json(
             client,

@@ -12,6 +12,7 @@ from typing import Any
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import (
     Creator,
@@ -23,6 +24,7 @@ from data_aggregator_mcp.models import (
     _orcid,
     _rel,
     compact,
+    local_id,
     normalize_access,
 )
 
@@ -31,6 +33,12 @@ DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 3
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
+
+# Search returns FULL records (manifest included); compact() strips files[] for the search
+# view, so a naive search→resolve re-fetches what we already had. Stash the raw record here
+# so resolve() can skip the redundant GET. Short TTL: resolve-after-search is near-immediate,
+# and a longer window risks serving a stale manifest.
+_SEARCH_CACHE: TTLCache = TTLCache(maxsize=256, ttl=600)
 
 # Zenodo resource_type.type → DataResource.kind
 _KIND_MAP = {
@@ -127,12 +135,18 @@ async def search(
     records = hits.get("hits", []) or []
     sliced = records[offset % capped :]
     total = int(hits.get("total", len(records)))
+    for r in sliced:  # stash raw records so resolve() can skip a redundant GET
+        if r.get("id") is not None:
+            _SEARCH_CACHE.set(f"zenodo:{r['id']}", r)
     return total, [compact(_normalize(r)) for r in sliced]
 
 
 async def resolve(client: httpx.AsyncClient, record_id: str) -> DataResource:
     """Resolve a Zenodo record by id (``zenodo:123`` or bare ``123``)."""
-    rid = record_id.split(":", 1)[1] if record_id.startswith("zenodo:") else record_id
+    rid = local_id(record_id, "zenodo")
+    cached = _SEARCH_CACHE.get(f"zenodo:{rid}")
+    if cached is not MISS:  # seeded by a recent search — full record already in hand
+        return _normalize(cached)
     try:
         record = await _http.request_json(
             client,

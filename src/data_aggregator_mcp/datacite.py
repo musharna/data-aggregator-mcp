@@ -30,6 +30,7 @@ from data_aggregator_mcp.models import (
     _orcid,
     _rel,
     compact,
+    local_id,
 )
 
 BASE_URL = "https://api.datacite.org"
@@ -218,7 +219,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
 
     DataCite returns a single record under ``data`` (a dict, not a list).
     """
-    doi = resource_id.split(":", 1)[1] if resource_id.startswith("datacite:") else resource_id
+    doi = local_id(resource_id, "datacite")
     try:
         body = await _http.request_json(
             client,
