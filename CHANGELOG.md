@@ -35,8 +35,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   so a new source is one row. Internal refactor — no behavior change; the derived
   adapter/gate/discovery sets are byte-for-byte the previous ones, and dispatch is verified
   live. `zenodo`/`datacite` gained `PREFIXES` (their bare-id routes stay as explicit
-  fallbacks). The rich `_SOURCES` metadata still lives in `server` but is now consistency-
-  checked against the registry.
+  fallbacks).
+
+- **The `list_sources` catalog now lives in the registry too, one row per source.** The
+  ~265-line `_SOURCES` metadata table moved out of `server.py` (1207 → 945 lines) onto the
+  registry entries, so a source's advertised description and its routing/fetch behavior are
+  declared together. `fetchable` became a _single_ declaration doing both jobs — it gates
+  fetch and is the label the catalog advertises (`False` = discovery-only, `True` = every
+  prefix fetchable, a string like `"per-repo"` = fetchable but decided per record) — so the
+  advertised capability and the actual gate can no longer disagree; a contradiction now fails
+  loud at import instead of misleading a client. Internal refactor — no behavior change: the
+  `list_sources` payload is byte-for-byte identical, key order and sparse optional keys
+  included, verified against a pre-refactor capture through the real tool dispatch.
 
 - **A `resolve` that follows a `search` on Zenodo no longer re-fetches the record.** Zenodo
   search already returns the full record (with the file manifest), so `search` now stashes the
