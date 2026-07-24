@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+from typing import Any
+
+import pytest
+
 from data_aggregator_mcp import router, server, sources
 
 
@@ -55,7 +60,81 @@ def test_every_source_has_search_and_resolve():
         assert spec.prefixes, spec.name  # every source declares at least one prefix
 
 
-def test_server_SOURCES_names_do_not_drift_from_the_registry():
-    """The rich human-facing _SOURCES metadata still lives in server, but its source set must
-    stay in lockstep with the registry (a consistency guard until it, too, is folded in)."""
+def test_server_SOURCES_is_the_registry_catalog():
+    """The human-facing catalog is now DERIVED from the registry, not restated in server —
+    so its source set cannot drift from the routing/fetch data."""
+    assert server._SOURCES is sources.CATALOG
     assert {s["name"] for s in server._SOURCES} == {s.name for s in sources.SOURCES}
+
+
+def test_catalog_order_covers_every_source_and_sets_the_payload_order():
+    """CATALOG_ORDER is presentation order (deliberately != SOURCES' precedence order).
+    Import fails loud if it ever misses a source; assert both halves here."""
+    assert set(sources.CATALOG_ORDER) == {s.name for s in sources.SOURCES}
+    assert [s["name"] for s in sources.CATALOG] == list(sources.CATALOG_ORDER)
+    # The two orders really are different — otherwise this guard is vacuous.
+    assert list(sources.CATALOG_ORDER) != [s.name for s in sources.SOURCES]
+
+
+def test_catalog_entry_omits_unset_optional_keys_and_fixes_key_order():
+    """list_sources is a public tool payload: optional keys stay ABSENT rather than None,
+    and the key order is stable."""
+    by_name = {s["name"]: s for s in sources.CATALOG}
+    assert "description" not in by_name["zenodo"]  # never had one
+    assert "fetchable_notes" not in by_name["zenodo"]
+    assert "operable" not in by_name["omics"]  # sparse: omics/literature/omicsdi/gwas
+    assert "description" not in by_name["datacite"]
+    canonical = [
+        "name",
+        "layer",
+        "kinds",
+        "filters_supported",
+        "auth_required",
+        "rate_limit",
+        "status",
+        "fetchable",
+        "operable",
+        "fetchable_notes",
+        "id_example",
+        "description",
+    ]
+    for entry in sources.CATALOG:
+        keys = list(entry)
+        assert keys == [k for k in canonical if k in entry], entry["name"]
+
+
+def test_advertised_fetchable_label_agrees_with_the_fetch_gate():
+    """The advertised label and the gate are one declaration, so they cannot disagree —
+    the failure mode where metadata promises a fetch the router refuses."""
+    for spec in sources.SOURCES:
+        assert bool(spec.fetchable) == bool(spec.fetchable_prefixes), spec.name
+    assert {s.name for s in sources.SOURCES if s.fetchable is False} == sources.DISCOVERY_ONLY
+
+
+def _stub_spec(**kw: Any) -> sources.SourceSpec:
+    """Build a throwaway spec, varying only the fetchability declaration."""
+    return sources._spec(
+        "stub",
+        SimpleNamespace(PREFIXES=frozenset({"stub"})),
+        layer="archives",
+        kinds=("dataset",),
+        filters_supported=("query",),
+        rate_limit="none",
+        status="live",
+        id_example="stub:1",
+        **kw,
+    )
+
+
+def test_spec_rejects_a_label_that_contradicts_the_gate():
+    # advertises fetchable, but no prefix is actually gated
+    with pytest.raises(ValueError, match="must agree"):
+        _stub_spec(fetchable=True, fetchable_prefixes=())
+    with pytest.raises(ValueError, match="must agree"):
+        _stub_spec(fetchable="per-repo", fetchable_prefixes=())
+    # declared discovery-only, yet names fetchable prefixes
+    with pytest.raises(ValueError, match="fetchable=False"):
+        _stub_spec(fetchable=False, fetchable_prefixes=("stub",))
+    # the consistent cases still build
+    assert _stub_spec(fetchable=False).fetchable_prefixes == frozenset()
+    assert _stub_spec().fetchable_prefixes == frozenset({"stub"})
