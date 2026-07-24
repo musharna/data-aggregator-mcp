@@ -61,6 +61,7 @@ from data_aggregator_mcp.models import (
     Taxon,
     TaxonExpansion,
     TissueExpansion,
+    UnresolvedEntity,
     derive_access_modes,
     derive_version_status,
 )
@@ -325,6 +326,57 @@ def _or_group(terms: list[str]) -> str:
     return " OR ".join(f'"{t}"' for t in safe if t)
 
 
+# (param name, registry label, the errors[] key that module writes on a LOOKUP FAILURE).
+# Order fixes the emitted order of SearchResult.unresolved.
+_ONTOLOGY_FIELDS: tuple[tuple[str, str, str], ...] = (
+    ("organism", "NCBI Taxonomy", "taxonomy"),
+    ("disease", "MeSH", "mesh"),
+    ("tissue", "UBERON", "uberon"),
+    ("chemical", "ChEBI", "chebi"),
+    ("assay", "EDAM", "edam"),
+)
+
+
+def _unresolved_entities(
+    supplied: dict[str, str | None],
+    expansions: dict[str, object | None],
+    errors: dict[str, str],
+) -> list[UnresolvedEntity]:
+    """Pure: derive the no-match echo from state the search path already has.
+
+    An entity is *unresolved* when the caller supplied it, the corresponding
+    ``*_expansion`` echo is None, and no lookup FAILURE was recorded for that
+    registry. That last clause keeps the two channels disjoint: a lookup that blew
+    up is already reported in ``errors`` (fail-loud), and reporting it here as well
+    would claim the registry answered "no match" when it never answered at all.
+
+    Derived rather than threaded through the five ``_expand_*`` signatures so the
+    multi-query variant loop — which deliberately discards its per-variant echoes —
+    cannot double-count.
+    """
+    out: list[UnresolvedEntity] = []
+    for field, ontology, error_key in _ONTOLOGY_FIELDS:
+        value = supplied.get(field)
+        if not value or not value.strip():
+            continue
+        if expansions.get(field) is not None:
+            continue
+        if error_key in errors:
+            continue
+        out.append(
+            UnresolvedEntity(
+                field=field,
+                input=value,
+                ontology=ontology,
+                note=(
+                    f"{ontology} returned no match for {field}={value!r}; "
+                    "the search ran WITHOUT that expansion"
+                ),
+            )
+        )
+    return out
+
+
 async def _expand_organism(
     client: httpx.AsyncClient, query: str, organism: str | None, errors: dict[str, str]
 ) -> tuple[str, TaxonExpansion | None]:
@@ -584,6 +636,7 @@ async def _build_search_result(
     tissue_expansion: TissueExpansion | None = None,
     chemical_expansion: ChemicalExpansion | None = None,
     assay_expansion: AssayExpansion | None = None,
+    unresolved: list[UnresolvedEntity] | None = None,
     query_understanding: QueryUnderstanding | None = None,
     query_expansion: QueryExpansion | None = None,
 ) -> SearchResult:
@@ -609,6 +662,7 @@ async def _build_search_result(
         tissue_expansion=tissue_expansion,
         chemical_expansion=chemical_expansion,
         assay_expansion=assay_expansion,
+        unresolved=list(unresolved or []),
         query_understanding=query_understanding,
         query_expansion=query_expansion,
     )
@@ -631,6 +685,7 @@ async def _multi_query_page(
     tissue_expansion: TissueExpansion | None = None,
     chemical_expansion: ChemicalExpansion | None = None,
     assay_expansion: AssayExpansion | None = None,
+    unresolved: list[UnresolvedEntity] | None = None,
     query_understanding: QueryUnderstanding | None = None,
 ) -> SearchResult:
     """A2.P2 parallel multi-query fan-out keyed by a composite ``(variant_index, source)``
@@ -736,6 +791,7 @@ async def _multi_query_page(
         tissue_expansion=tissue_expansion,
         chemical_expansion=chemical_expansion,
         assay_expansion=assay_expansion,
+        unresolved=unresolved,
         query_understanding=query_understanding,
         query_expansion=query_expansion,
     )
@@ -810,6 +866,11 @@ async def search_page(
         tissue_expansion = None  # frozen on continuation; do not re-expand
         chemical_expansion = None  # frozen on continuation; do not re-expand
         assay_expansion = None  # frozen on continuation; do not re-expand
+        # Frozen to [] like every other echo — and it MUST NOT be derived here: the
+        # ontology params above are restored from the cursor while the expansions are
+        # deliberately frozen None, so `_unresolved_entities` would read that as "every
+        # supplied param matched nothing" and cry wolf on every page after the first.
+        unresolved: list[UnresolvedEntity] = []
         query_understanding = None  # frozen on continuation; never re-understand
         effective_query = query
         errors: dict[str, str] = {}
@@ -899,6 +960,26 @@ async def search_page(
         effective_query, assay_expansion = await _expand_assay(
             client, effective_query, assay, errors
         )
+        # Computed once, here, where all five echoes are in scope — NOT inside the
+        # variant loop below, which re-runs the same (cached) expansions and drops
+        # their echoes on purpose.
+        unresolved = _unresolved_entities(
+            {
+                "organism": organism,
+                "disease": disease,
+                "tissue": tissue,
+                "chemical": chemical,
+                "assay": assay,
+            },
+            {
+                "organism": expansion,
+                "disease": disease_expansion,
+                "tissue": tissue_expansion,
+                "chemical": chemical_expansion,
+                "assay": assay_expansion,
+            },
+            errors,
+        )
 
         if multi_query:
             # A2.P2 parallel path. Variant 0 = the post-understand/post-expansion
@@ -946,6 +1027,7 @@ async def search_page(
                     tissue_expansion=tissue_expansion,
                     chemical_expansion=chemical_expansion,
                     assay_expansion=assay_expansion,
+                    unresolved=unresolved,
                     query_understanding=query_understanding,
                 )
         offsets = {}
@@ -1070,6 +1152,7 @@ async def search_page(
         tissue_expansion=tissue_expansion,
         chemical_expansion=chemical_expansion,
         assay_expansion=assay_expansion,
+        unresolved=unresolved,
         query_understanding=query_understanding,
     )
 

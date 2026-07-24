@@ -120,8 +120,13 @@ This is a discovery-and-fetch layer, not the whole stack. Today it does **not**:
   Ensembl are not wired. Outside the life sciences, Kaggle, data.gov, NASA
   Earthdata/CMR, and GBIF are absent — the `DataResource` model is domain-general,
   but the wiring is currently ~90% biological.
-- **Elicit clarification.** An ambiguous query is expanded and searched, not
-  queried back to the user.
+- **Elicit clarification on a free-text query.** An ambiguous `query` string is
+  expanded and searched, never queried back to the user. Elicitation is wired only
+  for the narrower case where an explicit ontology param (`organism`, `tissue`, …)
+  matches no term in its registry: a form-capable client is asked for a replacement,
+  and every client gets the `unresolved[]` echo either way. Terms that resolve are
+  not second-guessed — a live probe found the top-hit heuristic already picks
+  correctly on the rare genuinely-ambiguous term.
 
 For citation-graph _traversal_, pair it with an OpenAlex MCP — that boundary is
 deliberate, not an oversight.

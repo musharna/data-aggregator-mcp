@@ -1880,3 +1880,88 @@ async def test_search_page_cancelled_adapter_surfaces_in_errors_not_crash(monkey
     assert "CancelledError" in result.errors["zenodo"]
     # The healthy adapter's results must still be present.
     assert any(r.id == "datacite:ok" for r in result.results)
+
+
+# --- unresolved ontology params (S1.6 piece 1) --------------------------------
+# Live probe 2026-07-23: NCBI Taxonomy indexes none of "yeast"/"oak"/"cedar"/"bass";
+# UBERON has no bare "root"/"bulb"/"body"; ChEBI has no bare "sugar". Before this echo
+# a search carrying one of those params returned a page byte-identical to one where the
+# param was never passed, so the caller could not tell their filter was dropped.
+
+
+def test_unresolved_reports_a_param_that_matched_nothing() -> None:
+    out = router._unresolved_entities({"organism": "yeast"}, {"organism": None}, {})
+    assert [(u.field, u.input, u.ontology) for u in out] == [("organism", "yeast", "NCBI Taxonomy")]
+    assert "ran WITHOUT that expansion" in out[0].note
+
+
+def test_unresolved_stays_silent_when_the_param_did_resolve() -> None:
+    assert router._unresolved_entities({"organism": "mouse"}, {"organism": object()}, {}) == []
+
+
+def test_unresolved_ignores_params_the_caller_never_supplied() -> None:
+    supplied = {"organism": None, "disease": "", "tissue": "   "}
+    assert router._unresolved_entities(supplied, dict.fromkeys(supplied), {}) == []
+
+
+def test_unresolved_defers_to_errors_so_the_two_channels_stay_disjoint() -> None:
+    """A lookup that BLEW UP is already reported in errors[]. Repeating it here would
+    claim the registry answered 'no match' when it never answered at all."""
+    out = router._unresolved_entities(
+        {"organism": "mouse", "tissue": "root"},
+        {"organism": None, "tissue": None},
+        {"taxonomy": "ConnectError: boom"},
+    )
+    assert [u.field for u in out] == ["tissue"]
+
+
+def test_unresolved_emits_every_failing_field_in_declaration_order() -> None:
+    supplied = {
+        "assay": "alignment",
+        "organism": "yeast",
+        "chemical": "sugar",
+        "tissue": "root",
+        "disease": "notadisease",
+    }
+    out = router._unresolved_entities(supplied, dict.fromkeys(supplied), {})
+    assert [u.field for u in out] == ["organism", "disease", "tissue", "chemical", "assay"]
+    assert [u.ontology for u in out] == ["NCBI Taxonomy", "MeSH", "UBERON", "ChEBI", "EDAM"]
+
+
+async def test_unresolved_is_reported_on_page_one_and_frozen_on_continuation(
+    monkeypatch,
+) -> None:
+    """The page-2 trap: the cursor carries the ontology params but freezes the
+    expansion echoes to None. Deriving `unresolved` on a continuation would read that
+    as "every supplied param matched nothing" and cry wolf on every page after the
+    first, so it is frozen to [] alongside the other echoes."""
+    monkeypatch.setattr(mesh, "resolve_mesh", AsyncMock(return_value=None))
+
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        return 5, [_res(f"zenodo:{offset}", "zenodo", None)]
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        page1 = await router.search_page(
+            client, query="tumor", disease="notadisease", size=1, sources=["zenodo"]
+        )
+        assert page1.next_cursor is not None
+        page2 = await router.search_page(client, cursor=page1.next_cursor)
+
+    assert [(u.field, u.input) for u in page1.unresolved] == [("disease", "notadisease")]
+    assert page1.mesh_expansion is None
+    # the param IS on the cursor — so a naive re-derivation on page 2 would fire
+    from data_aggregator_mcp import _cursor
+
+    assert _cursor.decode(page1.next_cursor)["disease"] == "notadisease"
+    assert page2.unresolved == []
+
+
+async def test_unresolved_stays_empty_when_no_ontology_param_is_given(monkeypatch) -> None:
+    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
+    async with httpx.AsyncClient() as client:
+        result = await router.search_page(client, query="rna", sources=["zenodo"])
+    assert result.unresolved == []
