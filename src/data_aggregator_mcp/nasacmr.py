@@ -48,7 +48,8 @@ def _strip_doi(raw: str | None) -> str | None:
     if not raw:
         return None
     v = raw.strip()
-    return v[4:] if v.lower().startswith("doi:") else v or None
+    stripped = v[4:] if v.lower().startswith("doi:") else v
+    return stripped or None  # a prefix-only "doi:" must yield None, not ""
 
 
 def _creators(umm: dict) -> list[Creator]:
@@ -56,6 +57,8 @@ def _creators(umm: dict) -> list[Creator]:
     seen: set[str] = set()
     out: list[Creator] = []
     for dc in umm.get("DataCenters") or []:
+        if not isinstance(dc, dict):
+            continue
         name = (dc.get("ShortName") or "").strip()
         if name and name not in seen:
             seen.add(name)
@@ -68,6 +71,8 @@ def _subjects(umm: dict) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for kw in umm.get("ScienceKeywords") or []:
+        if not isinstance(kw, dict):
+            continue
         term = kw.get("Term") or kw.get("Topic") or kw.get("Category")
         if term and term not in seen:
             seen.add(term)
@@ -90,7 +95,7 @@ def _license_and_access(umm: dict) -> tuple[str | None, str | None]:
             uc.get("Description"),
             uc.get("LicenseText"),
         )
-        if s
+        if isinstance(s, str) and s  # a non-string leaf (schema violation) must not crash the join
     )
     m = _OPEN_URL_RE.search(text)
     spdx = normalize_spdx(m.group(0).rstrip(".)") if m else None)
@@ -101,16 +106,23 @@ def _links(umm: dict) -> list[Link]:
     """The primary Earthdata Search portal URL, so resolve points at where the granules
     (and their login-gated download) live."""
     for u in umm.get("RelatedUrls") or []:
-        if (u.get("Type") or "") == "GET DATA" and u.get("URL"):
+        if isinstance(u, dict) and (u.get("Type") or "") == "GET DATA" and u.get("URL"):
             return [Link(rel="data_access", target_id=u["URL"])]
     return []
 
 
 def _pub_year(umm: dict) -> int | None:
-    for dd in umm.get("DataDates") or []:
-        year = _year(dd.get("Date"))
-        if year:
-            return year
+    """Publication year from DataDates. Prefer a CREATE/PRODUCTION date — the entries are
+    unordered and also carry UPDATE/REVIEW/DELETE, so taking the first parseable one could
+    report a revision year as the publication year. Falls back to any parseable date."""
+    dates = [dd for dd in umm.get("DataDates") or [] if isinstance(dd, dict)]
+    for prefer_created in (True, False):
+        for dd in dates:
+            if prefer_created and (dd.get("Type") or "").upper() not in ("CREATE", "PRODUCTION"):
+                continue
+            year = _year(dd.get("Date"))
+            if year:
+                return year
     return None
 
 

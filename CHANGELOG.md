@@ -6,6 +6,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`_dedup` no longer lets a discovery-only source shadow the fetchable copy of a dataset.**
+  On a shared DOI, precedence now keys on real fetchability (fetchable native > DataCite >
+  discovery-only) instead of the `datacite:`-prefix proxy — so a record from a discovery-only
+  source (NASA CMR, GWAS) can no longer win by mere interleave position and drop the
+  checksum-verified copy (e.g. an ORNL DAAC DOI indexed by both CMR and DataONE). Found by a
+  bug audit of this cycle's new sources. Also hardened the new NASA CMR and data.gov adapters
+  against schema-violating responses (non-string licence leaves and null list elements no
+  longer crash a whole search leg; a prefix-only `doi:` yields `None`; CKAN string-form
+  resource sizes are coerced instead of dropped), and completed the `search` `sources` /
+  `list_sources` docs for the sources added this cycle.
+
 ### Added
 
 - **Recognize the UK Open Government Licence v3.0 (`OGL-UK-3.0`).** `normalize_spdx` now

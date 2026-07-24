@@ -77,6 +77,46 @@ def test_strip_doi_forms():
     assert nasacmr._strip_doi("doi:10.5067/x") == "10.5067/x"
     assert nasacmr._strip_doi("10.5067/x") == "10.5067/x"
     assert nasacmr._strip_doi(None) is None
+    # a prefix-only value must yield None, not "" (audit L3)
+    assert nasacmr._strip_doi("doi:") is None
+    assert nasacmr._strip_doi("DOI: ") is None
+    assert nasacmr._strip_doi("") is None
+
+
+def test_normalize_survives_schema_violations():
+    """A schema-violating response — a non-string UseConstraints leaf, and null elements in
+    the UMM list fields — must degrade gracefully, not crash the whole search leg (audit L1/L2)."""
+    item = {
+        "meta": {"concept-id": "C1-X"},
+        "umm": {
+            "EntryTitle": "t",
+            "UseConstraints": {"Description": {"nested": "object not a string"}},
+            "DataCenters": [None, {"ShortName": "NASA/X"}],
+            "ScienceKeywords": [None, {"Term": "TEMPERATURE"}],
+            "RelatedUrls": [None, {"Type": "GET DATA", "URL": "https://earthdata/x"}],
+            "DataDates": [None, {"Type": "CREATE", "Date": "2020-06-01"}],
+        },
+    }
+    r = nasacmr._normalize(item)  # must not raise
+    assert r.license is None  # the bad leaf is ignored, not joined
+    assert [c.name for c in r.creators] == ["NASA/X"]
+    assert r.subjects == ["TEMPERATURE"]
+    assert r.links and r.links[0].target_id == "https://earthdata/x"
+    assert r.year == 2020
+
+
+def test_pub_year_prefers_create_over_update():
+    """DataDates entries are unordered and carry mixed types; the publication year must come
+    from a CREATE/PRODUCTION date, not merely the first one listed (audit L4)."""
+    umm = {
+        "DataDates": [
+            {"Type": "UPDATE", "Date": "2025-01-01"},
+            {"Type": "CREATE", "Date": "2019-01-01"},
+        ]
+    }
+    assert nasacmr._pub_year(umm) == 2019
+    # falls back to any parseable date when no CREATE/PRODUCTION is present
+    assert nasacmr._pub_year({"DataDates": [{"Type": "UPDATE", "Date": "2025-01-01"}]}) == 2025
 
 
 @pytest.mark.asyncio

@@ -151,10 +151,32 @@ def _select(sources: list[str] | None) -> dict[str, Any]:
     return selected
 
 
+# Sources that are searchable + resolvable but have NO fetch backend (discovery-only).
+# MUST remain the complement, within _ADAPTERS, of server._FETCHABLE_SOURCES — a
+# consistency test enforces it. router cannot import that set (server imports router →
+# a cycle), so it is restated here and cross-checked in the tests.
+_DISCOVERY_ONLY_SOURCES: frozenset[str] = frozenset({"gwas", "nasacmr"})
+
+
+def _fetch_priority(r: DataResource) -> int:
+    """DOI-collision precedence: higher wins. A fetchable copy must beat a discovery-only
+    one (which carries no bytes at all), and a native fetch backend beats a DataCite record
+    (whose fetchability is only host-detected on resolve). Keying on real fetchability —
+    not the ``datacite:`` prefix — is what stops a discovery-only source (nasacmr/gwas) that
+    happens to share a DOI (e.g. ORNL DAAC records held by both CMR and DataONE) from
+    shadowing the verified fetchable copy purely by interleave position."""
+    if r.source in _DISCOVERY_ONLY_SOURCES:
+        return 0
+    if r.id.startswith("datacite:"):
+        return 1
+    return 2
+
+
 def _dedup(resources: list[DataResource]) -> list[DataResource]:
-    """Dedup by lowercased DOI, preserving first-seen order. On collision, a
-    native record (id not prefixed ``datacite:``) replaces a DataCite one so
-    the fetchable copy survives. Records without a DOI are always kept.
+    """Dedup by lowercased DOI, preserving first-seen order. On collision the
+    higher-``_fetch_priority`` record wins (fetchable native > DataCite > discovery-only),
+    so the fetchable copy survives regardless of encounter order; ties keep the first seen.
+    Records without a DOI are always kept.
     """
     by_doi: dict[str, DataResource] = {}
     order: list[str] = []
@@ -168,7 +190,7 @@ def _dedup(resources: list[DataResource]) -> list[DataResource]:
         if existing is None:
             by_doi[key] = r
             order.append(key)
-        elif existing.id.startswith("datacite:") and not r.id.startswith("datacite:"):
+        elif _fetch_priority(r) > _fetch_priority(existing):
             by_doi[key] = r
     return [by_doi[k] for k in order] + no_doi
 

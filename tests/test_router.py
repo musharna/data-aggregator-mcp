@@ -20,6 +20,43 @@ def _res(id_: str, source: str, doi: str | None) -> DataResource:
     return DataResource(id=id_, source=source, kind="dataset", title="t", doi=doi)
 
 
+def test_dedup_keeps_fetchable_over_discovery_only_regardless_of_order() -> None:
+    """Regression: a discovery-only source (nasacmr) sharing a DOI with a fetchable source
+    must NOT shadow the fetchable copy, even when encountered first (the ORNL DAAC case:
+    10.3334/ORNLDAAC DOIs are indexed by both CMR and DataONE)."""
+    doi = "10.3334/ORNLDAAC/1"
+    discovery = _res("nasacmr:C1-X", "nasacmr", doi)  # _fetch_priority 0
+    fetchable = _res(f"dataone:doi:{doi}", "dataone", doi)  # _fetch_priority 2
+    for pair in ([discovery, fetchable], [fetchable, discovery]):
+        survivors = [r for r in router._dedup(pair) if (r.doi or "").lower() == doi.lower()]
+        assert [r.source for r in survivors] == ["dataone"], f"order={[p.source for p in pair]}"
+
+
+def test_dedup_native_still_beats_datacite() -> None:
+    """The pre-existing rule must be preserved: a native record still wins over a DataCite
+    one on a shared DOI, in either encounter order."""
+    doi = "10.1/x"
+    dc = _res(f"datacite:{doi}", "figshare", doi)  # _fetch_priority 1
+    native = _res("zenodo:1", "zenodo", doi)  # _fetch_priority 2
+    for pair in ([dc, native], [native, dc]):
+        assert [r.source for r in router._dedup(pair) if r.doi == doi] == ["zenodo"]
+
+
+def test_discovery_only_set_matches_the_fetch_gate() -> None:
+    """Drift guard: _DISCOVERY_ONLY_SOURCES must stay exactly the adapters whose prefixes
+    are all absent from server._FETCHABLE_SOURCES — otherwise a newly-added discovery-only
+    source could shadow a fetchable copy in _dedup without anyone noticing."""
+    from data_aggregator_mcp import server
+
+    computed = {
+        name
+        for name, mod in router._ADAPTERS.items()
+        if (pfx := getattr(mod, "PREFIXES", frozenset()))
+        and not any(f"{p}:" in server._FETCHABLE_SOURCES for p in pfx)
+    }
+    assert computed == router._DISCOVERY_ONLY_SOURCES
+
+
 _ZENODO_REC = {
     "id": 123,
     "doi": "10.5281/zenodo.123",

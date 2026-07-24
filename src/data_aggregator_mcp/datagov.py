@@ -114,6 +114,19 @@ def _license_and_access(pkg: dict) -> tuple[str | None, str | None]:
     return spdx, ("open" if is_open else None)
 
 
+def _int_size(v: object) -> int | None:
+    """CKAN stores resource ``size`` as a text field, so a populated size arrives as a
+    numeric STRING (e.g. ``"12345"``), not an int — coerce it (cf. ena.py) rather than
+    dropping it. Non-numeric / absent → None."""
+    if isinstance(v, bool):  # bool is an int subclass; a stray True/False is not a size
+        return None
+    if isinstance(v, int):
+        return v
+    if isinstance(v, str) and v.strip().isdigit():
+        return int(v.strip())
+    return None
+
+
 def _files(pkg: dict) -> list[FileEntry]:
     """CKAN resources with a download url. No reliable checksum (hash is usually empty
     or an undeclared algorithm) → unverified fetch."""
@@ -122,13 +135,12 @@ def _files(pkg: dict) -> list[FileEntry]:
         url = res.get("url")
         if not url:
             continue
-        size = res.get("size")
         out.append(
             FileEntry(
                 name=res.get("name") or res.get("format") or url.rsplit("/", 1)[-1] or "resource",
                 url=url,
                 mime=res.get("mimetype") or None,
-                size=size if isinstance(size, int) else None,
+                size=_int_size(res.get("size")),
                 source="datagov",
             )
         )
