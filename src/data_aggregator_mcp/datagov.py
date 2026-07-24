@@ -25,14 +25,20 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 
 import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.license_compat import normalize_spdx
-from data_aggregator_mcp.models import Creator, DataResource, FileEntry, compact
+from data_aggregator_mcp.models import (
+    Creator,
+    DataResource,
+    FileEntry,
+    compact,
+    strip_html,
+    year_from,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +66,6 @@ _LICENSE_ID_SPDX = {
 _OPEN_LICENSE_IDS = {"cc-zero", "us-pd", "other-pd", "odc-pddl", "odc-by", "odc-odbl"}
 _OPEN_SPDX = {"PDDL-1.0", "ODC-By-1.0", "ODbL-1.0"}
 
-_TAG_RE = re.compile(r"<[^>]+>")
-_WS_RE = re.compile(r"\s+")
-
 _DEMO_KEY_WARNED = False
 
 
@@ -84,21 +87,6 @@ def _api_key() -> str:
 
 def _headers() -> dict[str, str]:
     return {"X-Api-Key": _api_key(), "Accept": "application/json"}
-
-
-def _clean(text: str | None) -> str | None:
-    """CKAN notes may carry light HTML / markdown; reduce to collapsed plain text."""
-    if not text:
-        return None
-    cleaned = _WS_RE.sub(" ", _TAG_RE.sub(" ", text)).strip()
-    return cleaned or None
-
-
-def _year(*vals: str | None) -> int | None:
-    for v in vals:
-        if v and isinstance(v, str) and len(v) >= 4 and v[:4].isdigit():
-            return int(v[:4])
-    return None
 
 
 def _license_and_access(pkg: dict) -> tuple[str | None, str | None]:
@@ -162,8 +150,8 @@ def _normalize(pkg: dict) -> DataResource:
         kind="dataset",
         title=pkg.get("title") or "",
         creators=_creators(pkg),
-        year=_year(pkg.get("metadata_created"), pkg.get("metadata_modified")),
-        description=_clean(pkg.get("notes")),
+        year=year_from(pkg.get("metadata_created"), pkg.get("metadata_modified")),
+        description=strip_html(pkg.get("notes")),
         subjects=[t["name"] for t in (pkg.get("tags") or []) if t.get("name")],
         license=spdx,
         access=access,

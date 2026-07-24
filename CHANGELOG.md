@@ -8,6 +8,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`uniprot:` records can now be resolved and fetched.** UniProtKB was registered and
+  advertised as fetchable, but had no branch in `resolve()`'s prefix-routing chain, so
+  `resolve`/`fetch` on a `uniprot:` id fell through to a `ValueError` (search worked, but the
+  result was a dead end). Added the routing branch, plus a drift-guard test asserting every
+  registered adapter that declares `PREFIXES` is routable. Found by an organization audit.
+
 - **`_dedup` no longer lets a discovery-only source shadow the fetchable copy of a dataset.**
   On a shared DOI, precedence now keys on real fetchability (fetchable native > DataCite >
   discovery-only) instead of the `datacite:`-prefix proxy — so a record from a discovery-only
@@ -18,6 +24,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   longer crash a whole search leg; a prefix-only `doi:` yields `None`; CKAN string-form
   resource sizes are coerced instead of dropped), and completed the `search` `sources` /
   `list_sources` docs for the sources added this cycle.
+
+### Changed
+
+- **Per-search organism enrichment now runs concurrently instead of serially.** Taxon
+  resolution across a result page is `asyncio.gather`-ed (bounded by the shared rate limiter
+  and the resolver cache), cutting cold-page latency ~2-3× when an `NCBI_API_KEY` is set; a
+  taxonomy failure is still recorded in `errors['taxonomy']` but no longer aborts enrichment
+  of the rest of the page. Consolidated the copy-pasted `_year` (×4) and HTML-strip (×2)
+  adapter helpers into shared `models.year_from` / `models.strip_html`.
 
 ### Added
 

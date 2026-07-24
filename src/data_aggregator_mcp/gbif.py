@@ -19,7 +19,6 @@ router so the fetchable GBIF record wins the DOI collision in ``_dedup``.
 
 from __future__ import annotations
 
-import re
 from urllib.parse import quote
 
 import httpx
@@ -27,7 +26,14 @@ import httpx
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.license_compat import normalize_spdx
-from data_aggregator_mcp.models import Creator, DataResource, FileEntry, compact
+from data_aggregator_mcp.models import (
+    Creator,
+    DataResource,
+    FileEntry,
+    compact,
+    strip_html,
+    year_from,
+)
 
 SEARCH = "https://api.gbif.org/v1/dataset/search"
 DATASET = "https://api.gbif.org/v1/dataset/{key}"
@@ -45,24 +51,6 @@ _AUTHOR_CONTACT_TYPES = {
     "PRINCIPAL_INVESTIGATOR",
     "AUTHOR",
 }
-
-_TAG_RE = re.compile(r"<[^>]+>")
-_WS_RE = re.compile(r"\s+")
-
-
-def _strip_html(text: str | None) -> str | None:
-    """GBIF descriptions are HTML fragments; reduce to collapsed plain text (or None)."""
-    if not text:
-        return None
-    cleaned = _WS_RE.sub(" ", _TAG_RE.sub(" ", text)).strip()
-    return cleaned or None
-
-
-def _year(*vals: str | None) -> int | None:
-    for v in vals:
-        if v and isinstance(v, str) and len(v) >= 4 and v[:4].isdigit():
-            return int(v[:4])
-    return None
 
 
 def _access_from_spdx(spdx: str | None) -> str | None:
@@ -126,8 +114,8 @@ def _normalize(doc: dict) -> DataResource:
         kind="dataset",
         title=doc.get("title") or "",
         creators=_creators(doc),
-        year=_year(doc.get("pubDate"), doc.get("created")),
-        description=_strip_html(doc.get("description")),
+        year=year_from(doc.get("pubDate"), doc.get("created")),
+        description=strip_html(doc.get("description")),
         doi=doc.get("doi"),
         subjects=_subjects(doc),
         license=spdx,
