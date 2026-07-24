@@ -27,6 +27,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Introduced a central source registry (`sources.py`).** Per-source routing and
+  fetchability were previously restated in four places kept in lockstep only by tests (the
+  gap that produced the `uniprot` resolve bug). They now derive from one ordered registry:
+  `router`'s adapter map, the discovery-only set, `server`'s fetch gate, and the `resolve`
+  dispatch (now a registry loop instead of a hand-written 16-branch chain) all read from it,
+  so a new source is one row. Internal refactor — no behavior change; the derived
+  adapter/gate/discovery sets are byte-for-byte the previous ones, and dispatch is verified
+  live. `zenodo`/`datacite` gained `PREFIXES` (their bare-id routes stay as explicit
+  fallbacks). The rich `_SOURCES` metadata still lives in `server` but is now consistency-
+  checked against the registry.
+
 - **A `resolve` that follows a `search` on Zenodo no longer re-fetches the record.** Zenodo
   search already returns the full record (with the file manifest), so `search` now stashes the
   raw record in a short-TTL cache and `resolve` serves it without a second `GET` — one fewer

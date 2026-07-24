@@ -21,27 +21,13 @@ import httpx
 from data_aggregator_mcp import (
     _cursor,
     anatomy,
-    biostudies,
-    cellxgene,
     chemistry,
-    dandi,
     datacite,
-    datagov,
-    dataone,
     embeddings,
-    gbif,
-    gwas,
-    huggingface,
-    literature,
     mesh,
-    nasacmr,
-    omics,
-    omicsdi,
-    openml,
     operate,
-    pdb,
+    sources,
     taxonomy,
-    uniprot,
     zenodo,
 )
 from data_aggregator_mcp import assay as assay_mod
@@ -94,33 +80,10 @@ def _dedup_ci(queries: list[str]) -> list[str]:
     return out
 
 
-# Registration order = merge precedence: native fetch backends first so that on
-# a DOI collision the fetchable record is encountered before the DataCite one.
-_ADAPTERS: dict[str, Any] = {
-    "zenodo": zenodo,
-    "dataone": dataone,
-    # gbif before datacite: GBIF DOIs use the 10.15468 DataCite prefix, so both index
-    # them; native-before-datacite makes the fetchable GBIF record win _dedup.
-    "gbif": gbif,
-    # data.gov has no DOIs, so dedup precedence is moot; grouped with the other
-    # non-omics breadth sources.
-    "datagov": datagov,
-    "cellxgene": cellxgene,
-    "datacite": datacite,
-    "dandi": dandi,
-    "omics": omics,
-    "literature": literature,
-    "huggingface": huggingface,
-    "omicsdi": omicsdi,
-    "openml": openml,
-    "pdb": pdb,
-    "uniprot": uniprot,
-    "gwas": gwas,
-    # nasacmr is discovery-only (non-fetchable, like gwas); registered late so that on a
-    # shared DOI a fetchable native source, seen first, wins _dedup.
-    "nasacmr": nasacmr,
-    "biostudies": biostudies,
-}
+# Name → adapter module, in dedup-precedence order. Single source of truth is the central
+# registry (sources.py); it also derives the fetch gate and the discovery-only set, so the
+# resolve dispatch below can never drift out of sync with them (that gap was the uniprot bug).
+_ADAPTERS: dict[str, Any] = sources.ADAPTERS
 
 
 def _cache_ttl() -> float:
@@ -151,11 +114,9 @@ def _select(sources: list[str] | None) -> dict[str, Any]:
     return selected
 
 
-# Sources that are searchable + resolvable but have NO fetch backend (discovery-only).
-# MUST remain the complement, within _ADAPTERS, of server._FETCHABLE_SOURCES — a
-# consistency test enforces it. router cannot import that set (server imports router →
-# a cycle), so it is restated here and cross-checked in the tests.
-_DISCOVERY_ONLY_SOURCES: frozenset[str] = frozenset({"gwas", "nasacmr"})
+# Sources with no fetch backend (discovery-only) — lowest DOI-dedup precedence. Derived
+# from the central registry, which also feeds the fetch gate, so the two cannot drift.
+_DISCOVERY_ONLY_SOURCES: frozenset[str] = sources.DISCOVERY_ONLY
 
 
 def _fetch_priority(r: DataResource) -> int:
@@ -1233,41 +1194,12 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     if cached is not MISS:
         return cached
     prefix = rid.split(":", 1)[0]
-    if prefix in omics.PREFIXES:
-        resource = await omics.resolve(client, rid)
-    elif prefix in literature.PREFIXES:
-        resource = await literature.resolve(client, rid)
-    elif prefix in dataone.PREFIXES:
-        resource = await dataone.resolve(client, rid)
-    elif prefix in gbif.PREFIXES:
-        resource = await gbif.resolve(client, rid)
-    elif prefix in datagov.PREFIXES:
-        resource = await datagov.resolve(client, rid)
-    elif prefix in nasacmr.PREFIXES:
-        resource = await nasacmr.resolve(client, rid)
-    elif prefix in dandi.PREFIXES:
-        resource = await dandi.resolve(client, rid)
-    elif prefix in cellxgene.PREFIXES:
-        resource = await cellxgene.resolve(client, rid)
-    elif prefix in omicsdi.PREFIXES:
-        resource = await omicsdi.resolve(client, rid)
-    elif prefix in openml.PREFIXES:
-        resource = await openml.resolve(client, rid)
-    elif prefix in pdb.PREFIXES:
-        resource = await pdb.resolve(client, rid)
-    elif prefix in gwas.PREFIXES:
-        resource = await gwas.resolve(client, rid)
-    elif prefix in biostudies.PREFIXES:
-        resource = await biostudies.resolve(client, rid)
-    elif prefix in uniprot.PREFIXES:
-        resource = await uniprot.resolve(client, rid)
-    elif rid.startswith("datacite:"):
-        resource = await datacite.resolve(client, rid)
-    elif rid.startswith("zenodo:") or rid.isdigit():
+    module = sources.resolver_for(prefix)
+    if module is not None:
+        resource = await module.resolve(client, rid)
+    elif rid.isdigit():  # a bare Zenodo record id
         resource = await zenodo.resolve(client, rid)
-    elif prefix in huggingface.PREFIXES:
-        resource = await huggingface.resolve(client, rid)
-    elif "/" in rid:
+    elif "/" in rid:  # a bare DOI
         resource = await datacite.resolve(client, rid)
     else:
         raise ValueError(

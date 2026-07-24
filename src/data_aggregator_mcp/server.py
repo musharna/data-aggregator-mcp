@@ -38,6 +38,7 @@ from data_aggregator_mcp import (
     operate,
     router,
     run_crate,
+    sources,
     zenodo,
 )
 from data_aggregator_mcp import croissant as croissant_mod
@@ -55,25 +56,9 @@ from data_aggregator_mcp.models import DataResource, FetchResult, RelateResult, 
 
 logger = logging.getLogger(__name__)
 
-_FETCHABLE_SOURCES = (
-    "zenodo:",
-    "sra:",
-    "geo:",
-    "datacite:",
-    "pubmed:",
-    "openaire:",
-    "hf:",
-    "dataone:",
-    "gbif:",
-    "datagov:",
-    "omicsdi:",
-    "dandi:",
-    "cellxgene:",
-    "openml:",
-    "pdb:",
-    "uniprot:",
-    "biostudies:",
-)  # id prefixes with a working fetch backend
+# id prefixes with a working fetch backend — derived from the central registry (which
+# also feeds router's adapter map + discovery-only set), so the gate can't drift from it.
+_FETCHABLE_SOURCES = sources.FETCHABLE_PREFIXES
 
 
 def _is_fetchable(fid: str) -> bool:
