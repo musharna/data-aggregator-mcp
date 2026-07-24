@@ -28,6 +28,7 @@ from data_aggregator_mcp import (
     datacite,
     dataone,
     embeddings,
+    gbif,
     gwas,
     huggingface,
     literature,
@@ -96,6 +97,9 @@ def _dedup_ci(queries: list[str]) -> list[str]:
 _ADAPTERS: dict[str, Any] = {
     "zenodo": zenodo,
     "dataone": dataone,
+    # gbif before datacite: GBIF DOIs use the 10.15468 DataCite prefix, so both index
+    # them; native-before-datacite makes the fetchable GBIF record win _dedup.
+    "gbif": gbif,
     "cellxgene": cellxgene,
     "datacite": datacite,
     "dandi": dandi,
@@ -1178,6 +1182,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     - ``geo:``/``sra:``/``bioproject:``  → omics (NCBI)
     - ``pubmed:``/``openaire:``          → literature
     - ``dataone:<pid>``                  → DataONE (verified fetch)
+    - ``gbif:<dataset-key>``             → GBIF (unverified DwC-A fetch)
     - ``omicsdi:<source>:<acc>``         → OmicsDI (routes fetch to PRIDE/MetaboLights)
     - ``datacite:<doi>``                 → DataCite
     - ``zenodo:<id>`` / bare digits      → Zenodo (native; carries files[])
@@ -1195,6 +1200,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = await literature.resolve(client, rid)
     elif prefix in dataone.PREFIXES:
         resource = await dataone.resolve(client, rid)
+    elif prefix in gbif.PREFIXES:
+        resource = await gbif.resolve(client, rid)
     elif prefix in dandi.PREFIXES:
         resource = await dandi.resolve(client, rid)
     elif prefix in cellxgene.PREFIXES:
@@ -1221,7 +1228,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise ValueError(
             f"cannot route id {resource_id!r}: expected 'zenodo:<id>', 'datacite:<doi>', "
             "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', 'dataone:<pid>', "
-            "'omicsdi:<source>:<acc>', 'dandi:<id>', 'cellxgene:<id>', 'openml:<id>', "
+            "'gbif:<dataset-key>', 'omicsdi:<source>:<acc>', 'dandi:<id>', "
+            "'cellxgene:<id>', 'openml:<id>', "
             "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', 'biostudies:<acc>', "
             "a bare Zenodo id, or a DOI"
         )

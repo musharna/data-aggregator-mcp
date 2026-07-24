@@ -8,6 +8,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **GBIF (Global Biodiversity Information Facility) wired as a source (S3).** The unit
+  is a GBIF _dataset_ (occurrence / checklist / sampling-event / metadata): `search`
+  and `resolve` cover the registry, and each dataset carries a DOI, a machine-readable
+  licence (normalized to SPDX), and — for archive-backed types — a downloadable Darwin
+  Core Archive that `fetch` streams. The archive fetch is **unverified**: GBIF publishes
+  no checksum, so the fail-loud content sniff still rejects an HTML error page served as
+  a zip, but no hash is checked (the HuggingFace precedent). Metadata-only datasets are
+  discovery-only and fail loud on fetch. Registered _before_ DataCite in the router
+  because GBIF DOIs use the `10.15468` DataCite prefix and both index them —
+  native-before-datacite makes the fetchable GBIF record win the DOI-dedup collision.
+  This is the first source outside the molecular-omics / archive core, extending
+  coverage into biodiversity and natural-history data.
 - **`search` reports ontology params that matched nothing, in `unresolved[]`.**
   The five ontology-typed params (`organism`/`disease`/`tissue`/`chemical`/`assay`)
   are looked up in NCBI Taxonomy / MeSH / UBERON / ChEBI / EDAM, and a lookup that

@@ -64,6 +64,7 @@ _FETCHABLE_SOURCES = (
     "openaire:",
     "hf:",
     "dataone:",
+    "gbif:",
     "omicsdi:",
     "dandi:",
     "cellxgene:",
@@ -94,6 +95,17 @@ def _ensure_repo_fetchable(fid: str, resource: DataResource) -> None:
         raise FetchNotSupportedError(
             f"'{fid}' (repo: {resource.source}) is discovery-only for fetch — its file "
             f"manifest is available via resolve, but no adapter streams its bytes.{hint}"
+        )
+
+
+def _ensure_gbif_fetchable(fid: str, resource: DataResource) -> None:
+    """Fail loud when a gbif: id resolved to no Darwin Core Archive — a metadata-only
+    (or feed-only) dataset is discovery-only; occurrence/checklist/sampling-event
+    datasets carry a DWC_ARCHIVE and pass."""
+    if fid.startswith("gbif:") and not resource.files:
+        raise FetchNotSupportedError(
+            f"'{fid}' is discovery-only for fetch — this GBIF dataset publishes no "
+            "Darwin Core Archive (metadata-only). Resolve it for the DOI / landing page instead."
         )
 
 
@@ -240,6 +252,20 @@ _SOURCES: list[dict[str, Any]] = [
         "fetchable_notes": "Data objects fetched from Member Nodes with per-object MD5/SHA-256 verification.",
         "id_example": "dataone:doi:10.18739/A26336",
         "description": "DataONE federation of environmental & earth-science repositories (KNB, Arctic Data Center, PANGAEA, TERN, ...).",
+    },
+    {
+        "name": "gbif",
+        "layer": "archives",
+        "kinds": ["dataset"],
+        "filters_supported": ["query", "size", "cursor"],
+        "auth_required": False,
+        "rate_limit": "public API; courtesy only",
+        "status": "live (biodiversity dataset registry; DOI-normalized, non-bio-omics)",
+        "fetchable": "per-dataset",
+        "operable": False,
+        "fetchable_notes": "Occurrence/checklist/sampling-event datasets fetch their Darwin Core Archive (unverified - no upstream checksum); metadata-only datasets are discovery-only.",
+        "id_example": "gbif:6d27080f-ed47-48e2-90e8-cdebaba11a03",
+        "description": "Global Biodiversity Information Facility - species-occurrence, checklist & sampling-event datasets with a DOI and a downloadable Darwin Core Archive.",
     },
     {
         "name": "omicsdi",
@@ -992,6 +1018,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 _ensure_repo_fetchable(fid, resource)
                 _ensure_fulltext_available(fid, resource)
                 _ensure_omicsdi_fetchable(fid, resource)
+                _ensure_gbif_fetchable(fid, resource)
                 # Wire MCP progress notifications when the caller supplied a
                 # progressToken (in the request meta). The notification is
                 # auxiliary telemetry: a send failure is logged and swallowed so
