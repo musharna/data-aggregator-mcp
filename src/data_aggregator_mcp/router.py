@@ -34,6 +34,7 @@ from data_aggregator_mcp import (
     huggingface,
     literature,
     mesh,
+    nasacmr,
     omics,
     omicsdi,
     openml,
@@ -115,6 +116,9 @@ _ADAPTERS: dict[str, Any] = {
     "pdb": pdb,
     "uniprot": uniprot,
     "gwas": gwas,
+    # nasacmr is discovery-only (non-fetchable, like gwas); registered late so that on a
+    # shared DOI a fetchable native source, seen first, wins _dedup.
+    "nasacmr": nasacmr,
     "biostudies": biostudies,
 }
 
@@ -1188,6 +1192,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     - ``dataone:<pid>``                  → DataONE (verified fetch)
     - ``gbif:<dataset-key>``             → GBIF (unverified DwC-A fetch)
     - ``datagov:<name-slug>``            → data.gov (CKAN; unverified resource fetch)
+    - ``nasacmr:<concept-id>``           → NASA CMR (Earthdata; discovery-only)
     - ``omicsdi:<source>:<acc>``         → OmicsDI (routes fetch to PRIDE/MetaboLights)
     - ``datacite:<doi>``                 → DataCite
     - ``zenodo:<id>`` / bare digits      → Zenodo (native; carries files[])
@@ -1209,6 +1214,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = await gbif.resolve(client, rid)
     elif prefix in datagov.PREFIXES:
         resource = await datagov.resolve(client, rid)
+    elif prefix in nasacmr.PREFIXES:
+        resource = await nasacmr.resolve(client, rid)
     elif prefix in dandi.PREFIXES:
         resource = await dandi.resolve(client, rid)
     elif prefix in cellxgene.PREFIXES:
@@ -1235,7 +1242,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise ValueError(
             f"cannot route id {resource_id!r}: expected 'zenodo:<id>', 'datacite:<doi>', "
             "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', 'dataone:<pid>', "
-            "'gbif:<dataset-key>', 'datagov:<name-slug>', 'omicsdi:<source>:<acc>', 'dandi:<id>', "
+            "'gbif:<dataset-key>', 'datagov:<name-slug>', 'nasacmr:<concept-id>', "
+            "'omicsdi:<source>:<acc>', 'dandi:<id>', "
             "'cellxgene:<id>', 'openml:<id>', "
             "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', 'biostudies:<acc>', "
             "a bare Zenodo id, or a DOI"
