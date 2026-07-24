@@ -8,6 +8,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Recognize the UK Open Government Licence v3.0 (`OGL-UK-3.0`).** `normalize_spdx` now
+  maps the bare SPDX id, the prose / short-code forms (`OGL 3.0`, `OGL3`, `Open Government
+Licence 3.0`), and the nationalarchives.gov.uk OGL URL to `OGL-UK-3.0` (the v1/v2 URLs are
+  identified too); a bundled compatibility profile — hand-encoded from the licence text —
+  assesses it as a permissive attribution licence (commercial use ALLOWed, attribution
+  required, no trademark grant, patents unaddressed). Previously every OGL form returned
+  `None` (unrecognized → REVIEW). Bare `OGL` with no version stays unmapped (ambiguous).
 - **NASA CMR (Earthdata) wired as a source (S3).** The Common Metadata Repository's
   earth-science collection catalog (satellite, atmospheric, oceanographic, climate) —
   `search` + `resolve` via the keyless UMM-C JSON API. This is a **discovery-only** leg:

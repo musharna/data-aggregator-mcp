@@ -59,6 +59,22 @@ from data_aggregator_mcp.models import DataResource, LicenseVerdict
         # bare "public domain" is ambiguous prose → NOT mapped to CC0 (would fabricate ALLOW)
         ("public domain", None),
         ("Public Domain", None),
+        # UK Open Government Licence v3.0: bare id (matrix key), prose, short code, and URL
+        ("OGL-UK-3.0", "OGL-UK-3.0"),
+        ("ogl-uk-3.0", "OGL-UK-3.0"),
+        ("OGL 3.0", "OGL-UK-3.0"),
+        ("OGL3", "OGL-UK-3.0"),
+        ("Open Government Licence 3.0", "OGL-UK-3.0"),
+        ("Open Government License 3.0", "OGL-UK-3.0"),  # US spelling
+        ("http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/", "OGL-UK-3.0"),
+        # the URL handler identifies the other real OGL versions too (not matrix-profiled)
+        (
+            "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/2/",
+            "OGL-UK-2.0",
+        ),
+        # bare "OGL" / versionless prose is ambiguous (v1/v2/v3 differ) → NOT mapped
+        ("OGL", None),
+        ("Open Government Licence", None),
         # junk / unknown / None → None
         ("see the paper", None),
         ("Contact authors", None),
@@ -82,6 +98,18 @@ def test_matrix_flags_drawn_from_documented_vocab():
         assert prof.permissions <= lc.PERMISSION_FLAGS, f"{spdx} permissions"
         assert prof.conditions <= lc.CONDITION_FLAGS, f"{spdx} conditions"
         assert prof.limitations <= lc.LIMITATION_FLAGS, f"{spdx} limitations"
+
+
+def test_ogl_uk_3_profile_and_verdict():
+    """OGL-UK-3.0 is identified AND assessed: a permissive attribution licence that
+    permits commercial use (ALLOW), requires attribution, and grants no trademark right."""
+    prof = lc.LICENSE_MATRIX["OGL-UK-3.0"]
+    assert {"commercial-use", "modifications", "distribution", "private-use"} <= prof.permissions
+    assert prof.conditions == frozenset({"include-copyright"})
+    assert "trademark-use" in prof.limitations
+    assert "patent-use" not in prof.limitations  # OGL is silent on patents → not asserted
+    verdict = lc.check("OGL-UK-3.0", "commercial")
+    assert verdict.spdx_id == "OGL-UK-3.0" and verdict.verdict == "ALLOW"
 
 
 def test_intents_reference_real_permission_flags():

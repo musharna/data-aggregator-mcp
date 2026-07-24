@@ -91,6 +91,18 @@ LICENSE_MATRIX: dict[str, LicenseProfile] = {
         conditions=frozenset(),
         limitations=frozenset({"liability", "warranty"}),
     ),
+    # UK Open Government Licence v3.0 — hand-encoded from the licence text (not in
+    # choosealicense). Free commercial + non-commercial copy/publish/distribute/adapt;
+    # the sole condition is attribution (acknowledge the source + link to the OGL). The
+    # Information is licensed "as is", so warranty + liability are disclaimed, and the
+    # licence grants no right to use the provider's trade marks. Patents are not addressed,
+    # so patent-use is deliberately omitted (silence is not an explicit exclusion). Open
+    # Definition compliant; the OGL text itself states compatibility with CC-BY-4.0.
+    "OGL-UK-3.0": LicenseProfile(
+        permissions=frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
+        conditions=frozenset({"include-copyright"}),
+        limitations=frozenset({"liability", "warranty", "trademark-use"}),
+    ),
     # Creative Commons 4.0 family. Attribution = include-copyright condition.
     "CC-BY-4.0": LicenseProfile(
         permissions=frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
@@ -286,6 +298,16 @@ _PROSE_ALIASES: dict[str, str] = {
     "odc by 1.0": "ODC-By-1.0",
     "pddl": "PDDL-1.0",
     "pddl 1.0": "PDDL-1.0",
+    # UK Open Government Licence v3.0 (the bare "ogl-uk-3.0" id is already handled by the
+    # matrix-key match; these are the prose / short-code forms). Bare "OGL" with no version
+    # is deliberately left unmapped — v1/v2/v3 differ, so it would be ambiguous.
+    "ogl 3.0": "OGL-UK-3.0",
+    "ogl v3.0": "OGL-UK-3.0",
+    "ogl3": "OGL-UK-3.0",
+    "open government licence 3.0": "OGL-UK-3.0",
+    "open government license 3.0": "OGL-UK-3.0",
+    "open government licence v3.0": "OGL-UK-3.0",
+    "open government license v3.0": "OGL-UK-3.0",
 }
 
 # Creative Commons element ordering for canonical SPDX construction (BY, NC, ND/SA).
@@ -414,6 +436,12 @@ def normalize_spdx(license_str: str | None) -> str | None:
         if "/pddl" in low:
             return "PDDL-1.0"
         return None
+
+    # 3b. UK Open Government Licence URLs (nationalarchives.gov.uk). The version lives in
+    # the path (…/open-government-licence/version/3/); SPDX ids are OGL-UK-1.0/2.0/3.0.
+    if host_matches(low, "nationalarchives.gov.uk") and "open-government-licence" in low:
+        m = re.search(r"/version/([123])\b", low)
+        return f"OGL-UK-{m.group(1)}.0" if m else None
 
     # 4. Prose / spaced forms via the alias table (normalize internal whitespace).
     collapsed = re.sub(r"\s+", " ", low).strip(" .")
