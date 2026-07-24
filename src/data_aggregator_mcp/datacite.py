@@ -34,6 +34,7 @@ from data_aggregator_mcp.models import (
 )
 
 BASE_URL = "https://api.datacite.org"
+PREFIXES = frozenset({"datacite"})  # bare DOIs (containing '/') also route here (router.resolve)
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 3
 DEFAULT_SIZE = 10

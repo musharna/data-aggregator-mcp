@@ -114,7 +114,7 @@ async def test_resolve_routes_hf_prefix(monkeypatch) -> None:
         called["rid"] = rid
         return DataResource(id=rid, source="huggingface", kind="dataset", title="t")
 
-    monkeypatch.setattr(router.huggingface, "resolve", fake)
+    monkeypatch.setattr(router._ADAPTERS["huggingface"], "resolve", fake)
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
     ) as c:
@@ -133,7 +133,7 @@ async def test_resolve_routes_uniprot_prefix(monkeypatch) -> None:
         called["rid"] = rid
         return DataResource(id=rid, source="uniprot", kind="dataset", title="t")
 
-    monkeypatch.setattr(router.uniprot, "resolve", fake)
+    monkeypatch.setattr(router._ADAPTERS["uniprot"], "resolve", fake)
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
     ) as c:
