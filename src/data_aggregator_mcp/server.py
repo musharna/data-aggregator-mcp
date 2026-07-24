@@ -474,9 +474,9 @@ TOOLS: list[types.Tool] = [
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Restrict fan-out to these sources (default: all). "
-                    "Available: zenodo, dataone, cellxgene, datacite, dandi, omics, "
-                    "literature, huggingface, omicsdi, openml, pdb, uniprot, gwas, "
-                    "biostudies",
+                    "Available: zenodo, dataone, gbif, cellxgene, datacite, dandi, omics, "
+                    "literature, huggingface, datagov, nasacmr, omicsdi, openml, pdb, "
+                    "uniprot, gwas, biostudies",
                 },
                 "organism": {
                     "type": "string",
@@ -758,8 +758,8 @@ TOOLS: list[types.Tool] = [
                     "description": (
                         "When true, probe 5 sources (zenodo, datacite, omics, literature, "
                         "huggingface) and attach a 'health' field "
-                        "({status: up|down, latency_ms, detail}) to those entries; the "
-                        "remaining 7 sources get health: null. "
+                        "({status: up|down, latency_ms, detail}) to those entries; every "
+                        "other source gets health: null. "
                         "Default false: returns the static catalog with no network."
                     ),
                     "default": False,

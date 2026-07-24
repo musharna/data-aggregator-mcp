@@ -88,6 +88,35 @@ async def test_license_and_access_mapping(monkeypatch):
     assert unspec.license is None and unspec.access is None  # never guessed open
 
 
+def test_int_size_coerces_ckan_string_sizes():
+    """CKAN sends resource `size` as a numeric string when populated; it must be coerced to
+    int, not dropped (audit L5)."""
+    assert datagov._int_size("12345") == 12345
+    assert datagov._int_size(12345) == 12345
+    assert datagov._int_size("  99  ") == 99
+    assert datagov._int_size("not-a-number") is None
+    assert datagov._int_size(None) is None
+    assert datagov._int_size(True) is None  # bool is an int subclass but never a real size
+
+
+@pytest.mark.asyncio
+async def test_resolve_coerces_string_resource_size(monkeypatch):
+    monkeypatch.setenv("DATA_GOV_API_KEY", "k")
+    pkg = {
+        "success": True,
+        "result": {
+            "name": "n",
+            "title": "t",
+            "resources": [{"name": "f.csv", "url": "https://x/f.csv", "size": "4096"}],
+        },
+    }
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=pkg))
+    ) as c:
+        r = await datagov.resolve(c, "datagov:n")
+    assert r.files[0].size == 4096  # string "4096" coerced, not dropped to None
+
+
 def test_api_key_falls_back_to_demo_key(monkeypatch):
     monkeypatch.delenv("DATA_GOV_API_KEY", raising=False)
     assert datagov._api_key() == "DEMO_KEY"
