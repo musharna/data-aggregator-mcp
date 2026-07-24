@@ -46,6 +46,7 @@ def test_available_sources_lists_all_adapters() -> None:
     assert router.available_sources() == [
         "zenodo",
         "dataone",
+        "gbif",
         "cellxgene",
         "datacite",
         "dandi",
@@ -321,6 +322,11 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     httpx_mock.add_response(
         url=re.compile(r"https://cn\.dataone\.org/cn/v2/query/solr/.*"),
         json={"response": {"numFound": 0, "docs": []}},
+    )
+    # gbif is also a default source: returns empty here
+    httpx_mock.add_response(
+        url=re.compile(r"https://api\.gbif\.org/v1/dataset/search.*"),
+        json={"count": 0, "results": []},
     )
     httpx_mock.add_response(
         url=re.compile(r"https://www\.omicsdi\.org/ws/dataset/search.*"),
