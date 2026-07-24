@@ -31,6 +31,7 @@ from data_aggregator_mcp.models import (
     DataResource,
     FileEntry,
     compact,
+    local_id,
     strip_html,
     year_from,
 )
@@ -160,7 +161,7 @@ async def search(
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    key = resource_id.split(":", 1)[1] if resource_id.startswith("gbif:") else resource_id
+    key = local_id(resource_id, "gbif")
     doc = await _http.request_json(
         client,
         "GET",

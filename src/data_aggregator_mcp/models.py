@@ -356,6 +356,20 @@ def normalize_access(raw: str | None) -> str | None:
     return _ACCESS_ALIASES.get(str(raw).strip().lower(), "unknown")
 
 
+def local_id(resource_id: str, prefix: str, *, strip: bool = False, upper: bool = False) -> str:
+    """Extract the accession from a ``prefix:accession`` resource id.
+
+    Returns the part after the first colon when ``resource_id`` starts with ``prefix:``,
+    else ``resource_id`` unchanged (adapters always receive their own correctly-prefixed
+    id from the router, so the passthrough is just defensive). ``strip`` trims surrounding
+    whitespace; ``upper`` uppercases (e.g. PDB / UniProt accessions). Consolidates the
+    id-strip idiom that had drifted across ~14 adapters."""
+    out = resource_id.split(":", 1)[1] if resource_id.startswith(f"{prefix}:") else resource_id
+    if strip:
+        out = out.strip()
+    return out.upper() if upper else out
+
+
 def year_from(*vals: str | None) -> int | None:
     """First 4-digit leading year among a series of date-ish strings, or None. Shared by
     adapters whose upstreams return ISO-ish date strings (dataone/gbif/datagov/nasacmr)."""

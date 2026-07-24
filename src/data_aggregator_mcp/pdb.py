@@ -23,6 +23,7 @@ from data_aggregator_mcp.models import (
     Link,
     Taxon,
     compact,
+    local_id,
 )
 
 SEARCH = "https://search.rcsb.org/rcsbsearch/v2/query"
@@ -162,7 +163,7 @@ async def search(
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    pid = resource_id.split(":", 1)[1].strip().upper() if ":" in resource_id else ""
+    pid = local_id(resource_id, "pdb", strip=True, upper=True)
     if not _PDB_ID_RE.match(pid):
         raise NotFoundError(f"malformed PDB id {resource_id!r}")
     meta = await _hydrate(client, [pid])

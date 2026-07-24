@@ -84,6 +84,22 @@ async def test_resolve_strips_prefix_and_normalizes(httpx_mock: HTTPXMock) -> No
     assert r.doi == "10.5281/zenodo.7654321"
 
 
+async def test_resolve_after_search_skips_the_redundant_get(httpx_mock: HTTPXMock) -> None:
+    """E2: search stashes the full record, so resolve serves it from cache without a second
+    GET. The resolve GET is deliberately NOT mocked — if resolve tried it, pytest-httpx would
+    raise 'no response mocked'."""
+    httpx_mock.add_response(
+        url="https://zenodo.org/api/records?q=phelipanche&size=10",
+        json={"hits": {"total": 1, "hits": [_record()]}},
+    )
+    async with httpx.AsyncClient() as client:
+        await zenodo.search(client, "phelipanche")  # seeds _SEARCH_CACHE
+        r = await zenodo.resolve(client, "zenodo:7654321")
+    # full record served from cache (files present, which the compact search view lacked)
+    assert r.doi == "10.5281/zenodo.7654321" and len(r.files) == 1
+    assert len(httpx_mock.get_requests()) == 1  # only the search hit the network
+
+
 async def test_resolve_404_raises_not_found(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(url="https://zenodo.org/api/records/99", status_code=404)
     async with httpx.AsyncClient() as client:
