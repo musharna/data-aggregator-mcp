@@ -48,6 +48,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `list_sources` payload is byte-for-byte identical, key order and sparse optional keys
   included, verified against a pre-refactor capture through the real tool dispatch.
 
+- **Static MCP wire specs moved to `tool_specs.py`.** The tool JSON schemas, the prompt
+  catalog and the prompt-text templates left `server.py`, which drops to 468 lines (from
+  1207 before this cycle) and is now request-handling logic rather than mostly literal.
+  `server` re-exports them under their historical names, so `server.TOOLS` / `server._PROMPTS`
+  keep working. Internal refactor — no behavior change: tool and prompt payloads are
+  byte-for-byte identical, verified by speaking MCP over stdio to the real server process
+  (`initialize` / `tools/list` / `prompts/list` / `prompts/get`), not just by importing the
+  module. Schema defaults still read from the modules that enforce them (`zenodo` page sizes,
+  the `fetch` byte ceiling), now pinned by a test so an advertised default cannot drift from
+  the applied limit.
+
 - **A `resolve` that follows a `search` on Zenodo no longer re-fetches the record.** Zenodo
   search already returns the full record (with the file manifest), so `search` now stashes the
   raw record in a short-TTL cache and `resolve` serves it without a second `GET` — one fewer
