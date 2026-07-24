@@ -65,6 +65,7 @@ _FETCHABLE_SOURCES = (
     "hf:",
     "dataone:",
     "gbif:",
+    "datagov:",
     "omicsdi:",
     "dandi:",
     "cellxgene:",
@@ -106,6 +107,16 @@ def _ensure_gbif_fetchable(fid: str, resource: DataResource) -> None:
         raise FetchNotSupportedError(
             f"'{fid}' is discovery-only for fetch — this GBIF dataset publishes no "
             "Darwin Core Archive (metadata-only). Resolve it for the DOI / landing page instead."
+        )
+
+
+def _ensure_datagov_fetchable(fid: str, resource: DataResource) -> None:
+    """Fail loud when a datagov: id resolved to no downloadable resource — a metadata-
+    only / link-only package is discovery-only; packages with CKAN resources pass."""
+    if fid.startswith("datagov:") and not resource.files:
+        raise FetchNotSupportedError(
+            f"'{fid}' is discovery-only for fetch — this data.gov package publishes no "
+            "downloadable resource. Resolve it for the landing page / metadata instead."
         )
 
 
@@ -266,6 +277,20 @@ _SOURCES: list[dict[str, Any]] = [
         "fetchable_notes": "Occurrence/checklist/sampling-event datasets fetch their Darwin Core Archive (unverified - no upstream checksum); metadata-only datasets are discovery-only.",
         "id_example": "gbif:6d27080f-ed47-48e2-90e8-cdebaba11a03",
         "description": "Global Biodiversity Information Facility - species-occurrence, checklist & sampling-event datasets with a DOI and a downloadable Darwin Core Archive.",
+    },
+    {
+        "name": "datagov",
+        "layer": "archives",
+        "kinds": ["dataset"],
+        "filters_supported": ["query", "size", "cursor"],
+        "auth_required": True,
+        "rate_limit": "api.data.gov key; DEMO_KEY fallback ~30/hour per IP",
+        "status": "live (US government open-data catalog; CKAN via the GSA Catalog API)",
+        "fetchable": "per-dataset",
+        "operable": False,
+        "fetchable_notes": "CKAN resources fetched by direct URL (unverified - no reliable upstream checksum); metadata-only packages are discovery-only. Needs an api.data.gov key via DATA_GOV_API_KEY (else the rate-limited DEMO_KEY).",
+        "id_example": "datagov:civil-rights-data-collection-crdc",
+        "description": "data.gov - the US government open-data catalog (climate, agriculture, economic, civic & scientific datasets); non-biological breadth beyond the omics core.",
     },
     {
         "name": "omicsdi",
@@ -1019,6 +1044,7 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 _ensure_fulltext_available(fid, resource)
                 _ensure_omicsdi_fetchable(fid, resource)
                 _ensure_gbif_fetchable(fid, resource)
+                _ensure_datagov_fetchable(fid, resource)
                 # Wire MCP progress notifications when the caller supplied a
                 # progressToken (in the request meta). The notification is
                 # auxiliary telemetry: a send failure is logged and swallowed so

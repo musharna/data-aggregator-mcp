@@ -39,14 +39,15 @@ Six tools, one model:
 Plus MCP **prompts** (`find_data`, `data_behind_paper`, `search_resolve_fetch`)
 and MCP **resources** (`dataresource://catalog`, `dataresource://record/{id}`).
 
-Sources (v0.41.1, 15 wired): **Zenodo**, **DataCite** (Dryad / Figshare /
+Sources (v0.41.1, 16 wired): **Zenodo**, **DataCite** (Dryad / Figshare /
 Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics** (GEO / SRA / BioProject) +
 **ENA**, **BioStudies** (EBI, incl. ArrayExpress),
 **literature** (PubMed / OpenAIRE / EuropePMC / Unpaywall),
 **HuggingFace** datasets, **DataONE** (eco/environmental federation,
 checksum-verified fetch via Member Nodes), **GBIF** (biodiversity
 occurrence / checklist / sampling-event datasets, DOI-normalized, Darwin Core
-Archive fetch), **OmicsDI** (proteomics / metabolomics,
+Archive fetch), **data.gov** (US government open-data catalog via the CKAN
+Catalog API; free api.data.gov key), **OmicsDI** (proteomics / metabolomics,
 with direct PRIDE / MetaboLights fetch), **DANDI** (neurophysiology),
 **CZ CELLxGENE** (single-cell), **OpenML**, **RCSB PDB**, **UniProtKB**, and the
 **GWAS Catalog**.
@@ -119,10 +120,10 @@ This is a discovery-and-fetch layer, not the whole stack. Today it does **not**:
   already-fetched keyword window against a remote embeddings endpoint; it is not
   embedding recall over a full index.
 - **Cover several major repositories.** ClinicalTrials.gov, GDC/TCGA, ENCODE, and
-  Ensembl are not wired. GBIF (biodiversity) is now wired, extending reach beyond the
-  molecular-omics core; but outside the life sciences, Kaggle, data.gov, and NASA
-  Earthdata/CMR remain absent — the `DataResource` model is domain-general, yet the
-  wiring is still overwhelmingly life-sciences.
+  Ensembl are not wired. GBIF (biodiversity) and data.gov (US government open data)
+  now extend reach beyond the molecular-omics core; but Kaggle and NASA Earthdata/CMR
+  remain absent — the `DataResource` model is domain-general, and the wiring is
+  broadening, though still weighted toward the life sciences.
 - **Elicit clarification on a free-text query.** An ambiguous `query` string is
   expanded and searched, never queried back to the user. Elicitation is wired only
   for the narrower case where an explicit ontology param (`organism`, `tissue`, …)
