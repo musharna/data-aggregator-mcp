@@ -122,6 +122,85 @@ async def test_resolve_routes_hf_prefix(monkeypatch) -> None:
     assert called["rid"] == "hf:owner/name" and r.source == "huggingface"
 
 
+@pytest.mark.asyncio
+async def test_resolve_routes_uniprot_prefix(monkeypatch) -> None:
+    """Regression: uniprot was registered + fetchable but had no resolve() branch, so
+    `uniprot:` ids fell through to ValueError (resolve/fetch unreachable)."""
+    router._RESOLVE_CACHE.clear()
+    called = {}
+
+    async def fake(client, rid):
+        called["rid"] = rid
+        return DataResource(id=rid, source="uniprot", kind="dataset", title="t")
+
+    monkeypatch.setattr(router.uniprot, "resolve", fake)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as c:
+        r = await router.resolve(c, "uniprot:P01308")
+    assert called["rid"] == "uniprot:P01308" and r.source == "uniprot"
+
+
+@pytest.mark.asyncio
+async def test_every_adapter_with_prefixes_is_routable_by_resolve(monkeypatch) -> None:
+    """Drift guard: every registered adapter that declares PREFIXES must have a resolve()
+    routing branch — a missing one makes that source's resolve AND fetch unreachable even
+    though search works (the uniprot bug). zenodo/datacite route by startswith and are
+    covered by their own tests."""
+
+    async def fake(client, rid):
+        return DataResource(id=rid, source="_routed", kind="dataset", title="t")
+
+    for mod in router._ADAPTERS.values():
+        if hasattr(mod, "resolve"):
+            monkeypatch.setattr(mod, "resolve", fake, raising=False)
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+    ) as c:
+        for name, mod in router._ADAPTERS.items():
+            prefixes = getattr(mod, "PREFIXES", None)
+            if not prefixes:
+                continue
+            router._RESOLVE_CACHE.clear()
+            prefix = next(iter(prefixes))
+            try:
+                r = await router.resolve(c, f"{prefix}:X")
+            except ValueError as exc:
+                pytest.fail(f"{name}: resolve('{prefix}:X') is unroutable — {exc}")
+            assert r.source == "_routed", f"{name}: routed to the wrong adapter"
+
+
+@pytest.mark.asyncio
+async def test_enrich_is_concurrent_and_records_failure_without_aborting(monkeypatch) -> None:
+    """_enrich now gathers across resources: a taxonomy failure on one is recorded but the
+    others still enrich (was: the first failure aborted every later resource)."""
+    from data_aggregator_mcp import taxonomy
+
+    class _Info:
+        def __init__(self, taxid: int, name: str) -> None:
+            self.taxid, self.canonical_name, self.is_plant = taxid, name, False
+
+    async def fake_resolve_taxon(client, name):
+        if name == "boom":
+            raise RuntimeError("NCBI down")
+        return _Info(9606, "Homo sapiens") if name == "human" else None
+
+    monkeypatch.setattr(taxonomy, "resolve_taxon", fake_resolve_taxon)
+    # the failing organism comes FIRST — under the old sequential-abort, the human record
+    # below would never enrich; under gather it does.
+    resources = [
+        DataResource(id="boom:1", source="s", kind="dataset", title="t", organism=["boom"]),
+        DataResource(id="ok:1", source="s", kind="dataset", title="t", organism=["human"]),
+    ]
+    errors: dict[str, str] = {}
+    async with httpx.AsyncClient() as c:
+        out = await router._enrich(c, resources, errors)
+    assert [r.id for r in out] == ["boom:1", "ok:1"]  # order preserved
+    assert "taxonomy" in errors  # the failure is still surfaced
+    assert out[1].taxa and out[1].taxa[0].taxid == 9606  # human enriched despite boom failing first
+
+
 def test_select_unknown_source_raises() -> None:
     with pytest.raises(ValueError, match="unknown source 'bogus'"):
         router._select(["bogus"])

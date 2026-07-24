@@ -356,6 +356,28 @@ def normalize_access(raw: str | None) -> str | None:
     return _ACCESS_ALIASES.get(str(raw).strip().lower(), "unknown")
 
 
+def year_from(*vals: str | None) -> int | None:
+    """First 4-digit leading year among a series of date-ish strings, or None. Shared by
+    adapters whose upstreams return ISO-ish date strings (dataone/gbif/datagov/nasacmr)."""
+    for v in vals:
+        if v and isinstance(v, str) and len(v) >= 4 and v[:4].isdigit():
+            return int(v[:4])
+    return None
+
+
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def strip_html(text: str | None) -> str | None:
+    """Reduce an HTML/markup fragment to collapsed plain text (or None). Bounded regex,
+    no nested quantifiers — safe on the short description strings adapters pass."""
+    if not text:
+        return None
+    cleaned = _WHITESPACE_RE.sub(" ", _HTML_TAG_RE.sub(" ", text)).strip()
+    return cleaned or None
+
+
 # links[].rel values that say "a NEWER version of me exists" (I am superseded).
 _SUPERSEDED_BY_RELS = {"is_previous_version_of", "is_obsoleted_by"}
 # links[].rel values that say "I supersede / version an OLDER record".

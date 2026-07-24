@@ -16,7 +16,7 @@ import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import Creator, DataResource, FileEntry, compact
+from data_aggregator_mcp.models import Creator, DataResource, FileEntry, compact, year_from
 
 SOLR = "https://cn.dataone.org/cn/v2/query/solr/"
 RESOLVE = "https://cn.dataone.org/cn/v2/resolve/{pid}"
@@ -52,13 +52,6 @@ def _escape_lucene(value: str) -> str:
     return "".join(out)
 
 
-def _year(*vals: str | None) -> int | None:
-    for v in vals:
-        if v and isinstance(v, str) and len(v) >= 4 and v[:4].isdigit():
-            return int(v[:4])
-    return None
-
-
 def _creators(doc: dict) -> list[Creator]:
     origin = doc.get("origin")
     if isinstance(origin, list) and origin:
@@ -76,7 +69,7 @@ def _normalize(doc: dict) -> DataResource:
         kind="dataset",
         title=doc.get("title") or "",
         creators=_creators(doc),
-        year=_year(doc.get("datePublished"), doc.get("dateUploaded")),
+        year=year_from(doc.get("datePublished"), doc.get("dateUploaded")),
         last_updated=doc.get("dateModified"),
         doi=doi,
         files=[],

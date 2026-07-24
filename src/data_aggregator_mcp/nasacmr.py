@@ -23,7 +23,7 @@ import httpx
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.license_compat import normalize_spdx
-from data_aggregator_mcp.models import Creator, DataResource, Link, compact
+from data_aggregator_mcp.models import Creator, DataResource, Link, compact, year_from
 
 SEARCH = "https://cmr.earthdata.nasa.gov/search/collections.umm_json"
 PREFIXES = {"nasacmr"}
@@ -34,13 +34,6 @@ MAX_RETRIES = 3
 
 # An open-content licence URL embedded in the free-text UseConstraints, if any.
 _OPEN_URL_RE = re.compile(r"https?://(?:creativecommons\.org|www\.opendefinition\.org)/\S+")
-
-
-def _year(*vals: str | None) -> int | None:
-    for v in vals:
-        if v and isinstance(v, str) and len(v) >= 4 and v[:4].isdigit():
-            return int(v[:4])
-    return None
 
 
 def _strip_doi(raw: str | None) -> str | None:
@@ -120,7 +113,7 @@ def _pub_year(umm: dict) -> int | None:
         for dd in dates:
             if prefer_created and (dd.get("Type") or "").upper() not in ("CREATE", "PRODUCTION"):
                 continue
-            year = _year(dd.get("Date"))
+            year = year_from(dd.get("Date"))
             if year:
                 return year
     return None

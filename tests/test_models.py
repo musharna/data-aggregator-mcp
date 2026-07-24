@@ -11,7 +11,23 @@ from data_aggregator_mcp.models import (
     compact,
     derive_access_modes,
     normalize_access,
+    strip_html,
+    year_from,
 )
+
+
+def test_year_from():
+    assert year_from("2019-01-01T00:00:00Z", None) == 2019
+    assert year_from(None, "2020") == 2020  # falls through to the second value
+    assert year_from("199", "abcd") is None  # too short / non-numeric leading 4
+    assert year_from() is None
+
+
+def test_strip_html():
+    assert strip_html("<p>a  b</p>\n<i>c</i>") == "a b c"  # tags dropped, whitespace collapsed
+    assert strip_html("plain text") == "plain text"
+    assert strip_html(None) is None
+    assert strip_html("   ") is None  # whitespace/empty → None, not ""
 
 
 def test_creator_and_funding_types():

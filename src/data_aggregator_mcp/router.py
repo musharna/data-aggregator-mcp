@@ -596,26 +596,33 @@ async def _enrich_resource(client: httpx.AsyncClient, r: DataResource) -> DataRe
 async def _enrich(
     client: httpx.AsyncClient, resources: list[DataResource], errors: dict[str, str]
 ) -> list[DataResource]:
-    """Enrich each resource with an organism. A taxonomy failure is recorded in
-    ``errors['taxonomy']`` and aborts further enrichment (don't hammer a down
-    NCBI); already-fetched results are still returned.
+    """Enrich each organism-bearing resource with taxon info, concurrently. A taxonomy
+    failure is recorded once in ``errors['taxonomy']`` and that resource is returned
+    un-enriched; the others still enrich.
 
-    Sequential by design: size<=50 and resolve_taxon is cached, so per-resource
-    fan-out isn't worth the complexity.
+    Concurrent (was sequential): the RTT-serialized awaits left an ``NCBI_API_KEY``'s
+    10/s budget unused. The shared token-bucket limiter and ``resolve_taxon``'s cache
+    bound the fan-out (page size <= 50), so a gather is safe and ~2-3x faster on a cold
+    page. A down NCBI now costs one bounded burst per page instead of a single probe —
+    an acceptable trade for the common-case latency win.
     """
+    results = await asyncio.gather(
+        *(_enrich_resource(client, r) if r.organism else _identity(r) for r in resources),
+        return_exceptions=True,
+    )
     out: list[DataResource] = []
-    aborted = False
-    for r in resources:
-        if aborted or not r.organism:
-            out.append(r)
-            continue
-        try:
-            out.append(await _enrich_resource(client, r))
-        except Exception as exc:  # surfaced, not swallowed
-            errors.setdefault("taxonomy", f"{type(exc).__name__}: {exc}")
-            aborted = True
-            out.append(r)
+    for original, res in zip(resources, results, strict=True):
+        if isinstance(res, BaseException):
+            errors.setdefault("taxonomy", f"{type(res).__name__}: {res}")
+            out.append(original)
+        else:
+            out.append(res)
     return out
+
+
+async def _identity(r: DataResource) -> DataResource:
+    """Await-able passthrough so gather() can mix enriched and organism-less resources."""
+    return r
 
 
 def _passes_filters(r: DataResource, f: dict[str, Any]) -> bool:
@@ -1252,6 +1259,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         resource = await gwas.resolve(client, rid)
     elif prefix in biostudies.PREFIXES:
         resource = await biostudies.resolve(client, rid)
+    elif prefix in uniprot.PREFIXES:
+        resource = await uniprot.resolve(client, rid)
     elif rid.startswith("datacite:"):
         resource = await datacite.resolve(client, rid)
     elif rid.startswith("zenodo:") or rid.isdigit():
