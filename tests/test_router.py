@@ -59,6 +59,7 @@ def test_available_sources_lists_all_adapters() -> None:
         "pdb",
         "uniprot",
         "gwas",
+        "nasacmr",
         "biostudies",
     ]
 
@@ -333,6 +334,11 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     httpx_mock.add_response(
         url=re.compile(r"https://api\.gsa\.gov/technology/datagov/v3/action/package_search.*"),
         json={"success": True, "result": {"count": 0, "results": []}},
+    )
+    # nasacmr is also a default source: returns empty here
+    httpx_mock.add_response(
+        url=re.compile(r"https://cmr\.earthdata\.nasa\.gov/search/collections\.umm_json.*"),
+        json={"hits": 0, "items": []},
     )
     httpx_mock.add_response(
         url=re.compile(r"https://www\.omicsdi\.org/ws/dataset/search.*"),

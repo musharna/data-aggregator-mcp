@@ -8,6 +8,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **NASA CMR (Earthdata) wired as a source (S3).** The Common Metadata Repository's
+  earth-science collection catalog (satellite, atmospheric, oceanographic, climate) —
+  `search` + `resolve` via the keyless UMM-C JSON API. This is a **discovery-only** leg:
+  a CMR collection has no single downloadable file (granule bytes live behind an Earthdata
+  login this server does not wire), so `files` is empty and `fetch` is not offered — the
+  same shape as the GWAS Catalog leg. `resolve` carries the DOI, provider, science
+  keywords, and an Earthdata Search data-access link. Many collections carry a real DOI
+  (`10.5067/…`), so these records do participate in cross-source DOI dedup.
 - **data.gov wired as a source (S3).** The US government open-data catalog: `search` +
   `resolve` cover CKAN packages (climate, agriculture, economic, civic & scientific
   data), each with a publishing agency, tags, a (frequently unspecified) licence, and
