@@ -29,6 +29,7 @@ from data_aggregator_mcp.models import (
 )
 
 BASE_URL = "https://zenodo.org"
+PREFIXES = frozenset({"zenodo"})  # bare-numeric ids also route here (see router.resolve)
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 3
 DEFAULT_SIZE = 10
