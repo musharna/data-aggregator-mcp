@@ -63,22 +63,27 @@ async def embed(client: httpx.AsyncClient, texts: list[str]) -> list[list[float]
         return None
 
 
-def _cosine(a: list[float], b: list[float]) -> float:
-    na = math.sqrt(sum(x * x for x in a))
-    nb = math.sqrt(sum(y * y for y in b))
-    if na == 0.0 or nb == 0.0:
-        return -1.0  # zero-norm sorts last
-    return sum(x * y for x, y in zip(a, b, strict=False)) / (na * nb)
-
-
 def cosine_rank(query_vec: list[float], cand_vecs: list[list[float]]) -> list[int]:
     """Indices of candidates sorted by descending cosine similarity to the query
-    (ties broken by original order)."""
-    scored = sorted(
-        range(len(cand_vecs)),
-        key=lambda i: (-_cosine(query_vec, cand_vecs[i]), i),
-    )
-    return scored
+    (ties broken by original order).
+
+    The query norm is a constant across the whole ranking, so it is computed once
+    here rather than per candidate — this runs on the search path for every
+    ``rank=semantic`` page and every multi-query merge.
+    """
+    qn = math.sqrt(sum(x * x for x in query_vec))
+    if qn == 0.0:
+        # Every score would tie at the zero-norm sentinel, so the tiebreak (original
+        # order) decides the whole ranking.
+        return list(range(len(cand_vecs)))
+    scores = []
+    for vec in cand_vecs:
+        cn = math.sqrt(sum(y * y for y in vec))
+        if cn == 0.0:
+            scores.append(-1.0)  # zero-norm sorts last
+            continue
+        scores.append(sum(x * y for x, y in zip(query_vec, vec, strict=False)) / (qn * cn))
+    return sorted(range(len(cand_vecs)), key=lambda i: (-scores[i], i))
 
 
 async def rerank(

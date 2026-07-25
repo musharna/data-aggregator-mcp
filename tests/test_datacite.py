@@ -333,24 +333,14 @@ async def test_live_resolve_dataverse_doi_attaches_files() -> None:
     assert r.files
 
 
-async def test_resolve_zenodo_doi_delegates_to_zenodo(httpx_mock: HTTPXMock) -> None:
+async def test_resolve_zenodo_doi_skips_datacite_and_goes_straight_to_zenodo(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """E5: a DOI in Zenodo's own 10.5281 namespace resolves to the native record, so
+    the DataCite GET was only ever discarded. Registering no DataCite response proves
+    it is not requested — pytest-httpx fails loud on any unmatched request."""
     from data_aggregator_mcp import datacite
 
-    # DataCite resolve → a Zenodo-client record (no files in DataCite metadata).
-    httpx_mock.add_response(
-        url="https://api.datacite.org/dois/10.5281/zenodo.7654321",
-        json={
-            "data": {
-                "attributes": {
-                    "doi": "10.5281/zenodo.7654321",
-                    "titles": [{"title": "Z"}],
-                    "types": {"resourceTypeGeneral": "Dataset"},
-                },
-                "relationships": {"client": {"data": {"id": "cern.zenodo"}}},
-            }
-        },
-    )
-    # Native Zenodo resolve → the file manifest.
     httpx_mock.add_response(
         url="https://zenodo.org/api/records/7654321",
         json={
@@ -371,6 +361,53 @@ async def test_resolve_zenodo_doi_delegates_to_zenodo(httpx_mock: HTTPXMock) -> 
         r = await datacite.resolve(client, "datacite:10.5281/zenodo.7654321")
     assert r.source == "zenodo"
     assert [f.name for f in r.files] == ["data.csv"]
+    assert [str(req.url) for req in httpx_mock.get_requests()] == [
+        "https://zenodo.org/api/records/7654321"
+    ]
+
+
+async def test_resolve_zenodo_record_off_the_5281_prefix_still_delegates_after_datacite(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """The short-circuit is narrow by design: a Zenodo-client record minted under some
+    other prefix is unknowable without asking DataCite, so it keeps the fetch-then-
+    delegate path. Coverage is unchanged; only the cost of the common case moved."""
+    from data_aggregator_mcp import datacite
+
+    httpx_mock.add_response(
+        url="https://api.datacite.org/dois/10.9999/zenodo.7654321",
+        json={
+            "data": {
+                "attributes": {
+                    "doi": "10.9999/zenodo.7654321",
+                    "titles": [{"title": "Z"}],
+                    "types": {"resourceTypeGeneral": "Dataset"},
+                },
+                "relationships": {"client": {"data": {"id": "cern.zenodo"}}},
+            }
+        },
+    )
+    httpx_mock.add_response(
+        url="https://zenodo.org/api/records/7654321",
+        json={
+            "id": 7654321,
+            "doi": "10.9999/zenodo.7654321",
+            "metadata": {"title": "Z"},
+            "files": [
+                {
+                    "key": "data.csv",
+                    "size": 10,
+                    "links": {"self": "https://zenodo.org/.../data.csv/content"},
+                    "checksum": "md5:abc",
+                }
+            ],
+        },
+    )
+    async with httpx.AsyncClient() as client:
+        r = await datacite.resolve(client, "datacite:10.9999/zenodo.7654321")
+    assert r.source == "zenodo"
+    assert [f.name for f in r.files] == ["data.csv"]
+    assert len(httpx_mock.get_requests()) == 2
 
 
 def test_normalize_ignores_non_orcid_scheme_even_if_shape_matches():

@@ -13,6 +13,15 @@ def test_cosine_rank_orders_by_similarity_zero_norm_last():
     assert embeddings.cosine_rank(q, cands) == [1, 0, 2]
 
 
+def test_cosine_rank_with_a_zero_norm_query_keeps_the_original_order():
+    """E3 hoists the query norm out of the per-candidate loop, which makes the
+    zero-query case its own branch — every score ties, so the tiebreak (original
+    order) decides, exactly as when the sentinel was computed per candidate."""
+    cands = [[0.0, 1.0], [1.0, 0.0], [0.0, 0.0]]
+    assert embeddings.cosine_rank([0.0, 0.0], cands) == [0, 1, 2]
+    assert embeddings.cosine_rank([0.0, 0.0], []) == []
+
+
 @pytest.mark.asyncio
 async def test_embed_returns_none_when_unconfigured(monkeypatch):
     monkeypatch.delenv("EMBEDDING_API_BASE", raising=False)
