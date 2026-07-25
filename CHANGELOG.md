@@ -6,7 +6,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- **`operate` with `op='sql'` can no longer make the server fetch arbitrary URLs.** The
+  DuckDB engine disabled the local filesystem after materializing the source but left
+  `httpfs` loaded, so a crafted `SELECT * FROM read_csv_auto('http://…')` caused the
+  **server** to issue that request and return the response body as query rows. Over stdio
+  this is largely invisible — the server is the caller's own child process — but under
+  `--transport http` the server can sit in a network the caller cannot otherwise reach,
+  making it server-side request forgery with the response exfiltrated through the result
+  set (cloud instance-metadata endpoints, internal services). `HTTPFileSystem` is now
+  disabled alongside `LocalFileSystem` before the configuration is locked; this costs
+  nothing because the source is already materialized in memory by that point. Reported by
+  an internal security audit; covered by a regression test that drives a real listener and
+  asserts the socket is never contacted.
+
 ### Fixed
+
+- **Licence ids qualified with an `spdx:` scheme prefix are now recognized.**
+  `spdx:CC-BY-4.0` normalized to _unknown_ while the bare `CC-BY-4.0` normalized fine, so
+  every DANDI record reported no licence at all and its compatibility verdicts silently
+  degraded to unknown.
 
 - **`bioproject:` ids can now be resolved at all.** NCBI's BioProject index has no `ACCN`
   field, but `resolve` built the same `<acc>[ACCN]` term for all three omics databases — so
@@ -65,6 +85,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `list_sources` docs for the sources added this cycle.
 
 ### Changed
+
+- **Two error messages state less than they used to claim.** The "no open-access full text"
+  failure listed only causes outside our control ("it may be paywalled, or not in
+  EuropePMC/Unpaywall") — the framing that made a broken PMCID lookup read as a property of
+  the _paper_; it now also allows that the lookup itself may have failed. And `operate`'s
+  rejected-scheme message no longer names the environment variable that turns the `file://`
+  restriction off: a user-facing error should not coach the caller into disabling a security
+  control (the escape hatch stays documented in the source, for operators).
 
 - **`router.py` is now just the orchestrator.** Two self-contained policies it only
   sequenced were embedded in it: cross-source record identity (exact-DOI dedup + mirror

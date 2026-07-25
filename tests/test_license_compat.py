@@ -571,3 +571,18 @@ def test_dossier_reports_the_real_id_for_an_unassessed_licence() -> None:
     assert prop is not None
     assert "CC-BY-SA-3.0" in str(prop)
     assert "unrecognized" not in str(prop)
+
+
+def test_normalize_spdx_strips_the_spdx_scheme_prefix():
+    """DANDI publishes the id scheme-qualified as 'spdx:CC-BY-4.0'. Nothing matched that,
+    so an unambiguous SPDX id was reported as an unknown licence — silently degrading
+    every downstream compatibility verdict to 'unknown' for that whole source."""
+    assert lc.normalize_spdx("spdx:CC-BY-4.0") == "CC-BY-4.0"
+    assert lc.normalize_spdx("SPDX:CC0-1.0") == "CC0-1.0"
+    assert lc.normalize_spdx("spdx: MIT") == "MIT"
+    # the bare form must be unaffected
+    assert lc.normalize_spdx("CC-BY-4.0") == "CC-BY-4.0"
+    # a prefix with nothing behind it is still unknown, not a crash
+    assert lc.normalize_spdx("spdx:") is None
+    # and an unrecognized id stays unrecognized after stripping
+    assert lc.normalize_spdx("spdx:NOT-A-LICENCE") is None

@@ -410,6 +410,15 @@ def normalize_spdx(license_str: str | None) -> str | None:
         return None
     low = raw.lower()
 
+    # DANDI (and other schema.org/DataCite-style feeds) publish the id scheme-qualified
+    # as "spdx:CC-BY-4.0". Nothing below matched that, so a perfectly unambiguous SPDX
+    # id was reported as an unknown licence. Strip the scheme, then fall through.
+    if low.startswith("spdx:"):
+        raw = raw[len("spdx:") :].strip()
+        if not raw:
+            return None
+        low = raw.lower()
+
     # 1. Bare SPDX id already in the matrix (case-insensitive match on keys).
     for key in LICENSE_MATRIX:
         if low == key.lower():

@@ -130,8 +130,9 @@ def _ensure_fulltext_available(fid: str, resource: DataResource) -> None:
     result (spec §8)."""
     if fid.startswith(_LITERATURE_PREFIXES) and not resource.files:
         raise FetchNotSupportedError(
-            f"'{fid}' has no open-access full text to fetch (it may be paywalled, "
-            "or not in EuropePMC/Unpaywall). Resolve it for the landing page / DOI instead."
+            f"no open-access full text was found for '{fid}' — it may be paywalled, absent "
+            "from EuropePMC/Unpaywall, or the lookup itself may have failed. Resolve it for "
+            "the landing page / DOI instead."
         )
 
 

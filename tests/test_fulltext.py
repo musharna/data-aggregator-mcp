@@ -194,3 +194,21 @@ async def test_malformed_pmcid_falls_back_to_doi_not_into_the_query(httpx_mock) 
     assert "OR" not in sent and "PMCID" not in sent, sent
     assert "DOI" in sent
     assert ft.file is not None
+
+
+@pytest.mark.skipif(
+    not (LIVE and os.environ.get("UNPAYWALL_EMAIL")),
+    reason="set DATA_AGGREGATOR_MCP_LIVE=1 and UNPAYWALL_EMAIL to run",
+)
+async def test_live_unpaywall_leg_is_actually_reachable() -> None:
+    """Coverage gap closed by construction: an audit that recorded every request the
+    live suite really makes found api.unpaywall.org was NEVER contacted — the leg existed
+    only under mocks using a fake e-mail. That is the same mock-only shape that hid the
+    EuropePMC PMCID bug in this very module, on the sibling code path.
+
+    Uses a DOI that is OA but deliberately NOT in EuropePMC's full-text set, so the
+    EuropePMC leg misses and control actually reaches Unpaywall.
+    """
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
+        ft = await fulltext.find(client, pmcid=None, doi="10.1371/journal.pone.0000308")
+    assert ft.file is not None, "no OA full text found via either leg"
