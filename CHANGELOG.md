@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`router.py` is now just the orchestrator.** Two self-contained policies it only
+  sequenced were embedded in it: cross-source record identity (exact-DOI dedup + mirror
+  collapse) and ontology query expansion. They now live in `_mirror` and `_ontology`,
+  which the router imports one-way — neither imports back. `router.py` drops from 1261 to
+  ~880 lines, and the merge policy can be read and tested without wading through the
+  fan-out. No behavior change: every moved function is AST-identical to its original, and
+  the router re-exports each under its historical private name, so existing callers and
+  tests address live code rather than a copy.
+
 ### Fixed
 
 - **`uniprot:` records can now be resolved and fetched.** UniProtKB was registered and
