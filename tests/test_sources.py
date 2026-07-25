@@ -185,3 +185,17 @@ def test_every_adapter_has_the_call_shape_the_router_uses():
         assert all(p.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD for p in resolve_params), (
             spec.name
         )
+
+
+def test_no_advertised_id_example_is_a_placeholder():
+    """`list_sources` is the model's discovery surface: an example it cannot resolve sends
+    it straight into an error. Three shipped as placeholders (`datacite:10.5061/dryad.x`,
+    `cellxgene:col-lung-1`, a literal `openaire:<id>`) — the first indistinguishable from a
+    real DOI. Offline shape guard; the live counterpart actually resolves them."""
+    routable = {p for spec in sources.SOURCES for p in spec.prefixes}
+    for spec in sources.SOURCES:
+        for part in (p.strip() for p in spec.id_example.split("|")):
+            assert "<" not in part and ">" not in part, f"{spec.name}: placeholder in {part!r}"
+            prefix = part.split(":", 1)[0]
+            assert prefix in routable, f"{spec.name}: {part!r} has unroutable prefix {prefix!r}"
+            assert part.split(":", 1)[1].strip(), f"{spec.name}: {part!r} has an empty local id"

@@ -94,3 +94,12 @@ async def test_live_files_for_known_doi():
     async with httpx.AsyncClient(timeout=60) as c:
         fs = await openneuro.files(c, "10.18112/openneuro.ds000001.v1.0.0")
         assert fs and all(f.source == "openneuro" and f.url for f in fs)
+
+
+def test_snapshot_query_declares_datasetid_as_id_not_string():
+    """OpenNeuro's schema is snapshot(datasetId: ID!). GraphQL rejects the whole document
+    when a variable's declared type mismatches the argument position, so declaring
+    $ds:String! made every snapshot lookup return HTTP 400 and no dataset ever got a
+    manifest — a total, silent loss of OpenNeuro file listings."""
+    assert "$ds:ID!" in openneuro._QUERY
+    assert "$ds:String!" not in openneuro._QUERY

@@ -15,7 +15,7 @@ _SEARCH = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 
 async def test_find_europepmc_xml_when_in_epmc(httpx_mock) -> None:
     httpx_mock.add_response(
-        url=f'{_SEARCH}?query=PMCID:"PMC3463246"&format=json&resultType=core&pageSize=1',
+        url=f"{_SEARCH}?query=PMCID:PMC3463246&format=json&resultType=core&pageSize=1",
         json={"resultList": {"result": [{"inEPMC": "Y", "pmcid": "PMC3463246"}]}},
     )
     async with httpx.AsyncClient() as client:
@@ -28,7 +28,7 @@ async def test_find_europepmc_xml_when_in_epmc(httpx_mock) -> None:
 
 async def test_find_europepmc_returns_access_and_license(httpx_mock) -> None:
     httpx_mock.add_response(
-        url=f'{_SEARCH}?query=PMCID:"PMC3463246"&format=json&resultType=core&pageSize=1',
+        url=f"{_SEARCH}?query=PMCID:PMC3463246&format=json&resultType=core&pageSize=1",
         json={
             "resultList": {
                 "result": [
@@ -94,7 +94,7 @@ async def test_find_fails_soft_on_transport_error(httpx_mock) -> None:
     for _ in range(3):  # request_with_retry retries transport errors max_retries times
         httpx_mock.add_exception(
             httpx.ConnectError("boom"),
-            url=f'{_SEARCH}?query=PMCID:"PMC9"&format=json&resultType=core&pageSize=1',
+            url=f"{_SEARCH}?query=PMCID:PMC9&format=json&resultType=core&pageSize=1",
         )
     async with httpx.AsyncClient() as client:
         ft = await fulltext.find(client, pmcid="PMC9", doi=None)
@@ -104,7 +104,7 @@ async def test_find_fails_soft_on_transport_error(httpx_mock) -> None:
 async def test_find_europepmc_off_contract_body_fails_soft(httpx_mock) -> None:
     # A 2xx body whose result[0] is not a dict must not raise (.get on a str) — spec §8.
     httpx_mock.add_response(
-        url=f'{_SEARCH}?query=PMCID:"PMC1"&format=json&resultType=core&pageSize=1',
+        url=f"{_SEARCH}?query=PMCID:PMC1&format=json&resultType=core&pageSize=1",
         json={"resultList": {"result": ["not-a-dict"]}},
     )
     async with httpx.AsyncClient() as client:
@@ -129,15 +129,17 @@ async def test_find_unpaywall_off_contract_body_fails_soft(httpx_mock, monkeypat
 
 
 # ---------------------------------------------------------------------------
-# Fix — EuropePMC query values must be phrase-quoted
+# EuropePMC query construction — PMCID bare + whitelisted, DOI phrase-quoted
 # ---------------------------------------------------------------------------
 
 
-async def test_europepmc_query_uses_phrase_quotes_for_pmcid(httpx_mock) -> None:
-    """The outgoing EuropePMC query must wrap the PMCID value in double quotes.
-    pytest-httpx's URL matcher confirms the query param has the quoted form."""
+async def test_europepmc_query_leaves_pmcid_unquoted(httpx_mock) -> None:
+    r"""This test previously asserted the OPPOSITE — that the PMCID was phrase-quoted —
+    and so locked the bug in: EuropePMC's PMCID field matches only the bare value, and
+    nothing here ever checked that the upstream actually returned a hit. Safety now comes
+    from the /PMC\d+/ whitelist, not from quoting."""
     httpx_mock.add_response(
-        url=f'{_SEARCH}?query=PMCID:"PMC3463246"&format=json&resultType=core&pageSize=1',
+        url=f"{_SEARCH}?query=PMCID:PMC3463246&format=json&resultType=core&pageSize=1",
         json={"resultList": {"result": []}},
     )
     async with httpx.AsyncClient() as client:
@@ -161,3 +163,34 @@ async def test_live_europepmc_fulltext_for_oa_pmcid() -> None:
     async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
         ft = await fulltext.find(client, pmcid="PMC3463246", doi="10.7554/eLife.00013")
     assert ft.file is not None and ft.file.source == "europepmc"
+
+
+def test_pmcid_query_is_unquoted_and_whitelisted():
+    """EuropePMC's PMCID field does not match a phrase-quoted value: PMCID:"PMC3463246"
+    returned zero hits while PMCID:PMC3463246 returns the record. Because callers pass
+    pmcid ahead of doi, the quoting silently beat a doi lookup that would have worked, so
+    every OA paper we knew a PMCID for looked like it had no full text."""
+    assert fulltext._PMCID_RE.fullmatch("PMC3463246")
+    for bad in ("PMC3463246 OR *", 'PMC1"', "3463246", "", "PMCabc"):
+        assert not fulltext._PMCID_RE.fullmatch(bad), bad
+
+
+async def test_malformed_pmcid_falls_back_to_doi_not_into_the_query(httpx_mock) -> None:
+    """A pmcid that fails the whitelist must never reach the query string; when a doi is
+    available the lookup still succeeds through it."""
+    httpx_mock.add_response(
+        url=f'{_SEARCH}?query=DOI:"10.1/x"&format=json&resultType=core&pageSize=1',
+        json={
+            "resultList": {
+                "result": [
+                    {"inEPMC": "Y", "pmcid": "PMC1", "isOpenAccess": "Y", "license": "cc by"}
+                ]
+            }
+        },
+    )
+    async with httpx.AsyncClient() as client:
+        ft = await fulltext.find(client, pmcid='PMC1" OR *', doi="10.1/x")
+    sent = str(httpx_mock.get_requests()[0].url)
+    assert "OR" not in sent and "PMCID" not in sent, sent
+    assert "DOI" in sent
+    assert ft.file is not None

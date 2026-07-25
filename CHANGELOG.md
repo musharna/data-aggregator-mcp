@@ -8,6 +8,38 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`bioproject:` ids can now be resolved at all.** NCBI's BioProject index has no `ACCN`
+  field, but `resolve` built the same `<acc>[ACCN]` term for all three omics databases — so
+  every BioProject accession matched zero records and raised `NotFoundError`, while the
+  identical syntax was correct for GEO and SRA. Since `search` surfaces `bioproject:` ids,
+  a third of omics results were unresolvable dead ends. The accession field is now declared
+  per database. Fixing that exposed a second failure directly behind it: a BioProject's SRA
+  links come from an unbounded `elink`, and feeding thousands of uids into one `esummary`
+  request overflowed the URL length limit outright (`PRJNA231221` links 7,314 runs). Linked
+  runs are now capped at 100 and the truncation is logged rather than silent.
+
+- **Open-access full text is no longer lost whenever a PMCID is known.** EuropePMC's
+  `PMCID` field does not match a phrase-quoted value — `PMCID:"PMC3463246"` returns zero
+  hits where `PMCID:PMC3463246` returns the record — and because callers pass the PMCID
+  ahead of the DOI, the quoting silently beat a DOI lookup that would have worked. A
+  resolved paper therefore came back with no files and no access, and `fetch` reported "no
+  open-access full text (it may be paywalled)" for papers that are open access and whose
+  full text EuropePMC serves. The PMCID is now whitelisted against `PMC<digits>` and
+  interpolated bare, which is a stricter injection guard than quoting was; DOIs still
+  phrase-quote, as that field matches fine quoted.
+
+- **OpenNeuro datasets get their file manifest again.** The snapshot query declared
+  `$ds: String!` while OpenNeuro's schema is `snapshot(datasetId: ID!)`. GraphQL rejects the
+  entire document on that mismatch, so every lookup returned HTTP 400 and no OpenNeuro
+  dataset ever resolved with files.
+
+- **Every id advertised by `list_sources` now resolves.** Four of the twenty advertised
+  example ids could not be resolved: `datacite:10.5061/dryad.x` and `cellxgene:col-lung-1`
+  were placeholders (the first indistinguishable from a real DOI), and the literature entry
+  shipped a literal `openaire:<id>`. `list_sources` is how a model discovers what to call,
+  so each is replaced with a real id verified to resolve, and a test now rejects placeholder
+  tokens and unroutable prefixes.
+
 - **A malformed pagination cursor whose `q` is not a string is now rejected up front.**
   `q` was the one required cursor field whose type went unvalidated, so a cursor carrying
   `q: null` passed decoding, fanned out a `None` query to every selected source over the

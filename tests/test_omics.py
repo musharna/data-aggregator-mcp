@@ -227,7 +227,7 @@ async def test_resolve_bioproject_attaches_sra_links(httpx_mock: HTTPXMock, monk
     eut = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
     # 1) esearch bioproject by accession
     httpx_mock.add_response(
-        url=f"{eut}/esearch.fcgi?db=bioproject&term=PRJNA1[ACCN]&retmax=1&retmode=json",
+        url=f"{eut}/esearch.fcgi?db=bioproject&term=PRJNA1[PRJA]&retmax=1&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["111"]}},
     )
     # 2) esummary bioproject
@@ -300,3 +300,56 @@ async def test_live_resolve_sra_has_ena_files() -> None:
         r = await omics.resolve(client, "sra:SRX079566")
     assert r.id == "sra:SRX079566"
     assert r.files and all(f.url.startswith("https://") for f in r.files)
+
+
+def test_accession_field_is_per_db_not_uniform():
+    """NCBI's BioProject index has no ACCN field — `PRJNA231221[ACCN]` matched zero
+    records, so every bioproject resolve raised NotFoundError while the identical syntax
+    was correct for gds/sra. Pin the per-db mapping and its coverage."""
+    from data_aggregator_mcp import omics
+
+    assert omics._ACCESSION_FIELD == {"gds": "ACCN", "sra": "ACCN", "bioproject": "PRJA"}
+    assert set(omics._ACCESSION_FIELD) == set(omics._DB.values()), "a db without a field"
+
+
+async def test_resolve_uses_the_right_accession_field_per_prefix(monkeypatch):
+    from data_aggregator_mcp import _eutils, omics
+
+    seen: list[tuple[str, str]] = []
+
+    async def fake_esearch(client, db, term, **kw):
+        seen.append((db, term))
+        return 0, []
+
+    monkeypatch.setattr(_eutils, "esearch", fake_esearch)
+    for rid in ("bioproject:PRJNA231221", "geo:GSE10072", "sra:SRX079566"):
+        with pytest.raises(NotFoundError):  # stub returns no ids; we only want the term
+            await omics.resolve(None, rid)
+    assert seen == [
+        ("bioproject", "PRJNA231221[PRJA]"),
+        ("gds", "GSE10072[ACCN]"),
+        ("sra", "SRX079566[ACCN]"),
+    ]
+
+
+async def test_bioproject_links_are_capped_and_logged(monkeypatch, caplog):
+    """elink is unbounded: PRJNA231221 links 7,314 runs, which overflowed the esummary
+    URL outright. Cap the list and say so — never silently."""
+    from data_aggregator_mcp import _eutils, omics
+
+    many = [str(i) for i in range(omics.MAX_LINKED_RUNS * 3)]
+    asked: list[list[str]] = []
+
+    async def fake_elink(client, *, dbfrom, db, ids):
+        return many
+
+    async def fake_esummary(client, db, ids):
+        asked.append(ids)
+        return []
+
+    monkeypatch.setattr(_eutils, "elink", fake_elink)
+    monkeypatch.setattr(_eutils, "esummary", fake_esummary)
+    with caplog.at_level("WARNING"):
+        await omics._bioproject_sra_links(None, "231221")
+    assert len(asked[0]) == omics.MAX_LINKED_RUNS
+    assert "7314" in caplog.text or str(len(many)) in caplog.text

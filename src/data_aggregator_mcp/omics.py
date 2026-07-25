@@ -29,6 +29,19 @@ PREFIXES = tuple(_DB)  # ("geo", "sra", "bioproject") — derived so it can't dr
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 
+# Per-db accession search field. NOT uniform: the BioProject index has no ``ACCN``
+# field at all (a term like ``PRJNA231221[ACCN]`` matches ZERO records there, while the
+# same syntax is correct for gds/sra), so resolving any bioproject id used to fail with
+# a flat NotFoundError. Keyed by db so a new db must state its own field.
+_ACCESSION_FIELD = {"gds": "ACCN", "sra": "ACCN", "bioproject": "PRJA"}
+
+# Cap on SRA run links attached to a BioProject. elink is unbounded — real projects
+# reach into the thousands (PRJNA231221 links 7,314 runs) — and every uid had to be
+# turned into an accession through one esummary GET, which overflowed the URL length
+# limit outright. A resolve payload carrying thousands of links is also unusable to a
+# caller, so the list is bounded and the truncation is logged.
+MAX_LINKED_RUNS = 100
+
 
 def _year_from(text: str | None) -> int | None:
     if text and len(text) >= 4 and text[:4].isdigit():
@@ -117,10 +130,24 @@ async def _search_db(
 
 async def _bioproject_sra_links(client: httpx.AsyncClient, bioproject_uid: str) -> list[Link]:
     """Links to the SRA runs under a BioProject (elink bioproject→sra), each as a
-    directly-resolvable ``sra:`` id. No edges → []."""
+    directly-resolvable ``sra:`` id. No edges → [].
+
+    Bounded by ``MAX_LINKED_RUNS``: elink returns every run in the project, which for a
+    large one is thousands of uids — more than a single esummary URL can carry, and more
+    links than a resolve payload should hold. Truncation is logged, never silent.
+    """
     uids = await _eutils.elink(client, dbfrom="bioproject", db="sra", ids=[bioproject_uid])
     if not uids:
         return []
+    if len(uids) > MAX_LINKED_RUNS:
+        logger.warning(
+            "BioProject uid=%s links %d SRA runs; attaching the first %d "
+            "(search sources=['omics'] for the project accession to page them all)",
+            bioproject_uid,
+            len(uids),
+            MAX_LINKED_RUNS,
+        )
+        uids = uids[:MAX_LINKED_RUNS]
     docs = await _eutils.esummary(client, "sra", uids)
     return [Link(rel="has_data", target_id=_normalize_sra(doc).id) for doc in docs]
 
@@ -168,7 +195,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     db = _DB.get(prefix)
     if db is None or not acc:
         raise NotFoundError(f"unroutable omics id {resource_id!r}")
-    _count, ids = await _eutils.esearch(client, db, f"{acc}[ACCN]", retmax=1)
+    _count, ids = await _eutils.esearch(client, db, f"{acc}[{_ACCESSION_FIELD[db]}]", retmax=1)
     if not ids:
         raise NotFoundError(f"no omics record for {acc!r} in {prefix}")
     docs = await _eutils.esummary(client, db, ids)

@@ -264,7 +264,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         fetchable=True,
         operable=False,
         fetchable_notes="H5AD/RDS assets stream from datasets.cellxgene.cziscience.com (direct URLs, unverified — no checksum in the API); the per-collection manifest is capped at 200 files for large atlases.",
-        id_example="cellxgene:col-lung-1",
+        id_example="cellxgene:af893e86-8e9f-41f1-a474-ef05359b1fb7",
         description="CZ CELLxGENE Discover — single-cell datasets grouped by collection (one publication DOI per collection); search filters on tissue/disease/organism/assay, resolve attaches the H5AD/RDS download manifest.",
     ),
     _spec(
@@ -278,7 +278,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         fetchable="per-repo",
         operable=True,
         fetchable_notes="Figshare/Dataverse/OSF/Zenodo fetchable; OpenNeuro (10.18112/openneuro.*) datasets fetchable via the snapshot manifest; Dryad manifest-only (token/bot-gated); Mendeley + other repos discovery-only.",
-        id_example="datacite:10.5061/dryad.x",
+        id_example="datacite:10.5061/dryad.t4b8gtjgj",
     ),
     _spec(
         "dandi",
@@ -331,7 +331,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         status="live (discovery + resolve-time data links + identifiers; fetch retrieves open-access full text via EuropePMC/Unpaywall)",
         fetchable="open-access only",
         fetchable_notes="Open-access full text fetchable (EuropePMC XML / Unpaywall PDF, unverified); paywalled/non-OA ids fail loud.",
-        id_example="pubmed:23066504 | openaire:<id>",
+        id_example=("pubmed:23066504 | openaire:od______9773::3290080244992524e3fa0eba329e6122"),
     ),
     _spec(
         "huggingface",
