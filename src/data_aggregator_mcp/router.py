@@ -5,6 +5,15 @@ Fans out adapter ``search`` coroutines in parallel, normalizes into one
 DataCite metadata), and routes ``resolve`` by id prefix. Per-source failures
 are captured into an errors map and surfaced — never silently swallowed (a
 dropped adapter would make the model conclude "no data exists").
+
+This module is the ORCHESTRATOR. Two self-contained policies it only sequences
+live next door, and the dependency runs one way — neither imports back:
+
+* ``_mirror``   — record identity: exact-DOI dedup + cross-repo mirror collapse.
+* ``_ontology`` — entity → synonym-expanded query, plus the unresolved echo.
+
+Both are re-exported below under their historical private names, so the merge
+path's existing callers and tests address live code rather than a copy.
 """
 
 from __future__ import annotations
@@ -12,7 +21,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import re
 from collections import Counter
 from typing import Any
 
@@ -20,17 +28,15 @@ import httpx
 
 from data_aggregator_mcp import (
     _cursor,
-    anatomy,
-    chemistry,
+    _mirror,
+    _ontology,
     datacite,
     embeddings,
-    mesh,
     operate,
     sources,
     taxonomy,
     zenodo,
 )
-from data_aggregator_mcp import assay as assay_mod
 from data_aggregator_mcp import query_understanding as query_understanding_mod
 from data_aggregator_mcp import relate as relate_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
@@ -42,7 +48,6 @@ from data_aggregator_mcp.models import (
     DataResource,
     Link,
     MeshExpansion,
-    Mirror,
     QueryExpansion,
     QueryUnderstanding,
     RelateResult,
@@ -117,417 +122,28 @@ def _select(sources: list[str] | None) -> dict[str, SourceAdapter]:
     return selected
 
 
-# Sources with no fetch backend (discovery-only) — lowest DOI-dedup precedence. Derived
-# from the central registry, which also feeds the fetch gate, so the two cannot drift.
-_DISCOVERY_ONLY_SOURCES: frozenset[str] = sources.DISCOVERY_ONLY
+# Cross-source record identity (exact-DOI dedup + mirror collapse) lives in _mirror;
+# ontology query expansion lives in _ontology. Both are pure policy this module only
+# sequences. Re-exported under their historical private names: they are the internal
+# surface the merge path — and its tests — already address.
+_DISCOVERY_ONLY_SOURCES = _mirror.DISCOVERY_ONLY_SOURCES
+_fetch_priority = _mirror.fetch_priority
+_dedup = _mirror.dedup_by_doi
+_normalize_title = _mirror.normalize_title
+_first_author_surname = _mirror.first_author_surname
+_fingerprint_key = _mirror.fingerprint_key
+_checksums = _mirror.checksums
+_survivor_rank = _mirror.survivor_rank
+_collapse_mirrors = _mirror.collapse_mirrors
 
-
-def _fetch_priority(r: DataResource) -> int:
-    """DOI-collision precedence: higher wins. A fetchable copy must beat a discovery-only
-    one (which carries no bytes at all), and a native fetch backend beats a DataCite record
-    (whose fetchability is only host-detected on resolve). Keying on real fetchability —
-    not the ``datacite:`` prefix — is what stops a discovery-only source (nasacmr/gwas) that
-    happens to share a DOI (e.g. ORNL DAAC records held by both CMR and DataONE) from
-    shadowing the verified fetchable copy purely by interleave position."""
-    if r.source in _DISCOVERY_ONLY_SOURCES:
-        return 0
-    if r.id.startswith("datacite:"):
-        return 1
-    return 2
-
-
-def _dedup(resources: list[DataResource]) -> list[DataResource]:
-    """Dedup by lowercased DOI, preserving first-seen order. On collision the
-    higher-``_fetch_priority`` record wins (fetchable native > DataCite > discovery-only),
-    so the fetchable copy survives regardless of encounter order; ties keep the first seen.
-    Records without a DOI are always kept.
-    """
-    by_doi: dict[str, DataResource] = {}
-    order: list[str] = []
-    no_doi: list[DataResource] = []
-    for r in resources:
-        if not r.doi:
-            no_doi.append(r)
-            continue
-        key = r.doi.lower()
-        existing = by_doi.get(key)
-        if existing is None:
-            by_doi[key] = r
-            order.append(key)
-        elif _fetch_priority(r) > _fetch_priority(existing):
-            by_doi[key] = r
-    return [by_doi[k] for k in order] + no_doi
-
-
-_PUNCT_RE = re.compile(r"[^\w\s]", re.UNICODE)
-_WS_RE = re.compile(r"\s+")
-
-
-def _normalize_title(title: str) -> str:
-    """Lowercase, drop punctuation, collapse whitespace. Compared for EXACT
-    normalized equality (never substring, never fuzzy) — the conservative
-    content-dedup title key."""
-    lowered = _PUNCT_RE.sub(" ", title.lower())
-    return _WS_RE.sub(" ", lowered).strip()
-
-
-def _first_author_surname(r: DataResource) -> str | None:
-    """Lowercased last whitespace token of the first creator's name, or None if
-    the record has no creators (then the title+author+year path cannot fire)."""
-    if not r.creators:
-        return None
-    name = r.creators[0].name.strip()
-    if not name:
-        return None
-    return name.split()[-1].lower()
-
-
-def _fingerprint_key(r: DataResource) -> tuple[str, str, int] | None:
-    """``(normalized_title, first_author_surname, year)`` ONLY when all three are
-    present/non-empty; else None (so a missing field can never satisfy the title
-    path). Conservative content-identity key."""
-    title = _normalize_title(r.title) if r.title else ""
-    surname = _first_author_surname(r)
-    if not title or not surname or r.year is None:
-        return None
-    return (title, surname, r.year)
-
-
-def _checksums(r: DataResource) -> set[str]:
-    """Full ``algo:hex`` checksum strings present on a record's files (byte-level
-    identity signal)."""
-    return {f.checksum for f in r.files if f.checksum}
-
-
-def _survivor_rank(r: DataResource) -> tuple[int, int]:
-    """Lower sorts first = better survivor. DOI-bearing beats DOI-less; among
-    DOI-bearing, a native id (not ``datacite:``-prefixed) beats a ``datacite:``
-    one — same precedence spirit as ``_dedup``. Ties fall through to first-seen
-    order (stable sort on the group's encounter order)."""
-    has_doi = 0 if r.doi else 1
-    is_datacite = 1 if r.id.startswith("datacite:") else 0
-    return (has_doi, is_datacite)
-
-
-def _collapse_mirrors(records: list[DataResource]) -> list[DataResource]:
-    """Conservative, PURE content-dedup ON TOP OF exact-DOI dedup. Groups records
-    that are the SAME dataset under different/no DOIs (a cross-repo mirror), folds
-    each group to one survivor, and annotates the survivor's ``mirrors[]`` with the
-    other members.
-
-    A record joins a group iff it shares ANY full ``algo:hex`` file checksum with a
-    member (byte-identical → definitional identity, source-agnostic) OR has the same
-    ``_fingerprint_key`` (normalized-title + first-author-surname + year, all present)
-    as a member AND comes from a DIFFERENT source than every member already in that
-    group. Title-only or partial matches never merge.
-
-    The CROSS-SOURCE requirement on the fingerprint path is load-bearing: B7 is
-    *cross-repo* dedup. Two same-source records that share title+author+year are
-    almost always VERSION SIBLINGS (e.g. Zenodo record v1/v2), a relationship already
-    modeled by ``is_latest``/``superseded_by`` (B1) — folding them as "mirrors" would
-    be wrong. Only a copy in a DIFFERENT repository is a mirror. (Byte-identical
-    checksums still fold regardless of source: identical bytes are the same data, and
-    version siblings differ in bytes so they do not collide on the checksum path.)
-
-    Survivor selection is deterministic (``_survivor_rank`` + first-seen order). The
-    survivor's ``mirrors`` lists every OTHER group member as ``Mirror(source,id,doi)``;
-    a record is never its own mirror. First-seen order of survivors is preserved.
-    Deterministic, no I/O.
-    """
-
-    class _Group:
-        __slots__ = ("members", "keys", "checksums", "sources", "order")
-
-        def __init__(self, order: int) -> None:
-            self.members: list[DataResource] = []
-            self.keys: set[tuple[str, str, int]] = set()
-            self.checksums: set[str] = set()
-            self.sources: set[str] = set()
-            self.order = order
-
-    groups: list[_Group] = []
-    for r in records:
-        key = _fingerprint_key(r)
-        sums = _checksums(r)
-        target: _Group | None = None
-        for g in groups:
-            checksum_hit = bool(sums & g.checksums)
-            # Fingerprint match only counts CROSS-source — a same-source title+author+
-            # year match is a version sibling (B1's domain), not a cross-repo mirror.
-            fingerprint_hit = key is not None and key in g.keys and r.source not in g.sources
-            if checksum_hit or fingerprint_hit:
-                target = g
-                break
-        if target is None:
-            target = _Group(len(groups))
-            groups.append(target)
-        target.members.append(r)
-        if key is not None:
-            target.keys.add(key)
-        target.checksums |= sums
-        target.sources.add(r.source)
-
-    # Post-pass: union groups that share any checksum or fingerprint key, iterating
-    # to fixpoint. The forward pass above uses greedy first-match, which misses
-    # transitive connections: e.g. A(md5:X), B(sha:Y), C(md5:X + sha:Y) arriving
-    # in order A,B,C — C joins A's group via md5:X, but B is stranded even though
-    # it shares sha:Y with C. The union pass merges those stranded groups.
-    changed = True
-    while changed:
-        changed = False
-        merged_groups: list[_Group] = []
-        for g in groups:
-            absorbed = False
-            for mg in merged_groups:
-                checksum_overlap = bool(g.checksums & mg.checksums)
-                # Fingerprint merge: any shared key where NOT all members share the
-                # same source (the cross-source guard still applies globally — if two
-                # groups have the same fingerprint key but all members come from the
-                # same source, they are version siblings and must not be merged).
-                key_overlap = bool(g.keys & mg.keys) and not (
-                    g.sources <= mg.sources and len(g.sources) == 1 and g.sources == mg.sources
-                )
-                if checksum_overlap or key_overlap:
-                    mg.members.extend(g.members)
-                    mg.keys |= g.keys
-                    mg.checksums |= g.checksums
-                    mg.sources |= g.sources
-                    absorbed = True
-                    changed = True
-                    break
-            if not absorbed:
-                merged_groups.append(g)
-        groups = merged_groups
-
-    out: list[DataResource] = []
-    for g in groups:
-        if len(g.members) == 1:
-            out.append(g.members[0])
-            continue
-        # Stable pick: best rank wins, first-seen order breaks ties.
-        survivor = min(enumerate(g.members), key=lambda im: (_survivor_rank(im[1]), im[0]))[1]
-        mirrors = [
-            Mirror(source=m.source, id=m.id, doi=m.doi) for m in g.members if m is not survivor
-        ]
-        out.append(survivor.model_copy(update={"mirrors": mirrors}))
-    return out
-
-
-def _or_group(terms: list[str]) -> str:
-    """Build a quoted ``"a" OR "b"`` group for query expansion, neutralizing any
-    embedded double-quote in a term. Free-text ontology labels (NCBI Taxonomy
-    synonyms, MeSH entry terms) must not break the surrounding quoting handed to
-    downstream adapters. Terms that are empty after neutralization are dropped.
-    Shared by ``_expand_organism`` and ``_expand_disease`` so the safety lives in
-    one place."""
-    safe = [t.replace('"', " ").strip() for t in terms]
-    return " OR ".join(f'"{t}"' for t in safe if t)
-
-
-# (param name, registry label, the errors[] key that module writes on a LOOKUP FAILURE).
-# Order fixes the emitted order of SearchResult.unresolved.
-_ONTOLOGY_FIELDS: tuple[tuple[str, str, str], ...] = (
-    ("organism", "NCBI Taxonomy", "taxonomy"),
-    ("disease", "MeSH", "mesh"),
-    ("tissue", "UBERON", "uberon"),
-    ("chemical", "ChEBI", "chebi"),
-    ("assay", "EDAM", "edam"),
-)
-
-
-def _unresolved_entities(
-    supplied: dict[str, str | None],
-    expansions: dict[str, object | None],
-    errors: dict[str, str],
-) -> list[UnresolvedEntity]:
-    """Pure: derive the no-match echo from state the search path already has.
-
-    An entity is *unresolved* when the caller supplied it, the corresponding
-    ``*_expansion`` echo is None, and no lookup FAILURE was recorded for that
-    registry. That last clause keeps the two channels disjoint: a lookup that blew
-    up is already reported in ``errors`` (fail-loud), and reporting it here as well
-    would claim the registry answered "no match" when it never answered at all.
-
-    Derived rather than threaded through the five ``_expand_*`` signatures so the
-    multi-query variant loop — which deliberately discards its per-variant echoes —
-    cannot double-count.
-    """
-    out: list[UnresolvedEntity] = []
-    for field, ontology, error_key in _ONTOLOGY_FIELDS:
-        value = supplied.get(field)
-        if not value or not value.strip():
-            continue
-        if expansions.get(field) is not None:
-            continue
-        if error_key in errors:
-            continue
-        out.append(
-            UnresolvedEntity(
-                field=field,
-                input=value,
-                ontology=ontology,
-                note=(
-                    f"{ontology} returned no match for {field}={value!r}; "
-                    "the search ran WITHOUT that expansion"
-                ),
-            )
-        )
-    return out
-
-
-async def _expand_organism(
-    client: httpx.AsyncClient, query: str, organism: str | None, errors: dict[str, str]
-) -> tuple[str, TaxonExpansion | None]:
-    """If ``organism`` resolves, AND ``query`` with a (canonical OR synonyms)
-    group and return the echo. A taxonomy lookup failure is recorded in
-    ``errors['taxonomy']`` and the query is returned un-expanded (fail-loud:
-    the caller sees expansion did not happen, never a silent 'no synonyms').
-    """
-    if not organism or not organism.strip():
-        return query, None
-    try:
-        info = await taxonomy.resolve_taxon(client, organism)
-    except Exception as exc:  # surfaced, not swallowed
-        errors["taxonomy"] = f"{type(exc).__name__}: {exc}"
-        return query, None
-    if info is None:
-        return query, None
-    terms = list(dict.fromkeys([info.canonical_name, *info.synonyms]))
-    or_group = _or_group(terms)
-    effective = f"({query}) AND ({or_group})"
-    expansion = TaxonExpansion(
-        input=organism,
-        taxid=info.taxid,
-        canonical_name=info.canonical_name,
-        synonyms=list(info.synonyms),
-    )
-    return effective, expansion
-
-
-async def _expand_disease(
-    client: httpx.AsyncClient, query: str, disease: str | None, errors: dict[str, str]
-) -> tuple[str, MeshExpansion | None]:
-    """If ``disease`` resolves to a MeSH descriptor, AND ``query`` with a
-    (canonical OR synonyms) group and return the echo. A MeSH lookup failure is
-    recorded in ``errors['mesh']`` and the query is returned un-expanded
-    (fail-loud — exactly like ``_expand_organism``; this is a search-input
-    expansion, NOT a fail-soft resolve enricher).
-    """
-    if not disease or not disease.strip():
-        return query, None
-    try:
-        info = await mesh.resolve_mesh(client, disease)
-    except Exception as exc:  # surfaced, not swallowed
-        errors["mesh"] = f"{type(exc).__name__}: {exc}"
-        return query, None
-    if info is None:
-        return query, None
-    terms = list(dict.fromkeys([info.canonical, *info.synonyms]))
-    or_group = _or_group(terms)
-    effective = f"({query}) AND ({or_group})"
-    expansion = MeshExpansion(
-        input=disease,
-        mesh_ui=info.ui,
-        canonical_name=info.canonical,
-        synonyms=list(info.synonyms),
-    )
-    return effective, expansion
-
-
-async def _expand_tissue(
-    client: httpx.AsyncClient, query: str, tissue: str | None, errors: dict[str, str]
-) -> tuple[str, TissueExpansion | None]:
-    """If ``tissue`` resolves to a UBERON term, AND ``query`` with a
-    (canonical OR synonyms) group and return the echo. A UBERON (EBI OLS) lookup
-    failure is recorded in ``errors['uberon']`` and the query is returned
-    un-expanded (fail-loud — exactly like ``_expand_organism``/``_expand_disease``;
-    this is a search-input expansion, NOT a fail-soft resolve enricher). A
-    *no-match* is not an error: the query is returned un-expanded with nothing
-    recorded.
-    """
-    if not tissue or not tissue.strip():
-        return query, None
-    try:
-        info = await anatomy.resolve_uberon(client, tissue)
-    except Exception as exc:  # surfaced, not swallowed
-        errors["uberon"] = f"{type(exc).__name__}: {exc}"
-        return query, None
-    if info is None:
-        return query, None
-    terms = list(dict.fromkeys([info.canonical, *info.synonyms]))
-    or_group = _or_group(terms)
-    effective = f"({query}) AND ({or_group})"
-    expansion = TissueExpansion(
-        input=tissue,
-        uberon_id=info.uberon_id,
-        canonical_name=info.canonical,
-        synonyms=list(info.synonyms),
-    )
-    return effective, expansion
-
-
-async def _expand_chemical(
-    client: httpx.AsyncClient, query: str, chemical: str | None, errors: dict[str, str]
-) -> tuple[str, ChemicalExpansion | None]:
-    """If ``chemical`` resolves to a ChEBI term, AND ``query`` with a
-    (canonical OR synonyms) group and return the echo. A ChEBI (EBI OLS) lookup
-    failure is recorded in ``errors['chebi']`` and the query is returned
-    un-expanded (fail-loud — exactly like ``_expand_organism``/``_expand_tissue``;
-    this is a search-input expansion, NOT a fail-soft resolve enricher). A
-    *no-match* is not an error: the query is returned un-expanded with nothing
-    recorded.
-    """
-    if not chemical or not chemical.strip():
-        return query, None
-    try:
-        info = await chemistry.resolve_chebi(client, chemical)
-    except Exception as exc:  # surfaced, not swallowed
-        errors["chebi"] = f"{type(exc).__name__}: {exc}"
-        return query, None
-    if info is None:
-        return query, None
-    terms = list(dict.fromkeys([info.canonical, *info.synonyms]))
-    or_group = _or_group(terms)
-    effective = f"({query}) AND ({or_group})"
-    expansion = ChemicalExpansion(
-        input=chemical,
-        chebi_id=info.chebi_id,
-        canonical_name=info.canonical,
-        synonyms=list(info.synonyms),
-    )
-    return effective, expansion
-
-
-async def _expand_assay(
-    client: httpx.AsyncClient, query: str, assay: str | None, errors: dict[str, str]
-) -> tuple[str, AssayExpansion | None]:
-    """If ``assay`` resolves to an EDAM-topic term, AND ``query`` with a
-    (canonical OR synonyms) group and return the echo. An EDAM (EBI OLS) lookup
-    failure is recorded in ``errors['edam']`` and the query is returned
-    un-expanded (fail-loud — exactly like ``_expand_organism``/``_expand_tissue``;
-    this is a search-input expansion, NOT a fail-soft resolve enricher). A
-    *no-match* is not an error: the query is returned un-expanded with nothing
-    recorded.
-    """
-    if not assay or not assay.strip():
-        return query, None
-    try:
-        info = await assay_mod.resolve_edam(client, assay)
-    except Exception as exc:  # surfaced, not swallowed
-        errors["edam"] = f"{type(exc).__name__}: {exc}"
-        return query, None
-    if info is None:
-        return query, None
-    terms = list(dict.fromkeys([info.canonical, *info.synonyms]))
-    or_group = _or_group(terms)
-    effective = f"({query}) AND ({or_group})"
-    expansion = AssayExpansion(
-        input=assay,
-        edam_id=info.edam_id,
-        canonical_name=info.canonical,
-        synonyms=list(info.synonyms),
-    )
-    return effective, expansion
+_or_group = _ontology.or_group
+_ONTOLOGY_FIELDS = _ontology.ONTOLOGY_FIELDS
+_unresolved_entities = _ontology.unresolved_entities
+_expand_organism = _ontology.expand_organism
+_expand_disease = _ontology.expand_disease
+_expand_tissue = _ontology.expand_tissue
+_expand_chemical = _ontology.expand_chemical
+_expand_assay = _ontology.expand_assay
 
 
 async def _enrich_resource(client: httpx.AsyncClient, r: DataResource) -> DataResource:
