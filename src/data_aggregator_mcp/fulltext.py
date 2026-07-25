@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass
 
 import httpx
@@ -25,6 +26,11 @@ logger = logging.getLogger(__name__)
 EPMC_BASE = "https://www.ebi.ac.uk/europepmc/webservices/rest"
 UNPAYWALL_BASE = "https://api.unpaywall.org/v2"
 
+# A PMCID is exactly "PMC" + digits. Whitelisting the whole value lets it be
+# interpolated unquoted (which is the only form EuropePMC's PMCID field matches)
+# without opening a query-injection hole.
+_PMCID_RE = re.compile(r"PMC\d+")
+
 
 @dataclass(frozen=True)
 class FullText:
@@ -36,12 +42,21 @@ class FullText:
 
 
 async def _europepmc(client: httpx.AsyncClient, pmcid: str | None, doi: str | None) -> FullText:
-    # Phrase-quote the value so embedded specials can't restructure the query.
-    # Strip any embedded double-quotes from the value first (second-order guard).
-    if pmcid:
-        query = f'PMCID:"{pmcid.replace(chr(34), "")}"'
+    # EuropePMC's PMCID field does NOT match a phrase-quoted value: PMCID:"PMC3463246"
+    # returns zero hits while PMCID:PMC3463246 returns the record. Quoting it therefore
+    # made every OA paper we knew a PMCID for look like it had no full text — and since
+    # callers pass pmcid ahead of doi, that silently beat a doi lookup that would have
+    # worked. So the PMCID is whitelisted against its exact shape and interpolated bare:
+    # a value that is not /PMC\d+/ never reaches the query at all, which is a stricter
+    # guard than quoting was. DOI still phrase-quotes — that field matches fine quoted,
+    # and DOIs contain characters a whitelist cannot enumerate.
+    if pmcid and _PMCID_RE.fullmatch(pmcid.strip()):
+        query = f"PMCID:{pmcid.strip()}"
     elif doi:
         query = f'DOI:"{doi.replace(chr(34), "")}"'
+    elif pmcid:
+        logger.warning("ignoring malformed pmcid %r (expected PMC<digits>)", pmcid)
+        query = None
     else:
         query = None
     if not query:

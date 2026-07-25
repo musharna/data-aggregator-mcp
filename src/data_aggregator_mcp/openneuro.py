@@ -22,7 +22,11 @@ from data_aggregator_mcp.models import FileEntry
 GRAPHQL = "https://openneuro.org/crn/graphql"
 # 10.18112/openneuro.ds000001.v1.0.0 → ("ds000001", "1.0.0")
 _DOI_RE = re.compile(r"openneuro\.(ds\d+)\.v([\w.]+)", re.IGNORECASE)
-_QUERY = "query($ds:String!,$tag:String!){snapshot(datasetId:$ds,tag:$tag){files{filename size directory urls}}}"
+# datasetId is ID! in OpenNeuro's schema, not String!. GraphQL rejects the whole
+# document when a variable's declared type does not match the argument's ("Variable
+# $ds of type String! used in position expecting type ID!"), so declaring it String!
+# meant every snapshot lookup returned HTTP 400 and no dataset ever got a manifest.
+_QUERY = "query($ds:ID!,$tag:String!){snapshot(datasetId:$ds,tag:$tag){files{filename size directory urls}}}"
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
 
