@@ -194,3 +194,88 @@ async def test_head_column_quote_is_escaped():
     # the doubled-quote kept the payload as a single (nonexistent) identifier, so
     # DuckDB raises a binder/column error — proving no statement-stacking break-out.
     assert "binder error" in msg or "not found" in msg or "does not have a column" in msg
+
+
+# ---------------------------------------------------------------------------
+# SSRF regression — a user SELECT must not be able to make the SERVER fetch a URL
+# ---------------------------------------------------------------------------
+
+
+async def test_user_sql_cannot_reach_the_network() -> None:
+    """Disabling only LocalFileSystem left httpfs loaded, so a crafted
+    ``read_csv_auto('http://...')`` made the server GET any URL and hand the body back as
+    rows — SSRF with response exfiltration once the server is not the caller's own stdio
+    child.
+
+    The source is served over HTTP, not from a file:// fixture, because that is what
+    production allows (operate's scheme allowlist is http/https) AND because a local
+    source makes the attack fail for the unrelated reason that LocalFileSystem is
+    disabled — which would let this test pass against vulnerable code.
+
+    A real listener is used rather than a mock: the assertion that carries the weight is
+    that the secret path is NEVER requested, which a mocked transport cannot establish.
+    """
+    import http.server
+    import socket
+    import threading
+
+    hits: list[str] = []
+
+    def _body(path: str) -> bytes:
+        return b"col\nlegit\n" if "source.csv" in path else b"secret\nEXFILTRATED\n"
+
+    class _H(http.server.BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def log_message(self, *a):
+            pass
+
+        def _send(self, body: bytes, status: int = 200, extra: dict | None = None):
+            self.send_response(status)
+            self.send_header("Content-Type", "text/csv")
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Content-Length", str(len(body)))
+            for k, v in (extra or {}).items():
+                self.send_header(k, v)
+            self.end_headers()
+
+        def do_HEAD(self):
+            hits.append(self.path)
+            self._send(_body(self.path))
+
+        def do_GET(self):
+            hits.append(self.path)
+            full = _body(self.path)
+            rng = self.headers.get("Range")
+            if rng and rng.startswith("bytes="):
+                lo, _, hi = rng[6:].partition("-")
+                a = int(lo or 0)
+                b = min(int(hi) if hi else len(full) - 1, len(full) - 1)
+                chunk = full[a : b + 1]
+                self._send(chunk, 206, {"Content-Range": f"bytes {a}-{b}/{len(full)}"})
+                self.wfile.write(chunk)
+                return
+            self._send(full)
+            self.wfile.write(full)
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", port), _H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        source = f"http://127.0.0.1:{port}/source.csv"
+        target = f"http://127.0.0.1:{port}/secret.csv"
+        # The legitimate source still loads: it is materialized before the lockdown.
+        ok = await duckquery.run_sql(source, "source.csv", "SELECT * FROM data")
+        assert ok["rows"] == [{"col": "legit"}]
+        assert any("source.csv" in h for h in hits)
+        hits.clear()
+        with pytest.raises(Exception) as exc:  # noqa: B017 - duckdb's PermissionException
+            await duckquery.run_sql(
+                source, "source.csv", f"SELECT * FROM read_csv_auto('{target}')"
+            )
+        assert "httpfilesystem" in str(exc.value).lower().replace(" ", "")
+        assert not any("secret.csv" in h for h in hits), f"server egressed: {hits}"
+    finally:
+        srv.shutdown()

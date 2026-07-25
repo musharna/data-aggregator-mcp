@@ -1,18 +1,24 @@
 # src/data_aggregator_mcp/duckquery.py
 """Hardened DuckDB+httpfs engine for operate's head/sql ops.
 
-The remote source is read eagerly into an in-memory table named ``data``; the
-local filesystem is then disabled and the configuration locked, so a user SELECT
-cannot read local files, write, or re-enable anything. Only a single SELECT/WITH
-statement is accepted. Sync calls run in ``asyncio.to_thread``; the whole call is
-wall-clock-bounded by the caller.
+The remote source is read eagerly into an in-memory table named ``data``; the local
+AND HTTP filesystems are then disabled and the configuration locked, so a user
+SELECT cannot read local files, reach the network, write, or re-enable anything.
+Only a single SELECT/WITH statement is accepted. Sync calls run in
+``asyncio.to_thread``; the whole call is wall-clock-bounded by the caller.
 
 Security posture (see ``_connect``): the source is materialized via ``CREATE
-TABLE`` while the local FS is still enabled, then we ``SET
-disabled_filesystems='LocalFileSystem'`` and ``SET lock_configuration=true``.
-After that point a crafted ``read_csv_auto('/etc/passwd')`` raises a
-``PermissionException`` instead of returning file contents, and the user
-statement cannot re-enable the FS or change config (the lock is sticky). Eager
+TABLE`` while the filesystems are still enabled, then we ``SET
+disabled_filesystems='LocalFileSystem,HTTPFileSystem'`` and ``SET
+lock_configuration=true``. After that point a crafted ``read_csv_auto('/etc/passwd')``
+— or ``read_csv_auto('http://169.254.169.254/...')`` — raises a
+``PermissionException`` instead of returning content, and the user
+statement cannot re-enable either FS or change config (the lock is sticky).
+Disabling HTTP matters as much as disabling local: with httpfs left loaded, a user
+SELECT made the SERVER fetch an arbitrary URL and returned the body as rows. That
+is invisible over stdio (the server is the caller's own child, same network
+position) but is SSRF with response exfiltration under ``--transport http``, where
+the server may sit in a network the caller cannot otherwise reach. Eager
 materialization is REQUIRED: DuckDB evaluates a ``CREATE VIEW`` lazily at query
 time, i.e. AFTER the lock, which would also block the legitimate source read —
 both ``file://`` and bare-path local reads route through ``LocalFileSystem``, so
@@ -55,11 +61,14 @@ def _connect(url: str, file: str):
 
     con = duckdb.connect(database=":memory:")
     con.execute("INSTALL httpfs; LOAD httpfs;")
-    # Eager read FIRST (local FS still enabled), then lock the FS down. See the
+    # Eager read FIRST (both filesystems still enabled), then lock them down. See the
     # module docstring: a CREATE VIEW would be evaluated lazily after the lock and
     # would block the legit source read too, so we materialize a TABLE here.
     con.execute(f"CREATE TABLE data AS SELECT * FROM {_reader(url, file)};")
-    con.execute("SET disabled_filesystems='LocalFileSystem';")
+    # HTTPFileSystem is disabled alongside LocalFileSystem: the source is already in
+    # memory by this line, so nothing downstream needs either, and leaving httpfs on
+    # is what let a user SELECT turn the server into an SSRF proxy.
+    con.execute("SET disabled_filesystems='LocalFileSystem,HTTPFileSystem';")
     con.execute("SET lock_configuration=true;")
     return con
 

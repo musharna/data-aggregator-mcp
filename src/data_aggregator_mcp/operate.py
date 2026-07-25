@@ -132,9 +132,11 @@ async def run(
     _scheme = _urlparse(url).scheme.lower()
     _allow_file = os.environ.get("DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS") == "1"
     if _scheme not in ("http", "https") and not (_scheme == "file" and _allow_file):
+        # Deliberately does NOT name the file:// opt-in env var: a user-facing error
+        # should not coach the caller into switching a security control off. The escape
+        # hatch is documented in the comment above for operators, where it belongs.
         raise OperateNotSupportedError(
-            f"URL scheme {_scheme!r} is not allowed for operate "
-            f"(only http/https; set DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS=1 for file://): {url}"
+            f"URL scheme {_scheme!r} is not allowed for operate (only http/https): {url}"
         )
 
     n = min(n, ROW_CAP)
