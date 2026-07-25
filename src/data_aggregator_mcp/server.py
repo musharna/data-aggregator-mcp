@@ -19,9 +19,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import logging
 import sys
+from collections.abc import AsyncGenerator
 from typing import Any
 
 import httpx
@@ -145,6 +147,41 @@ _SOURCES: list[dict[str, Any]] = sources.CATALOG
 # Static wire specs live in tool_specs; re-exported here under their historical names.
 TOOLS: list[types.Tool] = tool_specs.TOOLS
 
+# httpx pools connections per client, so a client per dispatch re-does DNS + TLS to
+# every host on every call — a cost sequential calls (paging, resolve-after-search)
+# pay again and again. A serve session owns one client for its whole lifetime; see
+# `_http_client`.
+_SHARED_CLIENT: httpx.AsyncClient | None = None
+
+
+@contextlib.asynccontextmanager
+async def shared_http_client() -> AsyncGenerator[None]:
+    """Install one HTTP client for the enclosing serve session (both transports).
+
+    Not reentrant: the client is bound to the running event loop, and a nested
+    session would close a client the outer one is still handing out.
+    """
+    global _SHARED_CLIENT
+    if _SHARED_CLIENT is not None:
+        raise RuntimeError("shared_http_client is already active")
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        _SHARED_CLIENT = client
+        try:
+            yield
+        finally:
+            _SHARED_CLIENT = None
+
+
+@contextlib.asynccontextmanager
+async def _http_client() -> AsyncGenerator[httpx.AsyncClient]:
+    """The client for one dispatch: the serve session's, left open for the next call,
+    or — with no session (unit tests, the search CLI) — a fresh one that closes here."""
+    if _SHARED_CLIENT is not None:
+        yield _SHARED_CLIENT
+        return
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        yield client
+
 
 @server.list_tools()
 async def _list_tools() -> list[types.Tool]:
@@ -192,7 +229,7 @@ async def _read_resource(uri: AnyUrl) -> list[ReadResourceContents]:
     rid = resources_mod.parse_record_id(uri)
     if rid is None:
         raise ValueError(f"not a readable data-aggregator resource: {uri}")
-    async with httpx.AsyncClient(follow_redirects=True) as client:
+    async with _http_client() as client:
         resource = await router.resolve(client, rid)
     return [ReadResourceContents(content=resource.model_dump_json(), mime_type="application/json")]
 
@@ -202,13 +239,13 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
         semantic_available = embeddings_mod.is_configured()
         if not args.get("check_health"):
             return {"sources": _SOURCES, "semantic_rank_available": semantic_available}
-        async with httpx.AsyncClient(follow_redirects=True) as client:
+        async with _http_client() as client:
             probed = {h["name"]: h for h in await health_mod.probe_sources(client)}
         return {
             "sources": [{**s, "health": probed.get(s["name"])} for s in _SOURCES],
             "semantic_rank_available": semantic_available,
         }
-    async with httpx.AsyncClient(follow_redirects=True) as client:
+    async with _http_client() as client:
         match name:
             case "search":
                 ontology_args = {
@@ -361,7 +398,7 @@ async def _call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
 
 
 async def _serve() -> None:
-    async with stdio_server() as (read_stream, write_stream):
+    async with shared_http_client(), stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())
 
 

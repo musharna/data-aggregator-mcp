@@ -8,12 +8,15 @@ DataCite metadata itself carries no file manifest, so ``_normalize`` returns
 files=[]. ``resolve`` then attaches files[] by dispatching on the detected
 ``source`` to each host repo's native API via ``_FILE_RESOLVERS`` (Figshare,
 Dataverse, OSF — fetchable; Dryad — manifest-only). A Zenodo DOI is delegated to
-``zenodo.resolve`` so its files[] populate from the native adapter; unrecognized
-repos stay files=[]. Fetchability is enforced post-resolve by the server fetch guard.
+``zenodo.resolve`` so its files[] populate from the native adapter — one in Zenodo's
+own 10.5281 namespace skips the DataCite GET entirely, the rest delegate after it;
+unrecognized repos stay files=[]. Fetchability is enforced post-resolve by the
+server fetch guard.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import httpx
@@ -89,6 +92,12 @@ _FILE_RESOLVERS = {
     "osf": osf.files,
     "openneuro": openneuro.files,
 }
+
+# Zenodo's own DOI namespace. `resolve` returns the native Zenodo record for these
+# anyway, so the DataCite GET is pure latency — match on the requested DOI and skip
+# it. Deliberately narrow: a Zenodo record minted under any other prefix still takes
+# the fetch-then-delegate path in `resolve`, so this changes cost, not coverage.
+_ZENODO_DOI_RE = re.compile(r"10\.5281/zenodo\.(\d+)", re.IGNORECASE)
 
 
 def _first(items: list[dict[str, Any]] | None, key: str) -> str | None:
@@ -221,6 +230,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     DataCite returns a single record under ``data`` (a dict, not a list).
     """
     doi = local_id(resource_id, "datacite")
+    native = _ZENODO_DOI_RE.fullmatch(doi)
+    if native is not None:  # skip the DataCite round-trip we would only discard
+        return await zenodo.resolve(client, f"zenodo:{native.group(1)}")
     try:
         body = await _http.request_json(
             client,

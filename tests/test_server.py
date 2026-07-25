@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
@@ -1070,3 +1071,57 @@ def test_relate_is_registered() -> None:
     assert tool.inputSchema["required"] == ["ids"]
     assert tool.inputSchema["properties"]["ids"]["minItems"] == 2
     assert tool.inputSchema["properties"]["ids"]["maxItems"] == 10
+
+
+# ---------------------------------------------------------------- shared HTTP client
+
+
+async def test_dispatches_share_one_client_inside_a_serve_session(monkeypatch) -> None:
+    """E4: a serve session pools connections across calls, so two dispatches must be
+    handed the SAME client — that is the whole point of the change."""
+    seen: list[httpx.AsyncClient] = []
+
+    async def fake_resolve(client, rid):
+        seen.append(client)
+        return DataResource(id=rid, source="geo", kind="dataset", title="t")
+
+    monkeypatch.setattr(server.router, "resolve", fake_resolve)
+    async with server.shared_http_client():
+        await server._dispatch("resolve", {"id": "geo:GSE1"})
+        await server._dispatch("resolve", {"id": "geo:GSE2"})
+        assert len(seen) == 2
+        assert seen[0] is seen[1]
+        # Still open between calls — a client closed at the end of the first dispatch
+        # would pool nothing, which was the pre-E4 behavior.
+        assert not seen[0].is_closed
+    # ...and the session still owns the close, so a serve process leaks no client.
+    assert seen[0].is_closed
+    assert server._SHARED_CLIENT is None
+
+
+async def test_without_a_serve_session_each_dispatch_gets_its_own_closed_client(
+    monkeypatch,
+) -> None:
+    """Unit tests and the one-shot search CLI have no session; they keep the previous
+    per-call lifecycle, and the client is closed when the call returns."""
+    seen: list[httpx.AsyncClient] = []
+
+    async def fake_resolve(client, rid):
+        seen.append(client)
+        return DataResource(id=rid, source="geo", kind="dataset", title="t")
+
+    monkeypatch.setattr(server.router, "resolve", fake_resolve)
+    await server._dispatch("resolve", {"id": "geo:GSE1"})
+    await server._dispatch("resolve", {"id": "geo:GSE2"})
+    assert seen[0] is not seen[1]
+    assert all(c.is_closed for c in seen)
+
+
+async def test_nested_serve_sessions_fail_loud() -> None:
+    """A nested session would close a client the outer one still hands out. Refuse
+    rather than leave dispatches holding a dead client."""
+    async with server.shared_http_client():
+        with pytest.raises(RuntimeError, match="already active"):
+            async with server.shared_http_client():
+                pass  # pragma: no cover - the enter above raises
+    assert server._SHARED_CLIENT is None
