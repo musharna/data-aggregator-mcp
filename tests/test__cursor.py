@@ -60,3 +60,14 @@ def test_cursor_decode_rejects_size_not_positive_int():
         token = _encode_raw({"q": "x", "size": bad_size, "offsets": {}})
         with pytest.raises(ValidationError, match="invalid or corrupt cursor"):
             _cursor.decode(token)
+
+
+def test_cursor_decode_rejects_q_not_str():
+    """'q' was the one required field whose type went unchecked. A cursor carrying
+    q=null reached the fan-out and issued a real request per source with a None query,
+    surfacing as a pydantic error on SearchResult long after the network cost was paid.
+    It must be rejected at the boundary like every other malformed field."""
+    for bad_q in [None, 123, ["x"], {"a": 1}]:
+        token = _encode_raw({"q": bad_q, "size": 10, "offsets": {}})
+        with pytest.raises(ValidationError, match="'q' must be a string"):
+            _cursor.decode(token)

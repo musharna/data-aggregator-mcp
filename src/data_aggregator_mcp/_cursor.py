@@ -26,6 +26,11 @@ def decode(token: str) -> dict[str, Any]:
     if not isinstance(state, dict) or not _REQUIRED.issubset(state):
         raise ValidationError("invalid or corrupt cursor: missing required fields")
     # Type validation — a crafted cursor with wrong types can cause fan-out of garbage.
+    # 'q' was the one required field whose type went unchecked: a cursor carrying
+    # q=null fanned out a None query to every selected source over the network and
+    # only died afterwards, inside SearchResult's own validation.
+    if not isinstance(state["q"], str):
+        raise ValidationError("invalid or corrupt cursor: 'q' must be a string")
     if not isinstance(state["offsets"], dict):
         raise ValidationError("invalid or corrupt cursor: 'offsets' must be a dict")
     if not isinstance(state["size"], int) or isinstance(state["size"], bool) or state["size"] <= 0:
