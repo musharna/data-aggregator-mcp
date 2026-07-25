@@ -60,6 +60,9 @@ from data_aggregator_mcp.models import (
     derive_version_status,
 )
 
+# Imported by name: `_select`'s own `sources` parameter shadows the module inside it.
+from data_aggregator_mcp.sources import SourceAdapter
+
 _VALID_KINDS = {"dataset", "sequencing_run", "study", "publication", "software"}
 
 # A2.P2: hard cap on the number of query variants fanned out (incl. the original as
@@ -88,7 +91,7 @@ def _dedup_ci(queries: list[str]) -> list[str]:
 # Name → adapter module, in dedup-precedence order. Single source of truth is the central
 # registry (sources.py); it also derives the fetch gate and the discovery-only set, so the
 # resolve dispatch below can never drift out of sync with them (that gap was the uniprot bug).
-_ADAPTERS: dict[str, Any] = sources.ADAPTERS
+_ADAPTERS: dict[str, sources.SourceAdapter] = sources.ADAPTERS
 
 
 def _cache_ttl() -> float:
@@ -108,10 +111,10 @@ def available_sources() -> list[str]:
     return list(_ADAPTERS)
 
 
-def _select(sources: list[str] | None) -> dict[str, Any]:
+def _select(sources: list[str] | None) -> dict[str, SourceAdapter]:
     if sources is None:
         return dict(_ADAPTERS)
-    selected: dict[str, Any] = {}
+    selected: dict[str, SourceAdapter] = {}
     for name in sources:
         if name not in _ADAPTERS:
             raise ValueError(f"unknown source {name!r}; available: {', '.join(_ADAPTERS)}")

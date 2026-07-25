@@ -19,6 +19,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A malformed pagination cursor whose `q` is not a string is now rejected up front.**
+  `q` was the one required cursor field whose type went unvalidated, so a cursor carrying
+  `q: null` passed decoding, fanned out a `None` query to every selected source over the
+  network, and only failed afterwards inside `SearchResult`'s own validation — paying the
+  full request cost for a guaranteed error and reporting it as a schema failure rather
+  than a bad cursor. Surfaced by typing the adapter contract (below).
+
 - **`uniprot:` records can now be resolved and fetched.** UniProtKB was registered and
   advertised as fetchable, but had no branch in `resolve()`'s prefix-routing chain, so
   `resolve`/`fetch` on a `uniprot:` id fell through to a `ValueError` (search worked, but the
@@ -37,6 +44,29 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `list_sources` docs for the sources added this cycle.
 
 ### Changed
+
+- **The source-adapter contract is now a checked `typing.Protocol` (`SourceAdapter`).**
+  Adapters are modules rather than classes, and the registry typed each one as `Any` — so a
+  module registered without `resolve`, or with a signature that had drifted, type-checked
+  cleanly and only failed at runtime on whichever id happened to route to it. That is the
+  same latent shape as the `uniprot` bug. Registering an incomplete module is now a type
+  error **at the registry call itself**, which is exactly where a new source gets added.
+- **Fewer redundant round-trips and handshakes on the hot paths.** Three independent
+  efficiency fixes from the same audit, none of which change any result:
+  - A serve session (stdio _and_ streamable HTTP) now owns **one HTTP client for its whole
+    lifetime** instead of building one per tool call, so sequential calls — paging, resolve
+    -after-search — reuse pooled connections rather than repeating DNS + TLS to every host.
+    Callers with no serve session (unit tests, the one-shot `search` CLI) keep the previous
+    per-call lifecycle.
+  - **Resolving a DOI in Zenodo's own `10.5281` namespace no longer calls DataCite first.**
+    That record was always re-resolved against the native Zenodo API, so the DataCite response
+    was fetched only to be discarded. Zenodo records minted under any other prefix are
+    unknowable without asking DataCite and still take the fetch-then-delegate path — the
+    change is to cost, not coverage.
+  - **Semantic re-rank computes the query norm once** per ranking instead of once per
+    candidate (it runs on every `rank=semantic` page and every multi-query merge). Verified
+    rank-for-rank identical to the previous implementation across 4000 randomized trials,
+    including zero-norm vectors and exact ties.
 
 - **Introduced a central source registry (`sources.py`).** Per-source routing and
   fetchability were previously restated in four places kept in lockstep only by tests (the

@@ -47,7 +47,7 @@ from starlette.routing import Mount
 from starlette.types import Receive, Scope, Send
 
 from data_aggregator_mcp.errors import ValidationError
-from data_aggregator_mcp.server import server
+from data_aggregator_mcp.server import server, shared_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +135,9 @@ def build_app(
     @contextlib.asynccontextmanager
     async def lifespan(_: Starlette) -> AsyncGenerator[None]:
         # The manager's task group lives for the process; it cannot be restarted.
-        async with manager.run():
+        # The shared HTTP client is scoped the same way, so outbound connections are
+        # pooled across requests exactly as they are across stdio calls.
+        async with shared_http_client(), manager.run():
             yield
 
     return Starlette(routes=[Mount(MCP_PATH, app=handle)], lifespan=lifespan)

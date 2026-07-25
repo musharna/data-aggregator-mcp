@@ -98,6 +98,22 @@ def test_stateless_app_builds_without_idle_timeout() -> None:
     assert http_transport.build_app(settings, stateless=False) is not None
 
 
+async def test_lifespan_installs_the_shared_http_client() -> None:
+    """E4: HTTP requests go through the same _dispatch as stdio calls, so the app's
+    lifespan must scope the shared client the same way `_serve` does — otherwise the
+    HTTP deployment silently keeps paying a new TLS handshake per request."""
+    from data_aggregator_mcp import server as server_mod
+
+    settings = http_transport.build_security_settings("127.0.0.1", 8000)
+    app = http_transport.build_app(settings)
+    assert server_mod._SHARED_CLIENT is None
+    async with app.router.lifespan_context(app):
+        client = server_mod._SHARED_CLIENT
+        assert client is not None and not client.is_closed
+    assert server_mod._SHARED_CLIENT is None
+    assert client.is_closed  # shut down with the app, not leaked
+
+
 # --------------------------------------------------------------------------
 # Real execution — packaged entry point, real port, real handshake
 # --------------------------------------------------------------------------
