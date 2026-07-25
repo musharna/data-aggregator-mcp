@@ -20,7 +20,9 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
+
+import httpx
 
 from data_aggregator_mcp import (
     biostudies,
@@ -41,6 +43,44 @@ from data_aggregator_mcp import (
     uniprot,
     zenodo,
 )
+from data_aggregator_mcp.models import DataResource
+
+
+@runtime_checkable
+class SourceAdapter(Protocol):
+    """The contract every adapter module in ``SOURCES`` satisfies.
+
+    Adapters are modules, not classes — this Protocol is what makes that structural
+    contract checkable instead of implied. It was previously spelled ``Any``, so a
+    registered module missing ``resolve`` (or carrying a drifted signature) type-checked
+    fine and only failed at runtime on the id that happened to route to it — the same
+    class of latent gap as the ``uniprot`` bug.
+
+    ``client`` and the id are positional-only here because adapters disagree on the
+    second parameter's name (``record_id`` in zenodo, ``resource_id`` elsewhere) and the
+    router only ever passes them positionally. ``PREFIXES`` is a read-only property so
+    the concrete types can vary (``frozenset`` / ``set`` / ``tuple``), which they do.
+    """
+
+    @property
+    def PREFIXES(self) -> Collection[str]: ...
+
+    async def search(
+        self,
+        client: httpx.AsyncClient,
+        query: str,
+        /,
+        *,
+        size: int = ...,
+        offset: int = ...,
+    ) -> tuple[int, list[DataResource]]:
+        """``(total_hits, page)``. ``total`` is the source's own reported total, which
+        may be an estimate; ``page`` holds at most ``size`` records."""
+        ...
+
+    async def resolve(self, client: httpx.AsyncClient, resource_id: str, /) -> DataResource:
+        """Full record for one id. Raises ``NotFoundError`` if the source has no such id."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -52,7 +92,7 @@ class SourceSpec:
     ``fetchable_prefixes`` is empty."""
 
     name: str
-    module: Any
+    module: SourceAdapter
     prefixes: frozenset[str]
     fetchable_prefixes: frozenset[str]
     # Human-facing catalog metadata — the list_sources tool payload.
@@ -93,7 +133,7 @@ class SourceSpec:
 
 def _spec(
     name: str,
-    module: Any,
+    module: SourceAdapter,
     *,
     layer: str,
     kinds: tuple[str, ...],
@@ -413,7 +453,7 @@ SOURCES: tuple[SourceSpec, ...] = (
 )
 
 # Name → adapter module, in registration (precedence) order.
-ADAPTERS: dict[str, Any] = {s.name: s.module for s in SOURCES}
+ADAPTERS: dict[str, SourceAdapter] = {s.name: s.module for s in SOURCES}
 
 # Sources with no fetch backend at all — lowest DOI-dedup precedence (router._fetch_priority).
 DISCOVERY_ONLY: frozenset[str] = frozenset(s.name for s in SOURCES if not s.fetchable_prefixes)
@@ -459,7 +499,7 @@ if set(CATALOG_ORDER) != set(_BY_NAME):  # a new source must be given a catalog 
 CATALOG: list[dict[str, Any]] = [_BY_NAME[name].catalog_entry() for name in CATALOG_ORDER]
 
 
-def resolver_for(prefix: str) -> Any | None:
+def resolver_for(prefix: str) -> SourceAdapter | None:
     """The adapter module that resolves ids with ``prefix``, or None if unrouted.
     (Bare-numeric → zenodo and bare-DOI → datacite are handled by the caller.)"""
     for spec in SOURCES:

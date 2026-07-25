@@ -138,3 +138,50 @@ def test_spec_rejects_a_label_that_contradicts_the_gate():
     # the consistent cases still build
     assert _stub_spec(fetchable=False).fetchable_prefixes == frozenset()
     assert _stub_spec().fetchable_prefixes == frozenset({"stub"})
+
+
+# ------------------------------------------------------------------ adapter contract
+
+
+def test_every_registered_adapter_satisfies_the_protocol():
+    """`module` was typed `Any`, so a registered module missing `resolve` type-checked
+    fine and only failed at runtime on the id that happened to route to it."""
+    for spec in sources.SOURCES:
+        assert isinstance(spec.module, sources.SourceAdapter), spec.name
+
+
+def test_protocol_membership_is_not_vacuous():
+    """Guard the guard: if the Protocol had no required members, the check above would
+    pass for literally any object."""
+    missing_resolve = SimpleNamespace(PREFIXES=frozenset({"x"}), search=lambda *a, **k: None)
+    assert not isinstance(missing_resolve, sources.SourceAdapter)
+    assert not isinstance(SimpleNamespace(), sources.SourceAdapter)
+
+
+def test_every_adapter_has_the_call_shape_the_router_uses():
+    """`runtime_checkable` only checks attribute PRESENCE — a drifted signature still
+    satisfies isinstance. The router calls `search(client, query, size=, offset=)` and
+    `resolve(client, id)`, so pin that shape for every source."""
+    import inspect
+
+    for spec in sources.SOURCES:
+        for hook in ("search", "resolve"):
+            fn = getattr(spec.module, hook)
+            assert inspect.iscoroutinefunction(fn), f"{spec.name}.{hook} is not async"
+
+        params = list(inspect.signature(spec.module.search).parameters.values())
+        assert [p.name for p in params[:2]][0] == "client", spec.name
+        assert all(p.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD for p in params[:2]), spec.name
+        by_name = {p.name: p for p in params}
+        for kw in ("size", "offset"):
+            assert by_name[kw].kind is inspect.Parameter.KEYWORD_ONLY, f"{spec.name}.{kw}"
+            assert by_name[kw].default is not inspect.Parameter.empty, f"{spec.name}.{kw}"
+
+        resolve_params = list(inspect.signature(spec.module.resolve).parameters.values())
+        assert len(resolve_params) == 2, spec.name
+        assert resolve_params[0].name == "client", spec.name
+        # The second name deliberately varies (record_id / resource_id), which is why the
+        # Protocol declares both parameters positional-only.
+        assert all(p.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD for p in resolve_params), (
+            spec.name
+        )
