@@ -130,6 +130,54 @@ Add to a client's MCP config (e.g. Claude Desktop `claude_desktop_config.json`):
 
 </details>
 
+## 🌐 Transports
+
+**stdio (default)** — the server runs as a child of the client, so `fetch()`
+writes to your own disk. Nothing to configure; every command above uses it.
+
+**Streamable HTTP** — the same six tools, prompts, and resources over HTTP:
+
+```bash
+data-aggregator-mcp --transport http     # → http://127.0.0.1:8000/mcp/
+```
+
+| flag                       | default          | notes                                                             |
+| -------------------------- | ---------------- | ----------------------------------------------------------------- |
+| `--transport {stdio,http}` | `stdio`          |                                                                   |
+| `--host`                   | `127.0.0.1`      | this machine only; any non-loopback value requires `--allow-host` |
+| `--port`                   | `8000`           |                                                                   |
+| `--allow-host HOST:PORT`   | auto on loopback | permitted `Host` header, repeatable — **required off loopback**   |
+| `--allow-origin ORIGIN`    | derived          | permitted browser `Origin` header, repeatable                     |
+| `--stateless`              | off              | fresh transport per request, no session affinity                  |
+| `--json-response`          | off              | plain JSON responses instead of SSE streams                       |
+
+The endpoint is served at **`/mcp/`** — with the trailing slash. `/mcp` answers
+`307` redirecting there, which is fine for any client that follows redirects (a
+`307` preserves the POST body); point one that doesn't straight at `/mcp/`. In
+stateful mode, sessions idle for 30 minutes are reaped.
+
+**DNS-rebinding protection is always on.** A loopback bind derives its own
+host/origin allowlist, so the default needs no configuration. A non-loopback bind
+(`--host 0.0.0.0`, a LAN address, a container interface) **refuses to start**
+without at least one explicit `--allow-host` — guessing an allowlist there is
+precisely the hole the protection exists to close, so it fails loud instead of
+open:
+
+```bash
+data-aggregator-mcp --transport http --host 0.0.0.0 \
+  --allow-host data.example.org:8000
+```
+
+Once running, a request whose `Host` header is outside the allowlist is refused
+with `421 Invalid Host header`.
+
+> ⚠️ **`fetch(dest=…)` writes to the _server's_ filesystem, not the client's.**
+> Over stdio those are the same disk; over HTTP they may be different machines,
+> and the caller gets back paths it cannot read. Treat `dest` on an HTTP
+> deployment as server-side staging, or use stdio when you need the bytes
+> locally. `search`, `resolve`, `operate`, `relate`, and `list_sources` are
+> unaffected — they return data, not paths.
+
 ## 🗂️ Sources
 
 | Source                       | Discover |       Fetch       |     Checksum     |
@@ -327,12 +375,22 @@ Claude Code):
 
 ## ⚙️ Configuration
 
-Both optional, set via environment variables:
+All optional, set via environment variables:
 
 - `NCBI_API_KEY` — raises the NCBI E-utilities rate limit (3 → 10 req/s) used by
   the omics, literature, and taxonomy lookups.
+- `DATA_GOV_API_KEY` — a free [api.data.gov](https://api.data.gov/signup/) key for
+  the data.gov source. Absent ⇒ requests fall back to the shared public
+  `DEMO_KEY`, rate-limited to roughly 30 requests/hour per IP — fine for light
+  discovery, worth setting for anything heavier.
 - `UNPAYWALL_EMAIL` — enables the Unpaywall fallback leg of literature full-text
   retrieval (the EuropePMC leg works without it).
+- `NCBI_EMAIL` — contact address sent to NCBI's ID converter; falls back to
+  `UNPAYWALL_EMAIL` when unset.
+- `DATAVERSE_BASE_URL` — resolve Dataverse DOIs against a different installation
+  (default `https://dataverse.harvard.edu`).
+- `CACHE_TTL_SECONDS` — resolve-cache lifetime in seconds (default `3600`; an
+  unparseable value falls back to that default).
 - `EMBEDDING_API_BASE` / `EMBEDDING_API_KEY` / `EMBEDDING_MODEL` — an
   OpenAI-compatible embeddings endpoint enabling `rank=semantic`. Absent ⇒
   semantic re-rank degrades to relevance order. Key is optional (keyless local
