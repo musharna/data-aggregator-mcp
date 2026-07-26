@@ -354,6 +354,34 @@ def _canonical_spdx_for_cc(elements: list[str], version: str) -> str | None:
     return "CC-" + "-".join(p.upper() for p in present) + f"-{version}"
 
 
+def _cc_elements_from_prose(collapsed: str) -> list[str]:
+    """Pull CC element tokens (by, nc, nd, sa) out of already-collapsed lowercase prose.
+
+    Defined once so the versioned path (``normalize_spdx``) and the versionless one
+    (``identify_cc_family``) cannot disagree about what "cc by-nc" contains — the same
+    single-definition reasoning as ``_CC_VERSION_ALT`` above.
+    """
+    tokens = re.split(r"[\s-]+", collapsed)
+    elements: list[str] = []
+    if "attribution" in collapsed or "by" in tokens:
+        elements.append("by")
+    if "noncommercial" in collapsed or "non-commercial" in collapsed or "nc" in tokens:
+        elements.append("nc")
+    if "noderivatives" in collapsed or "noderiv" in collapsed or "nd" in tokens:
+        elements.append("nd")
+    if "sharealike" in collapsed or "share-alike" in collapsed or "sa" in tokens:
+        elements.append("sa")
+    return elements
+
+
+def _looks_like_cc_prose(collapsed: str) -> bool:
+    return (
+        collapsed.startswith("cc ")
+        or collapsed.startswith("cc-")
+        or "creative commons" in collapsed
+    )
+
+
 # A URL-ish token: optional scheme, a dotted host, optional path. Used to pull the
 # HOST out of a licence string so domain checks cannot be satisfied by a substring
 # sitting in someone else's path.
@@ -458,30 +486,64 @@ def normalize_spdx(license_str: str | None) -> str | None:
         return _PROSE_ALIASES[collapsed]
 
     # 5. Spaced/cased CC prose, e.g. "CC BY 4.0", "CC BY-NC 4.0", "Creative Commons Attribution 4.0".
-    if (
-        collapsed.startswith("cc ")
-        or collapsed.startswith("cc-")
-        or "creative commons" in collapsed
-    ):
+    if _looks_like_cc_prose(collapsed):
         ver = _CC_VERSION_RE.search(collapsed)
         if ver:
-            version = ver.group(1)
-            tokens = re.split(r"[\s-]+", collapsed)
-            cc_elements: list[str] = []
-            phrase = collapsed
-            if "attribution" in phrase or "by" in tokens:
-                cc_elements.append("by")
-            if "noncommercial" in phrase or "non-commercial" in phrase or "nc" in tokens:
-                cc_elements.append("nc")
-            if "noderivatives" in phrase or "noderiv" in phrase or "nd" in tokens:
-                cc_elements.append("nd")
-            if "sharealike" in phrase or "share-alike" in phrase or "sa" in tokens:
-                cc_elements.append("sa")
-            spdx = _canonical_spdx_for_cc(cc_elements, version)
+            spdx = _canonical_spdx_for_cc(_cc_elements_from_prose(collapsed), ver.group(1))
             if spdx:
                 return spdx
 
     return None
+
+
+def identify_cc_family(license_str: str | None) -> str | None:
+    """Identify a Creative Commons licence stated *without* a version: ``"cc by-nc"`` →
+    ``"CC-BY-NC"``. Returns None for anything versioned, non-CC, or not a combination CC
+    issues. Pure, deterministic.
+
+    Deliberately NOT part of ``normalize_spdx``: there is no SPDX id for a versionless CC
+    licence, and returning an invented one would put a value into ``spdx_id`` that no
+    registry recognizes and that a matrix lookup could silently mismatch. This is the
+    third identification outcome the module needed and did not have — not "unknown", not
+    "identified precisely", but "family known, version not" — and the distinction is
+    load-bearing: CC 3.0 and 4.0 differ on attribution and on the effect of a DRM clause,
+    so guessing a version is exactly the fabrication ``_canonical_spdx_for_cc`` refuses.
+
+    Why it matters: EuropePMC states its licence without a version. Across 300 sampled OA
+    records, 231 carried a versionless CC string and none carried a version, so the
+    largest licence-bearing path in the product reported every one of them as "licence not
+    stated / not recognized".
+    """
+    if not license_str:
+        return None
+    raw = license_str.strip()
+    if raw.lower().startswith("spdx:"):
+        raw = raw[len("spdx:") :].strip()
+    low = raw.lower()
+    if not low:
+        return None
+    # A stated version is normalize_spdx's job; never shadow a precise identification.
+    if _CC_VERSION_RE.search(low):
+        return None
+
+    elements: list[str] = []
+    if host_matches(low, "creativecommons.org"):
+        # A versionless CC URL, e.g. creativecommons.org/licenses/by-nc/ — the licences
+        # path segment carries the elements even when the version segment is absent.
+        m = re.search(r"/licenses/([a-z-]+)", low)
+        if not m:
+            return None
+        elements = [e for e in m.group(1).split("-") if e]
+    elif _looks_like_cc_prose(low):
+        elements = _cc_elements_from_prose(re.sub(r"\s+", " ", low).strip(" ."))
+    else:
+        return None
+
+    order = ["by", "nc", "nd", "sa"]
+    present = tuple(e for e in order if e in elements)
+    if present not in _CC_VALID_ELEMENTS:
+        return None
+    return "CC-" + "-".join(p.upper() for p in present)
 
 
 def check(license_str: str | None, use: str) -> LicenseVerdict:
@@ -500,6 +562,23 @@ def check(license_str: str | None, use: str) -> LicenseVerdict:
 
     spdx = normalize_spdx(license_str)
     if spdx is None:
+        family = identify_cc_family(license_str)
+        if family is not None:
+            # Stated, and identifiable down to the element set — just not to a version,
+            # which is the only thing that would pick a matrix row. Saying "not stated"
+            # here contradicted license_raw sitting in the same verdict.
+            return LicenseVerdict(
+                use=use,
+                verdict="REVIEW",
+                spdx_id=None,
+                license_raw=license_str,
+                reason=(
+                    f"licence stated as {family} but with no version; the version "
+                    f"determines the terms, so no compatibility profile can be selected "
+                    f"— manual review required before this use"
+                ),
+                disclaimer=DISCLAIMER,
+            )
         return LicenseVerdict(
             use=use,
             verdict="REVIEW",

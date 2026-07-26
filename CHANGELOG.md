@@ -6,6 +6,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A Creative Commons licence stated without a version is no longer discarded.**
+  EuropePMC states its licence as `cc by`, `cc by-nc-nd` and friends — never with a
+  version. Across 300 sampled open-access records, 231 carried such a string and not
+  one carried a version, and `normalize_spdx` returned `None` for every one of them,
+  so the largest licence-bearing path in the product answered `licence not stated /
+not recognized; defaults to all-rights-reserved` for licences that were plainly
+  stated. `check` now identifies the family and says what it actually knows —
+  `licence stated as CC-BY-NC but with no version; the version determines the terms,
+so no compatibility profile can be selected`. `spdx_id` stays `None`, because there
+  is no SPDX id for a versionless CC licence, and no version is guessed: 3.0 and 4.0
+  differ on attribution and on the effect of a DRM clause, so picking one would be the
+  fabrication this module exists to refuse. New `identify_cc_family` is the third
+  identification outcome the module lacked — not "unknown", not "identified
+  precisely", but "family known, version not".
+
 ### Added
 
 - **The README now documents the streamable HTTP transport.** `--transport http`
