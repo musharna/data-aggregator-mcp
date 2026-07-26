@@ -87,6 +87,24 @@ Assert the legitimate query still succeeds inside the same test that asserts the
 attack fails. `tests/test_duckquery.py::test_user_sql_cannot_reach_the_network`
 is the worked example.
 
+### Corollaries for writing tests here
+
+**Tests run against an empty server configuration.** An autouse fixture in
+`tests/conftest.py` clears every environment variable the server reads, so a test
+behaves the same in CI and in a shell where you have `UNPAYWALL_EMAIL` or
+`DATA_GOV_API_KEY` exported. Set what your test needs with `monkeypatch.setenv`;
+take the `live_env` fixture if you need the operator's real values. Without this
+the suite was hermetic only by accident: exporting `UNPAYWALL_EMAIL` sent
+`fulltext.find()` down the Unpaywall leg and a test that mocked only EuropePMC
+died on an unregistered request.
+
+**Test one leg of a cascade by calling that leg.** `fulltext.find()` short-circuits
+on a EuropePMC hit, so a test routed through it reaches the Unpaywall leg only when
+EuropePMC happens to miss — third-party state that is not yours to control. The
+first live Unpaywall test did exactly that and passed while contacting nothing but
+`ebi.ac.uk`. Call `_unpaywall` directly and assert `file.source`; assert the
+cascade's _routing_ in a separate test.
+
 ## Linting
 
 CI runs Ruff over the whole tree; match it locally before pushing:
