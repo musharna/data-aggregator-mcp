@@ -8,6 +8,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **NCBI pacing now follows the request host, not the service label.** The rate
+  limiter picked its bucket with `service.startswith("NCBI")`, so GEO's
+  supplementary-file listing — which fetches from `ftp.ncbi.nlm.nih.gov` under the
+  label `GEO suppl listing` — drew from the default bucket at 10 req/s, over three
+  times NCBI's keyless ceiling, purely because of what the call was named. NCBI
+  throttles per account/IP across its hosts, so the host is the thing to key on; the
+  label survives only as a backstop for a URL that cannot be parsed, where it can add
+  pacing but never remove it. Honest scope note: this was found while triaging an
+  intermittent `GEO suppl listing → HTTP 403`, and it does **not** demonstrably fix
+  that — the 403 never reproduced in isolation (the exact URL returned 200 ten times,
+  the test passed 3/3, and 12 concurrent requests to that host all succeeded). It
+  appeared only under whole-suite aggregate NCBI load. The pacing gap is a real defect
+  on its own terms; whether it causes that 403 is unproven.
+
 - **A Creative Commons licence stated without a version is no longer discarded.**
   EuropePMC states its licence as `cc by`, `cc by-nc-nd` and friends — never with a
   version. Across 300 sampled open-access records, 231 carried such a string and not

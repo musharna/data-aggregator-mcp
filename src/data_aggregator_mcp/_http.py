@@ -55,7 +55,7 @@ async def _retrying(
     last_exc: Exception | None = None
     for attempt in range(max_retries):
         try:
-            await _ratelimit.acquire(service)
+            await _ratelimit.acquire(service, url)
             resp = await client.request(
                 method,
                 url,
