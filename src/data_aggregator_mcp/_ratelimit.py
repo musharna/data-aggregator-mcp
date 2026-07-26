@@ -2,10 +2,12 @@
 
 Paces outbound requests per upstream so we never trip a documented rate limit.
 NCBI allows 3 req/s anonymously, 10 with an API key — a PER-ACCOUNT ceiling
-shared across every eutils endpoint, so all ``NCBI*`` services draw from ONE
-bucket. Buckets live at module level and persist across tool calls within the
-long-lived stdio process. ``acquire`` is called inside ``_http._retrying`` so
-every upstream request — and every retry — spends a token.
+shared across every NCBI host, so all NCBI traffic draws from ONE bucket. The
+bucket is chosen by request HOST rather than by service label, because the host
+is what the upstream actually throttles. Buckets live at module level and persist
+across tool calls within the long-lived stdio process. ``acquire`` is called
+inside ``_http._retrying`` so every upstream request — and every retry — spends a
+token.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ import asyncio
 import os
 import time
 from collections.abc import Awaitable, Callable
+from urllib.parse import urlsplit
 
 _DEFAULT_RATE = 10.0
 
@@ -60,7 +63,35 @@ class TokenBucket:
 _BUCKETS: dict[str, TokenBucket] = {}
 
 
-def _bucket_for(service: str) -> str:
+_NCBI_DOMAIN = "ncbi.nlm.nih.gov"
+
+
+def _host_of(url: str) -> str:
+    """Lowercase host of ``url``, or "" when it has none. Never raises — pacing must not
+    be the thing that breaks a request."""
+    try:
+        return (urlsplit(url).hostname or "").lower()
+    except ValueError:
+        return ""
+
+
+def _bucket_for(service: str, url: str) -> str:
+    """Pick the token bucket for a request.
+
+    Keyed on the HOST, because that is what the upstream throttles: NCBI's ceiling is per
+    account/IP across all of its hosts, and our service label is only a display string for
+    error messages. Keying on the label instead let ``GEO suppl listing`` — which fetches
+    from ftp.ncbi.nlm.nih.gov — draw from the default bucket at 10 req/s, over three times
+    NCBI's keyless ceiling, purely because of what the call was named.
+
+    The label check is kept as a conservative backstop for a URL we cannot parse. It can
+    only ever add pacing, never remove it.
+    """
+    host = _host_of(url)
+    if host == _NCBI_DOMAIN or host.endswith("." + _NCBI_DOMAIN):
+        return "ncbi"
+    if host:
+        return "default"
     return "ncbi" if service.startswith("NCBI") else "default"
 
 
@@ -68,8 +99,8 @@ def _rate_for(bucket: str) -> float:
     return _ncbi_rate() if bucket == "ncbi" else _DEFAULT_RATE
 
 
-async def acquire(service: str) -> None:
-    name = _bucket_for(service)
+async def acquire(service: str, url: str) -> None:
+    name = _bucket_for(service, url)
     bucket = _BUCKETS.get(name)
     if bucket is None:
         bucket = TokenBucket(_rate_for(name))
