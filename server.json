@@ -1,19 +1,19 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.musharna/data-aggregator-mcp",
-  "description": "Find & fetch research datasets across 14 archives, omics registries, and literature sources.",
+  "description": "Find & fetch research datasets across 17 archives, omics registries, and literature sources.",
   "title": "Data Aggregator",
   "repository": {
     "url": "https://github.com/musharna/data-aggregator-mcp",
     "source": "github"
   },
-  "version": "0.41.1",
+  "version": "0.42.0",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "data-aggregator-mcp",
-      "version": "0.41.1",
+      "version": "0.42.0",
       "runtimeHint": "uvx",
       "transport": { "type": "stdio" },
       "environmentVariables": [
@@ -58,6 +58,12 @@
           "description": "Model name passed to the embeddings endpoint (default: text-embedding-3-small).",
           "isRequired": false,
           "isSecret": false
+        },
+        {
+          "name": "DATA_GOV_API_KEY",
+          "description": "Optional api.data.gov key for the data.gov source; without it requests fall back to the shared public DEMO_KEY, which is aggressively rate-limited.",
+          "isRequired": false,
+          "isSecret": true
         },
         {
           "name": "UNPAYWALL_EMAIL",
