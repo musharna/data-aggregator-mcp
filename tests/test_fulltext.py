@@ -200,15 +200,22 @@ async def test_malformed_pmcid_falls_back_to_doi_not_into_the_query(httpx_mock) 
     not (LIVE and os.environ.get("UNPAYWALL_EMAIL")),
     reason="set DATA_AGGREGATOR_MCP_LIVE=1 and UNPAYWALL_EMAIL to run",
 )
-async def test_live_unpaywall_leg_is_actually_reachable() -> None:
-    """Coverage gap closed by construction: an audit that recorded every request the
-    live suite really makes found api.unpaywall.org was NEVER contacted — the leg existed
-    only under mocks using a fake e-mail. That is the same mock-only shape that hid the
-    EuropePMC PMCID bug in this very module, on the sibling code path.
+async def test_live_unpaywall_leg_is_actually_reachable(live_env) -> None:
+    """Grade the Unpaywall request format against the real Unpaywall.
 
-    Uses a DOI that is OA but deliberately NOT in EuropePMC's full-text set, so the
-    EuropePMC leg misses and control actually reaches Unpaywall.
+    An audit that recorded every request the live suite really makes found
+    api.unpaywall.org was NEVER contacted — the leg existed only under mocks using a
+    fake e-mail. That is the same mock-only shape that hid the EuropePMC PMCID bug in
+    this very module, on the sibling code path.
+
+    Calls ``_unpaywall`` rather than ``find`` on purpose. ``find`` is a short-circuiting
+    cascade that returns on a EuropePMC hit, so a test routed through it reaches this
+    leg only when EuropePMC happens to miss — a third-party condition we neither control
+    nor assert. The first version of this test did route through ``find``, and passed
+    while contacting nothing but ebi.ac.uk. Which leg the cascade prefers is a separate
+    question, asserted by ``test_live_europepmc_fulltext_for_oa_pmcid``.
     """
     async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
-        ft = await fulltext.find(client, pmcid=None, doi="10.1371/journal.pone.0000308")
-    assert ft.file is not None, "no OA full text found via either leg"
+        ft = await fulltext._unpaywall(client, "10.1371/journal.pone.0000308")
+    assert ft.file is not None, "Unpaywall returned no OA PDF for a known-OA DOI"
+    assert ft.file.source == "unpaywall"
