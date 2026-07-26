@@ -316,8 +316,21 @@ def test_check_is_deterministic():
 
 
 def test_check_signature_is_two_positional_no_client():
-    params = list(inspect.signature(lc.check).parameters)
-    assert params == ["license_str", "use"]
+    """The point of this guard is that nothing I/O-shaped reaches ``check``. Source-level
+    blanket licences added two pure keyword-only params, so the assertion is now: the
+    positional signature is unchanged, and every extra param is keyword-only, optional,
+    and a plain string — a client could not be passed without failing this."""
+    params = inspect.signature(lc.check).parameters
+    positional = [
+        n for n, p in params.items() if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
+    ]
+    assert positional == ["license_str", "use"]
+    for name, p in params.items():
+        if name in positional:
+            continue
+        assert p.kind is p.KEYWORD_ONLY, name
+        assert p.default is None, name
+        assert p.annotation == "str | None", name
 
 
 def test_module_does_no_network_io():
@@ -678,3 +691,63 @@ async def test_live_europepmc_licences_are_identified() -> None:
         s for s in stated if lc.normalize_spdx(s) is None and lc.identify_cc_family(s) is None
     ]
     assert not unidentified, f"stated licences we still discard: {sorted(set(unidentified))}"
+
+
+# --- Source-level blanket licences ------------------------------------------------------
+# Measuring all 17 sources found the real gap is licence ABSENCE, not misparse: 10 of them
+# state no licence at all, and resolve confirms it is genuinely absent rather than a
+# search-time omission. For a source whose operator dedicates the whole archive under one
+# licence, answering "all-rights-reserved" is a wrong answer, not a safe one.
+
+_WWPDB = "wwPDB usage policy — https://www.wwpdb.org/about/usage-policies"
+
+
+def test_source_default_is_used_when_the_record_states_nothing() -> None:
+    v = lc.check(None, "commercial", source_default="CC0-1.0", source_policy=_WWPDB)
+    assert v.verdict == "ALLOW"
+    assert v.spdx_id == "CC0-1.0"
+    # The RECORD said nothing, and the verdict must not imply it did.
+    assert v.license_raw is None
+    assert "states no licence" in v.reason and "blanket policy" in v.reason
+    assert "wwpdb.org" in v.reason
+
+
+def test_a_licence_on_the_record_always_beats_the_source_default() -> None:
+    """The default fills a hole; it never overrides. A permissive archive default must not
+    launder a record that carries a more restrictive licence of its own."""
+    v = lc.check("CC-BY-NC-4.0", "commercial", source_default="CC0-1.0", source_policy=_WWPDB)
+    assert v.verdict == "DENY"
+    assert v.spdx_id == "CC-BY-NC-4.0"
+    assert v.license_raw == "CC-BY-NC-4.0"
+    assert "blanket policy" not in v.reason
+
+
+def test_without_a_source_default_the_answer_is_unchanged() -> None:
+    """The control: absent a default, an unstated licence still reviews as before."""
+    v = lc.check(None, "commercial")
+    assert v.verdict == "REVIEW" and v.spdx_id is None
+    assert "not stated" in v.reason
+
+
+def test_registry_defaults_are_only_the_ones_with_a_verified_policy() -> None:
+    from data_aggregator_mcp import sources
+
+    assert sources.default_license_for("pdb") == ("CC0-1.0", _WWPDB)
+    lic, policy = sources.default_license_for("uniprot")
+    assert lic == "CC-BY-4.0" and policy and "uniprot.org/help/license" in policy
+    # GWAS is mostly CC0 but individual studies carry their own Usage License, so a blanket
+    # default would be wrong exactly where it matters. Deliberately absent.
+    assert sources.default_license_for("gwas") == (None, None)
+    assert sources.default_license_for("nope") == (None, None)
+    assert sources.default_license_for(None) == (None, None)
+
+
+def test_every_declared_default_is_assessable_and_cited() -> None:
+    """A typo'd default would silently degrade to REVIEW, and an uncited one is a claim
+    about someone else's data with nothing behind it. Both fail loud here instead."""
+    from data_aggregator_mcp import sources
+
+    for name, (lic, policy) in sources.DEFAULT_LICENSES.items():
+        assert lc.normalize_spdx(lic) == lic, f"{name}: {lic!r} is not a canonical SPDX id"
+        assert lic in lc.LICENSE_MATRIX, f"{name}: {lic!r} has no compatibility profile"
+        assert policy and "http" in policy, f"{name}: default licence has no citation"

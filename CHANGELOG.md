@@ -6,6 +6,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Source-level blanket licences, for sources that publish one.** Measuring the
+  licence string every source actually returns found that the real gap is not
+  misparsing but absence: 10 of 17 sources state no licence at all, and `resolve`
+  confirms it is genuinely absent rather than omitted at search time. Where the
+  operator dedicates the entire archive under a single licence, answering
+  "defaults to all-rights-reserved" is a wrong answer rather than a safe one.
+  `resolve(use=…)` now falls back to that policy when — and only when — the record
+  itself is silent. `pdb` is `CC0-1.0` (the wwPDB dedicates the archive; entries
+  carry no licence field at all) and `uniprot` is `CC-BY-4.0` (every UniProtKB
+  flat-file record states it in-band, a notice the JSON our adapter reads drops).
+  The verdict says where the licence came from and leaves `license_raw` as `None`,
+  because the _record_ still said nothing. A licence on the record always wins.
+  `gwas` is deliberately excluded despite being mostly CC0: individual studies
+  carry their own Usage License, so a blanket default would be wrong precisely
+  where it matters. Every declared default must be a canonical SPDX id present in
+  the compatibility matrix and must carry its policy citation, enforced at test
+  time — an unsourced guess about someone else's data is worse than "unknown".
+
 ### Fixed
 
 - **NCBI pacing now follows the request host, not the service label.** The rate

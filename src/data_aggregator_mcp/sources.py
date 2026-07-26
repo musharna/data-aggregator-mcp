@@ -107,6 +107,14 @@ class SourceSpec:
     operable: bool | None = None
     fetchable_notes: str | None = None
     description: str | None = None
+    # A licence the SOURCE dedicates its whole archive under, for sources whose records
+    # carry no licence of their own. Set ONLY where the operator publishes a blanket
+    # policy that admits no per-record exceptions, and always with the citation in
+    # ``default_license_policy`` — this is a claim about someone else's data, so an
+    # unsourced guess here is worse than the "unknown" it replaces. It never overrides a
+    # licence the record does state; see ``license_compat.check``.
+    default_license: str | None = None
+    default_license_policy: str | None = None
 
     def catalog_entry(self) -> dict[str, Any]:
         """This source's ``list_sources`` row. Unset optional keys stay ABSENT rather than
@@ -147,6 +155,8 @@ def _spec(
     operable: bool | None = None,
     fetchable_notes: str | None = None,
     description: str | None = None,
+    default_license: str | None = None,
+    default_license_policy: str | None = None,
 ) -> SourceSpec:
     prefixes = frozenset(module.PREFIXES)
     if fetchable is False:
@@ -183,6 +193,8 @@ def _spec(
         operable=operable,
         fetchable_notes=fetchable_notes,
         description=description,
+        default_license=default_license,
+        default_license_policy=default_license_policy,
     )
 
 
@@ -394,6 +406,11 @@ SOURCES: tuple[SourceSpec, ...] = (
         fetchable_notes="Structure files (.cif/.pdb) stream from files.rcsb.org (unverified — no upstream checksum).",
         id_example="pdb:1BG2",
         description="RCSB Protein Data Bank — macromolecular structures; full-text search, DOI/PMID-rich, .cif/.pdb fetch.",
+        # PDB entries carry no licence field at all (verified: data.rcsb.org core/entry has
+        # none), but the wwPDB dedicates the whole archive to CC0, and RCSB states data from
+        # its programmatic APIs are under the same terms.
+        default_license="CC0-1.0",
+        default_license_policy="wwPDB usage policy — https://www.wwpdb.org/about/usage-policies",
     ),
     _spec(
         "uniprot",
@@ -408,6 +425,11 @@ SOURCES: tuple[SourceSpec, ...] = (
         fetchable_notes="FASTA sequence streams from rest.uniprot.org (unverified — no upstream checksum).",
         id_example="uniprot:P01308",
         description="UniProtKB — protein sequences & functional annotation; full-text search, FASTA fetch.",
+        # Every UniProtKB flat-file record states it in-band: "Distributed under the Creative
+        # Commons Attribution (CC BY 4.0) License" (verified against rest.uniprot.org). The
+        # JSON our adapter reads drops that notice, which is the only reason it needs a default.
+        default_license="CC-BY-4.0",
+        default_license_policy="UniProt licence — https://www.uniprot.org/help/license",
     ),
     _spec(
         "gwas",
@@ -420,6 +442,10 @@ SOURCES: tuple[SourceSpec, ...] = (
         fetchable=False,
         fetchable_notes="Discovery-only: study metadata + PMID bridge. Summary-statistics fetch is a future wave.",
         id_example="gwas:GCST000028",
+        # Deliberately NO default_license. The GWAS Catalog is mostly CC0 or EMBL-EBI
+        # standard terms, but "with a small number of exceptions" — individual studies carry
+        # their own Usage License. A blanket default would be wrong for precisely the records
+        # where the licence matters, so these stay honestly unknown.
         description="GWAS Catalog (EBI) — genome-wide association studies keyed by disease trait; DOI/PMID-rich, reinforces the paper-data bridge. NOTE: query must be an exact GWAS Catalog disease-trait vocabulary term (e.g. 'Type 2 diabetes'), not free text — the EBI findByDiseaseTrait API performs case-insensitive exact trait matching.",
     ),
     _spec(
@@ -454,6 +480,22 @@ SOURCES: tuple[SourceSpec, ...] = (
 
 # Name → adapter module, in registration (precedence) order.
 ADAPTERS: dict[str, SourceAdapter] = {s.name: s.module for s in SOURCES}
+
+# Source name → (blanket licence, policy citation), for the few sources that publish one.
+# Derived from the registry rows so the citation cannot drift away from the licence it backs.
+DEFAULT_LICENSES: dict[str, tuple[str, str]] = {
+    s.name: (s.default_license, s.default_license_policy or "")
+    for s in SOURCES
+    if s.default_license
+}
+
+
+def default_license_for(source: str | None) -> tuple[str | None, str | None]:
+    """The source's blanket licence and its citation, or ``(None, None)``. Unknown source
+    names answer ``(None, None)`` rather than raising — this only ever adds information."""
+    lic, policy = DEFAULT_LICENSES.get(source or "", (None, None))
+    return lic, policy or None
+
 
 # Sources with no fetch backend at all — lowest DOI-dedup precedence (router._fetch_priority).
 DISCOVERY_ONLY: frozenset[str] = frozenset(s.name for s in SOURCES if not s.fetchable_prefixes)
