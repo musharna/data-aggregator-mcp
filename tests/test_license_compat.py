@@ -709,7 +709,10 @@ def test_source_default_is_used_when_the_record_states_nothing() -> None:
     # The RECORD said nothing, and the verdict must not imply it did.
     assert v.license_raw is None
     assert "states no licence" in v.reason and "blanket policy" in v.reason
-    assert "wwpdb.org" in v.reason
+    # The WHOLE citation has to survive into the reason, not merely a domain somewhere in
+    # it — a bare-domain substring check is both a weaker assertion and the shape CodeQL
+    # flags as incomplete URL sanitization (py/incomplete-url-substring-sanitization).
+    assert _WWPDB in v.reason
 
 
 def test_a_licence_on_the_record_always_beats_the_source_default() -> None:
@@ -733,8 +736,10 @@ def test_registry_defaults_are_only_the_ones_with_a_verified_policy() -> None:
     from data_aggregator_mcp import sources
 
     assert sources.default_license_for("pdb") == ("CC0-1.0", _WWPDB)
-    lic, policy = sources.default_license_for("uniprot")
-    assert lic == "CC-BY-4.0" and policy and "uniprot.org/help/license" in policy
+    assert sources.default_license_for("uniprot") == (
+        "CC-BY-4.0",
+        "UniProt licence — https://www.uniprot.org/help/license",
+    )
     # GWAS is mostly CC0 but individual studies carry their own Usage License, so a blanket
     # default would be wrong exactly where it matters. Deliberately absent.
     assert sources.default_license_for("gwas") == (None, None)
@@ -750,4 +755,4 @@ def test_every_declared_default_is_assessable_and_cited() -> None:
     for name, (lic, policy) in sources.DEFAULT_LICENSES.items():
         assert lc.normalize_spdx(lic) == lic, f"{name}: {lic!r} is not a canonical SPDX id"
         assert lic in lc.LICENSE_MATRIX, f"{name}: {lic!r} has no compatibility profile"
-        assert policy and "http" in policy, f"{name}: default licence has no citation"
+        assert policy and "https://" in policy, f"{name}: default licence has no citation"
