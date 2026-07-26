@@ -314,8 +314,16 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 if args.get("fair"):
                     resource = resource.model_copy(update={"fair": fair_mod.assess(resource)})
                 if use := args.get("use"):
+                    default_lic, lic_policy = sources.default_license_for(resource.source)
                     resource = resource.model_copy(
-                        update={"license_compat": license_mod.check(resource.license, use)}
+                        update={
+                            "license_compat": license_mod.check(
+                                resource.license,
+                                use,
+                                source_default=default_lic,
+                                source_policy=lic_policy,
+                            )
+                        }
                     )
                 if fmt == "provenance":
                     if resource.fair is None:

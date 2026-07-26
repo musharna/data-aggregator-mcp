@@ -546,9 +546,20 @@ def identify_cc_family(license_str: str | None) -> str | None:
     return "CC-" + "-".join(p.upper() for p in present)
 
 
-def check(license_str: str | None, use: str) -> LicenseVerdict:
+def check(
+    license_str: str | None,
+    use: str,
+    *,
+    source_default: str | None = None,
+    source_policy: str | None = None,
+) -> LicenseVerdict:
     """Return a licence-compatibility verdict for ``use`` against ``license_str``. PURE:
     no I/O, deterministic.
+
+    ``source_default`` is a licence the SOURCE publishes for its whole archive (see
+    ``sources.SourceSpec.default_license``). It applies ONLY when the record itself states
+    nothing, never as an override, and the verdict says so in its reason with
+    ``license_raw`` left None.
 
     - unknown ``use`` (not in ``INTENTS``) → raises ``ValueError`` (caller error, fail loud).
     - licence absent / unrecognized / not in the matrix → ``REVIEW`` (spdx_id None),
@@ -559,6 +570,23 @@ def check(license_str: str | None, use: str) -> LicenseVerdict:
     """
     if use not in INTENTS:
         raise ValueError(f"unknown use intent {use!r}; supported: {', '.join(sorted(INTENTS))}")
+
+    if not license_str and source_default:
+        # The record states nothing, but the source dedicates its whole archive under a
+        # published blanket licence. Assess that — reporting "all-rights-reserved" for data
+        # its operator has placed in the public domain is a wrong answer, not a safe one.
+        # license_raw stays None: the RECORD said nothing, and the verdict must not imply
+        # otherwise. A licence the record DOES state always wins; this branch never runs then.
+        verdict = check(source_default, use)
+        return verdict.model_copy(
+            update={
+                "license_raw": None,
+                "reason": (
+                    f"{verdict.reason} — this record states no licence; assessed from the "
+                    f"source's published blanket policy ({source_policy or 'unspecified'})"
+                ),
+            }
+        )
 
     spdx = normalize_spdx(license_str)
     if spdx is None:
