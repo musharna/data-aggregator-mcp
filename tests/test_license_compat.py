@@ -586,3 +586,95 @@ def test_normalize_spdx_strips_the_spdx_scheme_prefix():
     assert lc.normalize_spdx("spdx:") is None
     # and an unrecognized id stays unrecognized after stripping
     assert lc.normalize_spdx("spdx:NOT-A-LICENCE") is None
+
+
+# --- Versionless Creative Commons prose ------------------------------------------------
+# EuropePMC states its licence without a version: over 300 sampled OA records, 231 carried
+# a versionless CC string and not one carried a version. Every one of them normalized to
+# None, so the single largest licence-bearing path in the product reported "licence not
+# stated / not recognized" for licences that were, in fact, plainly stated.
+
+
+@pytest.mark.parametrize(
+    "raw,family",
+    [
+        ("cc by", "CC-BY"),
+        ("cc by-nc", "CC-BY-NC"),
+        ("cc by-nc-nd", "CC-BY-NC-ND"),
+        ("cc by-nc-sa", "CC-BY-NC-SA"),
+        ("CC BY-SA", "CC-BY-SA"),
+        ("cc-by", "CC-BY"),
+        ("Creative Commons Attribution", "CC-BY"),
+    ],
+)
+def test_versionless_cc_prose_is_identified_as_a_family(raw: str, family: str) -> None:
+    assert lc.identify_cc_family(raw) == family
+
+
+def test_versionless_cc_reviews_naming_the_family_without_inventing_a_version() -> None:
+    v = lc.check("cc by-nc", "redistribute")
+    assert v.verdict == "REVIEW"
+    # There is no SPDX id for a versionless CC licence, so the field stays honest...
+    assert v.spdx_id is None
+    # ...but the reason must say what we do know, and why we cannot assess it.
+    assert "CC-BY-NC" in v.reason
+    assert "version" in v.reason
+    # No version was guessed. 3.0 and 4.0 differ materially; picking one is fabrication.
+    assert "4.0" not in v.reason and "3.0" not in v.reason
+
+
+def test_versionless_cc_does_not_claim_the_licence_was_unstated() -> None:
+    """The old reason text was self-contradicting: it reported license_raw='cc by'
+    alongside 'licence not stated / not recognized'."""
+    v = lc.check("cc by", "redistribute")
+    assert v.license_raw == "cc by"
+    assert "not stated" not in v.reason
+
+
+def test_versionless_combinations_creative_commons_does_not_issue_are_not_identified() -> None:
+    """Loosening identification must not invent licences. ND and SA are exclusive."""
+    assert lc.identify_cc_family("cc by-nd-sa") is None
+    assert lc.identify_cc_family("cc nc") is None  # every CC licence but CC0 carries BY
+
+
+def test_non_cc_text_is_still_unidentified() -> None:
+    assert lc.identify_cc_family("some bespoke institutional terms") is None
+    assert lc.identify_cc_family("MIT") is None
+    v = lc.check("some bespoke institutional terms", "redistribute")
+    assert v.spdx_id is None and "not recognized" in v.reason
+
+
+def test_versioned_and_assessed_licences_are_unaffected() -> None:
+    """A version present anywhere still wins — the family path is a fallback only."""
+    assert lc.normalize_spdx("cc by 4.0") == "CC-BY-4.0"
+    assert (
+        lc.check("https://creativecommons.org/licenses/by/4.0/", "redistribute").verdict == "ALLOW"
+    )
+    assert lc.check("CC-BY-ND-4.0", "modify").verdict == "DENY"
+    assert lc.identify_cc_family("cc by 4.0") is None  # versioned: not a family fallback
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_europepmc_licences_are_identified() -> None:
+    """Positive control for the claim above: EuropePMC's real licence strings must now
+    identify. If EuropePMC ever starts emitting versions, this still passes via
+    normalize_spdx — which is the point of checking both."""
+    import httpx
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        r = await client.get(
+            "https://www.ebi.ac.uk/europepmc/webservices/rest/search",
+            params={
+                "query": "OPEN_ACCESS:Y",
+                "format": "json",
+                "resultType": "core",
+                "pageSize": 100,
+            },
+        )
+    stated = [rec["license"] for rec in r.json()["resultList"]["result"] if rec.get("license")]
+    assert stated, "no EuropePMC record in the page stated a licence — harness suspect"
+    unidentified = [
+        s for s in stated if lc.normalize_spdx(s) is None and lc.identify_cc_family(s) is None
+    ]
+    assert not unidentified, f"stated licences we still discard: {sorted(set(unidentified))}"
