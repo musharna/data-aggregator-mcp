@@ -70,6 +70,24 @@
           "description": "Email address sent to the Unpaywall API; required to enable the Unpaywall PDF fallback leg of literature full-text retrieval.",
           "isRequired": false,
           "isSecret": false
+        },
+        {
+          "name": "NCBI_EMAIL",
+          "description": "Contact address sent to NCBI's ID converter; falls back to UNPAYWALL_EMAIL when unset.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "DATAVERSE_BASE_URL",
+          "description": "Resolve Dataverse DOIs against a different installation (default: https://dataverse.harvard.edu).",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "CACHE_TTL_SECONDS",
+          "description": "Resolve-cache lifetime in seconds (default: 3600); an unparseable value falls back to the default.",
+          "isRequired": false,
+          "isSecret": false
         }
       ]
     }
