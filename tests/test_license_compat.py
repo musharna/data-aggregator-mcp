@@ -118,6 +118,94 @@ def test_intents_reference_real_permission_flags():
             assert flag in lc.PERMISSION_FLAGS, f"{use} → {flag}"
 
 
+_PRE_4_0_CC_IDS = [
+    f"{family}-{version}"
+    for family in (
+        "CC-BY",
+        "CC-BY-SA",
+        "CC-BY-ND",
+        "CC-BY-NC",
+        "CC-BY-NC-SA",
+        "CC-BY-NC-ND",
+    )
+    for version in ("1.0", "2.0", "2.5", "3.0")
+]
+
+
+@pytest.mark.parametrize("spdx", _PRE_4_0_CC_IDS)
+def test_pre_4_0_cc_is_assessed_not_merely_identified(spdx):
+    """Every pre-4.0 CC id carries a profile, so it is assessed rather than REVIEWed.
+
+    Before this, `CC BY 3.0` normalized to a valid SPDX id but had no profile, so a
+    licence that plainly grants commercial use returned REVIEW — the same
+    conservative-but-misleading answer that source-level blanket licences rejected.
+    """
+    assert spdx in lc.LICENSE_MATRIX
+    assert lc.check(spdx, "commercial").verdict in {"ALLOW", "DENY"}
+
+
+@pytest.mark.parametrize("family", ["CC-BY", "CC-BY-SA", "CC-BY-ND", "CC-BY-NC", "CC-BY-NC-ND"])
+@pytest.mark.parametrize("version", ["1.0", "2.0", "2.5", "3.0"])
+def test_pre_4_0_cc_agrees_with_its_4_0_counterpart_on_every_intent(family, version):
+    """The grants a CC family makes did not change across versions, so the verdicts must not.
+
+    This is the substantive claim behind hand-encoding these: for the MODELED
+    vocabulary a 3.0 licence answers exactly as its 4.0 counterpart does.
+    """
+    for use in lc.INTENTS:
+        older = lc.check(f"{family}-{version}", use)
+        current = lc.check(f"{family}-4.0", use)
+        assert older.verdict == current.verdict, f"{family}-{version} vs 4.0 on {use}"
+
+
+@pytest.mark.parametrize("spdx", _PRE_4_0_CC_IDS)
+def test_pre_4_0_cc_does_not_assert_patent_or_trademark_exclusions(spdx):
+    """Pre-4.0 CC is SILENT on patents and on the licensor's trademarks.
+
+    4.0 added "Patent and trademark rights are not licensed under this Public
+    License"; 1.0-3.0 have no equivalent, and their only trademark clause disclaims
+    *Creative Commons'* marks. Copying 4.0's limitations wholesale would assert an
+    exclusion the text never makes — the same reasoning that omits `patent-use` from
+    OGL-UK-3.0. Warranty and liability ARE disclaimed, so they stay.
+    """
+    prof = lc.LICENSE_MATRIX[spdx]
+    assert "patent-use" not in prof.limitations
+    assert "trademark-use" not in prof.limitations
+    assert prof.limitations == frozenset({"liability", "warranty"})
+    # ...and this is a real difference from 4.0, not a copy of it.
+    assert "patent-use" in lc.LICENSE_MATRIX[f"{spdx.rsplit('-', 1)[0]}-4.0"].limitations
+
+
+def test_intent_vocabulary_is_pinned_because_pre_4_0_profiles_depend_on_it():
+    """Guard: the pre-4.0 CC profiles are only accurate for THIS intent vocabulary.
+
+    Those licences genuinely differ from 4.0 on attribution mechanics and the
+    DRM-circumvention clause. Those deltas fall outside the choosealicense flag
+    vocabulary, which is why approximating them is defensible today. Add an intent
+    that turns on either one and the approximation silently becomes wrong — there is
+    nothing in the data structure that would notice.
+
+    So the intent set is pinned here. If this test fails you are changing INTENTS:
+    re-read the pre-4.0 legal code for the areas your new intent touches and either
+    encode the difference or drop those profiles. Do not just update the constant.
+    """
+    assert lc.INTENTS == {
+        "commercial": ("commercial-use",),
+        "redistribute": ("distribution",),
+        "modify": ("modifications",),
+        "ml-training": ("commercial-use", "modifications"),
+    }
+
+
+def test_ported_cc_ids_fold_onto_the_unported_profile():
+    """SPDX has jurisdiction ports (CC-BY-3.0-US); the normalizer folds them onto the
+    unported id, so the hand-encoded profile answers for them too. Pinned because it is
+    the assumption most likely to be wrong for a ported jurisdiction."""
+    assert lc.normalize_spdx("CC BY 3.0 US") == "CC-BY-3.0"
+    assert lc.normalize_spdx("https://creativecommons.org/licenses/by/3.0/us/") == "CC-BY-3.0"
+    assert lc.check("CC BY 3.0 US", "commercial").verdict == "ALLOW"
+
+
 def test_matrix_covers_required_licences():
     expected = {
         "CC0-1.0",
@@ -543,10 +631,20 @@ def test_combinations_creative_commons_does_not_issue_stay_none(elements: list[s
 
 
 def test_identified_but_unassessed_reports_the_id_and_reviews() -> None:
-    v = lc.check("https://creativecommons.org/licenses/by-sa/3.0/", "redistribute")
+    """The identified-but-unassessed branch, exercised on a licence that really is one.
+
+    This used CC-BY-SA-3.0 until the pre-4.0 CC family was hand-encoded, which made it
+    assessed and would have quietly turned this into a test of nothing. OGL-UK-1.0 is
+    the honest replacement: the URL normalizer yields the id, but only OGL-UK-3.0 has a
+    hand-encoded profile, so 1.0 still lands on this branch.
+    """
+    v = lc.check(
+        "http://www.nationalarchives.gov.uk/doc/open-government-licence/version/1/",
+        "redistribute",
+    )
     assert v.verdict == "REVIEW"
-    assert v.spdx_id == "CC-BY-SA-3.0"  # identified...
-    assert "CC-BY-SA-3.0" not in lc.LICENSE_MATRIX  # ...but not assessed
+    assert v.spdx_id == "OGL-UK-1.0"  # identified...
+    assert "OGL-UK-1.0" not in lc.LICENSE_MATRIX  # ...but not assessed
     assert "no compatibility profile" in v.reason
     # No flags were invented for it.
     assert "grants" not in v.reason and "does not grant" not in v.reason

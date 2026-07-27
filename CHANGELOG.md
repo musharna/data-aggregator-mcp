@@ -6,6 +6,37 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Creative Commons 1.0/2.0/2.5/3.0 are now assessed, not merely identified.** The
+  normalizer already recognized `CC BY 3.0`, but only the 4.0 family carried
+  compatibility flags, so a licence that plainly permits commercial use returned
+  REVIEW — "identified as CC-BY-3.0, but no compatibility profile is bundled" — while
+  the identical 4.0 licence returned ALLOW. That is the same conservative-but-misleading
+  answer that source-level blanket licences rejected, and it covered **24 SPDX ids**
+  (6 CC families × 4 pre-4.0 versions), the versions that dominate older repository
+  records. All 24 are now hand-encoded from the licence texts, following the
+  OGL-UK-3.0 precedent.
+
+  The grants a CC family makes did not change across versions — BY permits commercial
+  use, modification, distribution; NC removes commercial use; ND removes modification;
+  SA adds share-alike — so the verdicts match their 4.0 counterparts on every intent,
+  and that equivalence is asserted per family and version rather than assumed.
+
+  The profiles are **not** copies of the 4.0 ones. Pre-4.0 CC says nothing about
+  patents, and its only trademark clause disclaims _Creative Commons'_ own marks
+  rather than the licensor's; the explicit "Patent and trademark rights are not
+  licensed under this Public License" sentence arrived in 4.0. So `patent-use` and
+  `trademark-use` are omitted here — silence is not an explicit exclusion, the same
+  rule already applied to OGL-UK-3.0. Since verdicts derive from permissions alone,
+  this is reported accurately without changing any answer.
+
+  The real 3.0-vs-4.0 differences — attribution mechanics and the DRM-circumvention
+  clause — fall outside the modeled flag vocabulary, so the approximation holds only
+  for the current intent set. A guard test pins that set: adding an intent which turns
+  on either area fails loudly instead of silently mis-answering. `OGL-UK-1.0`/`2.0`
+  remain identified-but-unassessed and now carry the coverage for that branch.
+
 ## [0.43.0] - 2026-07-27
 
 ### Added
@@ -27,7 +58,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   where it matters. Every declared default must be a canonical SPDX id present in
   the compatibility matrix and must carry its policy citation, enforced at test
   time — an unsourced guess about someone else's data is worse than "unknown".
-
 
 - **The README now documents the streamable HTTP transport.** `--transport http`
   and every flag that goes with it (`--host`, `--port`, `--allow-host`,

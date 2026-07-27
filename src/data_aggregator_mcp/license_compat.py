@@ -223,6 +223,92 @@ LICENSE_MATRIX: dict[str, LicenseProfile] = {
 }
 
 
+# --- pre-4.0 Creative Commons (1.0 / 2.0 / 2.5 / 3.0) ---------------------------------
+# Hand-encoded from the licence texts, following the OGL-UK-3.0 precedent. These are
+# GENERATED from six family shapes rather than written out 24 times, so the one claim
+# that matters — that they differ from their 4.0 counterparts ONLY in the limitations —
+# is structural and cannot drift entry by entry.
+#
+# Verified against the legal code (creativecommons.org/licenses/<id>/<ver>/legalcode,
+# read 2026-07-27), spot-checking BY 1.0 §3/§4/§5/§6/§8, BY 2.0 §3/§4.2/§5/§6, BY 3.0
+# §3/§4(b)/§5/§6/§8(f), and BY-NC-ND 3.0 for the NC and ND restrictions:
+#
+#   - Grants are the SAME as 4.0 per family: BY permits commercial-use, modifications,
+#     distribution, private-use; NC removes commercial-use; ND removes modifications;
+#     SA adds the same-license condition; attribution is required throughout.
+#   - Warranty (BY 3.0 §5) and liability (§6) are disclaimed, as in 4.0.
+#   - PATENTS ARE NOT ADDRESSED in any pre-4.0 version, and the only trademark clause
+#     (e.g. BY 3.0 §8(f)) disclaims *Creative Commons'* own marks, NOT the licensor's.
+#     4.0 added the explicit "Patent and trademark rights are not licensed" sentence.
+#     So `patent-use` and `trademark-use` are OMITTED here — silence is not an explicit
+#     exclusion, the same rule applied to OGL-UK-3.0 above.
+#
+# Because `check()` decides from `permissions` alone, these yield the same verdicts as
+# their 4.0 counterparts; the limitation difference is reported, never fabricated.
+#
+# The 1.0/2.0/2.5/3.0 divergences that ARE real — attribution mechanics and the
+# DRM-circumvention clause — fall outside this flag vocabulary entirely, so they cannot
+# be represented here either way. That approximation is only valid for the CURRENT
+# ``INTENTS`` vocabulary; ``tests/test_license_compat.py`` pins it so that adding an
+# intent which touches those areas fails loudly instead of silently mis-answering.
+#
+# Jurisdiction note: ``normalize_spdx`` folds ported ids (e.g. CC-BY-3.0-US) onto the
+# unported id, so these profiles also answer for ported variants. Porting could alter
+# terms in a given jurisdiction, which is a reason the verdict stays an advisory.
+_PRE_4_0_CC_SHAPES: dict[str, tuple[frozenset[str], frozenset[str]]] = {
+    # family suffix -> (permissions, conditions)
+    "CC-BY": (
+        frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
+        frozenset({"include-copyright"}),
+    ),
+    "CC-BY-SA": (
+        frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
+        frozenset({"include-copyright", "same-license"}),
+    ),
+    "CC-BY-NC": (
+        frozenset({"modifications", "distribution", "private-use"}),
+        frozenset({"include-copyright"}),
+    ),
+    "CC-BY-ND": (
+        frozenset({"commercial-use", "distribution", "private-use"}),
+        frozenset({"include-copyright"}),
+    ),
+    "CC-BY-NC-SA": (
+        frozenset({"modifications", "distribution", "private-use"}),
+        frozenset({"include-copyright", "same-license"}),
+    ),
+    "CC-BY-NC-ND": (
+        frozenset({"distribution", "private-use"}),
+        frozenset({"include-copyright"}),
+    ),
+}
+
+# Warranty and liability are disclaimed in every pre-4.0 version; patent-use and
+# trademark-use are deliberately absent (see above).
+_PRE_4_0_CC_LIMITATIONS = frozenset({"liability", "warranty"})
+_PRE_4_0_CC_VERSIONS = ("1.0", "2.0", "2.5", "3.0")
+
+
+def _pre_4_0_cc_profiles() -> dict[str, LicenseProfile]:
+    """Expand the six family shapes across the four pre-4.0 versions.
+
+    A function rather than a module-level loop so the iteration variables do not
+    leak into the module namespace.
+    """
+    return {
+        f"{family}-{version}": LicenseProfile(
+            permissions=permissions,
+            conditions=conditions,
+            limitations=_PRE_4_0_CC_LIMITATIONS,
+        )
+        for family, (permissions, conditions) in _PRE_4_0_CC_SHAPES.items()
+        for version in _PRE_4_0_CC_VERSIONS
+    }
+
+
+LICENSE_MATRIX.update(_pre_4_0_cc_profiles())
+
+
 # --- intended-use → required permission flags -----------------------------------------
 # ``ml-training`` maps to commercial-use + modifications: training a model is a derivative
 # use that is usually commercial, so ND/NC licences DENY. This is OUR stated interpretation,
