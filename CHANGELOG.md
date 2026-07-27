@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-07-27
+
 ### Added
 
 - **Source-level blanket licences, for sources that publish one.** Measuring the
@@ -25,6 +27,29 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   where it matters. Every declared default must be a canonical SPDX id present in
   the compatibility matrix and must carry its policy citation, enforced at test
   time — an unsourced guess about someone else's data is worse than "unknown".
+
+
+- **The README now documents the streamable HTTP transport.** `--transport http`
+  and every flag that goes with it (`--host`, `--port`, `--allow-host`,
+  `--allow-origin`, `--stateless`, `--json-response`), the `/mcp/` endpoint and
+  the `307` that `/mcp` redirects with, the always-on DNS-rebinding rules —
+  including the deliberate refusal to start on a non-loopback bind without an
+  explicit `--allow-host`, and the `421` a forged `Host` header earns — and that
+  `fetch(dest=…)` writes to the **server's** filesystem, not the caller's. The
+  transport itself shipped in 0.42.0, but appeared nowhere someone installing the
+  package would look: the README is also what PyPI renders, so the feature was
+  effectively undiscoverable.
+- **Four environment variables the code reads but nothing documented**:
+  `DATA_GOV_API_KEY`, `NCBI_EMAIL`, `DATAVERSE_BASE_URL`, and `CACHE_TTL_SECONDS`
+  are now in the README configuration list, and the latter three are declared in
+  `server.json` so the registry entry lists them too. `DATA_GOV_API_KEY` mattered
+  most: without it the data.gov source silently shares the public `DEMO_KEY`, which
+  is capped around 30 requests/hour per IP.
+
+### Changed
+
+- The configuration section said "Both optional" while listing four groups of
+  variables.
 
 ### Fixed
 
@@ -56,30 +81,6 @@ so no compatibility profile can be selected`. `spdx_id` stays `None`, because th
   fabrication this module exists to refuse. New `identify_cc_family` is the third
   identification outcome the module lacked — not "unknown", not "identified
   precisely", but "family known, version not".
-
-### Added
-
-- **The README now documents the streamable HTTP transport.** `--transport http`
-  and every flag that goes with it (`--host`, `--port`, `--allow-host`,
-  `--allow-origin`, `--stateless`, `--json-response`), the `/mcp/` endpoint and
-  the `307` that `/mcp` redirects with, the always-on DNS-rebinding rules —
-  including the deliberate refusal to start on a non-loopback bind without an
-  explicit `--allow-host`, and the `421` a forged `Host` header earns — and that
-  `fetch(dest=…)` writes to the **server's** filesystem, not the caller's. The
-  transport itself shipped in 0.42.0, but appeared nowhere someone installing the
-  package would look: the README is also what PyPI renders, so the feature was
-  effectively undiscoverable.
-- **Four environment variables the code reads but nothing documented**:
-  `DATA_GOV_API_KEY`, `NCBI_EMAIL`, `DATAVERSE_BASE_URL`, and `CACHE_TTL_SECONDS`
-  are now in the README configuration list, and the latter three are declared in
-  `server.json` so the registry entry lists them too. `DATA_GOV_API_KEY` mattered
-  most: without it the data.gov source silently shares the public `DEMO_KEY`, which
-  is capped around 30 requests/hour per IP.
-
-### Changed
-
-- The configuration section said "Both optional" while listing four groups of
-  variables.
 
 ## [0.42.0] - 2026-07-25
 
