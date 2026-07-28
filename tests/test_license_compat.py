@@ -12,6 +12,7 @@ from __future__ import annotations
 import inspect
 import os
 import re
+import time
 
 import pytest
 
@@ -553,6 +554,83 @@ def test_licence_domain_cannot_be_spoofed_by_substring(spoofed: str) -> None:
     malformed upstream metadata.
     """
     assert lc.normalize_spdx(spoofed) is None
+
+
+@pytest.mark.parametrize(
+    "spoofed",
+    [
+        # userinfo: everything before "@" is a username, never the host.
+        "http://creativecommons.org@evil.example.com/licenses/by/4.0/",
+        "https://creativecommons.org:8080@evil.example.com/licenses/by/4.0/",
+        "https://creativecommons.org:65535@evil.example.com/licenses/by/4.0/",
+        "http://user:pw@creativecommons.org@evil.example.com/licenses/by/4.0/",
+        # fragment / query: content after "#" or "&" is not a host either.
+        "https://evil.example.com#creativecommons.org/licenses/by/4.0/",
+        "https://evil.example.com/?a=1&b=creativecommons.org/licenses/by/4.0/",
+        "https://evil.example.com#opendatacommons.org/licenses/odbl/",
+    ],
+)
+def test_licence_domain_cannot_be_spoofed_by_url_structure(spoofed: str) -> None:
+    """The vectors the substring fix above did NOT close.
+
+    `host_matches` killed "domain sits in someone else's path", and the test above pins
+    that. But the scanner finds host-shaped tokens anywhere, so it split ONE url into TWO
+    at a character it could not consume — and each half then looked like a standalone url:
+    the userinfo of `creativecommons.org@evil.example.com` was read as the host, as was the
+    fragment of `evil.example.com#creativecommons.org/...`. Every input here returned a
+    real `ALLOW CC-BY-4.0` for a url pointing at an attacker's site.
+
+    Generalizable: a fix that repels the attack you thought of can still be partial. This
+    one guarded the matcher while the TOKENIZER stayed confused.
+    """
+    assert lc.normalize_spdx(spoofed) is None
+    # The harm was never the id in isolation — it was the grant that followed.
+    assert lc.check(spoofed, "commercial").verdict != "ALLOW"
+
+
+def test_real_licence_urls_still_resolve() -> None:
+    """Positive control for both spoofing tests.
+
+    Rejecting everything would satisfy them and break the feature, so the legitimate
+    shapes are asserted in their own right: scheme'd, scheme-less, and mentioned in prose.
+    """
+    assert lc.normalize_spdx("https://creativecommons.org/licenses/by/4.0/") == "CC-BY-4.0"
+    assert lc.normalize_spdx("creativecommons.org/publicdomain/zero/1.0") == "CC0-1.0"
+    assert lc.normalize_spdx("http://creativecommons.org/licenses/by-nc/3.0/") == "CC-BY-NC-3.0"
+    assert (
+        lc.normalize_spdx("Licensed under https://creativecommons.org/licenses/by-sa/4.0/ terms")
+        == "CC-BY-SA-4.0"
+    )
+    assert lc.host_matches("https://wiki.creativecommons.org/x", "creativecommons.org")
+    assert lc.check("https://creativecommons.org/licenses/by/4.0/", "commercial").verdict == "ALLOW"
+
+
+def test_host_scan_does_not_blow_up_on_hostile_input() -> None:
+    """The host scanner was quadratic, and licence text is attacker-supplied.
+
+    `(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+` nests a star inside a plus, so "by-by-by-…"
+    backtracked: 12 KB cost ~1.5 s of CPU, and `host_matches` runs it three times per
+    `normalize_spdx`. Anyone can upload a record with a licence field on Zenodo,
+    HuggingFace or OpenML, so a search page of such records was minutes of wall clock.
+
+    The bound is deliberately loose — 40x the measured post-fix cost — because this must
+    fail on a quadratic regression, not on a slow CI runner.
+    """
+    payload = "cc " + ("by-" * 4000) + "4.0"  # 12 KB, the size that used to cost ~1.5 s
+    start = time.perf_counter()
+    lc.normalize_spdx(payload)
+    elapsed = time.perf_counter() - start
+    assert elapsed < 0.5, f"host scan took {elapsed:.2f}s on 12 KB — quadratic regression?"
+
+
+def test_host_scan_is_length_capped() -> None:
+    """Belt and braces with the bounded regex: past the cap we are looking at licence
+    TEXT, not an identifier, and an attacker-supplied field has no natural size limit."""
+    buried = "x" * (lc._MAX_SCAN_CHARS + 10) + " https://creativecommons.org/licenses/by/4.0/"
+    assert lc.url_hosts(buried) == []
+    # Immediately before the cap it is still found — the cap is the reason, not an accident.
+    near = "x" * 100 + " https://creativecommons.org/licenses/by/4.0/"
+    assert "creativecommons.org" in lc.url_hosts(near)
 
 
 @pytest.mark.parametrize(

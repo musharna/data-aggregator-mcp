@@ -6,6 +6,29 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A hostile licence URL could mint a permissive verdict.** `host_matches` already
+  rejected a domain sitting in someone else's path, but the scanner that feeds it splits a
+  URL at any character it cannot consume — so one URL became two tokens and each half was
+  read as a host. `http://creativecommons.org@evil.example.com/licenses/by/4.0/` returned a
+  real `CC-BY-4.0` and an **ALLOW** for commercial use: the userinfo was read as the host.
+  So did the `:8080@` port form, and `https://evil.example.com#creativecommons.org/…`,
+  where the fragment matched. Open Data Commons URLs were affected the same way.
+
+  This matters because licence strings are record data, and anyone can upload a record and
+  set that field on Zenodo, HuggingFace or OpenML — so the verdict, the access flag and the
+  FAIR score were all derivable from attacker-controlled text. A token is now rejected when
+  the surrounding URL syntax proves it is not a host: followed by `@` (optionally via a
+  port) means userinfo, and preceded by `@ # ? & =` means it sits inside another URL.
+
+- **The same scanner was quadratic on attacker-supplied text.** Its host-label group nested
+  a star inside a plus, so a 12 KB licence field of `by-by-by-…` cost ~1.5 s of CPU — and
+  it runs three times per licence check, so a page of such records was minutes of wall
+  clock. Every repetition is now bounded by DNS's own limits (label ≤ 63 chars, ≤ 8
+  labels), and the scan is length-capped: 12 KB now costs ~12 ms. A test fails on a
+  quadratic regression rather than merely on being slow.
+
 ## [0.45.0] - 2026-07-28
 
 ### Fixed
