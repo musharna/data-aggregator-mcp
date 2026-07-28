@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-07-28
+
 ### Added
 
 - **Creative Commons 1.0/2.0/2.5/3.0 are now assessed, not merely identified.** The
