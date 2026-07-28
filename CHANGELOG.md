@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.45.2] - 2026-07-28
+
 ### Fixed
 
 - **A record could make the server read addresses the caller cannot reach.** `operate` and

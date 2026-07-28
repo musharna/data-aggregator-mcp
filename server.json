@@ -7,13 +7,13 @@
     "url": "https://github.com/musharna/data-aggregator-mcp",
     "source": "github"
   },
-  "version": "0.45.1",
+  "version": "0.45.2",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "data-aggregator-mcp",
-      "version": "0.45.1",
+      "version": "0.45.2",
       "runtimeHint": "uvx",
       "transport": { "type": "stdio" },
       "environmentVariables": [
