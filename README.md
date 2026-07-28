@@ -9,6 +9,7 @@ registries, and literature — behind a single normalized model.**
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/musharna/data-aggregator-mcp/blob/main/LICENSE)
 [![CI](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml)
 [![Glama](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp/badges/score.svg)](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21636332.svg)](https://doi.org/10.5281/zenodo.21636332)
 
 `search` one query across **17 sources** — **Zenodo, DataCite** (Dryad /
 Figshare / Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics**
