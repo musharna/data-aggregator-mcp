@@ -233,6 +233,11 @@ SOURCES: tuple[SourceSpec, ...] = (
         operable=True,
         fetchable_notes="Data objects fetched from Member Nodes with per-object MD5/SHA-256 verification.",
         id_example="dataone:doi:10.18739/A26336",
+        # Deliberately NO default_license. DataONE is a FEDERATION — each Member Node sets
+        # its own terms — so there is no operator-level policy to cite. Its Solr index has
+        # no licence field at all (`licenseName` / `licenseUrl` return "undefined field"),
+        # only `rightsHolder`, which is populated on 100% of ~3.36M records but names the
+        # rights HOLDER, not a grant. Reading it as a licence would be a fabrication.
         description="DataONE federation of environmental & earth-science repositories (KNB, Arctic Data Center, PANGAEA, TERN, ...).",
     ),
     # GBIF DOIs share the 10.15468 DataCite prefix — the native must precede datacite.
@@ -278,6 +283,17 @@ SOURCES: tuple[SourceSpec, ...] = (
         fetchable_notes="H5AD/RDS assets stream from datasets.cellxgene.cziscience.com (direct URLs, unverified — no checksum in the API); the per-collection manifest is capped at 200 files for large atlases.",
         id_example="cellxgene:af893e86-8e9f-41f1-a474-ef05359b1fb7",
         description="CZ CELLxGENE Discover — single-cell datasets grouped by collection (one publication DOI per collection); search filters on tissue/disease/organism/assay, resolve attaches the H5AD/RDS download manifest.",
+        # The curation API exposes NO licence field anywhere — verified across all 386
+        # published collections and their nested dataset objects, not a single sample — so
+        # every cellxgene record is silent and this default always applies. CZI publishes
+        # the licence unilaterally as a condition of submission ("anyone will be able to
+        # access it subject to a CC-BY 4.0 license"); contributors do not choose it, which
+        # is what separates this from the gwas case below.
+        default_license="CC-BY-4.0",
+        default_license_policy=(
+            "CZ CELLxGENE Discover publishing policy — "
+            "https://cellxgene.cziscience.com/docs/032__Contribute%20and%20Publish%20Data"
+        ),
     ),
     _spec(
         "datacite",
@@ -319,6 +335,13 @@ SOURCES: tuple[SourceSpec, ...] = (
             "kind",
             "cursor",
         ),
+        # Deliberately NO default_license, and this is the clearest case of the four. NCBI
+        # does not merely stay silent, it disclaims the ability to grant: it "places no
+        # restrictions on the use or distribution of the data", but "some submitters of the
+        # original data ... may claim patent, copyright, or other intellectual property
+        # rights", and since "there is no transfer of rights from submitters to NCBI, NCBI
+        # has no rights to transfer to a third party". An operator saying it cannot license
+        # the data is the strongest possible reason not to default one.
         rate_limit="NCBI 3/s (10/s with NCBI_API_KEY); ENA unmetered",
         status="live (discovery; SRA FASTQ + GEO supplementary fetch on resolve)",
         fetchable="per-sub-source",
@@ -377,6 +400,10 @@ SOURCES: tuple[SourceSpec, ...] = (
         fetchable="per-repo",
         fetchable_notes="PRIDE + MetaboLights records are fetchable (unverified - no upstream checksum); MassIVE/Metabolomics Workbench/GNPS/PeptideAtlas are discovery-only.",
         id_example="omicsdi:pride:PXD000001",
+        # Deliberately NO default_license, for the same reason as dataone: OmicsDI is an
+        # INDEX over other repositories (PRIDE, MetaboLights, MassIVE, GNPS, ...), so the
+        # terms belong to whichever repo the record came from — the `source` field says
+        # which. Its search payload carries no rights key of any kind.
         description="Omics Discovery Index - proteomics & metabolomics studies; restricted to the mass-spec modality repos not already covered by the omics leg.",
     ),
     _spec(
@@ -474,6 +501,12 @@ SOURCES: tuple[SourceSpec, ...] = (
         operable=False,
         fetchable_notes="Study files stream from www.ebi.ac.uk/biostudies/files (302 -> FIRE). UNVERIFIED: the API publishes no md5/sha256 for study files, so fetch cannot check integrity here the way Zenodo/ENA fetches can.",
         id_example="biostudies:E-MTAB-12595",
+        # Deliberately NO default_license. Studies carry no licence attribute (checked
+        # across S-BSST/S-BIAD/E-MTAB submissions), but EMBL-EBI's terms are explicitly NOT
+        # a grant: it "places no additional restrictions on the use or redistribution of
+        # the data ... other than those provided by the original data owners", and
+        # per-resource terms prevail on conflict. "No additional restrictions" is not the
+        # same as permission, so there is nothing here to default to.
         description="BioStudies (EBI) — functional-genomics studies including the ArrayExpress collection; EBI's counterpart to GEO. Resolve surfaces the file manifest, the publication DOI, and sibling accessions (GEO/ENA) that feed relate and cross-source dedup. NOTE: totalHits on the cross-collection search is an ESTIMATE (the API returns isTotalHitsExact=false); it is exact within a single collection.",
     ),
 )

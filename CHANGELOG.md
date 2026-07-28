@@ -6,6 +6,37 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`cellxgene` now answers licence questions instead of reviewing them.** CZ CELLxGENE
+  Discover publishes every dataset under CC-BY 4.0 as a condition of submission, but its
+  curation API exposes no licence field anywhere — verified across all 386 published
+  collections and their nested dataset objects, not a single sample — so every cellxgene
+  record fell through to REVIEW "all-rights-reserved". The archive with the clearest
+  blanket grant was among our most pessimistic answers. It now carries a source-level
+  default, applied only where the record itself is silent, with the policy cited.
+
+  A live test asserts the premise rather than trusting it: if CZI ever adds a licence
+  field, the test fails loudly, because at that point a record-stated licence starts
+  winning and the blanket default needs re-examining.
+
+### Changed
+
+- **Four sources are now documented as deliberately having no blanket licence.** Auditing
+  the remaining licence-less sources found only one qualified, and the reasons the others
+  failed are worth recording in the registry so a future coverage push doesn't "fix" them:
+  - `dataone` and `omicsdi` federate other repositories, so the terms belong to the member
+    repo, not the aggregator. DataONE's Solr index has no licence field at all — the query
+    returns "undefined field" — only `rightsHolder`, which is populated on 100% of ~3.36M
+    records but names the rights _holder_, not a grant.
+  - `omics` (NCBI) and `biostudies` (EMBL-EBI) publish near-identical careful wording: they
+    place no _additional_ restrictions beyond the original data owner's. NCBI goes further
+    and states that because "there is no transfer of rights from submitters to NCBI, NCBI
+    has no rights to transfer to a third party".
+
+  "No additional restrictions" is not permission. Defaulting a licence for these would
+  invent a grant the operator explicitly declined to make. A test pins each of them absent.
+
 ## [0.44.0] - 2026-07-28
 
 ### Added
