@@ -512,9 +512,59 @@ def _looks_like_cc_prose(collapsed: str) -> bool:
 # A URL-ish token: optional scheme, a dotted host, optional path. Used to pull the
 # HOST out of a licence string so domain checks cannot be satisfied by a substring
 # sitting in someone else's path.
+#
+# Every repetition is BOUNDED. The unbounded form
+# ``(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+`` nests a star inside a plus, which backtracks
+# quadratically on input like "by-by-by-…": 12 KB of it cost ~1.5 s, and licence strings
+# come from records that any user can upload on Zenodo/HuggingFace/OpenML. The bounds below
+# are DNS's own limits (label <= 63 chars, and no real licence host is 8 labels deep), so
+# they cost nothing real while making the worst case bounded.
 _URLISH_RE = re.compile(
-    r"(?:https?://)?(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:/[^\s,;)\]]*)?", re.I
+    r"(?:https?://)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){1,8}[a-z]{2,24}"
+    r"(?:/[^\s,;)\]]*)?",
+    re.I,
 )
+
+# Characters that, sitting immediately around a token, prove it is a PIECE of another URL
+# rather than a URL of its own. See _token_is_a_real_host.
+_NOT_A_HOST_BEFORE = frozenset("@#?&=")
+
+# A licence identifier is short. Past this, we are looking at a licence TEXT, and scanning
+# it for host tokens buys nothing — while an attacker-supplied field has no natural size
+# limit at all. Belt and braces with the bounded regex above.
+_MAX_SCAN_CHARS = 8192
+
+
+def _token_is_a_real_host(text: str, start: int, end: int) -> bool:
+    """Reject a token that URL syntax says is not a host.
+
+    The scanner finds host-shaped substrings anywhere, which is what lets a bare
+    ``creativecommons.org/licenses/by/4.0`` work. The cost is that it happily splits ONE
+    URL into TWO tokens at a character it cannot consume, and each half then looks like a
+    standalone URL:
+
+    - ``http://creativecommons.org@evil.com/…`` — the token ends at ``@``, so the
+      USERINFO is read as the host. The real host is ``evil.com``.
+    - ``https://evil.com#creativecommons.org/…`` — the fragment is read as a bare host.
+
+    Both previously produced ``ALLOW CC-BY-4.0`` for a URL pointing at an attacker's site.
+    A token followed by ``@`` is userinfo; a token preceded by ``@#?&=`` sits inside
+    another URL's userinfo, fragment or query. Neither is ever a host.
+
+    The ``@`` may be separated from the token by a port, because the scanner stops before
+    ``:`` — ``creativecommons.org:8080@evil.com`` is still userinfo, and checking only the
+    single next character missed it.
+    """
+    cursor = end
+    if cursor < len(text) and text[cursor] == ":":
+        digits = cursor + 1
+        while digits < len(text) and text[digits].isdigit():
+            digits += 1
+        if digits > cursor + 1:  # an actual :port, not a bare colon
+            cursor = digits
+    if cursor < len(text) and text[cursor] == "@":
+        return False
+    return not (start > 0 and text[start - 1] in _NOT_A_HOST_BEFORE)
 
 
 def url_hosts(text: str) -> list[str]:
@@ -523,10 +573,14 @@ def url_hosts(text: str) -> list[str]:
     A licence field is free-form: it may be a bare URL, a bare host+path with no
     scheme (``creativecommons.org/publicdomain/zero/1.0``), or prose that merely
     mentions one. All three need to work, which is why this scans for tokens rather
-    than parsing the whole string as a single URL.
+    than parsing the whole string as a single URL — and why each token has to be checked
+    against its neighbours before it counts as a host (``_token_is_a_real_host``).
     """
     hosts: list[str] = []
-    for token in _URLISH_RE.findall(text):
+    for m in _URLISH_RE.finditer(text[:_MAX_SCAN_CHARS]):
+        if not _token_is_a_real_host(text, m.start(), m.end()):
+            continue
+        token = m.group(0)
         candidate = token if "://" in token else "//" + token
         try:
             host = urlsplit(candidate).hostname
