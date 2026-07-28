@@ -628,9 +628,11 @@ def test_host_scan_is_length_capped() -> None:
     TEXT, not an identifier, and an attacker-supplied field has no natural size limit."""
     buried = "x" * (lc._MAX_SCAN_CHARS + 10) + " https://creativecommons.org/licenses/by/4.0/"
     assert lc.url_hosts(buried) == []
-    # Immediately before the cap it is still found — the cap is the reason, not an accident.
+    # Well inside the cap it is still found — the cap is the reason, not an accident.
+    # Compared as an exact list: membership would also pass if a phantom host were
+    # returned alongside the real one, which is the entire failure mode this PR fixes.
     near = "x" * 100 + " https://creativecommons.org/licenses/by/4.0/"
-    assert "creativecommons.org" in lc.url_hosts(near)
+    assert lc.url_hosts(near) == ["creativecommons.org"]
 
 
 @pytest.mark.parametrize(
