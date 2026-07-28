@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import inspect
 import os
+import re
 
 import pytest
 
@@ -942,11 +943,53 @@ def test_registry_defaults_are_only_the_ones_with_a_verified_policy() -> None:
         "CC-BY-4.0",
         "UniProt licence — https://www.uniprot.org/help/license",
     )
+    lic, policy = sources.default_license_for("cellxgene")
+    assert lic == "CC-BY-4.0"
+    assert policy is not None and "cellxgene.cziscience.com" in policy
     # GWAS is mostly CC0 but individual studies carry their own Usage License, so a blanket
     # default would be wrong exactly where it matters. Deliberately absent.
     assert sources.default_license_for("gwas") == (None, None)
     assert sources.default_license_for("nope") == (None, None)
     assert sources.default_license_for(None) == (None, None)
+
+
+@pytest.mark.parametrize("source", ["dataone", "omicsdi", "omics", "biostudies", "gwas"])
+def test_sources_without_a_blanket_grant_stay_absent(source: str) -> None:
+    """Five sources state no per-record licence yet still get NO default, and the reason is
+    the same in every case: nobody with authority granted one.
+
+    - dataone / omicsdi federate other repositories, so the terms are the member repo's.
+    - omics (NCBI) and biostudies (EMBL-EBI) both publish the *same* careful wording —
+      they place no ADDITIONAL restrictions beyond the original data owner's. NCBI goes
+      further and says outright that it has no rights to transfer.
+
+    "No additional restrictions" is not permission. Defaulting a licence here would invent
+    a grant the operator explicitly declined to make, which is the one thing this module
+    refuses to do — so this test exists to keep a future coverage push from "fixing" them.
+    """
+    from data_aggregator_mcp import sources
+
+    assert sources.default_license_for(source) == (None, None)
+
+
+def test_cellxgene_default_answers_the_intent_it_was_added_for() -> None:
+    """Wired end to end the way server.py does it, not just asserted in the registry.
+
+    Before this, every cellxgene record returned REVIEW "all-rights-reserved" for every
+    intent, because the curation API exposes no licence field on any of its 386 published
+    collections — so the archive that publishes ALL its data under CC-BY 4.0 was our most
+    consistently pessimistic answer.
+    """
+    from data_aggregator_mcp import sources
+
+    default_lic, policy = sources.default_license_for("cellxgene")
+    for intent in lc.INTENTS:
+        v = lc.check(None, intent, source_default=default_lic, source_policy=policy)
+        assert v.verdict == "ALLOW", f"{intent}: {v.reason}"
+        assert v.spdx_id == "CC-BY-4.0"
+        # The record itself said nothing, and that must stay visible.
+        assert v.license_raw is None
+        assert policy is not None and policy.split(" — ")[-1] in v.reason
 
 
 def test_every_declared_default_is_assessable_and_cited() -> None:
@@ -958,3 +1001,38 @@ def test_every_declared_default_is_assessable_and_cited() -> None:
         assert lc.normalize_spdx(lic) == lic, f"{name}: {lic!r} is not a canonical SPDX id"
         assert lic in lc.LICENSE_MATRIX, f"{name}: {lic!r} has no compatibility profile"
         assert policy and "https://" in policy, f"{name}: default licence has no citation"
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_cellxgene_really_states_no_licence() -> None:
+    """The cellxgene default rests on a claim about someone else's API — check it for real.
+
+    A source default is only correct while the source stays silent. The moment CZI adds a
+    licence field, a record-stated licence would start winning (which is the designed
+    behaviour), and the interesting case becomes a record that disagrees with the blanket
+    policy. This fails loudly at that transition instead of leaving a stale assumption
+    buried in a registry comment.
+    """
+    import httpx
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.get("https://api.cellxgene.cziscience.com/curation/v1/collections")
+    r.raise_for_status()
+    collections = r.json()
+    # Positive control: a broken harness (empty page, shape change) must not read as
+    # "no licence field found".
+    assert collections, "cellxgene returned no collections — harness suspect"
+    assert "collection_id" in collections[0], "cellxgene payload shape changed — harness suspect"
+
+    pattern = re.compile(r"licen[cs]|rights|terms|copyright", re.I)
+    offenders: set[str] = set()
+    for coll in collections:
+        offenders.update(k for k in coll if pattern.search(k))
+        for ds in coll.get("datasets") or []:
+            offenders.update(f"datasets/{k}" for k in ds if pattern.search(k))
+    assert not offenders, (
+        f"cellxgene now exposes licence-ish fields {sorted(offenders)} — re-check whether the "
+        f"blanket CC-BY-4.0 default is still the right answer, and whether the adapter should "
+        f"read the field instead."
+    )
