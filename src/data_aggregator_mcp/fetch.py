@@ -11,7 +11,7 @@ from pathlib import Path
 
 import httpx
 
-from data_aggregator_mcp import archive
+from data_aggregator_mcp import archive, egress
 from data_aggregator_mcp.errors import FetchTooLargeError, NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import DataResource, FetchResult, FileEntry
 
@@ -119,6 +119,9 @@ async def _download_one(
             f"fetch {f.name}: URL scheme {_scheme!r} is not allowed "
             f"(only http/https); refusing to fetch {f.url}"
         )
+    # The scheme says how, not where. f.url is uploader-controlled on every source that
+    # accepts uploads, so a record can point it into private address space.
+    await egress.assert_public_url(f.url, what=f"fetch {f.name}")
     # Sanitize: f.name is uploader-controlled (Zenodo file key). Reduce to a
     # bare basename so it cannot escape the target dir via path traversal.
     safe_name = Path(f.name).name
