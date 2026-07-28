@@ -29,15 +29,35 @@ The first OIDC publish (step 3) creates the project automatically.
 
 ### 3. Cut the release (fires `.github/workflows/publish.yml`)
 
-Set the version in **all four** places to the release value —
-`pyproject.toml`, `src/data_aggregator_mcp/__init__.py`, and `server.json`
-(both top-level `version` **and** `packages[0].version`). Then:
+Set the version in **all five** places to the release value:
+
+| file                                  | field                                |
+| ------------------------------------- | ------------------------------------ |
+| `pyproject.toml`                      | `version`                            |
+| `src/data_aggregator_mcp/__init__.py` | `__version__`                        |
+| `server.json`                         | top-level `version`                  |
+| `server.json`                         | `packages[0].version`                |
+| `CITATION.cff`                        | `version` (and bump `date-released`) |
+
+`CITATION.cff` is the newest and the easiest to forget — it arrived after this
+list was written and said "four". CI enforces it (`.github/workflows/citation.yml`
+fails when it disagrees with `pyproject.toml`), so a miss shows up as a red
+release PR rather than a bad publish — but only if you notice before tagging.
+`.zenodo.json` carries no version field; it does not need touching.
+
+Then:
 
 ```bash
-git tag vX.Y.Z
-git push origin main --tags
+git tag -a vX.Y.Z -m vX.Y.Z     # MUST be annotated — --notes-from-tag reads the tag message
+git push origin vX.Y.Z
 gh release create vX.Y.Z --title vX.Y.Z --notes-from-tag
 ```
+
+`git tag -a` matters: a lightweight tag has no message, and `--notes-from-tag`
+then produces empty release notes. Verify with `git cat-file -t vX.Y.Z` — it must
+print `tag`, not `commit`. From a worktree where `main` is checked out elsewhere,
+tag the SHA directly (`git tag -a vX.Y.Z <sha> -F notes.txt`); there is no need to
+check `main` out.
 
 The publish workflow verifies the tag matches the package version, builds the
 wheel + sdist, and uploads to PyPI via OIDC trusted publishing.
