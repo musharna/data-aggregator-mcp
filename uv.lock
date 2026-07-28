@@ -485,7 +485,7 @@ wheels = [
 
 [[package]]
 name = "data-aggregator-mcp"
-version = "0.45.1"
+version = "0.45.2"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

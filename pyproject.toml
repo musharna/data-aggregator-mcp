@@ -1,6 +1,6 @@
 [project]
 name = "data-aggregator-mcp"
-version = "0.45.1"
+version = "0.45.2"
 description = "Research-data acquisition MCP — find and fetch datasets across archives, omics registries, and literature"
 readme = "README.md"
 license = "MIT"

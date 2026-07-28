@@ -24,7 +24,7 @@ identifiers:
 repository-code: "https://github.com/musharna/data-aggregator-mcp"
 url: "https://pypi.org/project/data-aggregator-mcp/"
 license: MIT
-version: 0.45.1
+version: 0.45.2
 date-released: "2026-07-28"
 keywords:
   - research-data
