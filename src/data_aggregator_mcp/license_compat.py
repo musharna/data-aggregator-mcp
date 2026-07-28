@@ -673,6 +673,28 @@ def identify_cc_family(license_str: str | None) -> str | None:
     return "CC-" + "-".join(p.upper() for p in present)
 
 
+_STATED_EXCERPT_CAP = 60
+
+
+def _stated_licence_excerpt(license_str: str | None) -> str | None:
+    """Quote an unrecognized licence string back to the caller, safely.
+
+    Returns None when the record genuinely stated nothing, so the caller can tell the two
+    apart. A licence field is arbitrary upstream text — it can be a whole paragraph, or
+    carry newlines that would wreck a one-line reason — so collapse whitespace and cap the
+    length. Quoted rather than interpolated bare, so an empty-ish or punctuation-only value
+    still reads as a value.
+    """
+    if not license_str:
+        return None
+    collapsed = " ".join(license_str.split())
+    if not collapsed:
+        return None  # whitespace-only is "stated nothing" in every sense that matters
+    if len(collapsed) > _STATED_EXCERPT_CAP:
+        collapsed = collapsed[: _STATED_EXCERPT_CAP - 1].rstrip() + "…"
+    return f"'{collapsed}'"
+
+
 def check(
     license_str: str | None,
     use: str,
@@ -689,8 +711,9 @@ def check(
     ``license_raw`` left None.
 
     - unknown ``use`` (not in ``INTENTS``) → raises ``ValueError`` (caller error, fail loud).
-    - licence absent / unrecognized / not in the matrix → ``REVIEW`` (spdx_id None),
-      reason naming "licence not stated / not recognized; defaults to all-rights-reserved".
+    - licence absent → ``REVIEW`` (spdx_id None), reason "licence not stated".
+    - stated but unrecognized → ``REVIEW`` (spdx_id None), reason quoting the stated value,
+      because a caller can act on a string it can go read and cannot act on "not stated".
     - all required permissions present → ``ALLOW`` (downgraded to ``REVIEW`` when a copyleft
       ``same-license``/``disclose-source`` condition applies to a redistribute/ml-training intent).
     - any required permission missing → ``DENY``, reason naming the missing permission(s).
@@ -734,13 +757,33 @@ def check(
                 ),
                 disclaimer=DISCLAIMER,
             )
+        # "Not stated" and "stated, but we could not read it" are different facts, and the
+        # caller acts on them differently: nothing to chase versus a string worth a look.
+        # They shared one message until OpenML made the cost obvious — it states `Public`
+        # on every dataset, and we answered "licence not stated", so the one lead a caller
+        # had was hidden behind a sentence saying there was no lead. This is the same
+        # correction already applied to the CC-family branch above, generalized.
+        # The verdict does NOT move: `Public` is ambiguous ("publicly available" is not
+        # "public domain"), so REVIEW remains right. Only the explanation gets accurate.
+        if stated := _stated_licence_excerpt(license_str):
+            return LicenseVerdict(
+                use=use,
+                verdict="REVIEW",
+                spdx_id=None,
+                license_raw=license_str,
+                reason=(
+                    f"licence stated as {stated} but not recognized; defaults to "
+                    f"all-rights-reserved — manual review required before this use"
+                ),
+                disclaimer=DISCLAIMER,
+            )
         return LicenseVerdict(
             use=use,
             verdict="REVIEW",
             spdx_id=None,
             license_raw=license_str,
             reason=(
-                "licence not stated / not recognized; defaults to all-rights-reserved — "
+                "licence not stated; defaults to all-rights-reserved — "
                 "manual review required before this use"
             ),
             disclaimer=DISCLAIMER,

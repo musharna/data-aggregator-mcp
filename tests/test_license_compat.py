@@ -677,6 +677,80 @@ def test_identified_but_unassessed_positive_control() -> None:
     assert "no compatibility profile" not in v.reason
 
 
+def test_stated_but_unrecognized_reads_differently_from_not_stated() -> None:
+    """The whole point of the fix: these are different facts and must not share a sentence.
+
+    A caller told "not stated" has nothing to chase. A caller told the record said
+    'Public' has one concrete lead. Both still REVIEW — the verdict was never the problem.
+    """
+    stated = lc.check("Public", "commercial")
+    silent = lc.check(None, "commercial")
+
+    assert stated.verdict == silent.verdict == "REVIEW"
+    assert stated.spdx_id is None and silent.spdx_id is None
+    assert stated.reason != silent.reason, "the two states still share one message"
+
+    assert "'Public'" in stated.reason
+    assert "not recognized" in stated.reason
+    # The old message claimed nothing was stated, while license_raw sat there holding the
+    # value. That contradiction is the bug.
+    assert "not stated" not in stated.reason
+    assert stated.license_raw == "Public"
+
+    assert "not stated" in silent.reason
+    assert silent.license_raw is None
+
+
+def test_openml_public_is_reported_but_not_promoted() -> None:
+    """OpenML states `licence: 'Public'` on every dataset — measured live 2026-07-28.
+
+    REVIEW is the correct verdict and must stay: "publicly available" is not "public
+    domain", so promoting this to CC0-1.0 would invent a specific grant from a vague word.
+    This test exists to make that a deliberate decision rather than an oversight someone
+    later "fixes".
+    """
+    for intent in lc.INTENTS:
+        v = lc.check("Public", intent)
+        assert v.verdict == "REVIEW", f"{intent}: {v.reason}"
+        assert v.spdx_id is None, "'Public' must not be promoted to an SPDX id"
+        assert "'Public'" in v.reason
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["", "   ", "\n\t "],
+)
+def test_whitespace_only_licence_counts_as_not_stated(raw: str) -> None:
+    """A field holding only whitespace stated nothing, however non-empty it looks."""
+    v = lc.check(raw, "commercial")
+    assert v.verdict == "REVIEW"
+    assert "not stated" in v.reason
+    assert "stated as" not in v.reason
+
+
+def test_unrecognized_licence_excerpt_is_bounded_and_single_line() -> None:
+    """A licence field is arbitrary upstream text — it can be a paragraph, or carry
+    newlines that would wreck a one-line reason. Neither may leak into the message."""
+    blob = "Terms of use:\n" + ("x" * 500)
+    v = lc.check(blob, "commercial")
+    assert "\n" not in v.reason
+    assert len(v.reason) < 200, "an upstream blob is being echoed wholesale"
+    assert "…" in v.reason, "a long value should be visibly truncated, not silently cut"
+    # Truncated in the message, but preserved in full where callers can still read it.
+    assert v.license_raw == blob
+
+
+def test_a_stated_but_unrecognized_licence_does_not_fall_back_to_the_source_default() -> None:
+    """The default fills silence only. A record that stated something we could not parse
+    has NOT stated nothing — treating it as silent would let a permissive archive default
+    speak over a record whose actual terms we failed to read."""
+    v = lc.check("Public", "commercial", source_default="CC0-1.0", source_policy=_WWPDB)
+    assert v.verdict == "REVIEW"
+    assert v.spdx_id is None
+    assert v.license_raw == "Public"
+    assert "blanket policy" not in v.reason
+
+
 def test_every_identifiable_licence_is_also_assessable() -> None:
     """If we can name it, we should be able to assess it.
 
