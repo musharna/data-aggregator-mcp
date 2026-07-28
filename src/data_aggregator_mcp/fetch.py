@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import fnmatch
 import hashlib
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,6 +20,8 @@ DEFAULT_MAX_BYTES = 2_000_000_000  # ~2 GB
 DEFAULT_CACHE_DIR = Path.home() / ".cache" / "data-aggregator-mcp"
 _CHUNK = 1 << 16  # 64 KiB
 _MAX_CONCURRENCY = 4  # bounded parallel downloads per resource
+
+_log = logging.getLogger(__name__)
 
 # Declared mimes whose body must NOT be HTML (the classic "paywall/login page
 # served in place of the file" failure for unverified downloads).
@@ -94,6 +97,9 @@ class _Outcome:
     extracted: list[str] = field(default_factory=list)
     bytes: int = 0
     state: str = "downloaded"  # downloaded | resumed | skipped
+    #: The record declared a checksum whose algorithm we cannot compute, so nothing was
+    #: verified. Distinct from "no checksum declared", which is not tracked.
+    checksum_unverifiable: bool = False
 
 
 async def _download_one(
@@ -131,6 +137,19 @@ async def _download_one(
     if not force and _already_complete(out, f):
         return _Outcome(f.name, path=str(out), state="resumed")
     h = _hasher(f.checksum)
+    # A declared checksum we cannot compute is NOT the same as no checksum, and the two
+    # completed identically before this — so a caller could not tell an honoured integrity
+    # claim from a silently ignored one. Reported on the result rather than raised: the
+    # algorithm is upstream's choice (dataone, dryad and zenodo all pass it through), so
+    # DANDI's `dandi-etag` and friends would otherwise turn working fetches into errors.
+    checksum_unverifiable = bool(f.checksum) and h is None
+    if checksum_unverifiable:
+        _log.warning(
+            "fetch %s: record declares checksum %r but its algorithm is not available; "
+            "downloading WITHOUT verification",
+            f.name,
+            f.checksum,
+        )
     written = 0
     first_head = b""
     first_chunk_seen = False
@@ -187,7 +206,12 @@ async def _download_one(
             extracted = [str(m) for m in members]
         complete = True
         return _Outcome(
-            f.name, path=str(out), extracted=extracted, bytes=written, state="downloaded"
+            f.name,
+            path=str(out),
+            extracted=extracted,
+            bytes=written,
+            state="downloaded",
+            checksum_unverifiable=checksum_unverifiable,
         )
     except BaseException:
         if not complete:
@@ -275,6 +299,7 @@ async def fetch_files(
     paths: list[str] = []
     skipped: list[str] = []
     resumed: list[str] = []
+    unverified: list[str] = []
     written_total = 0
     for o in outcomes:
         if o.state == "skipped":
@@ -282,6 +307,8 @@ async def fetch_files(
             continue
         if o.state == "resumed":
             resumed.append(o.name)
+        if o.checksum_unverifiable:
+            unverified.append(o.name)
         if o.path is not None:
             paths.append(o.path)
             paths.extend(o.extracted)
@@ -291,6 +318,13 @@ async def fetch_files(
     paths.sort()
     skipped.sort()
     resumed.sort()
+    unverified.sort()
 
     (target / ".dataresource.json").write_text(resource.model_dump_json(indent=2))
-    return FetchResult(paths=paths, bytes=written_total, skipped=skipped, resumed=resumed)
+    return FetchResult(
+        paths=paths,
+        bytes=written_total,
+        skipped=skipped,
+        resumed=resumed,
+        unverified=unverified,
+    )

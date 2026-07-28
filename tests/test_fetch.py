@@ -624,3 +624,72 @@ async def test_fetch_rejects_file_scheme_url(tmp_path: Path) -> None:
             await fetch_mod.fetch_files(client, resource, dest=str(tmp_path))
     # Nothing should have been written
     assert not list(tmp_path.rglob("passwd"))
+
+
+# --- checksum verification must not fail *silently* ------------------------------------
+
+
+def _one(checksum: str | None, body: bytes) -> DataResource:
+    return DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        files=[FileEntry(name="d.bin", url="https://x/d.bin", checksum=checksum, size=len(body))],
+    )
+
+
+def _serve(body: bytes):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body)
+
+    return httpx.MockTransport(handler)
+
+
+@pytest.mark.parametrize("algo", ["dandi-etag", "notanalgo", "blake3"])
+async def test_unsupported_checksum_algorithm_is_reported_not_swallowed(
+    tmp_path: Path, algo: str
+) -> None:
+    """A declared checksum we cannot compute must not look like a verified download.
+
+    `_hasher` returns None for an unknown algorithm and the verify branch is
+    `if h is not None and f.checksum`, so before this the file completed with no signal at
+    all — indistinguishable from a record that declared nothing. The algorithm is
+    upstream's choice (dataone, dryad and zenodo pass it straight through), so DANDI's
+    `dandi-etag` reaches this for real; raising would break working fetches, hence a report
+    rather than an error.
+    """
+    body = b"content\n"
+    async with httpx.AsyncClient(transport=_serve(body)) as client:
+        out = await fetch_mod.fetch_files(client, _one(f"{algo}:abc", body), dest=str(tmp_path))
+    assert len(out.paths) == 1, "the file should still download"
+    assert out.unverified == ["d.bin"], "an unverifiable checksum must be surfaced"
+
+
+async def test_a_verified_download_is_not_flagged_unverified(tmp_path: Path) -> None:
+    """Positive control: flagging everything would satisfy the test above and be useless."""
+    body = b"content\n"
+    good = "md5:" + hashlib.md5(body).hexdigest()
+    async with httpx.AsyncClient(transport=_serve(body)) as client:
+        out = await fetch_mod.fetch_files(client, _one(good, body), dest=str(tmp_path))
+    assert out.paths and out.unverified == []
+
+
+async def test_no_declared_checksum_is_deliberately_not_listed(tmp_path: Path) -> None:
+    """`unverified` names records whose integrity claim we could not honour. A record that
+    makes no claim is visible from `files[].checksum` already, and listing every one would
+    bury the case that actually misleads."""
+    body = b"content\n"
+    async with httpx.AsyncClient(transport=_serve(body)) as client:
+        out = await fetch_mod.fetch_files(client, _one(None, body), dest=str(tmp_path))
+    assert out.paths and out.unverified == []
+
+
+async def test_a_supported_checksum_that_mismatches_still_raises(tmp_path: Path) -> None:
+    """The control itself must be untouched: where it binds, it still fails loud."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    body = b"content\n"
+    async with httpx.AsyncClient(transport=_serve(body)) as client:
+        with pytest.raises(UpstreamUnavailableError, match="checksum mismatch"):
+            await fetch_mod.fetch_files(client, _one("md5:" + "0" * 32, body), dest=str(tmp_path))

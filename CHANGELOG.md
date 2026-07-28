@@ -6,6 +6,26 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A checksum we could not compute was ignored silently.** `fetch` verifies a declared
+  checksum only when the algorithm is one `hashlib` provides. For anything else — DANDI's
+  `dandi-etag`, or a typo — the download completed with no verification and **no signal**,
+  indistinguishable from a record that declared no checksum at all. A caller who sees a
+  checksum on the record reasonably reads that as a verified download.
+
+  `FetchResult` now carries `unverified`, naming files whose record declared a checksum we
+  could not honour, and a warning is logged when it happens. Records that declare no
+  checksum are deliberately _not_ listed: that is already visible from `files[].checksum`,
+  and listing every one would bury the case that actually misleads.
+
+  Reported rather than raised on purpose. The algorithm is upstream's choice — `dataone`,
+  `dryad` and `zenodo` all pass it straight through — so failing loud would turn working
+  DANDI fetches into errors. Where the checksum _is_ computable, a mismatch still raises,
+  exactly as before.
+
+  This is an additive, defaulted field, so existing consumers are unaffected.
+
 ## [0.45.3] - 2026-07-28
 
 ### Fixed
