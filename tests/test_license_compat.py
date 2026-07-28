@@ -903,6 +903,10 @@ async def test_live_europepmc_licences_are_identified() -> None:
 # licence, answering "all-rights-reserved" is a wrong answer, not a safe one.
 
 _WWPDB = "wwPDB usage policy — https://www.wwpdb.org/about/usage-policies"
+_CELLXGENE = (
+    "CZ CELLxGENE Discover publishing policy — "
+    "https://cellxgene.cziscience.com/docs/032__Contribute%20and%20Publish%20Data"
+)
 
 
 def test_source_default_is_used_when_the_record_states_nothing() -> None:
@@ -943,9 +947,7 @@ def test_registry_defaults_are_only_the_ones_with_a_verified_policy() -> None:
         "CC-BY-4.0",
         "UniProt licence — https://www.uniprot.org/help/license",
     )
-    lic, policy = sources.default_license_for("cellxgene")
-    assert lic == "CC-BY-4.0"
-    assert policy is not None and "cellxgene.cziscience.com" in policy
+    assert sources.default_license_for("cellxgene") == ("CC-BY-4.0", _CELLXGENE)
     # GWAS is mostly CC0 but individual studies carry their own Usage License, so a blanket
     # default would be wrong exactly where it matters. Deliberately absent.
     assert sources.default_license_for("gwas") == (None, None)
@@ -989,7 +991,9 @@ def test_cellxgene_default_answers_the_intent_it_was_added_for() -> None:
         assert v.spdx_id == "CC-BY-4.0"
         # The record itself said nothing, and that must stay visible.
         assert v.license_raw is None
-        assert policy is not None and policy.split(" — ")[-1] in v.reason
+        # The citation has to reach the caller — an uncited blanket grant is the thing the
+        # registry comment warns against. Compared whole rather than by URL substring.
+        assert _CELLXGENE in v.reason
 
 
 def test_every_declared_default_is_assessable_and_cited() -> None:
