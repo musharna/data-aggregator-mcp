@@ -91,17 +91,42 @@ LICENSE_MATRIX: dict[str, LicenseProfile] = {
         conditions=frozenset(),
         limitations=frozenset({"liability", "warranty"}),
     ),
-    # UK Open Government Licence v3.0 — hand-encoded from the licence text (not in
-    # choosealicense). Free commercial + non-commercial copy/publish/distribute/adapt;
-    # the sole condition is attribution (acknowledge the source + link to the OGL). The
-    # Information is licensed "as is", so warranty + liability are disclaimed, and the
-    # licence grants no right to use the provider's trade marks. Patents are not addressed,
-    # so patent-use is deliberately omitted (silence is not an explicit exclusion). Open
-    # Definition compliant; the OGL text itself states compatibility with CC-BY-4.0.
+    # UK Open Government Licence — hand-encoded from the licence texts (not in
+    # choosealicense). All three published versions grant the same shape, so they share
+    # one profile: copy, publish, distribute and transmit the Information; adapt it; and
+    # exploit it commercially (v2.0/v3.0 say "commercially and non-commercially"). The
+    # sole condition is attribution — acknowledge the source via any attribution
+    # statement the Information Provider specifies; v2.0/v3.0 add "where possible,
+    # provide a link to this licence", which is the same include-copyright flag. The
+    # Information is licensed "as is" and the provider "excludes all representations,
+    # warranties, obligations and liabilities ... to the maximum extent permitted by
+    # law", giving warranty + liability.
+    #
+    # patent-use is asserted here and NOT for pre-4.0 CC, which looks inconsistent until
+    # you read the texts: every OGL version's exemption list explicitly carves out
+    # "other intellectual property rights, including patents, trade marks, and design
+    # rights". That is an EXPLICIT exclusion, so the "silence is not an explicit
+    # exclusion" rule does not apply — unlike pre-4.0 CC, which says nothing about
+    # patents at all. Verified against the live legalcode for v1.0, v2.0 and v3.0 on
+    # 2026-07-28; the v3.0 entry previously claimed "Patents are not addressed", which
+    # its own exemption list contradicts.
+    #
+    # All three are Open Definition compliant and each text states CC-BY interoperability
+    # (v1.0 "any Creative Commons Attribution Licence"; v2.0/v3.0 name CC-BY 4.0).
+    "OGL-UK-1.0": LicenseProfile(
+        permissions=frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
+        conditions=frozenset({"include-copyright"}),
+        limitations=frozenset({"liability", "warranty", "trademark-use", "patent-use"}),
+    ),
+    "OGL-UK-2.0": LicenseProfile(
+        permissions=frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
+        conditions=frozenset({"include-copyright"}),
+        limitations=frozenset({"liability", "warranty", "trademark-use", "patent-use"}),
+    ),
     "OGL-UK-3.0": LicenseProfile(
         permissions=frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
         conditions=frozenset({"include-copyright"}),
-        limitations=frozenset({"liability", "warranty", "trademark-use"}),
+        limitations=frozenset({"liability", "warranty", "trademark-use", "patent-use"}),
     ),
     # Creative Commons 4.0 family. Attribution = include-copyright condition.
     "CC-BY-4.0": LicenseProfile(
@@ -384,9 +409,25 @@ _PROSE_ALIASES: dict[str, str] = {
     "odc by 1.0": "ODC-By-1.0",
     "pddl": "PDDL-1.0",
     "pddl 1.0": "PDDL-1.0",
-    # UK Open Government Licence v3.0 (the bare "ogl-uk-3.0" id is already handled by the
+    # UK Open Government Licence (the bare "ogl-uk-N.0" id is already handled by the
     # matrix-key match; these are the prose / short-code forms). Bare "OGL" with no version
-    # is deliberately left unmapped — v1/v2/v3 differ, so it would be ambiguous.
+    # stays deliberately unmapped: the three versions now share one profile, so the VERDICT
+    # would be the same, but reporting a specific spdx_id for an unversioned string would
+    # invent a fact the source never stated — and spdx_id is the field callers cite.
+    "ogl 1.0": "OGL-UK-1.0",
+    "ogl v1.0": "OGL-UK-1.0",
+    "ogl1": "OGL-UK-1.0",
+    "open government licence 1.0": "OGL-UK-1.0",
+    "open government license 1.0": "OGL-UK-1.0",
+    "open government licence v1.0": "OGL-UK-1.0",
+    "open government license v1.0": "OGL-UK-1.0",
+    "ogl 2.0": "OGL-UK-2.0",
+    "ogl v2.0": "OGL-UK-2.0",
+    "ogl2": "OGL-UK-2.0",
+    "open government licence 2.0": "OGL-UK-2.0",
+    "open government license 2.0": "OGL-UK-2.0",
+    "open government licence v2.0": "OGL-UK-2.0",
+    "open government license v2.0": "OGL-UK-2.0",
     "ogl 3.0": "OGL-UK-3.0",
     "ogl v3.0": "OGL-UK-3.0",
     "ogl3": "OGL-UK-3.0",

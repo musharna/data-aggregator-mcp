@@ -34,8 +34,41 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   The real 3.0-vs-4.0 differences — attribution mechanics and the DRM-circumvention
   clause — fall outside the modeled flag vocabulary, so the approximation holds only
   for the current intent set. A guard test pins that set: adding an intent which turns
-  on either area fails loudly instead of silently mis-answering. `OGL-UK-1.0`/`2.0`
-  remain identified-but-unassessed and now carry the coverage for that branch.
+  on either area fails loudly instead of silently mis-answering.
+
+- **The UK Open Government Licence v1.0 and v2.0 are now assessed too, closing the
+  identified-but-unassessed set entirely.** The URL normalizer already yielded
+  `OGL-UK-1.0` and `OGL-UK-2.0`, but only v3.0 carried a profile, so two versions of a
+  licence whose whole purpose is unrestricted public-sector reuse answered REVIEW. All
+  three versions grant the same shape — copy, publish, distribute, adapt, and exploit
+  commercially, conditioned only on attribution — so they now share one hand-encoded
+  profile verified against the legal text of each version. The prose and short-code
+  forms (`OGL v2.0`, `Open Government Licence 2.0`, …) are recognized for v1.0 and v2.0
+  as well, which previously only worked for v3.0.
+
+  Bare `OGL` with no version stays deliberately unrecognized. The verdict would now be
+  the same for any version, but `spdx_id` is the field callers cite, and naming a
+  specific version for a source that never stated one invents a fact.
+
+  With this, **every licence id the normalizer can emit also carries a compatibility
+  profile**, and a new invariant test pins that. The failure it guards is silent: adding
+  an alias or URL pattern without a matching profile downgrades a plainly-stated licence
+  to REVIEW, which reads as caution rather than as the gap it is.
+
+### Fixed
+
+- **`OGL-UK-3.0` wrongly reported that the licence is silent on patents.** Its profile
+  omitted `patent-use` on the stated grounds that "patents are not addressed", but every
+  OGL version's exemption list explicitly carves out "other intellectual property rights,
+  including patents, trade marks, and design rights". The licence text is not silent, so
+  the "silence is not an explicit exclusion" rule never applied here. `patent-use` is now
+  asserted for all three versions. Verdicts are unaffected — they derive from permissions
+  alone — but the reported limitations were misdescribing the licence. A test had encoded
+  the same mistaken claim; it was corrected against the licence text rather than relaxed.
+
+  This is also why OGL and pre-4.0 CC land on opposite answers for `patent-use` despite
+  sharing an encoding rule: the OGL texts exclude patents explicitly, pre-4.0 CC does not
+  mention them at all.
 
 ## [0.43.0] - 2026-07-27
 
