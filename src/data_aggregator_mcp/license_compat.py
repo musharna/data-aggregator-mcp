@@ -91,17 +91,42 @@ LICENSE_MATRIX: dict[str, LicenseProfile] = {
         conditions=frozenset(),
         limitations=frozenset({"liability", "warranty"}),
     ),
-    # UK Open Government Licence v3.0 — hand-encoded from the licence text (not in
-    # choosealicense). Free commercial + non-commercial copy/publish/distribute/adapt;
-    # the sole condition is attribution (acknowledge the source + link to the OGL). The
-    # Information is licensed "as is", so warranty + liability are disclaimed, and the
-    # licence grants no right to use the provider's trade marks. Patents are not addressed,
-    # so patent-use is deliberately omitted (silence is not an explicit exclusion). Open
-    # Definition compliant; the OGL text itself states compatibility with CC-BY-4.0.
+    # UK Open Government Licence — hand-encoded from the licence texts (not in
+    # choosealicense). All three published versions grant the same shape, so they share
+    # one profile: copy, publish, distribute and transmit the Information; adapt it; and
+    # exploit it commercially (v2.0/v3.0 say "commercially and non-commercially"). The
+    # sole condition is attribution — acknowledge the source via any attribution
+    # statement the Information Provider specifies; v2.0/v3.0 add "where possible,
+    # provide a link to this licence", which is the same include-copyright flag. The
+    # Information is licensed "as is" and the provider "excludes all representations,
+    # warranties, obligations and liabilities ... to the maximum extent permitted by
+    # law", giving warranty + liability.
+    #
+    # patent-use is asserted here and NOT for pre-4.0 CC, which looks inconsistent until
+    # you read the texts: every OGL version's exemption list explicitly carves out
+    # "other intellectual property rights, including patents, trade marks, and design
+    # rights". That is an EXPLICIT exclusion, so the "silence is not an explicit
+    # exclusion" rule does not apply — unlike pre-4.0 CC, which says nothing about
+    # patents at all. Verified against the live legalcode for v1.0, v2.0 and v3.0 on
+    # 2026-07-28; the v3.0 entry previously claimed "Patents are not addressed", which
+    # its own exemption list contradicts.
+    #
+    # All three are Open Definition compliant and each text states CC-BY interoperability
+    # (v1.0 "any Creative Commons Attribution Licence"; v2.0/v3.0 name CC-BY 4.0).
+    "OGL-UK-1.0": LicenseProfile(
+        permissions=frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
+        conditions=frozenset({"include-copyright"}),
+        limitations=frozenset({"liability", "warranty", "trademark-use", "patent-use"}),
+    ),
+    "OGL-UK-2.0": LicenseProfile(
+        permissions=frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
+        conditions=frozenset({"include-copyright"}),
+        limitations=frozenset({"liability", "warranty", "trademark-use", "patent-use"}),
+    ),
     "OGL-UK-3.0": LicenseProfile(
         permissions=frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
         conditions=frozenset({"include-copyright"}),
-        limitations=frozenset({"liability", "warranty", "trademark-use"}),
+        limitations=frozenset({"liability", "warranty", "trademark-use", "patent-use"}),
     ),
     # Creative Commons 4.0 family. Attribution = include-copyright condition.
     "CC-BY-4.0": LicenseProfile(
@@ -223,6 +248,92 @@ LICENSE_MATRIX: dict[str, LicenseProfile] = {
 }
 
 
+# --- pre-4.0 Creative Commons (1.0 / 2.0 / 2.5 / 3.0) ---------------------------------
+# Hand-encoded from the licence texts, following the OGL-UK-3.0 precedent. These are
+# GENERATED from six family shapes rather than written out 24 times, so the one claim
+# that matters — that they differ from their 4.0 counterparts ONLY in the limitations —
+# is structural and cannot drift entry by entry.
+#
+# Verified against the legal code (creativecommons.org/licenses/<id>/<ver>/legalcode,
+# read 2026-07-27), spot-checking BY 1.0 §3/§4/§5/§6/§8, BY 2.0 §3/§4.2/§5/§6, BY 3.0
+# §3/§4(b)/§5/§6/§8(f), and BY-NC-ND 3.0 for the NC and ND restrictions:
+#
+#   - Grants are the SAME as 4.0 per family: BY permits commercial-use, modifications,
+#     distribution, private-use; NC removes commercial-use; ND removes modifications;
+#     SA adds the same-license condition; attribution is required throughout.
+#   - Warranty (BY 3.0 §5) and liability (§6) are disclaimed, as in 4.0.
+#   - PATENTS ARE NOT ADDRESSED in any pre-4.0 version, and the only trademark clause
+#     (e.g. BY 3.0 §8(f)) disclaims *Creative Commons'* own marks, NOT the licensor's.
+#     4.0 added the explicit "Patent and trademark rights are not licensed" sentence.
+#     So `patent-use` and `trademark-use` are OMITTED here — silence is not an explicit
+#     exclusion, the same rule applied to OGL-UK-3.0 above.
+#
+# Because `check()` decides from `permissions` alone, these yield the same verdicts as
+# their 4.0 counterparts; the limitation difference is reported, never fabricated.
+#
+# The 1.0/2.0/2.5/3.0 divergences that ARE real — attribution mechanics and the
+# DRM-circumvention clause — fall outside this flag vocabulary entirely, so they cannot
+# be represented here either way. That approximation is only valid for the CURRENT
+# ``INTENTS`` vocabulary; ``tests/test_license_compat.py`` pins it so that adding an
+# intent which touches those areas fails loudly instead of silently mis-answering.
+#
+# Jurisdiction note: ``normalize_spdx`` folds ported ids (e.g. CC-BY-3.0-US) onto the
+# unported id, so these profiles also answer for ported variants. Porting could alter
+# terms in a given jurisdiction, which is a reason the verdict stays an advisory.
+_PRE_4_0_CC_SHAPES: dict[str, tuple[frozenset[str], frozenset[str]]] = {
+    # family suffix -> (permissions, conditions)
+    "CC-BY": (
+        frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
+        frozenset({"include-copyright"}),
+    ),
+    "CC-BY-SA": (
+        frozenset({"commercial-use", "modifications", "distribution", "private-use"}),
+        frozenset({"include-copyright", "same-license"}),
+    ),
+    "CC-BY-NC": (
+        frozenset({"modifications", "distribution", "private-use"}),
+        frozenset({"include-copyright"}),
+    ),
+    "CC-BY-ND": (
+        frozenset({"commercial-use", "distribution", "private-use"}),
+        frozenset({"include-copyright"}),
+    ),
+    "CC-BY-NC-SA": (
+        frozenset({"modifications", "distribution", "private-use"}),
+        frozenset({"include-copyright", "same-license"}),
+    ),
+    "CC-BY-NC-ND": (
+        frozenset({"distribution", "private-use"}),
+        frozenset({"include-copyright"}),
+    ),
+}
+
+# Warranty and liability are disclaimed in every pre-4.0 version; patent-use and
+# trademark-use are deliberately absent (see above).
+_PRE_4_0_CC_LIMITATIONS = frozenset({"liability", "warranty"})
+_PRE_4_0_CC_VERSIONS = ("1.0", "2.0", "2.5", "3.0")
+
+
+def _pre_4_0_cc_profiles() -> dict[str, LicenseProfile]:
+    """Expand the six family shapes across the four pre-4.0 versions.
+
+    A function rather than a module-level loop so the iteration variables do not
+    leak into the module namespace.
+    """
+    return {
+        f"{family}-{version}": LicenseProfile(
+            permissions=permissions,
+            conditions=conditions,
+            limitations=_PRE_4_0_CC_LIMITATIONS,
+        )
+        for family, (permissions, conditions) in _PRE_4_0_CC_SHAPES.items()
+        for version in _PRE_4_0_CC_VERSIONS
+    }
+
+
+LICENSE_MATRIX.update(_pre_4_0_cc_profiles())
+
+
 # --- intended-use → required permission flags -----------------------------------------
 # ``ml-training`` maps to commercial-use + modifications: training a model is a derivative
 # use that is usually commercial, so ND/NC licences DENY. This is OUR stated interpretation,
@@ -298,9 +409,25 @@ _PROSE_ALIASES: dict[str, str] = {
     "odc by 1.0": "ODC-By-1.0",
     "pddl": "PDDL-1.0",
     "pddl 1.0": "PDDL-1.0",
-    # UK Open Government Licence v3.0 (the bare "ogl-uk-3.0" id is already handled by the
+    # UK Open Government Licence (the bare "ogl-uk-N.0" id is already handled by the
     # matrix-key match; these are the prose / short-code forms). Bare "OGL" with no version
-    # is deliberately left unmapped — v1/v2/v3 differ, so it would be ambiguous.
+    # stays deliberately unmapped: the three versions now share one profile, so the VERDICT
+    # would be the same, but reporting a specific spdx_id for an unversioned string would
+    # invent a fact the source never stated — and spdx_id is the field callers cite.
+    "ogl 1.0": "OGL-UK-1.0",
+    "ogl v1.0": "OGL-UK-1.0",
+    "ogl1": "OGL-UK-1.0",
+    "open government licence 1.0": "OGL-UK-1.0",
+    "open government license 1.0": "OGL-UK-1.0",
+    "open government licence v1.0": "OGL-UK-1.0",
+    "open government license v1.0": "OGL-UK-1.0",
+    "ogl 2.0": "OGL-UK-2.0",
+    "ogl v2.0": "OGL-UK-2.0",
+    "ogl2": "OGL-UK-2.0",
+    "open government licence 2.0": "OGL-UK-2.0",
+    "open government license 2.0": "OGL-UK-2.0",
+    "open government licence v2.0": "OGL-UK-2.0",
+    "open government license v2.0": "OGL-UK-2.0",
     "ogl 3.0": "OGL-UK-3.0",
     "ogl v3.0": "OGL-UK-3.0",
     "ogl3": "OGL-UK-3.0",
