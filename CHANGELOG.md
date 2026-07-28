@@ -6,6 +6,32 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A record could make the server read addresses the caller cannot reach.** `operate` and
+  `fetch` take the file URL straight from an upstream record, and every source that accepts
+  uploads — Zenodo, HuggingFace, figshare, OpenML — lets that URL be anything. A record
+  whose file is _named_ `data.csv` while pointing at `http://127.0.0.1:9200/` or
+  `http://169.254.169.254/` was fetched, and with `op='head'` the body came back to the
+  caller as rows.
+
+  The v0.45.0 hardening does not cover this: `duckquery` disables the filesystems _after_
+  materializing the source — necessarily, since a lazily-evaluated view would be blocked
+  too — so that lock protects the user's SQL and structurally cannot protect the source
+  read. The scheme allowlist governs _how_ we fetch, never _where_. And `_operable()` gates
+  on the file's **name**, so the extension check never looked at the URL at all.
+
+  A new egress guard resolves the host and refuses private, loopback, link-local, reserved,
+  multicast and unspecified addresses before any request is made. Harmless over stdio,
+  where the server is the caller's own child; the exposure was SSRF with response
+  exfiltration under `--transport http`, where the server may sit in a network the caller
+  cannot otherwise reach.
+
+  Set `DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS=1` if you deliberately serve records from
+  private address space. A host that does not resolve is still allowed — it points nowhere,
+  so refusing it would block offline callers while closing nothing. This does not defeat
+  DNS rebinding, which is documented rather than quietly implied.
+
 ## [0.45.1] - 2026-07-28
 
 ### Fixed

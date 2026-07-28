@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from data_aggregator_mcp import _ratelimit, router, taxonomy, zenodo
+from data_aggregator_mcp import _ratelimit, egress, router, taxonomy, zenodo
 
 # Every environment variable the server reads as configuration. A test's behavior must
 # not depend on which of these happen to be exported in the shell that runs it: with
@@ -17,6 +17,7 @@ _APP_ENV_VARS = (
     "CACHE_TTL_SECONDS",
     "DATAVERSE_BASE_URL",
     "DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS",
+    "DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS",
     "DATA_GOV_API_KEY",
     "EMBEDDING_API_BASE",
     "EMBEDDING_API_KEY",
@@ -68,6 +69,15 @@ def _isolate_app_env(monkeypatch):
     """
     for name in _APP_ENV_VARS:
         monkeypatch.delenv(name, raising=False)
+    # The egress guard is the one control that must be OFF by default here, and the reason
+    # is specific: under MockTransport no request leaves the process, so there is no egress
+    # to guard — but the guard would still resolve every fictional host the fixtures use
+    # ("https://x/", "https://pub.example"). That is real DNS on the critical path of fake
+    # requests: ~160ms per NXDOMAIN, which silently ate the headroom in
+    # test_fetch_parallel_overlaps_in_time. Tests that mean to exercise the guard delete
+    # this themselves — see tests/test_egress.py.
+    monkeypatch.setenv("DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS", "1")
+    egress._clear_cache()
 
 
 @pytest.fixture

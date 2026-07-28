@@ -7,7 +7,7 @@ import asyncio
 
 import httpx
 
-from data_aggregator_mcp import router
+from data_aggregator_mcp import egress, router
 from data_aggregator_mcp.errors import OperateNotSupportedError, ValidationError
 from data_aggregator_mcp.models import FileEntry
 
@@ -138,6 +138,11 @@ async def run(
         raise OperateNotSupportedError(
             f"URL scheme {_scheme!r} is not allowed for operate (only http/https): {url}"
         )
+
+    # The scheme allowlist says HOW we may fetch; it says nothing about WHERE. duckquery's
+    # filesystem lock cannot help either — it is applied after the source is materialized,
+    # by necessity — so the source URL has to be judged here, before any request goes out.
+    await egress.assert_public_url(url, what=f"operate {target.name!r}")
 
     n = min(n, ROW_CAP)
 
