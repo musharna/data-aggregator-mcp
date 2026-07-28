@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.45.1] - 2026-07-28
+
 ### Fixed
 
 - **A hostile licence URL could mint a permissive verdict.** `host_matches` already
