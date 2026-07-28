@@ -90,8 +90,19 @@ def test_search_result_shape() -> None:
 
 
 def test_fetch_result_shape() -> None:
+    """Pins the wire payload. `unverified` was added deliberately, not incidentally: it
+    names files whose record declared a checksum we could not compute, which previously
+    completed indistinguishably from files that declared none. Additive and defaulted, so
+    existing consumers are unaffected — but it IS a contract change, which is exactly what
+    this test exists to make someone say out loud."""
     fr = FetchResult(paths=["/tmp/a"], bytes=10, skipped=[])
-    assert fr.model_dump() == {"paths": ["/tmp/a"], "bytes": 10, "skipped": [], "resumed": []}
+    assert fr.model_dump() == {
+        "paths": ["/tmp/a"],
+        "bytes": 10,
+        "skipped": [],
+        "resumed": [],
+        "unverified": [],
+    }
 
 
 def test_fetch_result_resumed_roundtrip() -> None:

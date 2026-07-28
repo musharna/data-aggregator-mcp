@@ -324,6 +324,17 @@ class FetchResult(BaseModel):
     bytes: int = 0
     skipped: list[str] = Field(default_factory=list)
     resumed: list[str] = Field(default_factory=list)
+    #: Files whose record DECLARED a checksum we could not compute — an algorithm hashlib
+    #: does not provide, such as DANDI's ``dandi-etag``. They were downloaded and are
+    #: listed in ``paths``; they were simply never verified against the declared digest.
+    #:
+    #: Without this the caller cannot tell "declared a checksum we honoured" from
+    #: "declared one we silently ignored", because both complete identically — and a
+    #: record showing a checksum reasonably reads as a verified download. Files whose
+    #: record declares NO checksum are deliberately absent here: that is visible from
+    #: ``files[].checksum`` already, and listing every one of them would bury the case
+    #: that actually misleads.
+    unverified: list[str] = Field(default_factory=list)
 
 
 SEARCH_DESC_LIMIT = 500
