@@ -151,3 +151,71 @@ async def test_operate_still_accepts_a_public_source(guard_on, monkeypatch) -> N
     async with httpx.AsyncClient() as client:
         with pytest.raises(_ReachedTheNextStep):
             await operate.run(client, "zenodo:999999", op="head", n=5)
+
+
+async def test_a_redirect_into_private_space_is_blocked(guard_on, tmp_path, monkeypatch) -> None:
+    """The bypass that shipped in v0.45.2: checking the URL we are HANDED is not enough.
+
+    The client follows redirects, so a record with a perfectly public URL that 302s to
+    `http://127.0.0.1/` reached it with the call-site check satisfied — measured at the
+    time as `guard consulted about: [entry]`, `redirect target hits: 1`. The fix is a
+    request event hook, because that is the only layer that sees every address actually
+    connected to.
+
+    The entry URL is waved through here to stand in for a public origin; every other hop
+    goes through the real guard, so a pass cannot come from the harness disabling it.
+    """
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    hits: list[str] = []
+
+    class _Target(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            hits.append(self.path)
+            self.send_response(200)
+            self.send_header("Content-Length", "4")
+            self.end_headers()
+            self.wfile.write(b"a,b\n")
+
+    target_srv = HTTPServer(("127.0.0.1", 0), _Target)
+    threading.Thread(target=target_srv.serve_forever, daemon=True).start()
+    target_url = f"http://127.0.0.1:{target_srv.server_address[1]}/secret.csv"
+
+    class _Redirector(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            self.send_response(302)
+            self.send_header("Location", target_url)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+    redir_srv = HTTPServer(("127.0.0.1", 0), _Redirector)
+    threading.Thread(target=redir_srv.serve_forever, daemon=True).start()
+    entry = f"http://127.0.0.1:{redir_srv.server_address[1]}/looks-public.csv"
+
+    real = egress.assert_public_url
+
+    async def entry_is_public(url: str, *, what: str) -> None:
+        if url == entry:
+            return
+        await real(url, what=what)
+
+    monkeypatch.setattr(egress, "assert_public_url", entry_is_public)
+    try:
+        async with httpx.AsyncClient(
+            follow_redirects=True,
+            event_hooks={"request": [egress.enforce_on_request]},
+        ) as client:
+            with pytest.raises(ValidationError):
+                await fetch_mod.fetch_files(client, _poisoned(entry), dest=str(tmp_path))
+    finally:
+        redir_srv.shutdown()
+        target_srv.shutdown()
+
+    assert hits == [], "the redirect target was contacted despite the guard"
