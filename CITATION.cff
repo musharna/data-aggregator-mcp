@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use data-aggregator-mcp in your work, please cite it as below."
+title: data-aggregator-mcp
+abstract: >-
+  A unified research-data acquisition server for the Model Context Protocol
+  (MCP). Exposes search and fetch over research data repositories (Zenodo,
+  DataCite), NCBI omics archives (GEO, SRA, BioProject), and the literature
+  (PubMed, OpenAIRE) behind a single normalized data model, so that language
+  models and agents can discover and retrieve datasets across heterogeneous
+  sources through one interface.
+type: software
+authors:
+  - family-names: Arnold
+    given-names: Jaret
+    orcid: "https://orcid.org/0009-0003-4055-5238"
+repository-code: "https://github.com/musharna/data-aggregator-mcp"
+url: "https://pypi.org/project/data-aggregator-mcp/"
+license: MIT
+version: 0.44.0
+date-released: "2026-07-28"
+keywords:
+  - research-data
+  - data-discovery
+  - model-context-protocol
+  - mcp
+  - zenodo
+  - datacite
+  - ncbi
+  - pubmed
+  - bioinformatics
+  - open-science
