@@ -30,6 +30,7 @@ import asyncio
 import ipaddress
 import os
 import socket
+from typing import Any
 from urllib.parse import urlsplit
 
 from data_aggregator_mcp.errors import ValidationError
@@ -146,3 +147,22 @@ async def assert_public_url(url: str, *, what: str) -> None:
     # Cached only after every address passed, so a rejection is never remembered as an
     # approval — and re-checked from scratch once the short TTL lapses.
     _approved[target] = now
+
+
+async def enforce_on_request(request: Any) -> None:
+    """httpx request event hook: validate EVERY hop, redirects included.
+
+    Checking the URL a caller hands us is not enough, and the gap is not subtle: the client
+    follows redirects, so a record with a perfectly public URL that 302s to
+    ``http://127.0.0.1:9200/`` reaches it with the call-site check satisfied. Measured
+    before this existed — the guard was consulted once, about the entry URL, while the
+    redirect target was fetched unchecked.
+
+    A request hook is the only layer that sees every address actually connected to, which
+    is what the control has to bind to. The call-site checks stay: they fail before any I/O
+    and name the file, which a transport-level error cannot.
+
+    Typed ``Any`` rather than ``httpx.Request`` so this module does not import httpx purely
+    for an annotation; httpx passes the request object positionally.
+    """
+    await assert_public_url(str(request.url), what="request")

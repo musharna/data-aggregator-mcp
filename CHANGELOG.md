@@ -6,6 +6,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A redirect bypassed the egress guard shipped in 0.45.2.** That guard validated the URL
+  it was handed, but the client follows redirects — so a record with a perfectly _public_
+  URL that 302s to `http://127.0.0.1:9200/` reached it with the check satisfied. Measured
+  at the time: the guard was consulted once, about the entry URL, while the redirect target
+  was fetched unchecked.
+
+  Validation now runs as an httpx request event hook, which is the only layer that sees
+  every address actually connected to. The call-site checks remain — they fail before any
+  I/O and name the file, which a transport-level error cannot.
+
+  0.45.2 does block a record pointing _directly_ at private space; it did not block the same
+  thing behind a redirect. Anyone running `--transport http` should take 0.45.3.
+
 ## [0.45.2] - 2026-07-28
 
 ### Fixed

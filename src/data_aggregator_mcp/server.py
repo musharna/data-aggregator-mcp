@@ -36,6 +36,7 @@ from pydantic import AnyUrl
 from data_aggregator_mcp import (
     __version__,
     citation,
+    egress,
     elicitation,
     operate,
     router,
@@ -165,7 +166,12 @@ async def shared_http_client() -> AsyncGenerator[None]:
     global _SHARED_CLIENT
     if _SHARED_CLIENT is not None:
         raise RuntimeError("shared_http_client is already active")
-    async with httpx.AsyncClient(follow_redirects=True) as client:
+    async with httpx.AsyncClient(
+        follow_redirects=True,
+        # Every hop is validated, redirects included: checking only the URL a caller
+        # hands us is defeated by a public URL that 302s into private space.
+        event_hooks={"request": [egress.enforce_on_request]},
+    ) as client:
         _SHARED_CLIENT = client
         try:
             yield
@@ -180,7 +186,12 @@ async def _http_client() -> AsyncGenerator[httpx.AsyncClient]:
     if _SHARED_CLIENT is not None:
         yield _SHARED_CLIENT
         return
-    async with httpx.AsyncClient(follow_redirects=True) as client:
+    async with httpx.AsyncClient(
+        follow_redirects=True,
+        # Every hop is validated, redirects included: checking only the URL a caller
+        # hands us is defeated by a public URL that 302s into private space.
+        event_hooks={"request": [egress.enforce_on_request]},
+    ) as client:
         yield client
 
 
