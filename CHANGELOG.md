@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.45.3] - 2026-07-28
+
 ### Fixed
 
 - **A redirect bypassed the egress guard shipped in 0.45.2.** That guard validated the URL
