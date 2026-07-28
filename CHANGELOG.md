@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-07-28
+
 ### Fixed
 
 - **"Licence not stated" was also being said about records that stated one.** A record
@@ -30,6 +32,12 @@ recognized` — which also surfaces the two known drops from the 17-source sweep
   a stated-but-unusable licence should never be reported as silence.
 
 ### Added
+
+- **The project is now formally citable.** `CITATION.cff` and `.zenodo.json` ship in the
+  repository, so GitHub renders a "Cite this repository" entry and a Zenodo deposition can
+  mint a DOI. `CITATION.cff` records the version in a fifth place independent of
+  `pyproject.toml`, so CI now fails the build when the two disagree — a stale citation
+  version is the kind of error nothing else would catch.
 
 - **`cellxgene` now answers licence questions instead of reviewing them.** CZ CELLxGENE
   Discover publishes every dataset under CC-BY 4.0 as a condition of submission, but its
