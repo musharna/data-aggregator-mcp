@@ -1,0 +1,37 @@
+{
+  "upload_type": "software",
+  "title": "data-aggregator-mcp: unified research-data discovery across Zenodo, DataCite, NCBI omics, and the literature via the Model Context Protocol",
+  "description": "A unified research-data acquisition server for the Model Context Protocol (MCP). Exposes search and fetch over research data repositories (Zenodo, DataCite), NCBI omics archives (GEO, SRA, BioProject), and the literature (PubMed, OpenAIRE) behind a single normalized data model, so that language models and agents can discover and retrieve datasets across heterogeneous sources through one interface.",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Arnold, Jaret",
+      "orcid": "0009-0003-4055-5238"
+    }
+  ],
+  "keywords": [
+    "research-data",
+    "data-discovery",
+    "model-context-protocol",
+    "mcp",
+    "zenodo",
+    "datacite",
+    "ncbi",
+    "pubmed",
+    "bioinformatics",
+    "open-science"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/musharna/data-aggregator-mcp",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://pypi.org/project/data-aggregator-mcp/",
+      "relation": "isIdenticalTo",
+      "scheme": "url"
+    }
+  ],
+  "access_right": "open"
+}
