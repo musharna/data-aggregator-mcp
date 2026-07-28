@@ -6,6 +6,29 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **"Licence not stated" was also being said about records that stated one.** A record
+  whose licence we could not parse got the same verdict reason as a record with no licence
+  at all — while `license_raw` sat in the same response holding the value the message
+  denied existed. The verdict (REVIEW) was right in both cases; the explanation was not,
+  and it pointed the caller away from the one lead they had.
+
+  OpenML made the cost concrete: it states `licence: 'Public'` on every dataset, so we
+  answered "licence not stated" for a source that states something on every record.
+  Unrecognized licences now quote the stated value — `licence stated as 'Public' but not
+recognized` — which also surfaces the two known drops from the 17-source sweep,
+  `other-open` (Zenodo) and `Springer TDM`.
+
+  **No verdict changed and no licence is promoted.** `Public` stays REVIEW: "publicly
+  available" is not "public domain", and mapping it to CC0 would invent a specific grant
+  from a vague word. A test pins that so it is a decision rather than an oversight.
+
+  The quoted excerpt is whitespace-collapsed and length-capped, since a licence field is
+  arbitrary upstream text that can be a paragraph; the full value remains in `license_raw`.
+  This is the same correction already applied to the versionless-CC branch, generalized —
+  a stated-but-unusable licence should never be reported as silence.
+
 ### Added
 
 - **`cellxgene` now answers licence questions instead of reviewing them.** CZ CELLxGENE
