@@ -36,7 +36,7 @@ dependencies = [
     # handlers leak across clients). The first two are directly reachable from
     # the HTTP transport this package now ships. Ceiling keeps us off the 2.0
     # line until its breaking changes are evaluated.
-    "mcp>=1.28.1,<2",
+    "mcp>=1.28.1,<3",
     "httpx>=0.27",
     "pydantic>=2.6",
 ]
