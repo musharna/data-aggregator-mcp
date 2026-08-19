@@ -5,3 +5,6 @@ dist/
 build/
 .coverage
 .pytest_cache/
+
+# Internal planning notes (plans/specs) — never publish
+docs/superpowers/
