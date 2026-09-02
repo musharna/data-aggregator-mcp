@@ -19,3 +19,27 @@ jobs:
       - name: Types (mypy)
         run: uv run mypy src/data_aggregator_mcp
       - run: uv run pytest -q --cov=data_aggregator_mcp --cov-report=term-missing --cov-fail-under=92
+
+  # Every other job installs from uv.lock, so the DECLARED dependency range is
+  # never resolved and a wrong one cannot fail. #69 widened the mcp ceiling to
+  # <3 mechanically; mcp 2.x removed the low-level decorator API this server is
+  # built on, so `import data_aggregator_mcp.server` raised AttributeError on
+  # any lock-free install for a month while CI stayed green. Installing from
+  # pyproject alone and importing the module is the smallest thing that can
+  # fail on that.
+  declared-deps:
+    name: install from the declared range, not the lockfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          python-version: "3.13"
+      - name: Resolve pyproject without uv.lock
+        run: |
+          uv venv /tmp/declared
+          uv pip install --python /tmp/declared/bin/python .
+      - name: Report what the range resolved to
+        run: /tmp/declared/bin/python -c "import importlib.metadata as m; print('mcp', m.version('mcp'))"
+      - name: The server module must import under it
+        run: /tmp/declared/bin/python -c "import data_aggregator_mcp.server"

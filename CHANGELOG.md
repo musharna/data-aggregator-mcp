@@ -8,6 +8,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The declared mcp range admitted a version this server cannot import.** #69 widened the
+  ceiling from `<2` to `<3` a month ago. mcp 2.x removed the 1.x low-level decorator API
+  this server is built on — `@server.list_tools()`, `@server.call_tool()`; handlers are
+  constructor arguments there now — so `import data_aggregator_mcp.server` raises
+  `AttributeError: 'Server' object has no attribute 'list_tools'` under it. Not a
+  deprecation to work through later: the module does not load, so a lock-free install got
+  a package whose server cannot start. The published 0.45.3 still carries `mcp<2` and is
+  unaffected; anyone installing from source since 2026-08-04 was not.
+
+  The ceiling is back at `<2`, with the reason next to it, and raising it is now the
+  migration commit's job rather than a version-bump PR's.
+
+  CI could not have caught this and still cannot in the jobs that existed: every one of
+  them installs from `uv.lock`, so the declared range is never resolved and a wrong one
+  cannot fail. The new `declared-deps` job installs from `pyproject.toml` alone and imports
+  the server module — the smallest thing that fails when the range and the code disagree.
+  Verified against the broken state: with `<3` it resolves mcp 2.1.1 and the import exits
+  1; with `<2` it resolves 1.29.1 and exits 0.
+
 - **A checksum we could not compute was ignored silently.** `fetch` verifies a declared
   checksum only when the algorithm is one `hashlib` provides. For anything else — DANDI's
   `dandi-etag`, or a typo — the download completed with no verification and **no signal**,
