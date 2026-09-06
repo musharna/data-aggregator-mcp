@@ -48,7 +48,7 @@ dependencies = [
     #
     # Raise this to <3 in the commit that migrates to the 2.x server API, not
     # before.
-    "mcp>=1.28.1,<2",
+    "mcp>=1.28.1,<3",
     "httpx>=0.27",
     "pydantic>=2.6",
 ]
