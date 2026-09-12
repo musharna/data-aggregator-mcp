@@ -106,3 +106,6 @@ target-version = "py311"
 # wraps code; E501 would otherwise only nag about long strings/comments/URLs.
 select = ["E", "F", "I", "B", "UP", "SIM"]
 ignore = ["E501"]
+
+[tool.mutmut]
+source_paths = ["src"]
