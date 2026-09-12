@@ -13,6 +13,7 @@ from urllib.parse import quote
 
 import httpx
 from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
+from defusedxml.common import DefusedXmlException
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
@@ -113,7 +114,9 @@ def _first_url(xml_text: str) -> str | None:
     """First <url> in a DataONE ObjectLocationList (namespace-agnostic), or None."""
     try:
         root = ET.fromstring(xml_text)
-    except ET.ParseError:
+    except (ET.ParseError, DefusedXmlException):
+        # a DOCTYPE/entity payload is 'unparseable' too; defusedxml raises a
+        # ValueError subclass for it, which ParseError alone would let escape
         return None
     for el in root.iter():
         if el.tag.rsplit("}", 1)[-1] == "url" and el.text:

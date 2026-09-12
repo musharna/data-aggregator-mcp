@@ -20,3 +20,10 @@ def test_xml_parser_rejects_entities_and_parses_plain(mod):
     assert mod.ET.fromstring("<a><b>1</b></a>").find("b").text == "1"
     with pytest.raises(Exception, match=r"(?i)entit"):
         mod.ET.fromstring(BOMB)
+
+
+def test_dataone_first_url_treats_entity_payload_as_unparseable():
+    # _first_url's contract is "None on unparseable"; defusedxml's rejection is a
+    # ValueError, not ParseError, so without the widened except it escapes
+    assert dataone._first_url("<r><url>https://x/a</url></r>") == "https://x/a"
+    assert dataone._first_url(BOMB) is None
