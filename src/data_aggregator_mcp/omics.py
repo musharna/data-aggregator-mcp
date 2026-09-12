@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import xml.etree.ElementTree as ET
 from typing import Any
 
 import httpx
+from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
 
 from data_aggregator_mcp import _eutils, ena, geo
 from data_aggregator_mcp._merge import interleave

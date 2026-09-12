@@ -11,9 +11,9 @@ through the omics normalizers so the link target is a directly-resolvable
 from __future__ import annotations
 
 import logging
-import xml.etree.ElementTree as ET
 
 import httpx
+from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
 
 from data_aggregator_mcp import _eutils, fulltext, omics
 from data_aggregator_mcp.errors import NotFoundError

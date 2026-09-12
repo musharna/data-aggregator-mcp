@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import asyncio
 from urllib.parse import quote
-from xml.etree import ElementTree as ET
 
 import httpx
+from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError

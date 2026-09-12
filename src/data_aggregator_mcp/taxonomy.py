@@ -9,10 +9,10 @@ plant flag). Results are cached in-process keyed by lowercased name.
 
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
 import httpx
+from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
 
 from data_aggregator_mcp import _eutils
 from data_aggregator_mcp._cache import MISS, TTLCache

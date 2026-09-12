@@ -64,7 +64,7 @@ def _connect(url: str, file: str):
     # Eager read FIRST (both filesystems still enabled), then lock them down. See the
     # module docstring: a CREATE VIEW would be evaluated lazily after the lock and
     # would block the legit source read too, so we materialize a TABLE here.
-    con.execute(f"CREATE TABLE data AS SELECT * FROM {_reader(url, file)};")
+    con.execute(f"CREATE TABLE data AS SELECT * FROM {_reader(url, file)};")  # nosec B608 - url is ''-escaped in _reader
     # HTTPFileSystem is disabled alongside LocalFileSystem: the source is already in
     # memory by this line, so nothing downstream needs either, and leaving httpfs on
     # is what let a user SELECT turn the server into an SSRF proxy.
@@ -76,7 +76,7 @@ def _connect(url: str, file: str):
 def _run(url: str, file: str, sql: str, row_cap: int) -> dict:
     con = _connect(url, file)
     try:
-        rel = con.execute(f"SELECT * FROM ({sql}) LIMIT {row_cap + 1}")
+        rel = con.execute(f"SELECT * FROM ({sql}) LIMIT {row_cap + 1}")  # nosec B608 - user SQL is the feature; sandboxed by _connect
         cols = [{"name": d[0], "type": str(d[1])} for d in rel.description]
         rows = rel.fetchall()
     finally:
@@ -98,7 +98,7 @@ async def run_sql(url: str, file: str, query: str, *, row_cap: int = DEFAULT_ROW
 
 async def run_head(url: str, file: str, *, n: int, columns: list[str] | None) -> dict:
     proj = ", ".join('"' + c.replace('"', '""') + '"' for c in columns) if columns else "*"
-    return await asyncio.to_thread(_run, url, file, f"SELECT {proj} FROM data", n)
+    return await asyncio.to_thread(_run, url, file, f"SELECT {proj} FROM data", n)  # nosec B608 - proj is '"'-quoted
 
 
 def _normalize_summary_row(d: dict) -> dict:
