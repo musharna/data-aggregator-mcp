@@ -7,12 +7,12 @@ import pytest
 pytest.importorskip("duckdb")
 pytest.importorskip("pyarrow")
 
+import duckdb
 import pyarrow as pa
 import pyarrow.parquet as pq
 
 from data_aggregator_mcp import duckquery
 from data_aggregator_mcp.errors import ValidationError
-import duckdb
 
 FX = pathlib.Path(__file__).parent / "fixtures"
 PARQUET_URL = (FX / "sample.parquet").as_uri()

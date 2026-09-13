@@ -6,9 +6,9 @@ the same test: a plain document still parses, so a broken parser cannot read as
 """
 
 import pytest
+from defusedxml import DefusedXmlException
 
 from data_aggregator_mcp import _http, dataone, omics, pubmed, taxonomy
-from defusedxml import DefusedXmlException
 
 BOMB = (
     '<?xml version="1.0"?><!DOCTYPE a [<!ENTITY x "xxxxxxxxxx">'
