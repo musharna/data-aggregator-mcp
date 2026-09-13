@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping
 from typing import Any
 
 import httpx
+from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
 
 from data_aggregator_mcp import _ratelimit
 from data_aggregator_mcp.errors import (
