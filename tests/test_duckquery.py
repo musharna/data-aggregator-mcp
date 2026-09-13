@@ -7,6 +7,7 @@ import pytest
 pytest.importorskip("duckdb")
 pytest.importorskip("pyarrow")
 
+import duckdb
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -118,7 +119,7 @@ async def test_peek_does_not_reenable_local_fs():
     # tries to reach /etc/passwd — it must be blocked, not leaked.
     out = await duckquery.run_peek(PARQUET_URL, "sample.parquet")
     assert out["row_count"] == 3
-    with pytest.raises(Exception) as ei:
+    with pytest.raises(duckdb.PermissionException) as ei:
         await duckquery.run_sql(
             PARQUET_URL, "sample.parquet", "SELECT * FROM read_csv_auto('/etc/passwd')"
         )
@@ -160,7 +161,7 @@ async def test_local_file_read_rejected():
     # NOT return /etc/passwd contents. DuckDB's PermissionException is not one of our
     # typed errors, so we catch broadly but then POSITIVELY require evidence that the
     # SET disabled_filesystems='LocalFileSystem' hardening (not just "any error") fired.
-    with pytest.raises(Exception) as ei:
+    with pytest.raises(duckdb.PermissionException) as ei:
         await duckquery.run_sql(
             PARQUET_URL, "sample.parquet", "SELECT * FROM read_csv_auto('/etc/passwd')"
         )
@@ -183,7 +184,7 @@ async def test_head_column_quote_is_escaped():
     # a column name containing a double-quote must not break out of the identifier
     # quoting into injected SQL — it should be treated as a (nonexistent) column name
     # and raise a binder error, NOT execute injected statements.
-    with pytest.raises(Exception) as ei:
+    with pytest.raises(duckdb.BinderException) as ei:
         await duckquery.run_head(
             PARQUET_URL,
             "sample.parquet",
@@ -271,7 +272,7 @@ async def test_user_sql_cannot_reach_the_network() -> None:
         assert ok["rows"] == [{"col": "legit"}]
         assert any("source.csv" in h for h in hits)
         hits.clear()
-        with pytest.raises(Exception) as exc:  # noqa: B017 - duckdb's PermissionException
+        with pytest.raises(duckdb.PermissionException) as exc:
             await duckquery.run_sql(
                 source, "source.csv", f"SELECT * FROM read_csv_auto('{target}')"
             )
