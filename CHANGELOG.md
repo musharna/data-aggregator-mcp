@@ -6,6 +6,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`search` CLI: an upstream outage no longer prints `[]` with exit 0.** The
+  router tolerates a failing source (so the others can still answer) and reports
+  it in the page's `errors`; the CLI dropped that dict, making a Zenodo 504 storm
+  indistinguishable from "no hits". Failed sources are now named on stderr, and
+  exit 1 when every source failed. `test_search_cli_real_subprocess` derives its
+  subprocess timeout from the code's own retry budget (30 s x 3 + backoff, +30 s
+  slack) instead of a fixed 90 s that was *below* that budget, which is why the
+  2026-09-16 Zenodo outage surfaced as `TimeoutExpired` (a failure) rather than
+  the non-zero exit the test skips on, and blocked merges on a required check.
+  The test also now requires the two records it asked for.
+
 ### Changed
 
 - **Migrated to the mcp 2.x low-level server API; the dependency is now `mcp>=2,<3`.**
