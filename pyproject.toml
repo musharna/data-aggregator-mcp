@@ -110,3 +110,7 @@ ignore = ["E501"]
 
 [tool.mutmut]
 source_paths = ["src"]
+also_copy = [".editorconfig", ".github", ".gitignore", ".mcp.json", ".pre-commit-config.yaml", ".zenodo.json", "CHANGELOG.md", "CITATION.cff", "CLAUDE.md", "CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "LICENSE", "PUBLISH.md", "README.md", "SECURITY.md", "assets", "docs", "examples", "glama.json", "scripts", "server.json"]
+# test_entrypoint_smoke drives the stdio server as a subprocess, which the in-process mutmut output capture closes
+# test_search_cli_real_subprocess is a live Zenodo call with a 90 s timeout that flaked two nights in the baseline
+pytest_add_cli_args = ["--ignore=tests/test_entrypoint_smoke.py", "--deselect", "tests/test_search_cli.py::test_search_cli_real_subprocess"]
