@@ -37,7 +37,7 @@ async def test_list_sources_includes_huggingface() -> None:
 
 def test_search_tool_exposes_sources_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    assert "sources" in tool.inputSchema["properties"]
+    assert "sources" in tool.input_schema["properties"]
 
 
 async def test_dispatch_search_routes_to_zenodo(httpx_mock: HTTPXMock) -> None:
@@ -179,29 +179,29 @@ async def test_list_sources_exposes_fetchable_and_examples() -> None:
 
 def test_search_tool_exposes_organism_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    assert "organism" in tool.inputSchema["properties"]
+    assert "organism" in tool.input_schema["properties"]
 
 
 def test_search_tool_exposes_disease_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    assert "disease" in tool.inputSchema["properties"]
+    assert "disease" in tool.input_schema["properties"]
 
 
 def test_search_tool_exposes_tissue_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    assert "tissue" in tool.inputSchema["properties"]
+    assert "tissue" in tool.input_schema["properties"]
 
 
 def test_search_tool_exposes_chemical_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    prop = tool.inputSchema["properties"]
+    prop = tool.input_schema["properties"]
     assert "chemical" in prop
     assert prop["chemical"]["type"] == "string"
 
 
 def test_search_tool_exposes_assay_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    prop = tool.inputSchema["properties"]
+    prop = tool.input_schema["properties"]
     assert "assay" in prop
     assert prop["assay"]["type"] == "string"
 
@@ -358,7 +358,7 @@ async def test_dispatch_resolve_no_cite_leaves_citation_none(monkeypatch) -> Non
 
 def test_resolve_tool_exposes_cite_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "resolve")
-    assert "cite" in tool.inputSchema["properties"]
+    assert "cite" in tool.input_schema["properties"]
 
 
 def test_list_sources_advertises_filters_and_cursor() -> None:
@@ -375,7 +375,7 @@ def test_list_sources_advertises_filters_and_cursor() -> None:
 
 def test_search_schema_exposes_pagination_and_filters() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    props = tool.inputSchema["properties"]
+    props = tool.input_schema["properties"]
     assert {"cursor", "published_after", "published_before", "kind"} <= set(props)
     assert props["kind"]["enum"] == [
         "dataset",
@@ -388,7 +388,7 @@ def test_search_schema_exposes_pagination_and_filters() -> None:
 
 def test_search_schema_query_not_required() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    assert "query" not in tool.inputSchema.get("required", [])
+    assert "query" not in tool.input_schema.get("required", [])
 
 
 async def test_dispatch_threads_cursor(monkeypatch) -> None:
@@ -416,15 +416,15 @@ class _FakeSession:
         self.progress_calls.append((progress_token, progress, total))
 
 
-class _FakeMeta:
-    def __init__(self, token) -> None:
-        self.progressToken = token
-
-
 class _FakeReqCtx:
+    """The two `ServerRequestContext` fields fetch reads: `meta` is the request's
+    `_meta` mapping (2.x spells the key `progress_token`), `session` sends the
+    notifications."""
+
     def __init__(self, token, session) -> None:
-        self.meta = _FakeMeta(token) if token is not None else None
+        self.meta = {"progress_token": token} if token is not None else None
         self.session = session
+        self.request_id = 1
 
 
 def _fake_fetchable_resolve():
@@ -445,8 +445,6 @@ def _fake_fetchable_resolve():
 
 
 async def test_dispatch_fetch_sends_progress_when_token_present(monkeypatch) -> None:
-    import mcp.server.lowlevel.server as low
-
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", _fake_fetchable_resolve())
 
     async def fake_fetch_files(client, resource, *, on_progress=None, **kw):
@@ -460,11 +458,7 @@ async def test_dispatch_fetch_sends_progress_when_token_present(monkeypatch) -> 
     monkeypatch.setattr("data_aggregator_mcp.fetch.fetch_files", fake_fetch_files)
 
     sess = _FakeSession()
-    tok = low.request_ctx.set(_FakeReqCtx("tok-123", sess))
-    try:
-        out = await server._dispatch("fetch", {"id": "zenodo:1"})
-    finally:
-        low.request_ctx.reset(tok)
+    out = await server._dispatch("fetch", {"id": "zenodo:1"}, _FakeReqCtx("tok-123", sess))
 
     assert len(out["paths"]) == 2
     assert len(sess.progress_calls) >= 1
@@ -472,8 +466,6 @@ async def test_dispatch_fetch_sends_progress_when_token_present(monkeypatch) -> 
 
 
 async def test_dispatch_fetch_no_token_sends_nothing(monkeypatch) -> None:
-    import mcp.server.lowlevel.server as low
-
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", _fake_fetchable_resolve())
 
     async def fake_fetch_files(client, resource, *, on_progress=None, **kw):
@@ -486,11 +478,7 @@ async def test_dispatch_fetch_no_token_sends_nothing(monkeypatch) -> None:
     monkeypatch.setattr("data_aggregator_mcp.fetch.fetch_files", fake_fetch_files)
 
     sess = _FakeSession()
-    tok = low.request_ctx.set(_FakeReqCtx(None, sess))
-    try:
-        out = await server._dispatch("fetch", {"id": "zenodo:1"})
-    finally:
-        low.request_ctx.reset(tok)
+    out = await server._dispatch("fetch", {"id": "zenodo:1"}, _FakeReqCtx(None, sess))
 
     assert len(out["paths"]) == 1  # fetch still returns normally
     assert sess.progress_calls == []  # no token ⇒ no notifications
@@ -557,11 +545,11 @@ async def test_search_dispatch_passes_rank(monkeypatch):  # IRON_LAW_OK
 
 def test_search_tool_exposes_multi_query_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    prop = tool.inputSchema["properties"]
+    prop = tool.input_schema["properties"]
     assert "multi_query" in prop
     assert prop["multi_query"]["type"] == "boolean"
     assert prop["multi_query"]["default"] is False
-    assert "multi_query" not in tool.inputSchema.get("required", [])
+    assert "multi_query" not in tool.input_schema.get("required", [])
 
 
 async def test_dispatch_search_passes_multi_query_to_router(monkeypatch) -> None:
@@ -609,25 +597,30 @@ def test_read_only_tools_are_annotated() -> None:
     by_name = {t.name: t for t in server.TOOLS}
     for n in ("search", "resolve", "list_sources"):
         assert by_name[n].annotations is not None
-        assert by_name[n].annotations.readOnlyHint is True
+        assert by_name[n].annotations.read_only_hint is True
     # fetch writes files → not read-only, and not destructive to existing state
-    assert by_name["fetch"].annotations.readOnlyHint is False
-    assert by_name["fetch"].annotations.destructiveHint is False
+    assert by_name["fetch"].annotations.read_only_hint is False
+    assert by_name["fetch"].annotations.destructive_hint is False
 
 
 async def test_list_prompts_exposes_templates() -> None:
     from data_aggregator_mcp import server
 
-    prompts = await server._list_prompts()
+    prompts = (await server._list_prompts(None, None)).prompts
     names = {p.name for p in prompts}
     assert {"find_data", "data_behind_paper", "search_resolve_fetch"} <= names
 
 
 async def test_get_prompt_find_data_includes_topic() -> None:
+    from mcp import types
+
     from data_aggregator_mcp import server
 
     result = await server._get_prompt(
-        "find_data", {"topic": "rice drought", "organism": "Oryza sativa"}
+        None,
+        types.GetPromptRequestParams(
+            name="find_data", arguments={"topic": "rice drought", "organism": "Oryza sativa"}
+        ),
     )
     text = result.messages[0].content.text
     assert "rice drought" in text
@@ -713,7 +706,7 @@ async def test_dispatch_resolve_no_trust_leaves_trust_none(monkeypatch) -> None:
 
 def test_resolve_tool_exposes_trust_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "resolve")
-    assert "trust" in tool.inputSchema["properties"]
+    assert "trust" in tool.input_schema["properties"]
 
 
 async def test_dispatch_resolve_attaches_fair_when_requested(monkeypatch) -> None:
@@ -749,7 +742,7 @@ async def test_dispatch_resolve_no_fair_leaves_fair_none(monkeypatch) -> None:
 
 def test_resolve_tool_exposes_fair_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "resolve")
-    assert "fair" in tool.inputSchema["properties"]
+    assert "fair" in tool.input_schema["properties"]
 
 
 def test_dataone_and_omicsdi_are_fetchable_prefixes():
@@ -801,7 +794,7 @@ def test_ensure_omicsdi_fetchable_error_points_to_landing_page():
 
 def test_search_schema_sources_description_includes_dataone_and_omicsdi():
     tool = next(t for t in server.TOOLS if t.name == "search")
-    sources_desc = tool.inputSchema["properties"]["sources"]["description"]
+    sources_desc = tool.input_schema["properties"]["sources"]["description"]
     assert "dataone" in sources_desc, (
         f"'dataone' missing from sources description: {sources_desc!r}"
     )
@@ -814,8 +807,8 @@ def test_operate_tool_registered():
     names = {t.name for t in server.TOOLS}
     assert "operate" in names
     op = next(t for t in server.TOOLS if t.name == "operate")
-    assert op.inputSchema["required"] == ["op", "id"]
-    assert set(op.inputSchema["properties"]["op"]["enum"]) == {
+    assert op.input_schema["required"] == ["op", "id"]
+    assert set(op.input_schema["properties"]["op"]["enum"]) == {
         "schema",
         "preview",
         "head",
@@ -853,36 +846,39 @@ async def test_list_sources_advertises_operable():
 # ---------------------------------------------------------------------------
 
 
+def _read_params(uri: str):
+    from mcp import types
+
+    return types.ReadResourceRequestParams(uri=uri)
+
+
 async def test_list_resources_returns_catalog() -> None:
     from data_aggregator_mcp import resources
 
-    res = await server._list_resources()
+    res = (await server._list_resources(None, None)).resources
     assert [str(r.uri) for r in res] == [resources.CATALOG_URI]
 
 
 async def test_list_resource_templates_returns_record_template() -> None:
-    tmpls = await server._list_resource_templates()
-    assert tmpls[0].uriTemplate == "dataresource://record/{id}"
+    tmpls = (await server._list_resource_templates(None, None)).resource_templates
+    assert tmpls[0].uri_template == "dataresource://record/{id}"
 
 
 async def test_read_resource_catalog_returns_sources_json() -> None:
     import json
 
-    from pydantic import AnyUrl
-
     from data_aggregator_mcp import resources
 
-    contents = await server._read_resource(AnyUrl(resources.CATALOG_URI))
-    item = list(contents)[0]
+    contents = (await server._read_resource(None, _read_params(resources.CATALOG_URI))).contents
+    item = contents[0]
     assert item.mime_type == "application/json"
-    payload = json.loads(item.content)
+    assert str(item.uri) == resources.CATALOG_URI
+    payload = json.loads(item.text)
     assert "sources" in payload and any(s["name"] == "zenodo" for s in payload["sources"])
 
 
 async def test_read_resource_record_routes_through_resolve(monkeypatch) -> None:
     import json
-
-    from pydantic import AnyUrl
 
     from data_aggregator_mcp import resources
 
@@ -891,25 +887,21 @@ async def test_read_resource_record_routes_through_resolve(monkeypatch) -> None:
         return DataResource(id=rid, source="datacite", kind="dataset", title="Probe set")
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
-    uri = AnyUrl(resources.record_uri("datacite:10.5061/dryad.x"))
-    contents = await server._read_resource(uri)
-    item = list(contents)[0]
+    uri = resources.record_uri("datacite:10.5061/dryad.x")
+    contents = (await server._read_resource(None, _read_params(uri))).contents
+    item = contents[0]
     assert item.mime_type == "application/json"
-    assert json.loads(item.content)["id"] == "datacite:10.5061/dryad.x"
+    assert json.loads(item.text)["id"] == "datacite:10.5061/dryad.x"
 
 
 async def test_read_resource_unknown_uri_raises() -> None:
-    from pydantic import AnyUrl
-
     with pytest.raises(ValueError):
-        await server._read_resource(AnyUrl("dataresource://nope/x"))
+        await server._read_resource(None, _read_params("dataresource://nope/x"))
 
 
 async def test_read_resource_record_propagates_not_found(monkeypatch) -> None:
     # a valid record URI whose id resolves to nothing must surface NotFoundError
     # (fail loud), not swallow it into an empty/garbage resource.
-    from pydantic import AnyUrl
-
     from data_aggregator_mcp import resources
     from data_aggregator_mcp.errors import NotFoundError
 
@@ -918,7 +910,7 @@ async def test_read_resource_record_propagates_not_found(monkeypatch) -> None:
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
     with pytest.raises(NotFoundError):
-        await server._read_resource(AnyUrl(resources.record_uri("pdb:9999")))
+        await server._read_resource(None, _read_params(resources.record_uri("pdb:9999")))
 
 
 # --- B10a: provenance dossier (resolve format=provenance) -------------------
@@ -926,7 +918,7 @@ async def test_read_resource_record_propagates_not_found(monkeypatch) -> None:
 
 def test_resolve_tool_exposes_provenance_format() -> None:
     tool = next(t for t in server.TOOLS if t.name == "resolve")
-    assert "provenance" in tool.inputSchema["properties"]["format"]["enum"]
+    assert "provenance" in tool.input_schema["properties"]["format"]["enum"]
 
 
 async def test_dispatch_resolve_provenance_attaches_dossier_and_enrichers(monkeypatch) -> None:
@@ -1000,12 +992,12 @@ async def test_dispatch_resolve_no_provenance_leaves_it_none(monkeypatch) -> Non
 
 def test_search_tool_exposes_understand_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    prop = tool.inputSchema["properties"]
+    prop = tool.input_schema["properties"]
     assert "understand" in prop
     assert prop["understand"]["type"] == "boolean"
     assert prop["understand"]["default"] is False
     # additive: not a required field
-    assert "understand" not in tool.inputSchema.get("required", [])
+    assert "understand" not in tool.input_schema.get("required", [])
 
 
 async def test_dispatch_search_threads_understand_and_carries_echo(monkeypatch) -> None:
@@ -1068,9 +1060,9 @@ def test_relate_is_registered() -> None:
     from data_aggregator_mcp import server
 
     tool = next(t for t in server.TOOLS if t.name == "relate")
-    assert tool.inputSchema["required"] == ["ids"]
-    assert tool.inputSchema["properties"]["ids"]["minItems"] == 2
-    assert tool.inputSchema["properties"]["ids"]["maxItems"] == 10
+    assert tool.input_schema["required"] == ["ids"]
+    assert tool.input_schema["properties"]["ids"]["minItems"] == 2
+    assert tool.input_schema["properties"]["ids"]["maxItems"] == 10
 
 
 # ---------------------------------------------------------------- shared HTTP client

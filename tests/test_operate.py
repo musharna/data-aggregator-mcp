@@ -162,7 +162,7 @@ def test_operate_tool_enum_agrees_with_modes():
     from data_aggregator_mcp import server
 
     tool = next(t for t in server.TOOLS if t.name == "operate")
-    enum = tool.inputSchema["properties"]["op"]["enum"]
+    enum = tool.input_schema["properties"]["op"]["enum"]
     assert "peek" in enum
     assert "peek" in operate.OPERATE_MODES
     assert set(enum) == set(operate.OPERATE_MODES)

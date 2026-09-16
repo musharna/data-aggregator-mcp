@@ -61,7 +61,7 @@ TOOLS: list[types.Tool] = [
             "so a dropped filter is never silent. Clients that support form "
             "elicitation are asked for a replacement term before the search runs."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Free-text search query"},
@@ -210,8 +210,8 @@ TOOLS: list[types.Tool] = [
                 },
             },
         },
-        outputSchema=SearchResult.model_json_schema(),
-        annotations=types.ToolAnnotations(readOnlyHint=True),
+        output_schema=SearchResult.model_json_schema(),
+        annotations=types.ToolAnnotations(read_only_hint=True),
     ),
     types.Tool(
         name="resolve",
@@ -232,7 +232,7 @@ TOOLS: list[types.Tool] = [
             "(under provenance{}) composing version-currency, licence+SPDX, FAIR score, "
             "retraction status, and the source/DOI/ID chain — it auto-attaches fair + trust."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "id": {
@@ -290,8 +290,8 @@ TOOLS: list[types.Tool] = [
             },
             "required": ["id"],
         },
-        outputSchema=DataResource.model_json_schema(),
-        annotations=types.ToolAnnotations(readOnlyHint=True),
+        output_schema=DataResource.model_json_schema(),
+        annotations=types.ToolAnnotations(read_only_hint=True),
     ),
     types.Tool(
         name="fetch",
@@ -317,7 +317,7 @@ TOOLS: list[types.Tool] = [
             "Fails loud if selected files exceed max_bytes unless force=true. "
             "Verifies checksums; writes a .dataresource.json sidecar."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "id": {"type": "string", "description": "Source-prefixed id or bare Zenodo id"},
@@ -341,9 +341,9 @@ TOOLS: list[types.Tool] = [
             },
             "required": ["id"],
         },
-        outputSchema=FetchResult.model_json_schema(),
+        output_schema=FetchResult.model_json_schema(),
         annotations=types.ToolAnnotations(
-            readOnlyHint=False, destructiveHint=False, idempotentHint=False
+            read_only_hint=False, destructive_hint=False, idempotent_hint=False
         ),
     ),
     types.Tool(
@@ -352,7 +352,7 @@ TOOLS: list[types.Tool] = [
             "List wired data sources and their capabilities (layer, kinds, supported "
             "filters, auth requirement, rate limit, status)."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "check_health": {
@@ -368,12 +368,12 @@ TOOLS: list[types.Tool] = [
                 },
             },
         },
-        outputSchema={
+        output_schema={
             "type": "object",
             "properties": {"sources": {"type": "array", "items": {"type": "object"}}},
             "required": ["sources"],
         },
-        annotations=types.ToolAnnotations(readOnlyHint=True),
+        annotations=types.ToolAnnotations(read_only_hint=True),
     ),
     types.Tool(
         name="operate",
@@ -388,7 +388,7 @@ TOOLS: list[types.Tool] = [
             "id + file name (resolve the id first to see files[] and access_modes). Requires "
             "the [operate] extra; fails loud if the file is not an operable tabular file."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "op": {"type": "string", "enum": ["schema", "preview", "head", "sql", "peek"]},
@@ -412,7 +412,7 @@ TOOLS: list[types.Tool] = [
             },
             "required": ["op", "id"],
         },
-        annotations=types.ToolAnnotations(readOnlyHint=True),
+        annotations=types.ToolAnnotations(read_only_hint=True),
     ),
     types.Tool(
         name="relate",
@@ -425,7 +425,7 @@ TOOLS: list[types.Tool] = [
             "hint names the shared value as evidence. Resolve ids first if you only have a "
             "search result. Per-id resolve failures are reported, not fatal."
         ),
-        inputSchema={
+        input_schema={
             "type": "object",
             "properties": {
                 "ids": {
@@ -438,8 +438,8 @@ TOOLS: list[types.Tool] = [
             },
             "required": ["ids"],
         },
-        outputSchema=RelateResult.model_json_schema(),
-        annotations=types.ToolAnnotations(readOnlyHint=True),
+        output_schema=RelateResult.model_json_schema(),
+        annotations=types.ToolAnnotations(read_only_hint=True),
     ),
 ]
 

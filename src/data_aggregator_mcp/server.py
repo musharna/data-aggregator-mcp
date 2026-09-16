@@ -27,11 +27,10 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 import httpx
+import jsonschema
 from mcp import types
-from mcp.server import Server
-from mcp.server.lowlevel.helper_types import ReadResourceContents
+from mcp.server import Server, ServerRequestContext
 from mcp.server.stdio import stdio_server
-from pydantic import AnyUrl
 
 from data_aggregator_mcp import (
     __version__,
@@ -137,11 +136,6 @@ def _ensure_fulltext_available(fid: str, resource: DataResource) -> None:
         )
 
 
-# Pass version explicitly: the SDK falls back to reporting ITS OWN version in
-# initialize().serverInfo when this is None, so clients were told the server was
-# "1.28.1" (the mcp SDK) rather than the package version. Affects both transports.
-server: Server = Server("data-aggregator-mcp", version=__version__)
-
 # The catalog advertised by list_sources. Defined once, per-source, in sources.py —
 # alongside the routing/fetch data it must stay consistent with.
 _SOURCES: list[dict[str, Any]] = sources.CATALOG
@@ -195,25 +189,34 @@ async def _http_client() -> AsyncGenerator[httpx.AsyncClient]:
         yield client
 
 
-@server.list_tools()
-async def _list_tools() -> list[types.Tool]:
-    return TOOLS
+# mcp 2.x handlers: each takes the per-request context and the typed request
+# params and returns the typed result; nothing is auto-wrapped any more.
+_TOOLS_BY_NAME: dict[str, types.Tool] = {t.name: t for t in TOOLS}
+
+
+async def _list_tools(
+    ctx: ServerRequestContext, params: types.PaginatedRequestParams | None
+) -> types.ListToolsResult:
+    return types.ListToolsResult(tools=TOOLS)
 
 
 _PROMPTS: list[types.Prompt] = tool_specs.PROMPTS
 
 
-@server.list_prompts()
-async def _list_prompts() -> list[types.Prompt]:
-    return _PROMPTS
+async def _list_prompts(
+    ctx: ServerRequestContext, params: types.PaginatedRequestParams | None
+) -> types.ListPromptsResult:
+    return types.ListPromptsResult(prompts=_PROMPTS)
 
 
 _prompt_text = tool_specs.prompt_text
 
 
-@server.get_prompt()
-async def _get_prompt(name: str, arguments: dict[str, str] | None) -> types.GetPromptResult:
-    args = arguments or {}
+async def _get_prompt(
+    ctx: ServerRequestContext, params: types.GetPromptRequestParams
+) -> types.GetPromptResult:
+    name = params.name
+    args = params.arguments or {}
     text = _prompt_text(name, args)
     return types.GetPromptResult(
         description=next((p.description for p in _PROMPTS if p.name == name), None),
@@ -223,30 +226,43 @@ async def _get_prompt(name: str, arguments: dict[str, str] | None) -> types.GetP
     )
 
 
-@server.list_resources()
-async def _list_resources() -> list[types.Resource]:
-    return resources_mod.static_resources()
+async def _list_resources(
+    ctx: ServerRequestContext, params: types.PaginatedRequestParams | None
+) -> types.ListResourcesResult:
+    return types.ListResourcesResult(resources=resources_mod.static_resources())
 
 
-@server.list_resource_templates()
-async def _list_resource_templates() -> list[types.ResourceTemplate]:
-    return resources_mod.templates()
+async def _list_resource_templates(
+    ctx: ServerRequestContext, params: types.PaginatedRequestParams | None
+) -> types.ListResourceTemplatesResult:
+    return types.ListResourceTemplatesResult(resource_templates=resources_mod.templates())
 
 
-@server.read_resource()
-async def _read_resource(uri: AnyUrl) -> list[ReadResourceContents]:
+async def _read_resource(
+    ctx: ServerRequestContext, params: types.ReadResourceRequestParams
+) -> types.ReadResourceResult:
+    uri = params.uri
     if resources_mod.is_catalog(uri):
         payload = json.dumps({"sources": _SOURCES})
-        return [ReadResourceContents(content=payload, mime_type="application/json")]
-    rid = resources_mod.parse_record_id(uri)
-    if rid is None:
-        raise ValueError(f"not a readable data-aggregator resource: {uri}")
-    async with _http_client() as client:
-        resource = await router.resolve(client, rid)
-    return [ReadResourceContents(content=resource.model_dump_json(), mime_type="application/json")]
+    else:
+        rid = resources_mod.parse_record_id(uri)
+        if rid is None:
+            raise ValueError(f"not a readable data-aggregator resource: {uri}")
+        async with _http_client() as client:
+            resource = await router.resolve(client, rid)
+        payload = resource.model_dump_json()
+    return types.ReadResourceResult(
+        contents=[
+            types.TextResourceContents(uri=str(uri), text=payload, mime_type="application/json")
+        ]
+    )
 
 
-async def _dispatch(name: str, args: dict[str, Any]) -> Any:
+async def _dispatch(
+    name: str, args: dict[str, Any], ctx: ServerRequestContext | None = None
+) -> Any:
+    """Run one tool. ``ctx`` is the MCP request context (session, request id, meta)
+    when called from the wire; None from unit tests and the search CLI."""
     if name == "list_sources":
         semantic_available = embeddings_mod.is_configured()
         if not args.get("check_health"):
@@ -269,10 +285,6 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 # from the cursor, already prompted for on page 1. No-ops (returns {})
                 # for every client that can't or won't answer; never raises.
                 if not args.get("cursor") and any(ontology_args.values()):
-                    try:
-                        ctx = server.request_context
-                    except LookupError:
-                        ctx = None  # called outside an MCP request (e.g. a unit test)
                     corrections = await elicitation.correct_unresolved(
                         client,
                         getattr(ctx, "session", None),
@@ -366,11 +378,9 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 # auxiliary telemetry: a send failure is logged and swallowed so
                 # it can NEVER abort or mask the actual download. This is the one
                 # sanctioned fail-soft spot — the core fetch still succeeds.
-                try:
-                    ctx = server.request_context
-                except LookupError:
-                    ctx = None  # called outside an MCP request (e.g. a unit test)
-                token = getattr(getattr(ctx, "meta", None), "progressToken", None)
+                # 2.x: ctx.meta is the request's `_meta` mapping (snake_case keys).
+                meta = ctx.meta if ctx is not None else None
+                token = meta.get("progress_token") if meta else None
                 on_progress = None
                 if token is not None and ctx is not None:
                     session = ctx.session
@@ -412,9 +422,67 @@ async def _dispatch(name: str, args: dict[str, Any]) -> Any:
                 raise ValueError(f"unknown tool: {name}")
 
 
-@server.call_tool()
-async def _call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    return await _dispatch(name, arguments)
+def _error_result(text: str) -> types.CallToolResult:
+    return types.CallToolResult(content=[types.TextContent(type="text", text=text)], is_error=True)
+
+
+async def _call_tool(
+    ctx: ServerRequestContext, params: types.CallToolRequestParams
+) -> types.CallToolResult:
+    """The tool-layer contract, kept exactly as mcp 1.x's ``@call_tool`` gave it.
+
+    1.x validated arguments against ``inputSchema``, wrapped a dict return into
+    ``structuredContent`` plus its JSON as text, validated that against
+    ``outputSchema``, and turned ANY handler exception into
+    ``CallToolResult(isError=True, content=[str(exc)])``. 2.x does none of that:
+    an exception leaving this function becomes a JSON-RPC *error*, and on a
+    modern-era connection the SDK replaces its text with a generic "Internal
+    server error" (``mcp/server/runner.py::modern_error_data``). Every refusal
+    this server raises (``FetchNotSupportedError``, ``ValidationError``, ...) is
+    written for the model to read, so it must travel as an error *result* with
+    its text intact — which is what this wrapper guarantees on both transports.
+    """
+    name = params.name
+    arguments = params.arguments or {}
+    tool = _TOOLS_BY_NAME.get(name)
+    try:
+        if tool is not None:
+            try:
+                jsonschema.validate(instance=arguments, schema=tool.input_schema)
+            except jsonschema.ValidationError as e:
+                return _error_result(f"Input validation error: {e.message}")
+        result = await _dispatch(name, arguments, ctx)
+        if not isinstance(result, dict):
+            return _error_result(f"Unexpected return type from tool: {type(result).__name__}")
+        if tool is not None and tool.output_schema is not None:
+            try:
+                jsonschema.validate(instance=result, schema=tool.output_schema)
+            except jsonschema.ValidationError as e:
+                return _error_result(f"Output validation error: {e.message}")
+        return types.CallToolResult(
+            content=[types.TextContent(type="text", text=json.dumps(result, indent=2))],
+            structured_content=result,
+            is_error=False,
+        )
+    except Exception as exc:  # noqa: BLE001 - the wire contract: every failure reaches the model as text
+        logger.warning("tool %s failed: %s: %s", name, type(exc).__name__, exc)
+        return _error_result(str(exc))
+
+
+# Pass version explicitly: the SDK falls back to reporting ITS OWN version in
+# initialize().serverInfo when this is None, so clients were told the server was
+# "1.28.1" (the mcp SDK) rather than the package version. Affects both transports.
+server: Server = Server(
+    "data-aggregator-mcp",
+    version=__version__,
+    on_list_tools=_list_tools,
+    on_call_tool=_call_tool,
+    on_list_prompts=_list_prompts,
+    on_get_prompt=_get_prompt,
+    on_list_resources=_list_resources,
+    on_list_resource_templates=_list_resource_templates,
+    on_read_resource=_read_resource,
+)
 
 
 async def _serve() -> None:

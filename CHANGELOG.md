@@ -6,6 +6,46 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Migrated to the mcp 2.x low-level server API; the dependency is now `mcp>=2,<3`.**
+  The seven handlers are `on_*` constructor arguments of `Server`, each taking
+  `(ServerRequestContext, params)` and returning the typed result (`ListToolsResult`,
+  `ReadResourceResult` with `TextResourceContents`, ...). `server.request_context` is
+  gone: the fetch progress token and the elicitation session come from the `ctx` the SDK
+  hands the handler (`ctx.meta["progress_token"]`, `ctx.session`, `ctx.request_id`), and
+  `_dispatch` takes that context as an optional third argument. Wire-model fields are
+  snake_case in 2.x (`Tool.input_schema`, `ToolAnnotations.read_only_hint`,
+  `Resource.mime_type`, `CallToolResult.is_error`); the specs in `tool_specs.py` /
+  `resources.py` are written that way now.
+
+  Four things the 1.x `@server.call_tool()` decorator did silently are now done by our
+  `on_call_tool` handler, because 2.x removed them and this server's contract depends on
+  each: (1) arguments are validated against `inputSchema` (`"Input validation error: ..."`
+  as an error result, same text as 1.x); (2) a dict result is returned as
+  `structuredContent` plus its JSON as text — the 2.x _client_ raises `RuntimeError` when
+  a tool with an `outputSchema` returns no structured content, so this is load-bearing for
+  search/resolve/fetch; (3) the result is validated against `outputSchema`; (4) **every
+  exception is returned as `CallToolResult(isError=True, content=[str(exc)])`**. Under
+  2.x an exception that leaves the handler becomes a JSON-RPC _error_, and on a
+  modern-era connection the SDK replaces its message with a generic "Internal server
+  error" (`mcp/server/runner.py::modern_error_data`), so every refusal this server writes
+  for the model (`FetchNotSupportedError`, `ValidationError`, ...) would have arrived
+  textless. The stdio and streamable-HTTP entry-point smokes now call `fetch` on a
+  non-fetchable id and assert the refusal TEXT in an `is_error` result, with `list_sources`
+  succeeding in the same session as the positive control. Seen to fail: with the catch
+  removed, both fail with `MCPError(0, "[FetchNotSupportedError] 'bioproject:PRJNA111'
+has no wired fetch backend ...")`.
+
+  Security floor: all three advisories the old floor named are patched at 1.27.2 /
+  1.28.1 (GHSA-jpw9-pfvf-9f58 and GHSA-hvrp-rf83-w775 patched in 1.27.2;
+  GHSA-vj7q-gjh5-988w in 1.28.1), so every 2.x release carries the fixes.
+  `TransportSecuritySettings` and `StreamableHTTPSessionManager` are unchanged in 2.2.0;
+  the live DNS-rebinding test still rejects a spoofed Host/Origin on the wire.
+  `create_connected_server_and_client_session` no longer exists in 2.x; the end-to-end
+  elicitation tests build the in-memory session the way the 2.x migration guide shows.
+  The lockfile resolves mcp 2.2.0; the `declared-deps` job resolves the same.
+
 ### Fixed
 
 - **The declared mcp range admitted a version this server cannot import.** #69 widened the

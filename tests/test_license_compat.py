@@ -443,10 +443,10 @@ def test_resolve_input_schema_has_use():
     from data_aggregator_mcp import server
 
     resolve = next(t for t in server.TOOLS if t.name == "resolve")
-    props = resolve.inputSchema["properties"]
+    props = resolve.input_schema["properties"]
     assert "use" in props
     assert props["use"]["type"] == "string"
-    assert "use" not in resolve.inputSchema.get("required", [])
+    assert "use" not in resolve.input_schema.get("required", [])
     # documents the four intents
     desc = props["use"]["description"].lower()
     for intent in ("commercial", "redistribute", "modify", "ml-training"):

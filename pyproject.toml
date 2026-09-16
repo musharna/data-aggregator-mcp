@@ -36,19 +36,19 @@ dependencies = [
     # handlers leak across clients). The first two are directly reachable from
     # the HTTP transport this package now ships.
     #
-    # The ceiling is <2 because this server is built on the 1.x low-level API:
-    # `Server` plus the `@server.list_tools()` / `@server.call_tool()` decorator
-    # registration. mcp 2.x removed those decorators - handlers are passed to
-    # the constructor now - so `data_aggregator_mcp.server` raises
-    # `AttributeError: 'Server' object has no attribute 'list_tools'` on IMPORT
-    # under 2.x. It is not a deprecation to work through later; the module does
-    # not load. #69 widened this to <3 mechanically and nothing caught it,
-    # because CI installs from uv.lock (mcp 1.28.1) and never resolves the
-    # declared range. The `declared-deps` CI job now does.
+    # Every 2.x release is above the patched versions of all three (1.27.2 and
+    # 1.28.1), so the floor is the major itself.
     #
-    # Raise this to <3 in the commit that migrates to the 2.x server API, not
-    # before.
-    "mcp>=1.28.1,<2",
+    # The floor is 2 because this server is built on the 2.x low-level API:
+    # handlers are `on_*` constructor arguments of `Server` taking
+    # `(ServerRequestContext, params)` and returning the typed `*Result`. The
+    # 1.x decorator registration (`@server.list_tools()` etc.) does not exist in
+    # 2.x and the 2.x constructor arguments do not exist in 1.x, so the module
+    # imports under exactly one major. The `declared-deps` CI job installs from
+    # this range alone (not uv.lock) and imports the server module, so widening
+    # the range past what the code loads under fails there, not at a user's
+    # first `pip install`.
+    "mcp>=2,<3",
     "httpx>=0.27",
     "pydantic>=2.6",
     "defusedxml>=0.7",

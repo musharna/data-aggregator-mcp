@@ -20,20 +20,26 @@ def test_server_reexports_the_specs_it_serves():
 @pytest.mark.asyncio
 async def test_mcp_handlers_serve_the_specs():
     """Go through the registered MCP handlers, not the module constants."""
-    assert await server._list_tools() is tool_specs.TOOLS
-    assert await server._list_prompts() is tool_specs.PROMPTS
-    result = await server._get_prompt("find_data", {"topic": "maize drought"})
+    from mcp import types
+
+    # 2.x results are pydantic models that copy the list on construction, so identity
+    # is checked at the module level above; here the served content must be equal.
+    assert (await server._list_tools(None, None)).tools == tool_specs.TOOLS
+    assert (await server._list_prompts(None, None)).prompts == tool_specs.PROMPTS
+    result = await server._get_prompt(
+        None, types.GetPromptRequestParams(name="find_data", arguments={"topic": "maize drought"})
+    )
     assert "maize drought" in result.messages[0].content.text
 
 
 def test_the_advertised_schema_defaults_come_from_the_modules_that_enforce_them():
     """A hand-copied default would silently promise a limit the code does not apply."""
     search = next(t for t in tool_specs.TOOLS if t.name == "search")
-    size = search.inputSchema["properties"]["size"]
+    size = search.input_schema["properties"]["size"]
     assert size["default"] == zenodo.DEFAULT_SIZE
     assert size["maximum"] == zenodo.MAX_SIZE
     fetch_tool = next(t for t in tool_specs.TOOLS if t.name == "fetch")
-    max_bytes = fetch_tool.inputSchema["properties"]["max_bytes"]
+    max_bytes = fetch_tool.input_schema["properties"]["max_bytes"]
     assert max_bytes["default"] == fetch_mod.DEFAULT_MAX_BYTES
 
 

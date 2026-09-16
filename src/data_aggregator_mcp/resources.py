@@ -28,17 +28,25 @@ def record_uri(resolve_id: str) -> str:
     return f"{SCHEME}://record/{quote(resolve_id, safe='')}"
 
 
-def is_catalog(uri: AnyUrl) -> bool:
+def _as_url(uri: str | AnyUrl) -> AnyUrl:
+    # mcp 2.x hands resource URIs to handlers as plain str (1.x parsed them to AnyUrl);
+    # parse here so scheme/host/path checks stay structural, not substring matches.
+    return uri if isinstance(uri, AnyUrl) else AnyUrl(uri)
+
+
+def is_catalog(uri: str | AnyUrl) -> bool:
     # exactly dataresource://catalog — a trailing path (catalog/extra) is NOT the catalog.
-    return uri.scheme == SCHEME and uri.host == "catalog" and not uri.path
+    url = _as_url(uri)
+    return url.scheme == SCHEME and url.host == "catalog" and not url.path
 
 
-def parse_record_id(uri: AnyUrl) -> str | None:
+def parse_record_id(uri: str | AnyUrl) -> str | None:
     """Return the decoded resolve-id for a ``dataresource://record/<id>`` URI,
     else None (not a record URI / empty id)."""
-    if uri.scheme != SCHEME or uri.host != "record":
+    url = _as_url(uri)
+    if url.scheme != SCHEME or url.host != "record":
         return None
-    raw = (uri.path or "").lstrip("/")
+    raw = (url.path or "").lstrip("/")
     if not raw:
         return None
     return unquote(raw)
@@ -47,12 +55,12 @@ def parse_record_id(uri: AnyUrl) -> str | None:
 def static_resources() -> list[types.Resource]:
     return [
         types.Resource(
-            uri=AnyUrl(CATALOG_URI),
+            uri=CATALOG_URI,
             name="sources",
             title="Data source catalog",
             description="The wired data sources and their capabilities (same payload as the "
             "list_sources tool), as JSON.",
-            mimeType="application/json",
+            mime_type="application/json",
         )
     ]
 
@@ -60,12 +68,12 @@ def static_resources() -> list[types.Resource]:
 def templates() -> list[types.ResourceTemplate]:
     return [
         types.ResourceTemplate(
-            uriTemplate=RECORD_TEMPLATE,
+            uri_template=RECORD_TEMPLATE,
             name="record",
             title="Resolved data record",
             description="Resolve any record by its source-prefixed id (e.g. zenodo:123, "
             "datacite:10.5061/dryad.x, pdb:1abc, a bare Zenodo id, or a DOI) — the same id "
             "the resolve tool accepts, URL-encoded. Returns the full DataResource as JSON.",
-            mimeType="application/json",
+            mime_type="application/json",
         )
     ]
