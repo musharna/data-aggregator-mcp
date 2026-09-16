@@ -192,6 +192,31 @@ async def test_a_registry_outage_does_not_prompt(monkeypatch) -> None:
     assert session.calls == []
 
 
+async def test_resolvers_bind_at_call_time_so_the_registry_can_be_patched(monkeypatch) -> None:
+    """The three end-to-end tests in this file patch ``elicitation.taxonomy.resolve_taxon``.
+    That only takes effect if ``_RESOLVERS`` looks the function up when called; a table
+    that stored the function object at import silently kept calling the live NCBI
+    resolver from required CI. Positive control: with the patch removed, the table
+    reaches the module's current attribute."""
+    calls: list[str] = []
+
+    async def recorder(client, name):
+        calls.append(name)
+        return None
+
+    monkeypatch.setattr(elicitation.taxonomy, "resolve_taxon", recorder)
+    async with httpx.AsyncClient() as client:
+        assert await elicitation._resolves(client, "organism", "yeast") is False
+    assert calls == ["yeast"], "the patched resolver was never reached"
+
+    monkeypatch.undo()
+    resolver, _, _ = elicitation._RESOLVERS["organism"]
+    assert resolver.__code__ is not elicitation.taxonomy.resolve_taxon.__code__
+    import inspect
+
+    assert "taxonomy.resolve_taxon" in inspect.getsource(resolver)
+
+
 async def test_resolver_map_covers_exactly_the_search_ontology_params() -> None:
     """Guard against the map and the router's field list drifting apart."""
     from data_aggregator_mcp import router

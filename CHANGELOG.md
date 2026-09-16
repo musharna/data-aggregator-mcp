@@ -8,6 +8,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Elicitation resolvers are looked up at call time.** `_RESOLVERS` stored the
+  resolver function objects at import, so the test suite's
+  `monkeypatch.setattr(elicitation.taxonomy, "resolve_taxon", ...)` never bound:
+  three elicitation tests called the live NCBI resolver from required CI and
+  passed only while "yeast" stayed absent from the registry (the outage test
+  passed because "mouse" resolved, never exercising the raise it was written
+  for). Found by running the suite in an empty network namespace
+  (`unshare -rn`); the whole suite now passes offline except the one
+  deliberately live subprocess test.
 - **`search` CLI: an upstream outage no longer prints `[]` with exit 0.** The
   router tolerates a failing source (so the others can still answer) and reports
   it in the page's `errors`; the CLI dropped that dict, making a Zenodo 504 storm

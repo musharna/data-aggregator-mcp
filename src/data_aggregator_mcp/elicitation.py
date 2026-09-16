@@ -42,29 +42,37 @@ from data_aggregator_mcp import anatomy, assay, chemistry, mesh, taxonomy
 logger = logging.getLogger(__name__)
 
 # field -> (resolver, registry label, the hint shown in the form)
+#
+# Each resolver is a thunk that looks the function up on its module AT CALL
+# TIME. Storing ``taxonomy.resolve_taxon`` itself froze the function object at
+# import, so ``monkeypatch.setattr(elicitation.taxonomy, "resolve_taxon", ...)``
+# in three tests never bound: they called the real NCBI resolver from required
+# CI, passing only while "yeast" stayed absent from the live registry, and
+# failing with no network. (The same trap is documented for
+# ``datacite._FILE_RESOLVERS``.)
 _RESOLVERS: dict[str, tuple[Callable[[httpx.AsyncClient, str], Awaitable[Any]], str, str]] = {
     "organism": (
-        taxonomy.resolve_taxon,
+        lambda client, value: taxonomy.resolve_taxon(client, value),
         "NCBI Taxonomy",
         "a scientific name, e.g. 'Saccharomyces cerevisiae' for yeast",
     ),
     "disease": (
-        mesh.resolve_mesh,
+        lambda client, value: mesh.resolve_mesh(client, value),
         "MeSH",
         "a MeSH descriptor, e.g. 'Breast Neoplasms'",
     ),
     "tissue": (
-        anatomy.resolve_uberon,
+        lambda client, value: anatomy.resolve_uberon(client, value),
         "UBERON",
         "an UBERON term, e.g. 'liver' or 'cerebral cortex'",
     ),
     "chemical": (
-        chemistry.resolve_chebi,
+        lambda client, value: chemistry.resolve_chebi(client, value),
         "ChEBI",
         "a ChEBI compound name, e.g. 'caffeine'",
     ),
     "assay": (
-        assay.resolve_edam,
+        lambda client, value: assay.resolve_edam(client, value),
         "EDAM",
         "an EDAM method or topic, e.g. 'ChIP-seq'",
     ),
