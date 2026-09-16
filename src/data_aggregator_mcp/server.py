@@ -505,7 +505,18 @@ def _run_search_cli(argv: list[str]) -> None:
     except Exception as exc:  # fail loud on stderr, non-zero exit
         print(f"data-aggregator-mcp search: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
-    json.dump(page.get("results", []), sys.stdout)
+    results = page.get("results", [])
+    errors = page.get("errors", {}) or {}
+    # The router tolerates a failing source so the OTHER sources can still
+    # answer, and reports it in ``errors``. Dropping that dict here turned an
+    # upstream outage into ``[]`` with exit 0 - indistinguishable from "no
+    # hits", and a vacuous pass for anything asserting over the list.
+    for name, msg in errors.items():
+        print(f"data-aggregator-mcp search: {name}: {msg}", file=sys.stderr)
+    if errors and not results:
+        print("data-aggregator-mcp search: every source failed", file=sys.stderr)
+        raise SystemExit(1)
+    json.dump(results, sys.stdout)
     sys.stdout.write("\n")
 
 
