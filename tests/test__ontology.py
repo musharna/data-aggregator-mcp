@@ -29,7 +29,7 @@ def test_every_advertised_ontology_filter_has_an_expander():
     the same advertise/implement gap as the uniprot bug, one layer up."""
     declared = {field for field, _ontology_name, _err in _ontology.ONTOLOGY_FIELDS}
     search = next(t for t in tool_specs.TOOLS if t.name == "search")
-    advertised = declared & set(search.inputSchema["properties"])
+    advertised = declared & set(search.input_schema["properties"])
     assert advertised == declared, sorted(declared - advertised)
     for field in declared:
         assert callable(getattr(_ontology, f"expand_{field}")), field

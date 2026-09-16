@@ -156,16 +156,29 @@ async def test_entrypoint_serves_over_streamable_http() -> None:
     with _live_server() as port:
         url = f"http://127.0.0.1:{port}{http_transport.MCP_PATH}"
         async with (
-            streamable_http_client(url) as (read, write, _),
+            streamable_http_client(url) as (read, write),
             ClientSession(read, write) as session,
         ):
             init = await session.initialize()
             tools = await session.list_tools()
-    assert init.serverInfo.name == "data-aggregator-mcp"
+            # Refusal text must survive the HTTP wire as an error RESULT. mcp 2.x
+            # maps an exception that leaves the handler to a JSON-RPC error whose
+            # message is a generic "Internal server error" on modern-era
+            # connections (mcp/server/runner.py::modern_error_data), so this is the
+            # transport most likely to lose it. Positive control in the same
+            # session: a legitimate call succeeds with structured content.
+            refused = await session.call_tool("fetch", {"id": "bioproject:PRJNA111"})
+            ok = await session.call_tool("list_sources", {})
+    assert init.server_info.name == "data-aggregator-mcp"
     # Regression guard: the SDK reports its OWN version when Server(version=)
     # is omitted, which told clients the server was "1.28.1".
-    assert init.serverInfo.version == __version__
+    assert init.server_info.version == __version__
     assert {t.name for t in tools.tools} == EXPECTED_TOOLS
+    assert refused.is_error is True
+    assert "bioproject:PRJNA111" in refused.content[0].text
+    assert "has no wired fetch backend" in refused.content[0].text
+    assert ok.is_error is False
+    assert "sources" in ok.structured_content
 
 
 def test_live_server_rejects_spoofed_host_and_origin() -> None:

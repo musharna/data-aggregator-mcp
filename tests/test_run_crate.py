@@ -309,10 +309,10 @@ def test_hit_identifier_falls_back_to_url_then_id() -> None:
 
 def test_search_tool_exposes_provenance_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    prop = tool.inputSchema["properties"]["provenance"]
+    prop = tool.input_schema["properties"]["provenance"]
     assert prop["type"] == "boolean"
     # Not required (opt-in).
-    assert "provenance" not in tool.inputSchema.get("required", [])
+    assert "provenance" not in tool.input_schema.get("required", [])
 
 
 async def test_dispatch_search_attaches_crate_when_true(monkeypatch) -> None:

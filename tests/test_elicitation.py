@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
+import anyio
 import httpx
 import pytest
 from mcp import types
@@ -56,7 +58,8 @@ def test_form_capability_is_detected() -> None:
 
 def test_url_only_client_is_not_treated_as_form_capable() -> None:
     """The SDK's own ``check_client_capability`` stops at ``elicitation is None``
-    (mcp 1.28.1 server/session.py:153) and would say yes here. The spec makes the two
+    (mcp 2.2.0 server/connection.py::check_capability, which says it mirrors the v1
+    check verbatim) and would say yes here. The spec makes the two
     modes independent and requires only that a client support ONE of them, so sending
     a form request to a URL-only client is a protocol violation."""
     session = _Session(_caps(url=True))
@@ -203,9 +206,33 @@ async def test_resolver_map_covers_exactly_the_search_ontology_params() -> None:
 # would surface and unit tests could not see it.
 
 
-async def test_end_to_end_elicitation_over_a_real_mcp_session(monkeypatch) -> None:
-    from mcp.shared.memory import create_connected_server_and_client_session
+@contextlib.asynccontextmanager
+async def _connected_session(server, **client_kwargs):
+    """A real ClientSession wired to ``server`` over in-memory streams.
 
+    mcp 2.x removed ``create_connected_server_and_client_session``; this is the
+    replacement its migration guide shows (``create_client_server_memory_streams``
+    plus ``server.run`` in a task group). ``raise_exceptions=True`` so a handler
+    bug fails the test instead of becoming a wire error."""
+    from mcp import ClientSession
+    from mcp.shared.memory import create_client_server_memory_streams
+
+    async with (
+        create_client_server_memory_streams() as (client_streams, server_streams),
+        anyio.create_task_group() as tg,
+    ):
+        tg.start_soon(
+            lambda: server.run(
+                *server_streams, server.create_initialization_options(), raise_exceptions=True
+            )
+        )
+        async with ClientSession(*client_streams, **client_kwargs) as session:
+            await session.initialize()
+            yield session
+        tg.cancel_scope.cancel()
+
+
+async def test_end_to_end_elicitation_over_a_real_mcp_session(monkeypatch) -> None:
     from data_aggregator_mcp import router
     from data_aggregator_mcp import server as server_mod
 
@@ -226,11 +253,11 @@ async def test_end_to_end_elicitation_over_a_real_mcp_session(monkeypatch) -> No
     async def elicitation_callback(context, params):
         prompts.append(params.message)
         assert params.mode == "form"
-        assert set(params.requestedSchema["properties"]) == {"organism"}
+        assert set(params.requested_schema["properties"]) == {"organism"}
         return types.ElicitResult(action="accept", content={"organism": "Saccharomyces cerevisiae"})
 
-    async with create_connected_server_and_client_session(
-        server_mod.server, elicitation_callback=elicitation_callback, raise_exceptions=True
+    async with _connected_session(
+        server_mod.server, elicitation_callback=elicitation_callback
     ) as session:
         await session.call_tool("search", {"query": "fermentation", "organism": "yeast"})
 
@@ -241,8 +268,6 @@ async def test_end_to_end_elicitation_over_a_real_mcp_session(monkeypatch) -> No
 async def test_end_to_end_a_client_without_elicitation_still_searches(monkeypatch) -> None:
     """The same call from a client that advertises no elicitation capability must run
     the search unchanged rather than hanging, erroring, or dropping the request."""
-    from mcp.shared.memory import create_connected_server_and_client_session
-
     from data_aggregator_mcp import router
     from data_aggregator_mcp import server as server_mod
 
@@ -258,10 +283,8 @@ async def test_end_to_end_a_client_without_elicitation_still_searches(monkeypatc
     monkeypatch.setattr(router, "search_page", fake_search_page)
     monkeypatch.setattr(elicitation.taxonomy, "resolve_taxon", fake_resolve_taxon)
 
-    async with create_connected_server_and_client_session(
-        server_mod.server, raise_exceptions=True
-    ) as session:
+    async with _connected_session(server_mod.server) as session:
         result = await session.call_tool("search", {"query": "fermentation", "organism": "yeast"})
 
-    assert result.isError is not True
+    assert result.is_error is not True
     assert seen["organism"] == "yeast", "uncorrected param passes through untouched"

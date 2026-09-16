@@ -31,14 +31,14 @@ def test_parse_record_id_rejects_non_record_uris():
 def test_static_resources_lists_the_catalog():
     res = resources.static_resources()
     assert len(res) == 1
-    assert str(res[0].uri) == resources.CATALOG_URI and res[0].mimeType == "application/json"
+    assert str(res[0].uri) == resources.CATALOG_URI and res[0].mime_type == "application/json"
 
 
 def test_templates_expose_the_record_template():
     tmpls = resources.templates()
     assert len(tmpls) == 1
-    assert tmpls[0].uriTemplate == "dataresource://record/{id}"
-    assert tmpls[0].mimeType == "application/json"
+    assert tmpls[0].uri_template == "dataresource://record/{id}"
+    assert tmpls[0].mime_type == "application/json"
 
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"

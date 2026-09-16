@@ -367,10 +367,10 @@ def test_data_resource_mirrors_defaults_empty_and_dumps() -> None:
 
 def test_search_tool_exposes_collapse_mirrors_param() -> None:
     tool = next(t for t in server.TOOLS if t.name == "search")
-    prop = tool.inputSchema["properties"]["collapse_mirrors"]
+    prop = tool.input_schema["properties"]["collapse_mirrors"]
     assert prop["type"] == "boolean"
     assert prop["default"] is False
-    assert "collapse_mirrors" not in tool.inputSchema.get("required", [])
+    assert "collapse_mirrors" not in tool.input_schema.get("required", [])
 
 
 async def test_dispatch_search_threads_collapse_mirrors(monkeypatch) -> None:

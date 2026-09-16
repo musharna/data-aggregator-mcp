@@ -75,8 +75,9 @@ def supports_form_elicitation(session: Any) -> bool:
     """True only when the client advertised **form** mode.
 
     Deliberately not ``session.check_client_capability`` — that helper stops at
-    ``client_caps.elicitation is None`` (mcp 1.28.1 ``server/session.py:153``) and never
-    looks at the sub-capability, so it returns True for a URL-only client. The spec
+    ``have.elicitation is None`` (mcp 2.2.0 ``server/connection.py::check_capability``,
+    which the docstring there says mirrors v1 verbatim) and never looks at the
+    sub-capability, so it returns True for a URL-only client. The spec
     treats the two modes as independent and requires only that a client support at
     least one (``types.py:319``), so a URL-only client is a real shape — and sending it
     a form request would be a protocol violation we'd have talked ourselves into.
