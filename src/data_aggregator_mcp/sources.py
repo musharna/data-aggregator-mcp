@@ -115,6 +115,10 @@ class SourceSpec:
     # licence the record does state; see ``license_compat.check``.
     default_license: str | None = None
     default_license_policy: str | None = None
+    # Whether the upstream search parses the router's ontology expansion
+    # ``(q) AND ("a" OR "b")``. A keyword-only upstream answers it with 0 hits (it
+    # substring-matches the literal) or an HTTP 400, so the router sends it the plain query.
+    boolean_query: bool = True
 
     def catalog_entry(self) -> dict[str, Any]:
         """This source's ``list_sources`` row. Unset optional keys stay ABSENT rather than
@@ -157,6 +161,7 @@ def _spec(
     description: str | None = None,
     default_license: str | None = None,
     default_license_policy: str | None = None,
+    boolean_query: bool = True,
 ) -> SourceSpec:
     prefixes = frozenset(module.PREFIXES)
     if fetchable is False:
@@ -195,6 +200,7 @@ def _spec(
         description=description,
         default_license=default_license,
         default_license_policy=default_license_policy,
+        boolean_query=boolean_query,
     )
 
 
@@ -273,6 +279,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     _spec(
         "cellxgene",
         cellxgene,
+        boolean_query=False,
         layer="omics",
         kinds=("dataset",),
         filters_supported=("query", "size"),
@@ -371,6 +378,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     _spec(
         "huggingface",
         huggingface,
+        boolean_query=False,
         layer="archives",
         kinds=("dataset",),
         filters_supported=(
@@ -409,6 +417,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     _spec(
         "openml",
         openml,
+        boolean_query=False,
         layer="archives",
         kinds=("dataset",),
         filters_supported=("query", "size"),
@@ -478,6 +487,7 @@ SOURCES: tuple[SourceSpec, ...] = (
     _spec(
         "nasacmr",
         nasacmr,
+        boolean_query=False,
         layer="archives",
         kinds=("dataset",),
         filters_supported=("query", "size", "cursor"),
@@ -539,6 +549,9 @@ FETCHABLE_PREFIXES: tuple[str, ...] = tuple(
 )
 
 _BY_NAME: dict[str, SourceSpec] = {s.name: s for s in SOURCES}
+
+# Sources whose search cannot parse the boolean ontology expansion (see SourceSpec).
+KEYWORD_ONLY: frozenset[str] = frozenset(s.name for s in SOURCES if not s.boolean_query)
 
 # Presentation order for the list_sources catalog — historical (roughly the order sources were
 # wired). Deliberately NOT SOURCES' order, which is dedup/merge precedence and load-bearing;

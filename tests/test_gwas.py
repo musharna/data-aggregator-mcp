@@ -175,3 +175,47 @@ async def test_live_search_then_resolve():
         assert total > 0 and recs and recs[0].id.startswith("gwas:")
         full = await gwas.resolve(c, recs[0].id)
         assert full.kind == "study" and full.identifiers.get("pmid")
+
+
+@pytest.mark.asyncio
+async def test_search_offset_not_on_page_boundary_starts_at_offset():
+    """M7 (audit 2026-09-22): offset=3,size=10 fetched page 0 and returned ACC000..,
+    repeating three records the router had already consumed. The page-boundary slice
+    (zenodo/dandi/datacite pattern) must drop the first ``offset % size`` records."""
+    accs = [f"ACC{i:03d}" for i in range(25)]
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        size, page = int(req.url.params["size"]), int(req.url.params["page"])
+        chunk = accs[page * size : (page + 1) * size]
+        return httpx.Response(
+            200,
+            json={
+                "_embedded": {"studies": [{"accessionId": a} for a in chunk]},
+                "page": {"totalElements": len(accs)},
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        total, recs = await gwas.search(c, "x", size=10, offset=3)
+        # positive control: a page-aligned offset is unchanged
+        _, aligned = await gwas.search(c, "x", size=10, offset=10)
+    assert total == 25
+    assert [r.id for r in recs] == [f"gwas:{a}" for a in accs[3:10]]
+    assert [r.id for r in aligned] == [f"gwas:{a}" for a in accs[10:20]]
+
+
+@pytest.mark.asyncio
+async def test_search_404_is_an_outage_not_zero_hits(monkeypatch):
+    """H3 class: `not_found_returns={}` on the SEARCH endpoint turned a moved/removed
+    endpoint into "0 studies". A search 404 now raises; a real empty page is still 0."""
+
+    empty = {"_embedded": {"studies": []}, "page": {"totalElements": 0}}
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(404, json={}))
+    ) as c:
+        with pytest.raises(NotFoundError):
+            await gwas.search(c, "height")
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=empty))
+    ) as c:
+        assert await gwas.search(c, "height") == (0, [])

@@ -9,6 +9,7 @@ built from ``checksumAlgorithm`` so ``fetch.py``'s ``_hasher`` verifies either.
 from __future__ import annotations
 
 import asyncio
+import logging
 from urllib.parse import quote
 
 import httpx
@@ -26,11 +27,15 @@ from data_aggregator_mcp.models import (
     year_from,
 )
 
+logger = logging.getLogger(__name__)
+
 SOLR = "https://cn.dataone.org/cn/v2/query/solr/"
 RESOLVE = "https://cn.dataone.org/cn/v2/resolve/{pid}"
 PREFIXES = {"dataone"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
+# Most data objects attached to one resolved package (each needs its own CN resolve).
+MANIFEST_CAP = 1000
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 3
 
@@ -171,6 +176,29 @@ async def _file_entry(client: httpx.AsyncClient, doc: dict) -> FileEntry | None:
     )
 
 
+async def _package_data_docs(client: httpx.AsyncClient, q: str) -> list[dict]:
+    """Every data object in a package, paged ``MAX_SIZE`` rows at a time until
+    ``numFound``. One unpaged ``rows=50`` query silently dropped the rest of a larger
+    package. Bounded by ``MANIFEST_CAP`` (each object costs a CN resolve round-trip);
+    truncation there is logged, never silent — mirroring cellxgene's manifest cap."""
+    docs: list[dict] = []
+    start = 0
+    while True:
+        total, page = await _solr(client, q, rows=MAX_SIZE, start=start, fl=_DATA_FL)
+        docs.extend(page)
+        start += len(page)
+        if not page or start >= total:
+            return docs
+        if len(docs) >= MANIFEST_CAP:
+            logger.warning(
+                "DataONE package %s holds %d data objects; attaching the first %d",
+                q,
+                total,
+                MANIFEST_CAP,
+            )
+            return docs[:MANIFEST_CAP]
+
+
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     pid = local_id(resource_id, "dataone")
     _escaped_pid = _escape_lucene(pid)
@@ -183,8 +211,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     if not rmap:
         return resource  # metadata-only package
     _escaped_rmap = _escape_lucene(rmap)
-    _t, data_docs = await _solr(
-        client, f'resourceMap:"{_escaped_rmap}" AND formatType:DATA', rows=MAX_SIZE, fl=_DATA_FL
+    data_docs = await _package_data_docs(
+        client, f'resourceMap:"{_escaped_rmap}" AND formatType:DATA'
     )
     entries = await asyncio.gather(*[_file_entry(client, d) for d in data_docs])
     return resource.model_copy(update={"files": [e for e in entries if e is not None]})

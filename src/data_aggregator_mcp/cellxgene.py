@@ -149,9 +149,11 @@ async def _collections(client: httpx.AsyncClient) -> list[dict]:
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
-        not_found_returns=[],
+        # The API promises a bare JSON array. A 404 (endpoint moved) or a 200 error
+        # envelope is an outage and must raise — coercing it to [] read as "no data".
+        expect=list,
     )
-    return body if isinstance(body, list) else []
+    return list(body)
 
 
 async def search(

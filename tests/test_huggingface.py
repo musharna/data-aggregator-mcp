@@ -186,3 +186,24 @@ async def test_live_search_and_resolve() -> None:
         assert full.files, "resolve should attach siblings as files"
         head = await client.head(full.files[0].url)
         assert head.status_code < 400  # resolve URL serves (2xx/3xx)
+
+
+@pytest.mark.asyncio
+async def test_search_wrong_shape_body_is_an_outage_not_zero_hits(monkeypatch):
+    """H3 class: a non-list body (an error envelope) was read as zero datasets."""
+    from data_aggregator_mcp import _http
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    async def no_sleep(*a, **k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", no_sleep)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={"error": "x"}))
+    ) as c:
+        with pytest.raises(UpstreamUnavailableError):
+            await huggingface.search(c, "dna")
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=[]))
+    ) as c:
+        assert await huggingface.search(c, "dna") == (0, [])

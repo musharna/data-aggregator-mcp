@@ -35,6 +35,28 @@ DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
 
 
+def _is_no_results(resp: httpx.Response) -> bool:
+    """OpenML answers a list query that matches nothing with ``412`` and error code
+    ``372`` ("No results"). Any other 412 code (bad filter, ...) is a real error."""
+    if resp.status_code != 412:
+        return False
+    try:
+        err = (resp.json() or {}).get("error") or {}
+    except ValueError:
+        return False
+    return str(err.get("code")) == "372"
+
+
+def _tags(raw: object) -> list[str]:
+    """OpenML serialises a one-element tag list as a bare string; ``list()`` of that
+    char-splits it. Normalise both forms to a list of whole tags."""
+    if isinstance(raw, str):
+        return [raw] if raw else []
+    if isinstance(raw, list):
+        return [str(t) for t in raw if t]
+    return []
+
+
 def _normalize_list_entry(d: dict) -> DataResource:
     did = d.get("did")
     return DataResource(
@@ -59,7 +81,11 @@ async def search(
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
-        not_found_returns={"data": {"dataset": []}},
+        # A 404 here means the list endpoint moved — an outage, not "no datasets".
+        # OpenML's real "no match" is HTTP 412 with its error code 372.
+        no_content_returns={"data": {"dataset": []}},
+        empty_answer=_is_no_results,
+        expect=dict,
     )
     datasets = ((body or {}).get("data") or {}).get("dataset") or []
     return len(datasets), [compact(_normalize_list_entry(d)) for d in datasets]
@@ -133,7 +159,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         year=year,
         license=desc.get("licence"),
         access=normalize_access("open"),
-        subjects=list(desc.get("tag") or []),
+        subjects=_tags(desc.get("tag")),
         last_updated=desc.get("upload_date"),
         files=files,
         links=[Link(rel="landing_page", target_id=_LANDING.format(did=did))],

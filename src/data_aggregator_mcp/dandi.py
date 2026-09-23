@@ -75,7 +75,9 @@ async def search(
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
-        not_found_returns={"count": 0, "results": []},
+        # No not_found_returns: a 404 on the LIST endpoint means it moved (an outage);
+        # a search that matches nothing is a 200 with count 0.
+        expect=dict,
     )
     results = (body or {}).get("results") or []
     total = (body or {}).get("count", len(results))
@@ -113,7 +115,9 @@ async def _asset_manifest(client: httpx.AsyncClient, ident: str, version: str) -
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
-        not_found_returns={"results": []},
+        # No not_found_returns: this version was just read off the dandiset itself,
+        # so a 404 here is a failure, not "the dandiset has no assets".
+        expect=dict,
     )
     out: list[FileEntry] = []
     for a in (body or {}).get("results") or []:

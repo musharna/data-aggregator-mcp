@@ -109,16 +109,6 @@ async def test_search_all_terms_must_match_and_paginates():
         assert total2 == 2 and recs2[0].id == "cellxgene:col-brain-2"  # 2nd of 2 "normal" matches
 
 
-@pytest.mark.asyncio
-async def test_search_non_list_body_is_empty():
-    # the default fan-out test mocks every source with `{}` (a dict, not a list);
-    # search must coerce non-list bodies to [] instead of iterating dict keys.
-    async with httpx.AsyncClient(
-        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
-    ) as c:
-        assert await cellxgene.search(c, "x") == (0, [])
-
-
 _DETAIL = {
     "collection_id": "col-lung-1",
     "collection_url": "https://cellxgene.cziscience.com/collections/col-lung-1",
@@ -259,3 +249,35 @@ async def test_live_search_then_resolve():
         # Exact host, not a URL prefix: startswith("https://datasets.cellxgene")
         # would also accept https://datasets.cellxgene.evil.com/x.h5ad.
         assert all(f.url and urlsplit(f.url).hostname == _ASSET_HOST for f in full.files)
+
+
+@pytest.mark.asyncio
+async def test_search_upstream_failure_raises_not_empty(monkeypatch):
+    """Audit 2026-09-22 H3: the collections endpoint answering 404, or 200 with an
+    error envelope (a dict where the API promises a bare list), read as "0 results" —
+    an outage indistinguishable from "no such data". Both must raise so the router
+    records the source in ``errors``."""
+    from data_aggregator_mcp import _http
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    async def _ns(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _ns)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(404, text="Not Found"))
+    ) as c:
+        with pytest.raises(NotFoundError):
+            await cellxgene.search(c, "lung")
+    envelope = {"detail": "Internal error", "status": 500}
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=envelope))
+    ) as c:
+        with pytest.raises(UpstreamUnavailableError, match="expected list"):
+            await cellxgene.search(c, "lung")
+    cols = [{"collection_id": "c1", "name": "Human lung atlas", "datasets": []}]
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=cols))
+    ) as c:
+        total, recs = await cellxgene.search(c, "lung")  # positive control
+    assert total == 1 and recs[0].id == "cellxgene:c1"

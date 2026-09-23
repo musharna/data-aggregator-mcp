@@ -13,6 +13,7 @@ router. Its only side effect is the single LLM call inside ``llm.complete_json``
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import httpx
@@ -83,7 +84,8 @@ def _clean_int(value: object) -> int | None:
     if isinstance(value, int):
         return value
     if isinstance(value, float):
-        return int(value)
+        # json.loads accepts Infinity/NaN, and int() of either raises (Overflow/Value).
+        return int(value) if math.isfinite(value) else None
     if isinstance(value, str):
         try:
             return int(value.strip())
@@ -105,6 +107,8 @@ def _clean_float(value: object) -> float | None:
         except ValueError:
             return None
     else:
+        return None
+    if not math.isfinite(f):  # NaN would clamp to 1.0 and read as full confidence
         return None
     return max(0.0, min(1.0, f))
 

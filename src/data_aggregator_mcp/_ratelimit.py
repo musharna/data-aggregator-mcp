@@ -15,10 +15,12 @@ from __future__ import annotations
 import asyncio
 import os
 import time
+import weakref
 from collections.abc import Awaitable, Callable
 from urllib.parse import urlsplit
 
 _DEFAULT_RATE = 10.0
+_EPS = 1e-9
 
 
 # Rate is sampled once at bucket-creation time (first request); a key added
@@ -46,16 +48,32 @@ class TokenBucket:
         self._now = now
         self._sleep = sleep
         self._updated = now()
-        self._lock = asyncio.Lock()
+        # One lock PER EVENT LOOP. The bucket is module-level and outlives any single
+        # loop, but an asyncio.Lock binds to the loop of its first contended use, so a
+        # single shared lock made the next ``asyncio.run`` raise RuntimeError. Token
+        # state stays shared across loops — pacing is a property of the upstream.
+        self._locks: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Lock] = (
+            weakref.WeakKeyDictionary()
+        )
+
+    def _lock(self) -> asyncio.Lock:
+        loop = asyncio.get_running_loop()
+        lock = self._locks.get(loop)
+        if lock is None:
+            lock = self._locks[loop] = asyncio.Lock()
+        return lock
 
     async def acquire(self) -> None:
-        async with self._lock:
+        async with self._lock():
             while True:
                 now = self._now()
                 self._tokens = min(self.capacity, self._tokens + (now - self._updated) * self.rate)
                 self._updated = now
-                if self._tokens >= 1.0:
-                    self._tokens -= 1.0
+                # Epsilon: refill arithmetic lands on 0.9999999999999998 tokens, and the
+                # remaining wait (~7e-17 s) is below a float clock's resolution at t~1 —
+                # so without it the loop can sleep "forever" without time advancing.
+                if self._tokens >= 1.0 - _EPS:
+                    self._tokens = max(0.0, self._tokens - 1.0)
                     return
                 await self._sleep((1.0 - self._tokens) / self.rate)
 

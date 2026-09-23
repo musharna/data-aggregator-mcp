@@ -285,3 +285,34 @@ async def test_live_operate_peek_real_remote_parquet(monkeypatch):
     assert isinstance(col["null_percentage"], float)
     assert isinstance(col["approx_unique"], int)
     assert "count" not in col
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("op", ["head", "preview"])
+async def test_non_positive_row_count_rejected(patch_resolve, op):
+    """L18 (audit 2026-09-22): n=0 and n=-3 were accepted — head n=-3 went straight into
+    duckdb's LIMIT and preview n<=0 answered an empty page as if the file were empty.
+    Both are caller errors. Positive control: n=2 returns two rows."""
+    patch_resolve(_res([FileEntry(name="sample.parquet", url=PARQUET_URL)]))
+    async with httpx.AsyncClient() as c:
+        for bad in (0, -3):
+            with pytest.raises(ValidationError, match="n must be"):
+                await operate.run(c, "zenodo:1", op, n=bad)
+        out = await operate.run(c, "zenodo:1", op, n=2)
+    assert len(out["rows"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_tsv_ops_split_on_tabs_end_to_end(patch_resolve, tmp_path):
+    """M16 (audit 2026-09-22) through the tool path: schema/preview/head on a .tsv all
+    see three columns, not one tab-joined column."""
+    tsv = tmp_path / "t.tsv"
+    tsv.write_text("gene\tsample\tcount\nA\ts1\t5\nB\ts2\t7\n")
+    patch_resolve(_res([FileEntry(name="t.tsv", url=tsv.as_uri())]))
+    async with httpx.AsyncClient() as c:
+        sch = await operate.run(c, "zenodo:1", "schema")
+        pre = await operate.run(c, "zenodo:1", "preview", n=2)
+        head = await operate.run(c, "zenodo:1", "head", n=2)
+    assert [col["name"] for col in sch["columns"]] == ["gene", "sample", "count"]
+    assert pre["rows"][1]["sample"] == "s2"
+    assert head["rows"][1]["sample"] == "s2"

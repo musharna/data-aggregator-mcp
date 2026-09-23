@@ -35,9 +35,34 @@ def decode(token: str) -> dict[str, Any]:
         raise ValidationError("invalid or corrupt cursor: 'offsets' must be a dict")
     if not isinstance(state["size"], int) or isinstance(state["size"], bool) or state["size"] <= 0:
         raise ValidationError("invalid or corrupt cursor: 'size' must be a positive integer")
+    if not all(_is_count(v) for v in state["offsets"].values()):
+        raise ValidationError("invalid or corrupt cursor: offsets must be non-negative integers")
+    ahead = state.get("ahead")
+    if ahead is not None and (
+        not isinstance(ahead, dict)
+        or not all(isinstance(v, list) and all(_is_count(i) for i in v) for v in ahead.values())
+    ):
+        raise ValidationError(
+            "invalid or corrupt cursor: 'ahead' must map streams to non-negative integer lists"
+        )
+    if "eq" in state and not isinstance(state["eq"], str):
+        raise ValidationError("invalid or corrupt cursor: 'eq' must be a string")
     variants = state.get("variants")
     if variants is not None and (
         not isinstance(variants, list) or not all(isinstance(v, str) for v in variants)
     ):
         raise ValidationError("invalid or corrupt cursor: 'variants' must be a list of strings")
+    raw_variants = state.get("raw_variants")
+    if raw_variants is not None and (
+        not isinstance(raw_variants, list)
+        or not all(isinstance(v, str) for v in raw_variants)
+        or len(raw_variants) != len(variants or [])
+    ):
+        raise ValidationError(
+            "invalid or corrupt cursor: 'raw_variants' must be strings matching 'variants'"
+        )
     return state
+
+
+def _is_count(v: object) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool) and v >= 0

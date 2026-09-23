@@ -30,7 +30,8 @@ async def test_links_for_maps_dataset_target_to_datacite(httpx_mock: HTTPXMock) 
         links = await scholix.links_for(client, "10.5061/dryad.x")
     assert len(links) == 1
     assert links[0].target_id == "datacite:10.1594/PANGAEA.1"
-    assert links[0].rel == "is_supplement_to"
+    # source IsSupplementedBy target: the dataset supplements the queried record
+    assert links[0].rel == "is_supplemented_by"
 
 
 async def test_links_for_drops_literature_citation_edges(httpx_mock: HTTPXMock) -> None:
@@ -98,3 +99,30 @@ async def test_live_scholix_pangaea_returns_mappable_targets() -> None:
         links = await scholix.links_for(client, "10.1594/PANGAEA.745671")
     assert links  # non-empty
     assert all(lnk.target_id.startswith("datacite:") for lnk in links)
+
+
+@pytest.mark.parametrize(
+    ("scholix_rel", "ours"),
+    [
+        ("IsSupplementedBy", "is_supplemented_by"),
+        ("IsSupplementTo", "is_supplement_to"),
+        ("References", "references"),
+        ("IsReferencedBy", "is_referenced_by"),
+        ("IsRelatedTo", "is_related_to"),
+        ("SomethingNew", "is_related_to"),  # unknown stays the neutral rel
+    ],
+)
+async def test_links_for_keeps_relation_direction(
+    httpx_mock: HTTPXMock, scholix_rel: str, ours: str
+) -> None:
+    """L23 (audit 2026-09-22): each inverse pair collapsed onto ONE rel, so "the paper IS
+    SUPPLEMENTED BY this dataset" and "the paper IS A SUPPLEMENT TO this dataset" both
+    read ``is_supplement_to`` — the direction of the edge, relative to the queried DOI,
+    was lost (and for IsSupplementedBy, inverted). Same for References/IsReferencedBy.
+    Rels are named in the DataCite snake-case vocabulary the rest of ``links`` uses."""
+    httpx_mock.add_response(
+        url=_URL, json={"totalLinks": 1, "result": [_rec("dataset", "10.1/d", rel=scholix_rel)]}
+    )
+    async with httpx.AsyncClient() as client:
+        links = await scholix.links_for(client, "10.5061/dryad.x")
+    assert [(lnk.rel, lnk.target_id) for lnk in links] == [(ours, "datacite:10.1/d")]

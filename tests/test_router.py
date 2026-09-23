@@ -1192,7 +1192,9 @@ async def test_enrich_skips_resource_without_organism(monkeypatch) -> None:
 async def test_search_enriches_results(monkeypatch) -> None:
     monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=_plant_info()))
 
-    async def fake_omics_search(client, query, *, size=10, offset=0):
+    async def fake_omics_search(client, sub, query, *, size=10, offset=0):
+        if sub != "geo":
+            return 0, []
         return 1, [
             DataResource(
                 id="geo:GSE1",
@@ -1203,7 +1205,7 @@ async def test_search_enriches_results(monkeypatch) -> None:
             )
         ]
 
-    monkeypatch.setattr("data_aggregator_mcp.omics.search", fake_omics_search)
+    monkeypatch.setattr("data_aggregator_mcp.omics.search_subsource", fake_omics_search)
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "x", sources=["omics"])
     assert results[0].taxa[0].taxid == 99112
@@ -1215,7 +1217,9 @@ async def test_search_enrichment_failure_surfaces_taxonomy_error(monkeypatch) ->
         taxonomy, "resolve_taxon", AsyncMock(side_effect=UpstreamUnavailableError("down"))
     )
 
-    async def fake_omics_search(client, query, *, size=10, offset=0):
+    async def fake_omics_search(client, sub, query, *, size=10, offset=0):
+        if sub != "geo":
+            return 0, []
         return 1, [
             DataResource(
                 id="geo:GSE1",
@@ -1226,7 +1230,7 @@ async def test_search_enrichment_failure_surfaces_taxonomy_error(monkeypatch) ->
             )
         ]
 
-    monkeypatch.setattr("data_aggregator_mcp.omics.search", fake_omics_search)
+    monkeypatch.setattr("data_aggregator_mcp.omics.search_subsource", fake_omics_search)
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "x", sources=["omics"])
     assert "taxonomy" in errors
@@ -1404,7 +1408,18 @@ def _mock_adapter(monkeypatch, name, pages):
     async def search(client, query, *, size, offset=0):
         return pages.get(offset, (0, []))
 
-    monkeypatch.setattr(router._ADAPTERS[name], "search", search)
+    adapter = router._ADAPTERS[name]
+    monkeypatch.setattr(adapter, "search", search)
+    subs = getattr(adapter, "SUBSOURCES", None)
+    if subs:
+        # The router pages a composite source per sub-source; route `pages` through the
+        # first one so no mocked adapter can fall through to a live sub-source.
+        async def search_subsource(client, sub, query, *, size, offset=0):
+            return (
+                await search(client, query, size=size, offset=offset) if sub == subs[0] else (0, [])
+            )
+
+        monkeypatch.setattr(adapter, "search_subsource", search_subsource)
 
 
 async def test_fresh_search_sets_next_cursor_when_full_window(monkeypatch) -> None:

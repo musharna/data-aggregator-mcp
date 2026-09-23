@@ -103,3 +103,40 @@ def test_snapshot_query_declares_datasetid_as_id_not_string():
     manifest — a total, silent loss of OpenNeuro file listings."""
     assert "$ds:ID!" in openneuro._QUERY
     assert "$ds:String!" not in openneuro._QUERY
+
+
+@pytest.mark.asyncio
+async def test_files_graphql_errors_raise_not_empty(monkeypatch):
+    """Audit 2026-09-22 H1: GraphQL reports failures as HTTP 200 with ``errors[]`` and
+    ``data: null`` (the ID!/String! mismatch was exactly this). It read as an empty
+    manifest, so the resolve looked fine and a fetch "succeeded" with zero files."""
+    from data_aggregator_mcp import _http
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    async def _ns(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _ns)
+    err = {
+        "errors": [{"message": "Variable $ds of type String! used in position expecting ID!"}],
+        "data": None,
+    }
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=err))
+    ) as c:
+        with pytest.raises(UpstreamUnavailableError, match="expecting ID!"):
+            await openneuro.files(c, "10.18112/openneuro.ds000001.v1.0.0")
+    ok = {
+        "data": {
+            "snapshot": {
+                "files": [
+                    {"filename": "a.tsv", "size": 3, "directory": False, "urls": ["https://x/a"]}
+                ]
+            }
+        }
+    }
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=ok))
+    ) as c:
+        files = await openneuro.files(c, "10.18112/openneuro.ds000001.v1.0.0")  # control
+    assert [f.name for f in files] == ["a.tsv"]

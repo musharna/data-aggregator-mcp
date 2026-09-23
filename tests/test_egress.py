@@ -56,6 +56,29 @@ async def test_public_addresses_are_allowed(guard_on, url: str) -> None:
     await egress.assert_public_url(url, what="probe")
 
 
+@pytest.mark.parametrize(
+    ("url", "why"),
+    [
+        ("http://100.64.0.1/a.csv", "RFC6598 shared/CGNAT space"),
+        ("http://100.100.100.100/a.csv", "Tailscale MagicDNS (CGNAT)"),
+        ("http://100.127.255.254/a.csv", "top of 100.64.0.0/10"),
+        ("http://[::ffff:100.64.0.1]/a.csv", "IPv4-mapped CGNAT"),
+        ("http://[::ffff:127.0.0.1]/a.csv", "IPv4-mapped loopback"),
+        ("http://192.0.0.8/a.csv", "IETF protocol assignments"),
+    ],
+)
+async def test_non_global_addresses_are_refused(guard_on, url: str, why: str) -> None:
+    """M15 (audit 2026-09-22): 100.64.0.0/10 is neither private nor reserved to the
+    stdlib, so the category denylist let every tailnet address through. The guard now
+    requires ``is_global``; the positive control proves public space still passes."""
+    with pytest.raises(ValidationError) as exc:
+        await egress.assert_public_url(url, what="probe")
+    assert "non-public" in str(exc.value), why
+    # positive control, same test: a public neighbour of the CGNAT block is allowed
+    await egress.assert_public_url("http://100.63.255.254/a.csv", what="probe")
+    await egress.assert_public_url("http://[::ffff:8.8.8.8]/a.csv", what="probe")
+
+
 async def test_opt_out_env_allows_private(monkeypatch) -> None:
     """Operators who really do serve records from private space have a way out."""
     monkeypatch.setenv(egress.ALLOW_PRIVATE_ENV, "1")

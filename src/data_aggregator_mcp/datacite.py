@@ -17,6 +17,7 @@ server fetch guard.
 from __future__ import annotations
 
 import re
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import httpx
@@ -27,6 +28,7 @@ from data_aggregator_mcp.license_compat import host_matches
 from data_aggregator_mcp.models import (
     Creator,
     DataResource,
+    FileEntry,
     FundingRef,
     Link,
     Metrics,
@@ -85,13 +87,17 @@ def _source_for_client(client_id: str) -> str:
 
 # source name → per-repo file-manifest resolver (populates files[] at resolve).
 # Dryad is included (manifest-only); fetchability is gated separately in server.py.
-_FILE_RESOLVERS = {
+_FILE_RESOLVERS: dict[str, Callable[..., Awaitable[list[FileEntry]]]] = {
     "dryad": dryad.files,
     "figshare": figshare.files,
     "dataverse": dataverse.files,
     "osf": osf.files,
     "openneuro": openneuro.files,
 }
+
+# File resolvers whose host is a federation of installations: they take the record's
+# DataCite landing URL (``landing_url=``) to pick the installation that holds it.
+_LANDING_AWARE = frozenset({"dataverse"})
 
 # Zenodo's own DOI namespace. `resolve` returns the native Zenodo record for these
 # anyway, so the DataCite GET is pure latency — match on the requested DOI and skip
@@ -237,7 +243,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         body = await _http.request_json(
             client,
             "GET",
-            f"{BASE_URL}/dois/{doi}",
+            f"{BASE_URL}/dois/{_http.doi_path(doi)}",
             service="DataCite resolve",
             headers={"Accept": "application/json"},
             timeout=DEFAULT_TIMEOUT,
@@ -257,7 +263,13 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             return await zenodo.resolve(client, f"zenodo:{recid}")
     resolver = _FILE_RESOLVERS.get(resource.source)
     if resolver is not None and resource.doi:
-        file_list = await resolver(client, resource.doi)
+        if resource.source in _LANDING_AWARE:
+            # The host repo is a federation (Dataverse): the record's own landing URL
+            # names the installation that holds it. Any other server cannot resolve it.
+            landing = (data.get("attributes") or {}).get("url")
+            file_list = await resolver(client, resource.doi, landing_url=landing)
+        else:
+            file_list = await resolver(client, resource.doi)
         if file_list:
             resource = resource.model_copy(update={"files": file_list})
     return resource

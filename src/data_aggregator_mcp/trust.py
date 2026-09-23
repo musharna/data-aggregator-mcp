@@ -15,7 +15,6 @@ less reliable than resolve without it.
 from __future__ import annotations
 
 import logging
-from urllib.parse import quote
 
 import httpx
 
@@ -48,7 +47,7 @@ async def annotate(client: httpx.AsyncClient, resource: DataResource) -> TrustSi
         body = await _http.request_json(
             client,
             "GET",
-            CROSSREF.format(doi=quote(doi, safe="/")),
+            CROSSREF.format(doi=_http.doi_path(doi)),
             service="Crossref retraction",
             headers=_HEADERS,
             timeout=DEFAULT_TIMEOUT,

@@ -8,6 +8,88 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+Bug audit 2026-09-22 (H = high, M = medium, L = low). Each fix ships with a test that
+failed on the old code for the stated reason.
+
+- **A fetch that downloads nothing is an error, not a success (H1).** A restricted,
+  embargoed or metadata-only record (`files=[]`), a `files` glob matching nothing, and a
+  manifest with no fetchable entry all returned `paths=[]` with no error. They now raise
+  `NotFoundError` / `ValidationError`, naming what was there. OpenNeuro GraphQL `errors[]`
+  now raise instead of producing an empty manifest, and institutional Figshare DOIs
+  (`10.25405/ncl.33951526.v1`) now list their files, after checking that the article's
+  own DOI matches.
+- **Files that share a basename no longer overwrite each other (H2).** Fetch cut every
+  name down to its basename, so `hf:nyu-mll/glue`'s `cola/train.parquet` and
+  `sst2/train.parquet` became one file. Relative directories are now kept (traversal
+  segments are still removed). Names that are identical anyway, such as cellxgene's
+  dataset-title names, get a stable `~<hash>` suffix.
+- **An upstream failure no longer reads as "0 results" (H3).** These now raise:
+  - NCBI's `esearchresult.ERROR` envelope, which arrives inside an HTTP 200 and was
+    cached by taxonomy as "no match" for an hour.
+  - A 404 or error-envelope body from the CELLxGENE, DANDI, OpenML, RCSB, GWAS Catalog
+    and HuggingFace search endpoints, or from DANDI's asset listing.
+
+  The shared checks live in `_http`: `expect=` for body shape and `check=` for in-band
+  errors. Composite sources report each failing sub-database in `errors` by name
+  (`omics/geo`, `literature/pubmed`, ...). Their own `search` raises when every backend
+  fails.
+
+- **Cursor walks return every record exactly once (H4, M5, M6).** Each source, and each
+  sub-database of `omics` / `literature`, is now paged as its own stream with its own
+  offset. The offset counts in the upstream's own order, and the cursor also carries the
+  positions already returned past it (`ahead`). Before this:
+  - omics and literature applied one offset to every sub-database: 60 of 90 records were
+    never returned.
+  - `rank=semantic` and multi-query consumed the whole fetched window but emitted only
+    `size` records.
+  - A DOI-deduped mirror, and records without a DOI (which dedup moved to the end of the
+    window), shifted a source's offset, so later pages skipped or repeated records.
+- **Continuation pages search the same query as page 1.** The cursor stored the raw
+  query, so from page 2 on an `organism=` / `disease=` walk silently dropped the ontology
+  restriction and paged a different, wider result set.
+- **Keyword-only sources get the plain query (M9).** The boolean ontology expansion
+  `(q) AND ("a" OR "b")` returned 0 hits from CELLxGENE, HuggingFace and OpenML and
+  HTTP 400 from NASA CMR. These sources (the registry's `boolean_query=False`) are now
+  sent the unexpanded query, and `errors["query_syntax"]` says the restriction was not
+  applied there.
+- **Zero hits are no longer reported as an outage (M10, M14).** Any 2xx is a success.
+  RCSB's `204 No Content` and OpenML's `412` with code `372` ("No results") are an empty
+  page; any other 412 is still an error.
+- **A Dataverse DOI is looked up on its own installation (M11).** The server is now
+  taken from the DataCite landing URL. Harvard is used only for `10.7910` DOIs. An
+  unknown installation gets no file listing and a log line, not Harvard's 404.
+- **DataONE packages with more than 50 data objects list all of them (M12).** The
+  listing is paged, with a logged cap at 1000.
+- **A nonexistent PMID raises `NotFoundError` (M13).** It used to resolve to an empty
+  record, which was then cached.
+- **The egress guard refuses carrier-NAT and Tailscale addresses (M15).**
+  100.64.0.0/10 is neither private nor reserved to the stdlib, so the guard now also
+  requires `ip.is_global`. IPv4-mapped IPv6 is judged as the IPv4 address it carries.
+- **`.tsv` schema and preview split on tabs (M16).**
+- **`doi:` / `https://doi.org/` / `http://dx.doi.org/` / `info:doi/` ids resolve (M8).**
+  They reached DataCite verbatim and came back as a false NotFound.
+- **GWAS Catalog and BioStudies search honour a mid-page offset (M7).** An offset that
+  was not a multiple of `size` replayed rows the router had already consumed.
+- **Smaller fixes (L17-L25):**
+  - CSV/TSV preview drops the partial last line and sets `truncated` when the 64 KB
+    sniff window cut the rows short.
+  - `operate` rejects `n < 1`. The schema now declares `minimum: 1`.
+  - `search(sources=[])` is a `ValidationError`, not an empty success.
+  - Checksums compare case-insensitively: DataONE's `MD5:` / upper-case hex no longer
+    fails a correct download.
+  - Query understanding no longer raises on an LLM's `Infinity` / `NaN`.
+  - The rate limiter works across event loops. It has per-loop locks and a fix for a
+    float stall in the refill loop.
+  - Scholix inverse relations keep their direction (`is_supplemented_by`,
+    `is_referenced_by`).
+  - A single-string OpenML `tag` is one subject, not a list of characters.
+  - Every DOI placed in a URL path goes through one encoder, `_http.doi_path`. The
+    doi.org citation, DataCite and Unpaywall requests used to send `#`/`?` raw, which
+    cut the DOI short.
+- **`test_all_tool_outputs_validate_against_schemas` can fail.** It used to construct
+  the pydantic models and never looked at a schema. It now drives each tool's real
+  handler and validates the output against the tool's declared `outputSchema`.
+
 - **Elicitation resolvers are looked up at call time.** `_RESOLVERS` stored the
   resolver function objects at import, so the test suite's
   `monkeypatch.setattr(elicitation.taxonomy, "resolve_taxon", ...)` never bound:
@@ -23,7 +105,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   indistinguishable from "no hits". Failed sources are now named on stderr, and
   exit 1 when every source failed. `test_search_cli_real_subprocess` derives its
   subprocess timeout from the code's own retry budget (30 s x 3 + backoff, +30 s
-  slack) instead of a fixed 90 s that was *below* that budget, which is why the
+  slack) instead of a fixed 90 s that was _below_ that budget, which is why the
   2026-09-16 Zenodo outage surfaced as `TimeoutExpired` (a failure) rather than
   the non-zero exit the test skips on, and blocked merges on a required check.
   The test also now requires the two records it asked for.

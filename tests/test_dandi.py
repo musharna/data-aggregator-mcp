@@ -191,3 +191,51 @@ async def test_live_search_then_resolve():
         assert total > 0 and recs and recs[0].id.startswith("dandi:")
         full = await dandi.resolve(c, recs[0].id)
         assert full.kind == "dataset" and full.files
+
+
+@pytest.mark.asyncio
+async def test_search_404_raises_not_empty(monkeypatch):
+    """Audit 2026-09-22 H3: a 404 on the dandisets LIST endpoint was mapped to
+    ``{"count": 0}`` — a moved/broken endpoint reported as "no dandisets match"."""
+    from data_aggregator_mcp import _http
+
+    async def _ns(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _ns)
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(404, text="Not Found"))
+    ) as c:
+        with pytest.raises(NotFoundError):
+            await dandi.search(c, "mouse")
+    listing = {"count": 1, "results": [{"identifier": "000004", "draft_version": {"name": "n"}}]}
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=listing))
+    ) as c:
+        total, recs = await dandi.search(c, "mouse")  # positive control
+    assert total == 1 and recs[0].id == "dandi:000004"
+
+
+@pytest.mark.asyncio
+async def test_resolve_assets_404_raises_not_empty_manifest(monkeypatch):
+    """Audit 2026-09-22 H1/H3 class: the version was JUST resolved from the dandiset
+    detail, so a 404 on its asset listing is an upstream failure — mapping it to
+    ``results: []`` produced a record with files=[] and a fetch that "succeeded" empty."""
+    from data_aggregator_mcp import _http
+
+    async def _ns(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _ns)
+
+    def broken(request):
+        if request.url.path.endswith("/assets/"):
+            return httpx.Response(404, text="Not Found")
+        return _resolve_router(request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(broken)) as c:
+        with pytest.raises(NotFoundError):
+            await dandi.resolve(c, "dandi:000004")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_resolve_router)) as c:
+        r = await dandi.resolve(c, "dandi:000004")  # positive control
+    assert len(r.files) == 2

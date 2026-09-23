@@ -122,13 +122,73 @@ def test_list_sources_includes_dataone_and_omicsdi():
     assert "id_example" in d1 and "id_example" in od
 
 
-def test_all_tool_outputs_validate_against_schemas() -> None:
-    # outputSchema is declared per tool; ensure each model still serializes.
-    from data_aggregator_mcp.models import FetchResult, SearchResult
+async def _representative_tool_outputs(monkeypatch, tmp_path) -> dict[str, dict]:
+    """Drive every tool through ``server._dispatch`` (the real handler, not a model
+    constructor) with its upstreams faked, and return the dicts the wire would carry."""
+    import types as pytypes
 
-    SearchResult(query="q", total=0, count=0).model_dump()
-    DataResource(id="datacite:10.x/y", source="dryad", kind="dataset", title="t").model_dump()
-    FetchResult().model_dump()
+    from data_aggregator_mcp import router
+    from data_aggregator_mcp.models import FetchResult
+
+    rec = DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        year=2024,
+        doi="10.5281/zenodo.1",
+        creators=[Creator(name="A. Author")],
+        license="cc-by-4.0",
+        files=[FileEntry(name="a.csv", url="https://x.example/a.csv", checksum="md5:00")],
+        links=[Link(rel="is_supplement_to", target_id="datacite:10.1/y")],
+    )
+
+    async def fake_search(client, q, *, size=10, offset=0):
+        return 1, [rec][offset : offset + size]
+
+    async def fake_resolve(client, rid):
+        return rec.model_copy(update={"id": rid})
+
+    monkeypatch.setattr(
+        router,
+        "_ADAPTERS",
+        {"zenodo": pytypes.SimpleNamespace(search=fake_search, PREFIXES=frozenset({"zenodo"}))},
+    )
+    monkeypatch.setattr(router, "resolve", fake_resolve)
+
+    async def fake_fetch(client, resource, **kw):
+        return FetchResult(paths=[str(tmp_path / "a.csv")], bytes=1)
+
+    monkeypatch.setattr("data_aggregator_mcp.fetch.fetch_files", fake_fetch)
+    return {
+        "search": await server._dispatch("search", {"query": "q", "sources": ["zenodo"]}),
+        "resolve": await server._dispatch("resolve", {"id": "zenodo:1"}),
+        "fetch": await server._dispatch("fetch", {"id": "zenodo:1"}),
+        "list_sources": await server._dispatch("list_sources", {}),
+        "relate": await server._dispatch("relate", {"ids": ["zenodo:1", "zenodo:2"]}),
+    }
+
+
+async def test_all_tool_outputs_validate_against_schemas(monkeypatch, tmp_path) -> None:
+    """Every tool that DECLARES an outputSchema: its real handler output validates
+    against that declared schema — the same check ``_call_tool`` runs on the wire.
+
+    The previous version only constructed the pydantic models, so it could not fail
+    on a schema/output mismatch (it never looked at a schema)."""
+    import jsonschema
+
+    outputs = await _representative_tool_outputs(monkeypatch, tmp_path)
+    declared = {t.name: t.output_schema for t in server.TOOLS if t.output_schema is not None}
+    # A tool that grows an outputSchema without a representative output here fails.
+    assert set(declared) == set(outputs), (set(declared), set(outputs))
+    for name, schema in declared.items():
+        jsonschema.validate(instance=outputs[name], schema=schema)
+
+    # Negative control: the same validator rejects a planted type mismatch in a real
+    # output, so the loop above is capable of failing.
+    planted = {**outputs["search"], "total": "not-an-int"}
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(instance=planted, schema=declared["search"])
 
 
 def test_list_sources_reports_omics() -> None:

@@ -157,3 +157,83 @@ async def test_esearch_default_retstart_zero_or_absent() -> None:
     async with httpx.AsyncClient(transport=transport) as client:
         await _eutils.esearch(client, "pubmed", "cancer", retmax=10)
     assert captured.get("retstart", "0") == "0"
+
+
+# --- audit 2026-09-22 H3 / M13: NCBI error envelopes ride inside HTTP 200 ---
+
+_ESEARCH = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+_ESUMMARY = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+
+
+def _no_sleep(monkeypatch) -> None:
+    from data_aggregator_mcp import _http
+
+    async def _ns(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _ns)
+
+
+async def test_esearch_error_envelope_raises_not_zero_hits(
+    httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    """``{"esearchresult": {"ERROR": ...}}`` is a backend failure; it read as count 0,
+    so an NCBI outage looked like "no records" (and taxonomy cached it as no-match)."""
+    import pytest
+
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    _no_sleep(monkeypatch)
+    httpx_mock.add_response(
+        url=f"{_ESEARCH}?db=gds&term=rice&retmax=10&retmode=json",
+        json={"esearchresult": {"ERROR": "Search Backend failed: <internal>"}},
+        is_reusable=True,
+    )
+    # positive control: NCBI's real no-match shape (captured live 2026-09-22)
+    httpx_mock.add_response(
+        url=f"{_ESEARCH}?db=gds&term=zzqq&retmax=10&retmode=json",
+        json={
+            "esearchresult": {
+                "count": "0",
+                "idlist": [],
+                "warninglist": {"outputmessages": ["No items found."]},
+                "errorlist": {"phrasesnotfound": ["zzqq"]},
+            }
+        },
+    )
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(UpstreamUnavailableError, match="Search Backend failed"):
+            await _eutils.esearch(client, "gds", "rice", retmax=10)
+        assert await _eutils.esearch(client, "gds", "zzqq", retmax=10) == (0, [])
+
+
+async def test_esummary_error_envelopes(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    """A top-level ``error`` is a failed call (raise); a per-uid ``error`` means that
+    uid has no record — it must be dropped, not normalised into an empty "record"."""
+    import pytest
+
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    _no_sleep(monkeypatch)
+    httpx_mock.add_response(
+        url=f"{_ESUMMARY}?db=pubmed&id=1&version=2.0&retmode=json",
+        json={"error": "Invalid uid"},
+        is_reusable=True,
+    )
+    httpx_mock.add_response(
+        url=f"{_ESUMMARY}?db=pubmed&id=99999999999,2&version=2.0&retmode=json",
+        json={
+            "result": {
+                "uids": ["99999999999", "2"],
+                "99999999999": {"uid": "99999999999", "error": "cannot get document summary"},
+                "2": {"uid": "2", "title": "real"},
+            }
+        },
+    )
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(UpstreamUnavailableError, match="Invalid uid"):
+            await _eutils.esummary(client, "pubmed", ["1"])
+        docs = await _eutils.esummary(client, "pubmed", ["99999999999", "2"])
+    assert [d["uid"] for d in docs] == ["2"]  # the real doc survives (positive control)

@@ -153,7 +153,10 @@ async def search(
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
-        not_found_returns={"total_count": 0, "result_set": []},
+        # RCSB answers a zero-hit search with 204 No Content. A 404 is NOT "no hits":
+        # it means the search endpoint itself is gone, so it raises like any outage.
+        no_content_returns={"total_count": 0, "result_set": []},
+        expect=dict,
     )
     total = (body or {}).get("total_count", 0)
     ids = [hit["identifier"] for hit in (body or {}).get("result_set") or []]

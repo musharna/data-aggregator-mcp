@@ -82,8 +82,9 @@ async def search(
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=list,  # an error envelope is an outage, not zero datasets
     )
-    items = data if isinstance(data, list) else []
+    items = data
     return len(items), [compact(_normalize(d)) for d in items]
 
 
