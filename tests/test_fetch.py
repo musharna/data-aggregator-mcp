@@ -693,3 +693,137 @@ async def test_a_supported_checksum_that_mismatches_still_raises(tmp_path: Path)
     async with httpx.AsyncClient(transport=_serve(body)) as client:
         with pytest.raises(UpstreamUnavailableError, match="checksum mismatch"):
             await fetch_mod.fetch_files(client, _one("md5:" + "0" * 32, body), dest=str(tmp_path))
+
+
+# --- audit 2026-09-22: H1 empty fetch, H2 name collisions, L20 checksum case ------------
+
+
+def _by_url(bodies: dict[str, bytes]):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=bodies[str(request.url)])
+
+    return httpx.MockTransport(handler)
+
+
+async def test_a_fetch_that_downloads_nothing_is_an_error_not_success(tmp_path: Path) -> None:
+    """H1: a restricted/metadata-only record (files=[]), a glob matching nothing, and a
+    manifest whose every entry is unfetchable all used to return success with paths=[]
+    — indistinguishable from "fetched" to a caller reading only the status."""
+    from data_aggregator_mcp.errors import NotFoundError, ValidationError
+
+    body = b"a,b\n1,2\n"
+    good = _one(None, body)
+    empty = good.model_copy(update={"files": []})
+    no_urls = good.model_copy(update={"files": [FileEntry(name="d.bin", url=None)]})
+    async with httpx.AsyncClient(transport=_serve(body)) as client:
+        with pytest.raises(NotFoundError, match="no downloadable files"):
+            await fetch_mod.fetch_files(client, empty, dest=str(tmp_path))
+        with pytest.raises(ValidationError, match=r"matched none of the 1 file"):
+            await fetch_mod.fetch_files(client, good, dest=str(tmp_path), files="*.tsv")
+        with pytest.raises(NotFoundError, match="none of the 1 selected file"):
+            await fetch_mod.fetch_files(client, no_urls, dest=str(tmp_path))
+        # Positive control: the same record with a real file and a matching glob succeeds.
+        out = await fetch_mod.fetch_files(client, good, dest=str(tmp_path), files="*.bin")
+    assert len(out.paths) == 1 and Path(out.paths[0]).read_bytes() == body
+
+
+async def test_files_sharing_a_basename_do_not_overwrite_each_other(tmp_path: Path) -> None:
+    """H2: fetch reduced every name to its basename, so hf:nyu-mll/glue's
+    ``cola/train.parquet`` and ``sst2/train.parquet`` landed on ONE path (30/69 files
+    lost, the survivor chosen by completion order). Relative directories are kept."""
+    bodies = {
+        "https://x.example/a/data.csv": b"AAAA from dir a\n",
+        "https://x.example/b/data.csv": b"BBBB from dir b\n",
+        "https://x.example/top.csv": b"top\n",
+    }
+    r = DataResource(
+        id="hf:o/n",
+        source="huggingface",
+        kind="dataset",
+        title="t",
+        files=[
+            FileEntry(name="a/data.csv", url="https://x.example/a/data.csv"),
+            FileEntry(name="b/data.csv", url="https://x.example/b/data.csv"),
+            FileEntry(name="top.csv", url="https://x.example/top.csv"),
+        ],
+    )
+    async with httpx.AsyncClient(transport=_by_url(bodies)) as client:
+        out = await fetch_mod.fetch_files(client, r, dest=str(tmp_path))
+    assert len(set(out.paths)) == 3, out.paths
+    base = tmp_path / "hf" / "o" / "n"
+    got = {Path(p).relative_to(base).as_posix(): Path(p).read_bytes() for p in out.paths}
+    assert got == {
+        "a/data.csv": bodies["https://x.example/a/data.csv"],
+        "b/data.csv": bodies["https://x.example/b/data.csv"],
+        "top.csv": b"top\n",
+    }
+
+
+async def test_identical_names_are_disambiguated_not_overwritten(tmp_path: Path) -> None:
+    """H2, second shape: cellxgene names files by dataset TITLE, so two datasets titled
+    "Lung" both became ``Lung.h5ad``. Colliding names get a stable, distinct path; the
+    first keeps the plain name (positive control: a unique name is untouched)."""
+    bodies = {"https://x.example/d1.h5ad": b"DATA-D1", "https://x.example/d2.h5ad": b"DATA-D2"}
+    r = DataResource(
+        id="cellxgene:c1",
+        source="cellxgene",
+        kind="dataset",
+        title="t",
+        files=[
+            FileEntry(name="Lung.h5ad", url="https://x.example/d1.h5ad"),
+            FileEntry(name="Lung.h5ad", url="https://x.example/d2.h5ad"),
+        ],
+    )
+    async with httpx.AsyncClient(transport=_by_url(bodies)) as client:
+        out = await fetch_mod.fetch_files(client, r, dest=str(tmp_path))
+        again = await fetch_mod.fetch_files(client, r, dest=str(tmp_path), force=True)
+    contents = sorted(Path(p).read_bytes() for p in out.paths)
+    assert contents == [b"DATA-D1", b"DATA-D2"], out.paths
+    assert any(Path(p).name == "Lung.h5ad" for p in out.paths)
+    assert again.paths == out.paths, "disambiguated names must be stable across runs"
+
+
+async def test_traversal_segments_are_dropped_but_the_relative_path_kept(tmp_path: Path) -> None:
+    """Keeping directories must not reopen the traversal hole the basename cut closed."""
+    r = DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        files=[
+            FileEntry(name="../../sub/../x.txt", url="https://x.example/x"),
+            FileEntry(name="/abs/y.txt", url="https://x.example/y"),
+        ],
+    )
+    bodies = {"https://x.example/x": b"x", "https://x.example/y": b"y"}
+    async with httpx.AsyncClient(transport=_by_url(bodies)) as client:
+        out = await fetch_mod.fetch_files(client, r, dest=str(tmp_path))
+    base = (tmp_path / "zenodo" / "1").resolve()
+    assert len(out.paths) == 2
+    for p in out.paths:
+        assert Path(p).resolve().is_relative_to(base), p
+    assert not (tmp_path.parent / "x.txt").exists()
+
+
+@pytest.mark.parametrize("declared", ["upper-hex", "upper-algo"])
+async def test_checksum_comparison_ignores_hex_and_algorithm_case(
+    tmp_path: Path, declared: str
+) -> None:
+    """L20: DataONE publishes ``MD5`` / upper-case hex; the correct bytes were rejected
+    as a checksum mismatch because the comparison was case-sensitive."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    body = b"hello"
+    hexd = hashlib.md5(body).hexdigest()
+    checksum = f"md5:{hexd.upper()}" if declared == "upper-hex" else f"MD5:{hexd}"
+    async with httpx.AsyncClient(transport=_serve(body)) as client:
+        out = await fetch_mod.fetch_files(client, _one(checksum, body), dest=str(tmp_path))
+        assert out.paths and out.unverified == []
+        # The resume path compares the same way (no pointless re-download).
+        again = await fetch_mod.fetch_files(client, _one(checksum, body), dest=str(tmp_path))
+        assert again.resumed == ["d.bin"]
+        # Negative control: wrong bytes still fail, whatever the case.
+        with pytest.raises(UpstreamUnavailableError, match="checksum mismatch"):
+            await fetch_mod.fetch_files(
+                client, _one("MD5:" + "A" * 32, body), dest=str(tmp_path), force=True
+            )

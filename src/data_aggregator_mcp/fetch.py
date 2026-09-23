@@ -8,12 +8,17 @@ import hashlib
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import httpx
 
 from data_aggregator_mcp import archive, egress
-from data_aggregator_mcp.errors import FetchTooLargeError, NotFoundError, UpstreamUnavailableError
+from data_aggregator_mcp.errors import (
+    FetchTooLargeError,
+    NotFoundError,
+    UpstreamUnavailableError,
+    ValidationError,
+)
 from data_aggregator_mcp.models import DataResource, FetchResult, FileEntry
 
 DEFAULT_MAX_BYTES = 2_000_000_000  # ~2 GB
@@ -39,13 +44,70 @@ def _target_dir(resource: DataResource, dest: str | None) -> Path:
     return base / safe
 
 
+def _relative_path(name: str) -> PurePosixPath | None:
+    """The file's path relative to the record dir, with every component that could
+    climb out of it (``..``, ``.``, empty / absolute roots, backslash separators)
+    dropped. None when nothing usable is left.
+
+    Keeping the directories is the point: the name used to be cut to its basename, so
+    ``cola/train.parquet`` and ``sst2/train.parquet`` wrote ONE file (the survivor
+    picked by completion order). ``name`` is uploader-controlled, hence the scrub."""
+    parts = [p for p in name.replace("\\", "/").split("/") if p not in ("", ".", "..")]
+    return PurePosixPath(*parts) if parts else None
+
+
+def _plan_paths(selected: list[FileEntry]) -> list[PurePosixPath | None]:
+    """One distinct on-disk relative path per selected file, in manifest order.
+
+    Two entries can still map to the same path — cellxgene names files by dataset
+    title, so two datasets titled "Lung" are both ``Lung.h5ad``. The first keeps its
+    name; a later collision gets ``<stem>~<hash8><suffix>``, the hash taken from its
+    url so the choice is stable across runs (resume keeps working). Compared
+    case-insensitively: the cache may live on a case-insensitive filesystem."""
+    files_taken: set[str] = set()
+    dirs_taken: set[str] = set()
+    planned: list[PurePosixPath | None] = []
+
+    def clashes(p: PurePosixPath) -> bool:
+        # Same file, a file where a dir must go, or a dir where a file must go.
+        key = p.as_posix().lower()
+        ancestors = {a.as_posix().lower() for a in p.parents if a != PurePosixPath(".")}
+        return key in files_taken or key in dirs_taken or bool(ancestors & files_taken)
+
+    for f in selected:
+        rel = _relative_path(f.name)
+        if rel is None:
+            planned.append(None)
+            continue
+        candidate, n = rel, 0
+        while clashes(candidate):
+            n += 1
+            tag = hashlib.sha1(f"{f.url}|{n}".encode(), usedforsecurity=False).hexdigest()[:8]
+            candidate = rel.with_name(f"{rel.stem}~{tag}{rel.suffix}")
+        files_taken.add(candidate.as_posix().lower())
+        dirs_taken.update(
+            a.as_posix().lower() for a in candidate.parents if a != PurePosixPath(".")
+        )
+        planned.append(candidate)
+    return planned
+
+
+def _split_checksum(checksum: str) -> tuple[str, str]:
+    """``"MD5:ABC…"`` → ``("md5", "abc…")``. Upstreams disagree on case for both the
+    algorithm label and the hex digest (DataONE publishes ``MD5`` and upper-case hex);
+    a hex digest is case-insensitive, so the comparison must be too."""
+    algo, _, digest = checksum.partition(":")
+    return algo.strip().lower(), digest.strip().lower()
+
+
 def _hasher(checksum: str | None):
     if not checksum or ":" not in checksum:
         return None
-    algo = checksum.split(":", 1)[0]
-    if algo not in hashlib.algorithms_available:
-        return None
-    return hashlib.new(algo)
+    algo, _ = _split_checksum(checksum)
+    for name in (algo, algo.replace("-", "")):
+        if name in hashlib.algorithms_available:
+            return hashlib.new(name)
+    return None
 
 
 def _already_complete(out: Path, f: FileEntry) -> bool:
@@ -61,7 +123,7 @@ def _already_complete(out: Path, f: FileEntry) -> bool:
         with out.open("rb") as fh:
             for block in iter(lambda: fh.read(_CHUNK), b""):
                 h.update(block)
-        return h.hexdigest() == f.checksum.split(":", 1)[1]
+        return h.hexdigest() == _split_checksum(f.checksum)[1]
     if f.size is not None:
         return out.stat().st_size == f.size
     return False
@@ -106,6 +168,7 @@ async def _download_one(
     client: httpx.AsyncClient,
     f: FileEntry,
     target: Path,
+    rel: PurePosixPath | None,
     *,
     budget: _Budget,
     force: bool,
@@ -128,12 +191,13 @@ async def _download_one(
     # The scheme says how, not where. f.url is uploader-controlled on every source that
     # accepts uploads, so a record can point it into private address space.
     await egress.assert_public_url(f.url, what=f"fetch {f.name}")
-    # Sanitize: f.name is uploader-controlled (Zenodo file key). Reduce to a
-    # bare basename so it cannot escape the target dir via path traversal.
-    safe_name = Path(f.name).name
-    if not safe_name or safe_name in (".", ".."):
+    # ``rel`` is the scrubbed, collision-free relative path from _plan_paths (f.name is
+    # uploader-controlled); None = nothing usable survived the scrub.
+    if rel is None:
         return _Outcome(f.name, state="skipped")
-    out = target / safe_name
+    safe_name = rel.name
+    out = target / rel
+    out.parent.mkdir(parents=True, exist_ok=True)
     if not force and _already_complete(out, f):
         return _Outcome(f.name, path=str(out), state="resumed")
     h = _hasher(f.checksum)
@@ -181,7 +245,7 @@ async def _download_one(
         except (httpx.TimeoutException, httpx.TransportError) as exc:
             raise UpstreamUnavailableError(f"fetch {f.name} transport failure: {exc!r}") from exc
         if h is not None and f.checksum:
-            expected = f.checksum.split(":", 1)[1]
+            expected = _split_checksum(f.checksum)[1]
             if h.hexdigest() != expected:
                 raise UpstreamUnavailableError(f"checksum mismatch for {f.name}")
         if h is None and f.mime in _BINARY_MIMES and _looks_like_html(first_head):
@@ -243,11 +307,27 @@ async def fetch_files(
     fail-soft telemetry must swallow inside their callback).
     """
     target = _target_dir(resource, dest)
-    target.mkdir(parents=True, exist_ok=True)
 
+    # A fetch that writes nothing is a failure, never an empty success: a restricted /
+    # embargoed / metadata-only record, a glob that matches nothing and a manifest of
+    # unfetchable entries all used to return ``paths=[]`` with no error.
+    if not resource.files:
+        raise NotFoundError(
+            f"{resource.id} lists no downloadable files (restricted, embargoed, or "
+            "metadata-only record); nothing was fetched"
+        )
     selected = resource.files
     if files:
         selected = [f for f in resource.files if fnmatch.fnmatch(f.name, files)]
+        if not selected:
+            names = [f.name for f in resource.files]
+            shown = ", ".join(names[:20]) + (" ..." if len(names) > 20 else "")
+            raise ValidationError(
+                f"files={files!r} matched none of the {len(names)} file(s) in "
+                f"{resource.id}: {shown}"
+            )
+    planned = _plan_paths(selected)
+    target.mkdir(parents=True, exist_ok=True)
 
     declared_total = sum(f.size or 0 for f in selected)
     if declared_total > max_bytes and not force:
@@ -271,11 +351,11 @@ async def fetch_files(
     progress_lock = asyncio.Lock()
     done = 0
 
-    async def _guarded(f: FileEntry) -> _Outcome:
+    async def _guarded(f: FileEntry, rel: PurePosixPath | None) -> _Outcome:
         nonlocal done
         async with sem:
             outcome = await _download_one(
-                client, f, target, budget=budget, force=force, extract=extract
+                client, f, target, rel, budget=budget, force=force, extract=extract
             )
         if on_progress is not None:
             # Serialize the counter bump AND the emit so callbacks fire in
@@ -286,7 +366,9 @@ async def fetch_files(
                 await on_progress(done, total, outcome.name)
         return outcome
 
-    tasks = [asyncio.create_task(_guarded(f)) for f in selected]
+    tasks = [
+        asyncio.create_task(_guarded(f, rel)) for f, rel in zip(selected, planned, strict=True)
+    ]
     try:
         outcomes: list[_Outcome] = list(await asyncio.gather(*tasks))
     except BaseException:
@@ -313,6 +395,12 @@ async def fetch_files(
             paths.append(o.path)
             paths.extend(o.extracted)
         written_total += o.bytes
+
+    if not paths:
+        raise NotFoundError(
+            f"{resource.id}: none of the {len(selected)} selected file(s) could be fetched "
+            f"(no download URL or no usable file name): {', '.join(sorted(skipped)[:20])}"
+        )
 
     # Sort for order-stability: completion order under gather is nondeterministic.
     paths.sort()
