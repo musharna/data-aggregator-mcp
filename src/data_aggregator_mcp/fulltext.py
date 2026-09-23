@@ -100,7 +100,7 @@ async def _unpaywall(client: httpx.AsyncClient, doi: str | None) -> FullText:
         resp = await _http.request_with_retry(
             client,
             "GET",
-            f"{UNPAYWALL_BASE}/{doi}",
+            f"{UNPAYWALL_BASE}/{_http.doi_path(doi)}",
             service="Unpaywall",
             params={"email": email},
             not_found_returns=None,

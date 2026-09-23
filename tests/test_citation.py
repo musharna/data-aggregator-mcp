@@ -92,3 +92,26 @@ async def test_live_render_crossref_bibtex_and_csl() -> None:
         csl = await citation.render(client, rec, "csl-json")
     assert bib and "@article" in bib.lower()
     assert json.loads(csl)["DOI"].lower() == "10.1038/171737a0"
+
+
+async def test_render_percent_encodes_the_doi_path() -> None:
+    """L25 (audit 2026-09-22): the DOI went into the URL raw. A SICI DOI's ``#`` starts a
+    URL fragment, so content negotiation asked doi.org for a TRUNCATED DOI (everything
+    after ``#`` never left the client) and ``<``/``>`` are not legal in a path. Encode the
+    DOI (keeping ``/``). Positive control: a plain DOI's URL is unchanged."""
+    sici = "10.1002/(SICI)1097-4636(199706)35:4<477::AID-JBM8>3.0.CO;2-#"
+    seen: list[httpx.URL] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen.append(req.url)
+        return httpx.Response(200, text="@article{x}")
+
+    rec = _DOI_REC.model_copy(update={"doi": sici})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        assert await citation.render(client, rec, "bibtex") == "@article{x}"
+        assert await citation.render(client, _DOI_REC, "bibtex") == "@article{x}"
+    from urllib.parse import unquote
+
+    assert seen[0].fragment == ""
+    assert unquote(seen[0].raw_path.decode()) == "/" + sici  # the whole DOI reached doi.org
+    assert str(seen[1]) == "https://doi.org/10.1038/x"

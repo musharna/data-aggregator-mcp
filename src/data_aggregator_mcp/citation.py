@@ -38,6 +38,13 @@ _CSL_TYPE = {
 }
 
 
+def _doi_url(doi: str) -> str:
+    """doi.org URL for ``doi`` with the DOI percent-encoded as a path (``/`` kept). DOIs
+    may legally contain ``#``, ``?``, ``<``, ``>`` and ``;`` (SICI DOIs do); sent raw, a
+    ``#`` cut the DOI short as a URL fragment and a ``?`` would become a query string."""
+    return f"{DOI_BASE}/{_http.doi_path(doi)}"
+
+
 def _accept_for(fmt: str) -> str:
     return _FORMAT_ACCEPT.get(fmt) or f"text/x-bibliography; style={fmt}"
 
@@ -66,10 +73,15 @@ async def render(client: httpx.AsyncClient, resource: DataResource, fmt: str) ->
                 return _csl_json_from_metadata(resource)
             logger.warning("citation: format %r needs a DOI; %s has none", fmt, resource.id)
             return None
+        if not resource.doi.isprintable():
+            # No DOI contains a control character; quoting one would turn a malformed
+            # upstream value into a real request instead of a refusal.
+            logger.warning("citation: DOI of %s is malformed: %r", resource.id, resource.doi)
+            return None
         resp = await _http.request_with_retry(
             client,
             "GET",
-            f"{DOI_BASE}/{resource.doi}",
+            _doi_url(resource.doi),
             service="DOI content negotiation",
             headers={"Accept": _accept_for(fmt)},
         )
