@@ -7,13 +7,12 @@ Discovery-only: no fetch, no citation-graph analysis (that is the openalex MCP).
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 import httpx
 
 from data_aggregator_mcp import openaire, pubmed
-from data_aggregator_mcp._merge import interleave
+from data_aggregator_mcp._merge import fan_in, interleave
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import DataResource, compact
 
@@ -25,6 +24,26 @@ DEFAULT_SIZE = 10
 MAX_SIZE = 50
 
 
+# The router pages each backend as its own stream (``literature/pubmed`` ...) with its own
+# offset; see omics.SUBSOURCES for why one shared offset lost records.
+SUBSOURCES = PREFIXES
+
+
+async def search_subsource(
+    client: httpx.AsyncClient,
+    subsource: str,
+    query: str,
+    *,
+    size: int = DEFAULT_SIZE,
+    offset: int = 0,
+) -> tuple[int, list[DataResource]]:
+    """One backend at its own offset. Raises on failure."""
+    total, recs = await _BACKENDS[subsource].search(
+        client, query, size=min(size, MAX_SIZE), offset=offset
+    )
+    return total, [compact(r) for r in recs]
+
+
 async def search(
     client: httpx.AsyncClient,
     query: str,
@@ -32,27 +51,17 @@ async def search(
     size: int = DEFAULT_SIZE,
     offset: int = 0,
 ) -> tuple[int, list[DataResource]]:
-    """Discover across PubMed + OpenAIRE. Returns (summed_total, COMPACT)."""
+    """Discover across PubMed + OpenAIRE. Returns (summed_total, COMPACT).
+
+    One page only (``offset`` applies to both backends); the router pages
+    ``search_subsource`` per backend. Raises when every backend fails."""
     capped = min(size, MAX_SIZE)
-    outcomes = await asyncio.gather(
-        *(b.search(client, query, size=capped, offset=offset) for b in _BACKENDS.values()),
-        return_exceptions=True,
+    total, per_backend = await fan_in(
+        {n: search_subsource(client, n, query, size=capped, offset=offset) for n in _BACKENDS},
+        what="literature search",
+        logger=logger,
     )
-    total = 0
-    per_backend: list[list[DataResource]] = []
-    for name, outcome in zip(_BACKENDS, outcomes, strict=False):
-        if isinstance(outcome, Exception):
-            logger.warning("literature search: %s backend failed: %r", name, outcome)
-            continue
-        # gather(return_exceptions=True) types outcome as tuple | BaseException; the
-        # Exception guard above can't subtract the BaseException supertype, so narrow
-        # positively to the success tuple before unpacking.
-        assert isinstance(outcome, tuple)
-        backend_total, recs = outcome
-        total += backend_total
-        per_backend.append(recs)
-    merged = interleave(per_backend)[:capped]
-    return total, [compact(r) for r in merged]
+    return total, interleave(per_backend)[:capped]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:

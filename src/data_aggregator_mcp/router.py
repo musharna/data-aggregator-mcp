@@ -19,9 +19,12 @@ path's existing callers and tests address live code rather than a copy.
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 import os
-from collections import Counter
+import re
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -114,6 +117,12 @@ def available_sources() -> list[str]:
 def _select(sources: list[str] | None) -> dict[str, SourceAdapter]:
     if sources is None:
         return dict(_ADAPTERS)
+    if not sources:
+        # An explicit empty list used to fan out to nothing and return a successful,
+        # empty page — "no data" rather than "you selected nothing".
+        raise ValidationError(
+            f"sources must name at least one source (or be omitted for all): {', '.join(_ADAPTERS)}"
+        )
     selected: dict[str, SourceAdapter] = {}
     for name in sources:
         if name not in _ADAPTERS:
@@ -230,17 +239,194 @@ def _with_version_status(r: DataResource) -> DataResource:
 
 
 def _comp_key(vi: int, name: str) -> str:
-    """Serialize a composite ``(variant_index, source)`` offset key for the multi-query
+    """Serialize a composite ``(variant_index, stream)`` offset key for the multi-query
     cursor. JSON object keys must be strings, so we join with a separator that cannot
-    appear in a variant index (digits) — the source name follows the first colon."""
+    appear in a variant index (digits) — the stream key follows the first colon."""
     return f"{vi}:{name}"
 
 
-def _comp_unkey(key: str) -> tuple[int, str]:
-    """Inverse of :func:`_comp_key`. The variant index is the prefix before the first
-    colon; the source name (which may itself contain no colon for our adapters) follows."""
-    vi_str, name = key.split(":", 1)
-    return int(vi_str), name
+# --- paging core ---------------------------------------------------------------------
+#
+# A page is fanned out over STREAMS: one per selected source, or one per sub-database of
+# a composite source (omics -> omics/geo, omics/sra, omics/bioproject), and in multi-query
+# mode one per (variant, stream). Each stream keeps its own offset in the cursor, counted
+# in that stream's OWN coordinates (the upstream's result order), plus the positions past
+# that offset already returned ("ahead"). Three bugs came from counting anything else:
+#
+# * composite sources shared one offset across their sub-databases (60/90 records lost);
+# * a record dropped by DOI dedup occupied a slot upstream but was not counted, so the
+#   loser's source lagged one record and every later page repeated one;
+# * window re-ranking (rank=semantic, multi-query) consumed the whole fetched window but
+#   emitted `size`, so everything else in the window was never returned.
+#
+# Re-ranking may emit a stream's record 5 before its record 2. The offset then advances
+# only over the contiguous prefix already handled; record 5 goes in "ahead" and is skipped
+# when the window is fetched again, so nothing is lost and nothing repeats.
+
+
+@dataclass(frozen=True)
+class _Stream:
+    key: str  # cursor offset key
+    label: str  # errors[] key when the stream fails
+    call: Callable[..., Awaitable[tuple[int, list[DataResource]]]]  # (size=, offset=)
+
+
+def _source_streams(
+    client: httpx.AsyncClient,
+    adapters: dict[str, SourceAdapter],
+    *,
+    expanded: str,
+    plain: str,
+    vi: int | None = None,
+) -> list[_Stream]:
+    """One stream per adapter, or per sub-source for composite adapters (``SUBSOURCES``
+    + ``search_subsource``). Keyword-only sources are sent ``plain`` (the query before
+    ontology expansion), the rest ``expanded``. ``vi`` namespaces the keys for a
+    multi-query variant."""
+    out: list[_Stream] = []
+    for name, adapter in adapters.items():
+        q = plain if name in sources.KEYWORD_ONLY else expanded
+        subs = getattr(adapter, "SUBSOURCES", None)
+        parts: list[tuple[str, Callable[..., Awaitable[tuple[int, list[DataResource]]]]]]
+        if subs:
+            parts = [
+                (f"{name}/{sub}", functools.partial(adapter.search_subsource, client, sub, q))  # type: ignore[attr-defined]
+                for sub in subs
+            ]
+        else:
+            parts = [(name, functools.partial(adapter.search, client, q))]
+        for skey, call in parts:
+            if vi is None:
+                out.append(_Stream(key=skey, label=skey, call=call))
+            else:
+                out.append(_Stream(key=_comp_key(vi, skey), label=f"{skey}#v{vi}", call=call))
+    return out
+
+
+def _stored_offset(offsets: dict[str, int], key: str) -> int:
+    """The stream's offset; a cursor minted before composite sources were split into
+    sub-streams stored one ``omics`` offset — fall back to it for ``omics/geo``."""
+    if key in offsets:
+        return offsets[key]
+    return offsets.get(key.rsplit("/", 1)[0], 0) if "/" in key else 0
+
+
+@dataclass
+class _Page:
+    emitted: list[DataResource]
+    total: int
+    offsets: dict[str, int]
+    ahead: dict[str, list[int]]
+    more: bool
+
+
+async def _fetch_page(
+    client: httpx.AsyncClient,
+    streams: list[_Stream],
+    *,
+    size: int,
+    offsets: dict[str, int],
+    ahead: dict[str, list[int]],
+    filters: dict[str, Any],
+    rank_query: str | None,
+    errors: dict[str, str],
+) -> _Page:
+    """Fan out every stream at its offset, dedup, (re-)rank, emit up to ``size`` records
+    that pass ``filters``, and account for what was handled per stream. ``rank_query``
+    None = upstream relevance order (interleaved); else an embedding re-rank anchor."""
+    base = {s.key: _stored_offset(offsets, s.key) for s in streams}
+    outcomes = await asyncio.gather(
+        *(s.call(size=size, offset=base[s.key]) for s in streams), return_exceptions=True
+    )
+    fetched: dict[str, list[DataResource]] = {}
+    totals: dict[str, int] = {}
+    total = 0
+    for s, outcome in zip(streams, outcomes, strict=True):
+        if isinstance(outcome, BaseException):
+            # Surface the failure (incl. CancelledError) by stream — never "0 results".
+            errors[s.label] = f"{type(outcome).__name__}: {outcome}"
+            fetched[s.key], totals[s.key] = [], 0
+            continue
+        stream_total, recs = outcome
+        total += stream_total
+        fetched[s.key], totals[s.key] = list(recs), stream_total
+
+    prior = {s.key: set(ahead.get(s.key, [])) for s in streams}
+    # Candidates in upstream relevance order (fair round-robin across streams), minus the
+    # positions an earlier page already returned.
+    ordered = interleave(
+        [
+            [(s.key, i, r) for i, r in enumerate(fetched[s.key]) if i not in prior[s.key]]
+            for s in streams
+        ]
+    )
+    # Dedup: the same id twice (two query variants) keeps the first; a shared DOI keeps
+    # the _dedup winner. Losers are not emitted but DO occupy their upstream position.
+    seen_ids: set[str] = set()
+    unique: list[tuple[str, int, DataResource]] = []
+    dropped: list[tuple[str, int, DataResource]] = []
+    for c in ordered:
+        (dropped if c[2].id in seen_ids else unique).append(c)
+        seen_ids.add(c[2].id)
+    winners = {id(r) for r in _dedup([c[2] for c in unique])}
+    kept = [c for c in unique if id(c[2]) in winners]
+    dropped += [c for c in unique if id(c[2]) not in winners]
+
+    if rank_query is not None:
+        reordered, reason = await embeddings.rerank(client, rank_query, [c[2] for c in kept])
+        if reason:
+            errors["semantic"] = reason
+        pos = {id(r): i for i, r in enumerate(reordered)}
+        kept.sort(key=lambda c: pos.get(id(c[2]), len(pos)))
+
+    handled: dict[str, set[int]] = {s.key: set() for s in streams}
+    handled_ids: set[str] = set()
+    handled_dois: set[str] = set()
+    emitted: list[DataResource] = []
+    for key, i, r in kept:
+        if len(emitted) == size:
+            break
+        handled[key].add(i)
+        handled_ids.add(r.id)
+        if r.doi:
+            handled_dois.add(r.doi.lower())
+        if _passes_filters(r, filters):
+            emitted.append(r)
+    for key, i, r in dropped:
+        if r.id in handled_ids or (r.doi and r.doi.lower() in handled_dois):
+            handled[key].add(i)
+
+    new_offsets: dict[str, int] = {}
+    new_ahead: dict[str, list[int]] = {}
+    remaining = False
+    for s in streams:
+        n = len(fetched[s.key])
+        done = handled[s.key] | prior[s.key]
+        p = 0
+        while p < n and p in done:
+            p += 1
+        new_offsets[s.key] = base[s.key] + p
+        rest = sorted(i - p for i in done if i >= p)
+        if rest:
+            new_ahead[s.key] = rest
+        if any(i not in done for i in range(p, n)) or new_offsets[s.key] < totals[s.key]:
+            remaining = True
+    # No record fetched from any stream => nothing can advance; a cursor would replay the
+    # identical window forever (e.g. an adapter reporting total>0 but returning []).
+    more = remaining and any(fetched.values())
+    return _Page(emitted, total, new_offsets, new_ahead, more)
+
+
+def _query_syntax_note(names: list[str], plain: list[str], expanded: list[str]) -> str | None:
+    """Advisory for keyword-only sources that were sent the un-expanded query."""
+    keyword = [n for n in names if n in sources.KEYWORD_ONLY]
+    if not keyword or plain == expanded:
+        return None
+    return (
+        f"{', '.join(keyword)} cannot parse boolean queries, so the ontology expansion "
+        "(organism/disease/tissue/chemical/assay) was NOT applied there: they were "
+        "searched with the plain query"
+    )
 
 
 async def _build_search_result(
@@ -294,10 +480,12 @@ async def _multi_query_page(
     *,
     original_query: str,
     variants: list[str],
+    raw_variants: list[str] | None,
     size: int,
     sources: list[str] | None,
     filters: dict[str, Any],
     comp_offsets: dict[str, int],
+    comp_ahead: dict[str, list[int]],
     collapse_mirrors: bool,
     errors: dict[str, str],
     query_expansion: QueryExpansion | None,
@@ -318,84 +506,42 @@ async def _multi_query_page(
     continuation re-fans the frozen variants with NO LLM / NO re-expand."""
     adapters = _select(sources)
     names = list(adapters)
-    keys = [(vi, name) for vi in range(len(variants)) for name in names]
-    outcomes = await asyncio.gather(
-        *(
-            adapters[name].search(
-                client, variants[vi], size=size, offset=comp_offsets.get(_comp_key(vi, name), 0)
-            )
-            for (vi, name) in keys
-        ),
-        return_exceptions=True,
-    )
-
-    origin: dict[int, str] = {}  # id(record) -> composite key string
-    per_stream: list[list[DataResource]] = []
-    comp_totals: dict[str, int] = {}
-    total = 0
-    for (vi, name), outcome in zip(keys, outcomes, strict=False):
-        ckey = _comp_key(vi, name)
-        if isinstance(outcome, BaseException):
-            # Surface a per-variant×source failure (including asyncio.CancelledError)
-            # without clobbering another variant's error for the same source.
-            errors[f"{name}#v{vi}"] = f"{type(outcome).__name__}: {outcome}"
-            comp_totals[ckey] = 0
-            continue
-        assert isinstance(outcome, tuple)
-        adapter_total, recs = outcome
-        total += adapter_total
-        comp_totals[ckey] = adapter_total
-        for r in recs:
-            origin[id(r)] = ckey
-        per_stream.append(recs)
-
-    merged = _dedup(interleave(per_stream))
-
+    # Keyword-only sources get the variant BEFORE ontology expansion (see _query_syntax_note).
+    plain = raw_variants if raw_variants is not None else variants
+    streams: list[_Stream] = []
+    for vi in range(len(variants)):
+        streams += _source_streams(client, adapters, expanded=variants[vi], plain=plain[vi], vi=vi)
+    if note := _query_syntax_note(names, list(plain), variants):
+        errors["query_syntax"] = note
     # Window-rank ALWAYS for multi-query: the union has no single coherent upstream order,
-    # so re-rank the whole window against the ORIGINAL pre-expansion query and consume all
-    # of it. No embedding endpoint → interleaved order + errors["semantic"] (still a recall
-    # win, just unranked).
-    reordered, reason = await embeddings.rerank(client, original_query, merged)
-    if reason:
-        errors["semantic"] = reason
-    merged = reordered
-    emitted: list[DataResource] = []
-    for r in merged:
-        if _passes_filters(r, filters):
-            emitted.append(r)
-            if len(emitted) == size:
-                break
-    # Multi-query always window-consumes the full merged+reranked window (no partial
-    # consume), so every fetched record advances its stream offset. More results
-    # remain iff any stream still has rows past the new offset.
-    consumed = merged
-
-    consumed_per_stream: Counter[str] = Counter(origin[id(r)] for r in consumed)
-    new_comp_offsets = {
-        _comp_key(vi, name): comp_offsets.get(_comp_key(vi, name), 0)
-        + consumed_per_stream.get(_comp_key(vi, name), 0)
-        for (vi, name) in keys
-    }
-
-    # `bool(merged)` guard mirrors the single-query path: an empty window consumed nothing,
-    # so a replayed cursor would loop forever.
-    more = bool(merged) and any(
-        new_comp_offsets.get(_comp_key(vi, name), 0) < comp_totals.get(_comp_key(vi, name), 0)
-        for (vi, name) in keys
+    # so re-rank against the ORIGINAL pre-expansion query. No embedding endpoint →
+    # interleaved order + errors["semantic"] (still a recall win, just unranked).
+    page = await _fetch_page(
+        client,
+        streams,
+        size=size,
+        offsets=comp_offsets,
+        ahead=comp_ahead,
+        filters=filters,
+        rank_query=original_query,
+        errors=errors,
     )
+    emitted, total = page.emitted, page.total
     next_cursor = (
         _cursor.encode(
             {
                 "q": original_query,
                 "sources": sources,
                 "variants": variants,
+                "raw_variants": list(plain),
                 "filters": filters,
                 "size": size,
-                "offsets": new_comp_offsets,
+                "offsets": page.offsets,
+                "ahead": page.ahead,
                 "collapse_mirrors": collapse_mirrors,
             }
         )
-        if more
+        if page.more
         else None
     )
 
@@ -462,10 +608,12 @@ async def search_page(
                 client,
                 original_query=st["q"],
                 variants=st["variants"],
+                raw_variants=st.get("raw_variants"),
                 size=st["size"],
                 sources=st.get("sources"),
                 filters=st.get("filters") or {},
                 comp_offsets=st["offsets"],
+                comp_ahead=st.get("ahead") or {},
                 collapse_mirrors=st.get("collapse_mirrors", False),
                 errors={},
                 query_expansion=None,  # echo is page-1 only; frozen None on continuation
@@ -476,6 +624,7 @@ async def search_page(
         filters = st.get("filters") or {}
         size = st["size"]
         offsets = st["offsets"]
+        ahead: dict[str, list[int]] = st.get("ahead") or {}
         rank = st.get("rank", "relevance")
         disease = st.get("disease")
         tissue = st.get("tissue")
@@ -493,7 +642,10 @@ async def search_page(
         # supplied param matched nothing" and cry wolf on every page after the first.
         unresolved: list[UnresolvedEntity] = []
         query_understanding = None  # frozen on continuation; never re-understand
-        effective_query = query
+        # The EXPANDED query page 1 searched. Continuing with the raw `q` silently dropped
+        # the ontology restriction from page 2 on — the offsets then indexed a different,
+        # wider result set. (A pre-fix cursor has no `eq`; it keeps the old behaviour.)
+        effective_query = st.get("eq", query)
         errors: dict[str, str] = {}
     else:
         if query is None:
@@ -632,6 +784,7 @@ async def search_page(
                     client,
                     original_query=original_query,
                     variants=eff_variants,
+                    raw_variants=raw_variants,
                     size=size,
                     sources=sources,
                     filters={
@@ -640,6 +793,7 @@ async def search_page(
                         "kind": kind,
                     },
                     comp_offsets={},
+                    comp_ahead={},
                     collapse_mirrors=collapse_mirrors,
                     errors=errors,
                     query_expansion=QueryExpansion(input=original_query, variants=raw_variants),
@@ -652,91 +806,32 @@ async def search_page(
                     query_understanding=query_understanding,
                 )
         offsets = {}
+        ahead = {}
 
     adapters = _select(sources)
     names = list(adapters)
-    outcomes = await asyncio.gather(
-        *(
-            adapters[n].search(client, effective_query, size=size, offset=offsets.get(n, 0))
-            for n in names
-        ),
-        return_exceptions=True,
+    streams = _source_streams(client, adapters, expanded=effective_query, plain=query)
+    if note := _query_syntax_note(names, [query], [effective_query]):
+        errors["query_syntax"] = note
+    # rank=semantic re-ranks the fetched window against the raw `query`, not the
+    # organism-expanded `effective_query`: the boolean-expanded string is a poor embedding
+    # anchor, and the window is already organism-filtered by the fan-out.
+    page = await _fetch_page(
+        client,
+        streams,
+        size=size,
+        offsets=offsets,
+        ahead=ahead,
+        filters=filters,
+        rank_query=query if rank == "semantic" else None,
+        errors=errors,
     )
-
-    origin: dict[int, str] = {}
-    per_source: list[list[DataResource]] = []
-    totals: dict[str, int] = {}
-    total = 0
-    for name, outcome in zip(names, outcomes, strict=False):
-        if isinstance(outcome, BaseException):
-            errors[name] = f"{type(outcome).__name__}: {outcome}"
-            totals[name] = 0
-            continue
-        # gather(return_exceptions=True) delivers either a BaseException instance or
-        # the success value; the BaseException guard above handles all error cases
-        # (including asyncio.CancelledError which is not an Exception since Python 3.8).
-        assert isinstance(outcome, tuple)
-        adapter_total, recs = outcome
-        total += adapter_total
-        totals[name] = adapter_total
-        for r in recs:
-            origin[id(r)] = name
-        per_source.append(recs)
-
-    merged = _dedup(interleave(per_source))
-
-    if rank == "semantic":
-        # Re-rank the full fetched window by semantic similarity, then emit the
-        # top `size` that pass filters. Ranking needs every candidate, so the
-        # WHOLE window is consumed (window-based pagination) — see the spec.
-        # Anchor the re-rank on the raw `query`, not the organism-expanded
-        # `effective_query`: the boolean-expanded string ("(q) AND (syn1 OR syn2)")
-        # is a poor embedding anchor, and `merged` is already organism-filtered by
-        # the fan-out, so query-relevance within that set is the right signal.
-        reordered, reason = await embeddings.rerank(client, query, merged)
-        if reason:
-            errors["semantic"] = reason
-        merged = reordered
-        emitted = []
-        for r in merged:
-            if _passes_filters(r, filters):
-                emitted.append(r)
-                if len(emitted) == size:
-                    break
-        consumed = merged
-        cut = len(merged) - 1
-    else:
-        emitted = []
-        cut = -1
-        for i, r in enumerate(merged):
-            cut = i
-            if _passes_filters(r, filters):
-                emitted.append(r)
-                if len(emitted) == size:
-                    break
-        if cut < 0:
-            cut = len(merged) - 1
-        consumed = merged[: cut + 1]
-
-    consumed_per_adapter = Counter(origin[id(r)] for r in consumed)
-    new_offsets = {n: offsets.get(n, 0) + consumed_per_adapter.get(n, 0) for n in names}
-
-    # More results remain if we left fetched candidates unconsumed, OR any source
-    # still has rows past our advanced offset. Using the upstream total (not
-    # len(recs)==size) is robust to the page-boundary slice that makes a paged
-    # adapter return < size records even when it has more.
-    #
-    # `bool(merged)` guard: an empty page consumed nothing, so offsets could not
-    # advance — emitting a cursor here would replay the identical window forever
-    # (e.g. an adapter that reports total>0 but returns []). No candidates fetched
-    # ⇒ no way to page forward ⇒ stop.
-    more = bool(merged) and (
-        (cut < len(merged) - 1) or any(new_offsets.get(n, 0) < totals.get(n, 0) for n in names)
-    )
+    emitted, total = page.emitted, page.total
     next_cursor = (
         _cursor.encode(
             {
                 "q": query,
+                "eq": effective_query,
                 "sources": sources,
                 "organism": organism,
                 "disease": disease,
@@ -745,12 +840,13 @@ async def search_page(
                 "assay": assay,
                 "filters": filters,
                 "size": size,
-                "offsets": new_offsets,
+                "offsets": page.offsets,
+                "ahead": page.ahead,
                 "rank": rank,
                 "collapse_mirrors": collapse_mirrors,
             }
         )
-        if more
+        if page.more
         else None
     )
 
@@ -794,6 +890,16 @@ async def search(
     return r.total, r.results, r.errors, r.taxon_expansion
 
 
+# `doi:10.x/y`, `https://doi.org/10.x/y`, `http://dx.doi.org/10.x/y`, `info:doi/10.x/y`:
+# the spellings a DOI is usually pasted in. They used to reach datacite verbatim and come
+# back NotFound for a DOI that exists.
+_DOI_SCHEME_RE = re.compile(r"^(?:doi:|info:doi/|https?://(?:dx\.)?doi\.org/)(?=10\.)", re.I)
+
+
+def _strip_doi_scheme(rid: str) -> str:
+    return _DOI_SCHEME_RE.sub("", rid, count=1)
+
+
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     """Route ``resolve`` by id shape, then enrich with normalized taxa + links.
     - ``geo:``/``sra:``/``bioproject:``  → omics (NCBI)
@@ -806,9 +912,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     - ``datacite:<doi>``                 → DataCite
     - ``zenodo:<id>`` / bare digits      → Zenodo (native; carries files[])
     - ``hf:<owner>/<name>``              → HuggingFace (native; carries files[])
-    - a bare DOI (contains ``/``)        → DataCite
+    - a bare DOI (contains ``/``)        → DataCite; ``doi:``, ``https://doi.org/``,
+      ``http://dx.doi.org/`` and ``info:doi/`` spellings are reduced to the bare DOI
     """
-    rid = resource_id.strip()
+    rid = _strip_doi_scheme(resource_id.strip())
     cached = _RESOLVE_CACHE.get(rid)
     if cached is not MISS:
         return cached

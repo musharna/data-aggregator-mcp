@@ -9,7 +9,6 @@ lives in linked SRA runs.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import Any
 
@@ -17,7 +16,7 @@ import httpx
 from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
 
 from data_aggregator_mcp import _eutils, ena, geo
-from data_aggregator_mcp._merge import interleave
+from data_aggregator_mcp._merge import fan_in, interleave
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import DataResource, Link, compact
 
@@ -152,6 +151,25 @@ async def _bioproject_sra_links(client: httpx.AsyncClient, bioproject_uid: str) 
     return [Link(rel="has_data", target_id=_normalize_sra(doc).id) for doc in docs]
 
 
+# The router pages each NCBI db as its own stream (``omics/geo`` ...) so each keeps its own
+# offset and a failing db is reported by name. One shared offset applied to all three,
+# then an interleave cut to ``size``, lost 60 of every 90 records across a cursor walk.
+SUBSOURCES = PREFIXES
+
+
+async def search_subsource(
+    client: httpx.AsyncClient,
+    subsource: str,
+    query: str,
+    *,
+    size: int = DEFAULT_SIZE,
+    offset: int = 0,
+) -> tuple[int, list[DataResource]]:
+    """One NCBI db (``geo`` / ``sra`` / ``bioproject``) at its own offset. Raises on failure."""
+    total, recs = await _search_db(client, _DB[subsource], query, min(size, MAX_SIZE), offset)
+    return total, [compact(r) for r in recs]
+
+
 async def search(
     client: httpx.AsyncClient,
     query: str,
@@ -159,28 +177,17 @@ async def search(
     size: int = DEFAULT_SIZE,
     offset: int = 0,
 ) -> tuple[int, list[DataResource]]:
-    """Discover across GEO + SRA + BioProject. Returns (summed_total, COMPACT)."""
+    """Discover across GEO + SRA + BioProject. Returns (summed_total, COMPACT).
+
+    One page only: ``offset`` applies to every db, so this cannot walk a cursor — the
+    router pages ``search_subsource`` per db instead. Raises when every db fails."""
     capped = min(size, MAX_SIZE)
-    outcomes = await asyncio.gather(
-        *(_search_db(client, db, query, capped, offset) for db in _DB.values()),
-        return_exceptions=True,
+    total, per_db = await fan_in(
+        {sub: search_subsource(client, sub, query, size=capped, offset=offset) for sub in _DB},
+        what="omics search",
+        logger=logger,
     )
-    total = 0
-    per_db: list[list[DataResource]] = []
-    for db, outcome in zip(_DB.values(), outcomes, strict=False):
-        if isinstance(outcome, Exception):
-            # partial results beat total failure, but log (don't silently swallow) the cause
-            logger.warning("omics search: NCBI %s db failed: %r", db, outcome)
-            continue
-        # gather(return_exceptions=True) types outcome as tuple | BaseException; the
-        # Exception guard above can't subtract the BaseException supertype, so narrow
-        # positively to the success tuple before unpacking.
-        assert isinstance(outcome, tuple)
-        db_total, recs = outcome
-        total += db_total
-        per_db.append(recs)
-    merged = interleave(per_db)[:capped]
-    return total, [compact(r) for r in merged]
+    return total, interleave(per_db)[:capped]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
