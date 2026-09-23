@@ -188,3 +188,35 @@ async def test_live_search_then_resolve():
         assert total > 0 and recs and recs[0].id.startswith("pdb:")
         full = await pdb.resolve(c, recs[0].id)
         assert any(f.name.endswith(".cif") for f in full.files)
+
+
+@pytest.mark.asyncio
+async def test_search_204_zero_hits_is_empty_not_outage(monkeypatch):
+    """Audit 2026-09-22 M14: RCSB's real zero-hit answer is ``204 No Content`` (the
+    200-with-empty-result_set fixture above never happens live). It was reported as an
+    outage. A 404 on the SEARCH endpoint means the endpoint moved: that must raise,
+    not read as "no hits" (H3)."""
+    from data_aggregator_mcp import _http
+    from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
+
+    def handler(request):
+        q = request.url.params.get("json", "")
+        if request.url.host == "search.rcsb.org":
+            if "zzzznohit" in q:
+                return httpx.Response(204)
+            if "gone" in q:
+                return httpx.Response(404, text="Not Found")
+            return httpx.Response(200, json=_SEARCH)
+        return httpx.Response(200, json=_GRAPHQL)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        assert await pdb.search(c, "zzzznohit", size=10) == (0, [])
+        with pytest.raises((NotFoundError, UpstreamUnavailableError)):
+            await pdb.search(c, "gone", size=10)
+        total, recs = await pdb.search(c, "kinesin", size=2)  # positive control
+    assert total == 1997 and [r.id for r in recs] == ["pdb:1GOJ", "pdb:1BG2"]

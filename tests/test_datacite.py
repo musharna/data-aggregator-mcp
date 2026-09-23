@@ -546,3 +546,88 @@ def test_access_open_requires_a_real_licence_host() -> None:
     )
     assert datacite._access_from_rights([]) is None
     assert datacite._access_from_rights(None) is None
+
+
+def _dataverse_item(doi: str, client_id: str, url: str | None) -> dict:
+    attrs: dict = {
+        "doi": doi,
+        "titles": [{"title": "t"}],
+        "types": {"resourceTypeGeneral": "Dataset"},
+    }
+    if url is not None:
+        attrs["url"] = url
+    return {
+        "id": doi,
+        "type": "dois",
+        "attributes": attrs,
+        "relationships": {"client": {"data": {"id": client_id, "type": "clients"}}},
+    }
+
+
+_DV_FILES = {
+    "data": {
+        "latestVersion": {
+            "files": [{"dataFile": {"id": 7, "filename": "a.csv", "filesize": 1, "md5": "m"}}]
+        }
+    }
+}
+
+
+async def test_resolve_dataverse_doi_queries_its_own_installation(httpx_mock: HTTPXMock) -> None:
+    """Audit 2026-09-22 M11: every client id containing "dataverse" was sent to the
+    HARVARD API, so a DataverseNO record (10.18710, dataverse.no) got Harvard's 404
+    and a failed resolve. The installation is the host of the record's DataCite
+    landing URL; Harvard is only the fallback for Harvard's own DOIs."""
+    no_doi = "10.18710/F79PSN"
+    httpx_mock.add_response(
+        url=f"https://api.datacite.org/dois/{no_doi}",
+        json={
+            "data": _dataverse_item(
+                no_doi,
+                "brage.dataverseno",
+                f"https://dataverse.no/citation?persistentId=doi:{no_doi}",
+            )
+        },
+    )
+    httpx_mock.add_response(
+        url=f"https://dataverse.no/api/datasets/:persistentId/?persistentId=doi:{no_doi}",
+        json=_DV_FILES,
+    )
+    hv_doi = "10.7910/DVN/TJCLKP"
+    httpx_mock.add_response(
+        url=f"https://api.datacite.org/dois/{hv_doi}",
+        json={
+            "data": _dataverse_item(
+                hv_doi,
+                "gdcc.harvard-dv",
+                f"https://dataverse.harvard.edu/citation?persistentId=doi:{hv_doi}",
+            )
+        },
+    )
+    httpx_mock.add_response(
+        url=f"https://dataverse.harvard.edu/api/datasets/:persistentId/?persistentId=doi:{hv_doi}",
+        json=_DV_FILES,
+    )
+    async with httpx.AsyncClient() as client:
+        r = await datacite.resolve(client, f"datacite:{no_doi}")
+        assert r.source == "dataverse"
+        assert [f.url for f in r.files] == ["https://dataverse.no/api/access/datafile/7"]
+        # positive control: a Harvard record still lists from Harvard
+        h = await datacite.resolve(client, f"datacite:{hv_doi}")
+        assert [f.url for f in h.files] == ["https://dataverse.harvard.edu/api/access/datafile/7"]
+
+
+async def test_resolve_dataverse_without_landing_url_does_not_guess_harvard(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """No landing URL and not a Harvard DOI: the installation is unknown, so no file
+    listing is attempted (logged) rather than querying a server that cannot hold it.
+    pytest-httpx fails the test on any unexpected request (e.g. to Harvard)."""
+    doi = "10.34894/ABCDEF"
+    httpx_mock.add_response(
+        url=f"https://api.datacite.org/dois/{doi}",
+        json={"data": _dataverse_item(doi, "dans.dataversenl", None)},
+    )
+    async with httpx.AsyncClient() as client:
+        r = await datacite.resolve(client, f"datacite:{doi}")
+    assert r.source == "dataverse" and r.files == []

@@ -160,3 +160,73 @@ async def test_live_search_then_resolve():
         assert recs and recs[0].source == "openml"
         full = await openml.resolve(c, recs[0].id)
         assert full.files and any(f.name.endswith((".pq", ".arff")) for f in full.files)
+
+
+def _no_sleep(monkeypatch):
+    from data_aggregator_mcp import _http
+
+    async def _ns(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _ns)
+
+
+@pytest.mark.asyncio
+async def test_search_412_code_372_is_zero_hits_other_failures_raise(monkeypatch):
+    """Audit 2026-09-22 M10 + H3. OpenML's live answer to a name with no match is
+    ``HTTP 412 {"error":{"code":"372","message":"No results"}}`` (verified live); it was
+    reported as an outage. Conversely a 404 on the LIST endpoint was mapped to "no
+    results" — a moved endpoint reading as "nothing exists". Both inverted."""
+    from data_aggregator_mcp.errors import DataAggregatorError
+
+    _no_sleep(monkeypatch)
+
+    def handler(request):
+        path = request.url.path
+        if "/nomatch/" in path:
+            return httpx.Response(412, json={"error": {"code": "372", "message": "No results"}})
+        if "/badfilter/" in path:
+            return httpx.Response(412, json={"error": {"code": "370", "message": "Bad filter"}})
+        if "/gone/" in path:
+            return httpx.Response(404, text="Not Found")
+        return httpx.Response(200, json=_LIST)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        assert await openml.search(c, "nomatch", size=5) == (0, [])
+        with pytest.raises(DataAggregatorError, match="412"):
+            await openml.search(c, "badfilter", size=5)
+        with pytest.raises(NotFoundError):
+            await openml.search(c, "gone", size=5)
+        total, recs = await openml.search(c, "iris", size=5)  # positive control
+    assert total == 2 and [r.id for r in recs] == ["openml:61", "openml:150"]
+
+
+@pytest.mark.asyncio
+async def test_resolve_single_string_tag_is_one_subject():
+    """Audit 2026-09-22 L24: OpenML serialises a one-element ``tag`` list as a bare
+    string; ``list("study_14")`` char-split it into 8 one-letter subjects."""
+    single = {
+        "data_set_description": {
+            "id": "1",
+            "name": "x",
+            "tag": "study_14",
+            "url": "https://x/1.arff",
+        }
+    }
+    multi = {
+        "data_set_description": {
+            "id": "2",
+            "name": "y",
+            "tag": ["study_14", "uci"],
+            "url": "https://x/2.arff",
+        }
+    }
+
+    def handler(request):
+        return httpx.Response(200, json=single if request.url.path.endswith("/1") else multi)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        r1 = await openml.resolve(c, "openml:1")
+        r2 = await openml.resolve(c, "openml:2")
+    assert r1.subjects == ["study_14"]
+    assert r2.subjects == ["study_14", "uci"]  # positive control: list form unchanged

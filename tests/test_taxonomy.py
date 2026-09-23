@@ -183,3 +183,45 @@ async def test_resolve_taxon_cache_expires(monkeypatch):
         assert calls["n"] == 2
     finally:
         taxonomy._CACHE = saved
+
+
+async def test_ncbi_error_envelope_is_not_negative_cached(
+    httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    """Audit 2026-09-22 H3: an esearch ERROR envelope during an NCBI outage was read as
+    "no such taxon" and cached for an hour. It must raise and cache nothing; the next
+    call (NCBI recovered) resolves normally."""
+    from data_aggregator_mcp import _http
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    async def _ns(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _ns)
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    taxonomy._CACHE.clear()
+    base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+    for _ in range(3):
+        httpx_mock.add_response(
+            url=f"{base}/esearch.fcgi?db=taxonomy&term=Arabidopsis+thaliana&retmax=1&retmode=json",
+            json={"esearchresult": {"ERROR": "Search Backend failed"}},
+        )
+    httpx_mock.add_response(
+        url=f"{base}/esearch.fcgi?db=taxonomy&term=Arabidopsis+thaliana&retmax=1&retmode=json",
+        json={"esearchresult": {"count": "1", "idlist": ["3702"]}},
+    )
+    httpx_mock.add_response(
+        url=f"{base}/efetch.fcgi?db=taxonomy&id=3702&retmode=xml",
+        text=(
+            "<TaxaSet><Taxon><TaxId>3702</TaxId><ScientificName>Arabidopsis thaliana"
+            "</ScientificName><Lineage>cellular organisms; Eukaryota; Viridiplantae"
+            "</Lineage></Taxon></TaxaSet>"
+        ),
+    )
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(UpstreamUnavailableError):
+            await taxonomy.resolve_taxon(client, "Arabidopsis thaliana")
+        assert taxonomy._CACHE.get("arabidopsis thaliana") is not taxonomy._NEG
+        info = await taxonomy.resolve_taxon(client, "Arabidopsis thaliana")
+    assert info is not None and info.taxid == 3702 and info.is_plant
+    taxonomy._CACHE.clear()

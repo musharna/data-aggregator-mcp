@@ -121,3 +121,64 @@ async def test_request_xml_retries_malformed_then_succeeds(
     async with httpx.AsyncClient() as client:
         resp = await _http.request_xml(client, "GET", "https://x.test/x", service="t")
     assert resp.text == "<ok/>"
+
+
+# --- audit 2026-09-22: M14 (2xx other than 200) and H3 (wrong-shape 200 body) ---
+
+
+async def test_204_no_content_is_success_not_outage(httpx_mock: HTTPXMock) -> None:
+    """RCSB answers a zero-hit search with 204 No Content. Only 200 counted as success,
+    so a legitimate "no hits" exhausted the retries and surfaced as an outage."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    httpx_mock.add_response(url="https://x.test/empty", status_code=204)
+    httpx_mock.add_response(url="https://x.test/full", json={"hits": [1]})
+    httpx_mock.add_response(url="https://x.test/down", status_code=500, is_reusable=True)
+    async with httpx.AsyncClient() as client:
+        out = await _http.request_json(
+            client, "GET", "https://x.test/empty", service="t", no_content_returns={"hits": []}
+        )
+        assert out == {"hits": []}
+        # positive control: a 200 body still parses through the same call shape
+        full = await _http.request_json(
+            client, "GET", "https://x.test/full", service="t", no_content_returns={"hits": []}
+        )
+        assert full == {"hits": [1]}
+        # and a real outage is still an outage (no_content_returns does not mask 5xx)
+        with pytest.raises(UpstreamUnavailableError):
+            await _http.request_json(
+                client,
+                "GET",
+                "https://x.test/down",
+                service="t",
+                max_retries=1,
+                no_content_returns={"hits": []},
+            )
+
+
+async def test_204_without_sentinel_raises_upstream(httpx_mock: HTTPXMock) -> None:
+    """A caller that did not opt in cannot parse an empty body: fail loud, typed."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    httpx_mock.add_response(url="https://x.test/e", status_code=204, is_reusable=True)
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(UpstreamUnavailableError, match="no content"):
+            await _http.request_json(client, "GET", "https://x.test/e", service="t", max_retries=1)
+
+
+async def test_request_json_expect_rejects_wrong_shape(httpx_mock: HTTPXMock) -> None:
+    """A 200 error envelope (dict) where a list is expected is an upstream failure,
+    not an empty result set."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    httpx_mock.add_response(
+        url="https://x.test/list", json={"detail": "Internal error"}, is_reusable=True
+    )
+    httpx_mock.add_response(url="https://x.test/ok", json=[{"a": 1}])
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(UpstreamUnavailableError, match="expected list"):
+            await _http.request_json(
+                client, "GET", "https://x.test/list", service="t", max_retries=1, expect=list
+            )
+        ok = await _http.request_json(client, "GET", "https://x.test/ok", service="t", expect=list)
+    assert ok == [{"a": 1}]

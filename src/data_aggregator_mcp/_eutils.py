@@ -6,12 +6,15 @@ appended automatically when present. Normalization lives in the adapters, not he
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
 import httpx
 
 from data_aggregator_mcp import _http
+
+logger = logging.getLogger(__name__)
 
 BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 DEFAULT_TIMEOUT = 30.0
@@ -25,6 +28,29 @@ def _api_key_params() -> dict[str, str]:
 
 def _common_params() -> dict[str, str]:
     return {"retmode": "json", **_api_key_params()}
+
+
+def _check_esearch(body: Any) -> None:
+    """NCBI reports a failed search INSIDE a 200: ``esearchresult.ERROR``. Read as
+    count 0, an outage looked like "no records" and taxonomy negative-cached it for an
+    hour. A genuine no-match carries ``count: "0"`` plus warninglist/errorlist entries
+    (phrasesnotfound) and no ``ERROR`` key, so it still passes."""
+    if not isinstance(body, dict):
+        raise _http.UnexpectedShapeError(f"esearch body is {type(body).__name__}, not an object")
+    result = body.get("esearchresult")
+    if isinstance(result, dict) and result.get("ERROR"):
+        raise _http.UpstreamEnvelopeError(f"NCBI esearch ERROR: {result['ERROR']}")
+    if isinstance(body.get("error"), str):
+        raise _http.UpstreamEnvelopeError(f"NCBI esearch error: {body['error']}")
+
+
+def _check_esummary(body: Any) -> None:
+    """A top-level ``error`` is a failed call. (A PER-UID ``error`` is not: it means
+    that uid has no record, and ``esummary`` drops it.)"""
+    if not isinstance(body, dict):
+        raise _http.UnexpectedShapeError(f"esummary body is {type(body).__name__}, not an object")
+    if isinstance(body.get("error"), str):
+        raise _http.UpstreamEnvelopeError(f"NCBI esummary error: {body['error']}")
 
 
 async def esearch(
@@ -54,6 +80,7 @@ async def esearch(
         params=params,
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        check=_check_esearch,
     )
     result = data.get("esearchresult", {}) or {}
     ids = result.get("idlist", []) or []
@@ -78,10 +105,22 @@ async def esummary(
         params=params,
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        check=_check_esummary,
     )
     result = data.get("result", {}) or {}
     uids = result.get("uids", []) or []
-    return [result[u] for u in uids if u in result]
+    docs: list[dict[str, Any]] = []
+    for u in uids:
+        doc = result.get(u)
+        if not isinstance(doc, dict):
+            continue
+        if doc.get("error"):
+            # Per-uid "cannot get document summary": this uid has no record. Kept, it
+            # normalised into an empty success-shaped record (a bad PMID "resolved").
+            logger.info("NCBI esummary (%s): uid %s has no record: %s", db, u, doc["error"])
+            continue
+        docs.append(doc)
+    return docs
 
 
 async def elink(

@@ -17,6 +17,7 @@ import re
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp.errors import UpstreamUnavailableError
 from data_aggregator_mcp.models import FileEntry
 
 GRAPHQL = "https://openneuro.org/crn/graphql"
@@ -53,8 +54,18 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
         # No not_found_returns: this GraphQL endpoint answers 200 with
         # data.snapshot=null for a missing snapshot (handled below); a real
         # HTTP 404 means the endpoint itself moved and should fail loud.
+        expect=dict,
     )
-    snapshot = ((body or {}).get("data") or {}).get("snapshot") or {}
+    # GraphQL reports failure INSIDE a 200: ``errors[]`` (usually with data=null). Read
+    # as an empty manifest it made the resolve look fine and a fetch "succeed" with
+    # zero files; it is an upstream failure and says so.
+    gql_errors = body.get("errors")
+    if gql_errors:
+        messages = "; ".join(
+            str(e.get("message") if isinstance(e, dict) else e) for e in gql_errors
+        )
+        raise UpstreamUnavailableError(f"OpenNeuro GraphQL error for {ds}@{tag}: {messages}")
+    snapshot = (body.get("data") or {}).get("snapshot") or {}
     out: list[FileEntry] = []
     for f in snapshot.get("files") or []:
         if f.get("directory"):

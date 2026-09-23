@@ -369,3 +369,24 @@ async def test_resolve_pubmed_access_from_europepmc(httpx_mock, monkeypatch) -> 
     assert r.access == "open"
     assert r.license == "cc0"
     assert r.files and r.files[0].source == "europepmc"
+
+
+async def test_resolve_bad_pmid_real_ncbi_shape_raises(httpx_mock: HTTPXMock, monkeypatch) -> None:
+    """Audit 2026-09-22 M13: NCBI's real answer for a nonexistent PMID (captured live
+    2026-09-22) lists the uid with a per-uid ``error`` — not the empty ``uids`` the test
+    above assumes. It normalised into an empty success record (title '', no year) that
+    the router then cached for an hour."""
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    httpx_mock.add_response(
+        url=f"{_EUT}/esummary.fcgi?db=pubmed&id=99999999999&version=2.0&retmode=json",
+        json={
+            "header": {"type": "esummary", "version": "0.3"},
+            "result": {
+                "uids": ["99999999999"],
+                "99999999999": {"uid": "99999999999", "error": "cannot get document summary"},
+            },
+        },
+    )
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(NotFoundError, match="no pubmed record"):
+            await pubmed.resolve(client, "pubmed:99999999999")

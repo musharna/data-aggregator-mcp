@@ -335,3 +335,31 @@ async def test_resolve_escapes_double_quote_in_pid():
     assert '\\"' in q, f"unescaped double-quote in: {q!r}"
     # The phrase query wrapper must still be intact (outer quotes present)
     assert 'identifier:"' in q, f"identifier phrase prefix missing in: {q!r}"
+
+
+@pytest.mark.asyncio
+async def test_resolve_pages_data_objects_past_50():
+    """Audit 2026-09-22 M12: the resourceMap query asked for ``rows=50`` once and never
+    paged, so a package with 120 data objects silently resolved with 50 files."""
+    starts: list[int] = []
+
+    def handler(req):
+        q = req.url.params.get("q", "")
+        if q.startswith("identifier:"):
+            doc = {"identifier": "doi:10.1/x", "title": "t", "resourceMap": ["rm1"]}
+            return httpx.Response(200, json={"response": {"numFound": 1, "docs": [doc]}})
+        if q.startswith("resourceMap:"):
+            start, rows = int(req.url.params["start"]), int(req.url.params["rows"])
+            starts.append(start)
+            docs = [
+                {"identifier": f"obj{i}", "fileName": f"f{i}.csv", "size": 1}
+                for i in range(start, min(start + rows, 120))
+            ]
+            return httpx.Response(200, json={"response": {"numFound": 120, "docs": docs}})
+        return httpx.Response(303, headers={"location": "https://mn.example/obj"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        r = await dataone.resolve(c, "dataone:doi:10.1/x")
+    assert len(r.files) == 120
+    assert [f.name for f in r.files][:2] == ["f0.csv", "f1.csv"] and r.files[-1].name == "f119.csv"
+    assert starts[0] == 0 and len(starts) > 1  # positive: it actually paged
