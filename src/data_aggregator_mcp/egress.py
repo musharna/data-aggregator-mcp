@@ -62,8 +62,16 @@ def _is_public(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     covers the cloud metadata services (169.254.169.254 and fd00:ec2::254), and reserved
     covers the blocks that get repurposed later. A range-by-range list would need editing
     every time IANA allocates something.
+
+    ``is_global`` is the allowlist half: the categories above miss RFC 6598 shared
+    address space (100.64.0.0/10 — carrier NAT, and every Tailscale node), which the
+    stdlib counts as neither private nor reserved. An IPv4-mapped IPv6 literal
+    (``::ffff:100.64.0.1``) is judged as the IPv4 address it carries, since that is
+    where the connection lands.
     """
-    return not (
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+        ip = ip.ipv4_mapped
+    return ip.is_global and not (
         ip.is_private
         or ip.is_loopback
         or ip.is_link_local

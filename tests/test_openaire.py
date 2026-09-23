@@ -163,7 +163,8 @@ async def test_resolve_fetches_entity_and_attaches_scholix_links(
         r = await openaire.resolve(client, "openaire:doi_dedup___::5c75a0e2")
     assert r.id == "openaire:doi_dedup___::5c75a0e2"
     assert [(lnk.rel, lnk.target_id) for lnk in r.links] == [
-        ("is_supplement_to", "datacite:10.5061/dryad.z")
+        # paper IsSupplementedBy dataset: direction kept (L23, audit 2026-09-22)
+        ("is_supplemented_by", "datacite:10.5061/dryad.z")
     ]
 
 

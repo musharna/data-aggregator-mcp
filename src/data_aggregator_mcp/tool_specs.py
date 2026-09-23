@@ -403,6 +403,7 @@ TOOLS: list[types.Tool] = [
                     "type": "integer",
                     "description": "Row count for head/preview",
                     "default": 20,
+                    "minimum": 1,
                 },
                 "columns": {
                     "type": "array",

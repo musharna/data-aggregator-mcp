@@ -17,12 +17,15 @@ from data_aggregator_mcp.models import Link
 SCHOLIX_VERSION = "v3"
 BASE_URL = f"https://api.scholexplorer.openaire.eu/{SCHOLIX_VERSION}/Links"
 
-# Scholix RelationshipType.Name → our model rel vocabulary.
+# Scholix RelationshipType.Name → our model rel vocabulary (the DataCite snake-case
+# names ``links`` uses everywhere else). The edge reads source → target, and the source
+# is the DOI we queried, so each inverse pair keeps its own name: collapsing
+# IsSupplementedBy onto is_supplement_to said "the paper supplements the dataset".
 _REL_MAP = {
-    "issupplementedby": "is_supplement_to",
+    "issupplementedby": "is_supplemented_by",
     "issupplementto": "is_supplement_to",
     "references": "references",
-    "isreferencedby": "references",
+    "isreferencedby": "is_referenced_by",
     "isrelatedto": "is_related_to",
 }
 # target.Type values that are NOT data — dropped.

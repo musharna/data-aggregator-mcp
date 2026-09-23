@@ -256,3 +256,25 @@ async def test_live_file_url_is_actually_downloadable() -> None:
         resp = await c.get(target.url, headers={"Range": "bytes=0-200"})
         assert resp.status_code in (200, 206), resp.status_code
         assert resp.content
+
+
+@pytest.mark.asyncio
+async def test_search_offset_not_on_page_boundary_starts_at_offset() -> None:
+    """M7 (audit 2026-09-22): offset=3,size=10 fetched page 1 and returned ACC000..,
+    repeating records already consumed. Drop the first ``offset % size`` records."""
+    accs = [f"ACC{i:03d}" for i in range(25)]
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        size, page = int(req.url.params["pageSize"]), int(req.url.params["page"]) - 1
+        chunk = accs[page * size : (page + 1) * size]
+        return httpx.Response(
+            200, json={"hits": [{"accession": a} for a in chunk], "totalHits": len(accs)}
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        total, recs = await biostudies.search(c, "x", size=10, offset=3)
+        _, aligned = await biostudies.search(c, "x", size=10, offset=10)
+    assert total == 25
+    assert [r.id for r in recs] == [f"biostudies:{a}" for a in accs[3:10]]
+    # positive control: a page-aligned offset is unchanged
+    assert [r.id for r in aligned] == [f"biostudies:{a}" for a in accs[10:20]]

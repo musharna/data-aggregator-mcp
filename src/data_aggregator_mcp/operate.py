@@ -112,6 +112,10 @@ async def run(
         raise ValidationError(f"unknown op {op!r}; expected one of {OPERATE_MODES}")
     if op == "sql" and not query:
         raise ValidationError("op='sql' requires a query")
+    # Checked before any I/O and for every op: a non-positive row count is a caller error,
+    # not an empty page (head n=-3 reached duckdb's LIMIT; preview n=0 crashed pyarrow).
+    if isinstance(n, bool) or not isinstance(n, int) or n < 1:
+        raise ValidationError(f"n must be a positive integer; got {n!r}")
 
     from data_aggregator_mcp import duckquery, tabular
 

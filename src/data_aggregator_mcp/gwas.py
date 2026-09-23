@@ -65,14 +65,20 @@ async def search(
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
-        not_found_returns={},
+        # No not_found_returns: a 404 on the SEARCH endpoint means it moved (an outage),
+        # not "no studies" — an empty result is a 200 with an empty `studies` list.
+        expect=dict,
     )
     studies = ((body or {}).get("_embedded") or {}).get("studies") or []
     # `.get(k, default)` only falls back on an ABSENT key, not an explicit null —
     # coerce a None totalElements to the page length so total stays an int.
     reported = ((body or {}).get("page") or {}).get("totalElements")
     total = reported if isinstance(reported, int) else len(studies)
-    return total, [compact(_normalize(s)) for s in studies]
+    # Page-boundary slice (see pagination spec): the page holding `offset` starts at
+    # `page * capped`, so drop the first `offset % capped` rows — otherwise a mid-page
+    # offset replays rows the router already consumed.
+    sliced = studies[offset % capped :] if capped else studies
+    return total, [compact(_normalize(s)) for s in sliced]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:

@@ -162,3 +162,28 @@ async def test_rewrite_confidence_alone_is_not_usable(monkeypatch) -> None:
     )
     async with httpx.AsyncClient() as client:
         assert await query_understanding.rewrite(client, "x") is None
+
+
+async def test_rewrite_never_raises_on_non_finite_numbers(monkeypatch) -> None:
+    """L21 (audit 2026-09-22): json.loads accepts the non-standard ``Infinity``/``NaN``
+    literals, so an LLM answering ``"year_min": Infinity`` made ``int(inf)`` raise
+    OverflowError straight through the NEVER-raises contract (and NaN confidence clamped
+    to 1.0). Driven through the real llm.complete_json parse, not a pre-parsed dict.
+    Positive control: the finite fields of the same answer still land."""
+    _enable(monkeypatch)
+    body = '{"keyword_core": "rna", "year_min": Infinity, "year_max": NaN, "confidence": NaN}'
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"choices": [{"message": {"content": body}}]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        ru = await query_understanding.rewrite(client, "rna from forever")
+    assert ru is not None
+    assert ru.keyword_core == "rna"
+    assert ru.year_min is None and ru.year_max is None
+    assert ru.confidence is None
+    # direct coercer controls: finite values still coerce, non-finite never raise
+    assert query_understanding._clean_int(2020.0) == 2020
+    assert query_understanding._clean_int(float("-inf")) is None
+    assert query_understanding._clean_float(0.5) == 0.5
+    assert query_understanding._clean_float("inf") is None

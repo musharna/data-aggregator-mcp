@@ -106,3 +106,31 @@ async def test_geo_suppl_shares_the_ncbi_bucket_with_eutils():
         "GEO suppl listing", "https://ftp.ncbi.nlm.nih.gov/geo/series/GSE1nnn/GSE1/suppl/"
     )
     assert list(_ratelimit._BUCKETS) == ["ncbi"]
+
+
+def test_bucket_survives_a_second_event_loop():
+    """L22 (audit 2026-09-22): buckets are module-level and outlive an event loop, but
+    each held ONE asyncio.Lock, which binds to the loop of its first contended use. The
+    next ``asyncio.run`` (a CLI call, a test, an embedding host) then raised
+    ``RuntimeError: ... is bound to a different event loop`` on its first contended
+    acquire. The lock is now per loop; the token state stays shared. The first burst is
+    the positive control; the pacing assertion proves tokens still carry over."""
+    import asyncio
+
+    class YieldingClock(FakeClock):
+        async def sleep(self, dt: float) -> None:
+            self.t += dt
+            await asyncio.sleep(0)  # yield, so the other acquirers contend on the lock
+
+    clk = YieldingClock()
+    b = TokenBucket(rate=3.0, capacity=3.0, now=clk.now, sleep=clk.sleep)
+
+    async def burst() -> None:
+        await asyncio.gather(*(b.acquire() for _ in range(5)))
+
+    asyncio.run(burst())
+    after_first = clk.t
+    assert after_first == pytest.approx(2 / 3, abs=1e-6)  # 3 free, 2 paced
+    asyncio.run(burst())  # raised RuntimeError before the fix
+    # bucket was empty at the start of loop 2, so all 5 are paced: shared state held
+    assert clk.t == pytest.approx(after_first + 5 / 3, abs=1e-6)

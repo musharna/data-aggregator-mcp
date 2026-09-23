@@ -255,6 +255,9 @@ async def search(
         max_retries=MAX_RETRIES,
     )
     hits = (body or {}).get("hits") or []
+    # Page-boundary slice (see pagination spec): drop the first `offset % capped` rows
+    # of the page holding `offset`, else a mid-page offset replays consumed rows.
+    hits = hits[offset % capped :] if capped else hits
     recs = [compact(_normalize_hit(h)) for h in hits if isinstance(h, dict)]
     total = (body or {}).get("totalHits")
     return (int(total) if isinstance(total, int) else len(recs)), recs
