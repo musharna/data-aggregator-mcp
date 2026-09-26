@@ -15,11 +15,8 @@ release (`uvx data-aggregator-mcp` always pulls it) before reporting.
 
 **Please do not open a public issue for a security vulnerability.**
 
-Report privately, either way:
-
-- Preferred: use GitHub's **"Report a vulnerability"** button under the repo's
-  **Security** tab (private security advisories), or
-- Email **mjarnold1998@gmail.com**.
+Report privately with GitHub's **"Report a vulnerability"** button under the
+repo's **Security** tab (private security advisories).
 
 Please include a description of the issue, the affected version, and a minimal
 reproduction (the `search`/`resolve`/`fetch`/`operate`/`list_sources` call, the
