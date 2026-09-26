@@ -1,18 +1,22 @@
 # Why data-aggregator-mcp
 
-Most MCP servers in the research space sit at one of two extremes. **Single-source
+Many MCP servers in the research space sit at one of two extremes. **Single-source
 servers** wrap one repository well — DataCite, PubMed, ClinicalTrials.gov, a
 preprint index — with no way to ask one question across archives, omics, and the
-literature at once. **Breadth gateways** proxy hundreds of APIs as hundreds of raw
-tools, but hand back each source's native payload: no shared model, no dedup, no
+literature at once. **Breadth gateways** proxy many APIs, one raw
+tool each, but hand back each source's native payload: no shared model, no dedup, no
 cross-source joins. And **deep-research agents** are tuned to find _papers_, then
 frequently fabricate a download when the actual bytes aren't reachable.
 
 This server occupies the middle that neither extreme covers: **a normalized,
 multi-domain data layer.** One search fans out across research-data archives,
 omics registries, and the literature; results come back as one `DataResource`
-model, deduplicated by DOI; and `fetch` either verifies the bytes against a
-checksum or fails loud — it never pretends.
+model, deduplicated by DOI; and `fetch` verifies the bytes against a checksum
+where the source publishes one, and raises instead of returning a path when the
+bytes can't be reached. Many sources publish no checksum (GEO, HuggingFace,
+PRIDE, MetaboLights, DANDI, CELLxGENE, PDB, UniProt, BioStudies, GBIF, data.gov
+and others); those downloads are not verified, and the only content check is an
+HTML sniff on files declared as PDF or XML.
 
 ## The shape
 
@@ -26,7 +30,8 @@ Six tools, one model:
   trust signals, FAIR assessment, and optional Croissant / RO-Crate /
   provenance-dossier export.
 - **`fetch`** — stream files to disk with checksum verification where the source
-  exposes one, optional archive unpacking, and a fail-loud integrity sniff.
+  exposes one, optional archive unpacking, and an HTML sniff on files declared
+  as PDF or XML.
 - **`operate`** — read the schema, preview rows, or run a read-only SQL `SELECT`
   against a remote Parquet/CSV/TSV **without downloading it** (Parquet footer +
   DuckDB httpfs range reads). Optional `[operate]` extra.
@@ -39,7 +44,7 @@ Six tools, one model:
 Plus MCP **prompts** (`find_data`, `data_behind_paper`, `search_resolve_fetch`)
 and MCP **resources** (`dataresource://catalog`, `dataresource://record/{id}`).
 
-Sources (v0.41.1, 17 wired): **Zenodo**, **DataCite** (Dryad / Figshare /
+Sources (v0.46.0, 17 wired): **Zenodo**, **DataCite** (Dryad / Figshare /
 Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics** (GEO / SRA / BioProject) +
 **ENA**, **BioStudies** (EBI, incl. ArrayExpress),
 **literature** (PubMed / OpenAIRE / EuropePMC / Unpaywall),
@@ -53,12 +58,13 @@ with direct PRIDE / MetaboLights fetch), **DANDI** (neurophysiology),
 **CZ CELLxGENE** (single-cell), **OpenML**, **RCSB PDB**, **UniProtKB**, and the
 **GWAS Catalog**.
 
-## What only this does
+## What it combines
 
-Six capabilities are uncontested across the MCP research ecosystem. Swept
-2026-07-21 against the official MCP registry (`search=dataset`), Glama's
-`research-and-data` category, and a web sweep of the bio/dataset MCP space. That
-sweep is registry-scoped — it is not a claim about every server that exists.
+A search on 2026-07-21 of the official MCP registry (`search=dataset`), Glama's
+`research-and-data` category, and the web for bio/dataset MCP servers found no
+other server offering these six capabilities together. The search results were
+not saved, it covered only those listings, and servers may have been published
+since; read it as a dated observation, not a survey of every server that exists.
 
 1. **Normalized multi-domain unification + cross-source dedup.** Every source —
    archive, omics registry, or paper — lands in the same `DataResource` shape, and
@@ -67,23 +73,26 @@ sweep is registry-scoped — it is not a claim about every server that exists.
    structurally cannot do this.
 2. **Taxonomy synonym query-expansion.** `organism="Orobanche aegyptiaca"` also
    matches records filed under `Phelipanche aegyptiaca` via NCBI Taxonomy — a
-   species rename doesn't cost you results. Others filter by organism; none expand
-   the query across synonyms.
+   species rename doesn't cost you results. Servers found in the 2026-07-21 search
+   filtered by organism; none of them expanded the query across synonyms.
 3. **Bidirectional paper↔data bridge.** Resolve a paper and get links to the GEO /
    SRA / BioProject / DataCite records it produced; resolve a dataset and get back
    to its literature. Multi-repo and MCP-native.
-4. **Verified-fetch-or-fail-loud.** Fetch verifies MD5 / SHA-256 where the source
-   publishes one, and a content sniff rejects an HTML paywall page served as a
-   "PDF". When bytes genuinely aren't reachable, it raises — it does not invent a
-   path. This is the direct answer to deep-research tools that hallucinate on
-   fetch-failure.
+4. **Checksum-verified fetch where possible; no invented paths.** Fetch verifies
+   MD5 / SHA-256 where the source publishes one. Many sources publish none, and
+   those downloads are not verified (see the Checksum column in the README's
+   Sources table); for them the only content check is an HTML sniff on files
+   declared as PDF or XML, which rejects a paywall page served as a "PDF". When
+   bytes aren't reachable, it raises — it does not invent a path, which is the
+   failure seen in deep-research tools that report a download that never
+   happened.
 5. **FAIR assessment + research-object packaging.** `resolve` can attach an
    RDA-grounded FAIRness score (Maturity Model v0.90, with per-indicator RDA ids
    and actionable gaps), and export the record as Croissant, RO-Crate, or a
    `format="provenance"` dossier that composes version-currency, licence/SPDX,
    FAIRness, and retraction signals into one machine-readable artifact — with a
    whole-search Run Crate available on `search`. No other MCP server
-   found in the sweep combines RO-Crate packaging, FAIR scoring, and
+   found in the 2026-07-21 search combined RO-Crate packaging, FAIR scoring, and
    checksum-verified fetch.
 6. **Query the data without downloading it.** `operate` runs schema / preview /
    read-only SQL against remote columnar files via range reads — so an agent can
@@ -93,14 +102,15 @@ sweep is registry-scoped — it is not a claim about every server that exists.
 
 |                                                             | Multi-domain (archive+omics+lit) | Normalized model + DOI dedup | Taxonomy expansion | Paper↔data bridge |    Verified fetch     |   FAIR / RO-Crate   |
 | ----------------------------------------------------------- | :------------------------------: | :--------------------------: | :----------------: | :---------------: | :-------------------: | :-----------------: |
-| **data-aggregator-mcp**                                     |                ✅                |              ✅              |         ✅         |        ✅         |          ✅           |         ✅          |
+| **data-aggregator-mcp**                                     |                ✅                |              ✅              |         ✅         |        ✅         | partial (checksummed sources) |         ✅          |
 | Single-source servers (datacite-, pubmed-, clinicaltrials-) |          ❌ one source           |             n/a              |         ❌         |        ❌         |        varies         |         ❌          |
-| Breadth gateways (600+ sources)                             |           ✅ by count            |  ❌ raw per-source payloads  |         ❌         |        ❌         |          ❌           |         ❌          |
+| Breadth gateways (many APIs as raw tools)                   |           ✅ by count            |  ❌ raw per-source payloads  |         ❌         |        ❌         |          ❌           |         ❌          |
 | Biomedical knowledgebase hubs (e.g. BioContextAI, 20+ DBs)  |        ✅ annotation DBs         |              ❌              |         ❌         |      partial      | ❌ answers, not bytes |         ❌          |
 | ML-dataset / Croissant tools (e.g. Eclair)                  |         ❌ no omics/lit          |    ❌ not DOI-normalized     |         ❌         |        ❌         |       downloads       | partial (Croissant) |
 | Multi-source bio (e.g. BioMCP)                              |     partial, clinical-biased     |              ❌              |         ❌         |      partial      |   ❌ dataset fetch    |         ❌          |
 
-Competitor characterizations are from a 2026-07-21 ecosystem sweep; the named tools
+Competitor characterizations are from the 2026-07-21 search above (results not
+saved; they may be out of date); the named tools
 are real and good at what they do — the table contrasts _axes_, not quality. In
 particular, BioContextAI-class hubs are excellent at _answering biomedical
 questions_ from annotation databases; they are not trying to hand you verified

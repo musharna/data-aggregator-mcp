@@ -2,10 +2,11 @@
 
 Every step below is **outward-facing and irreversible** (PyPI versions cannot be
 re-uploaded or deleted; the PyPI project name and the registry name are
-permanent). The repo is prepared to the gate — nothing here has been executed.
-Run these manually when ready to ship a release.
+permanent). The one-time setup (steps 1–2) is done: the package is published on
+PyPI and in the official MCP registry (0.46.0 in both as of 2026-09-25). Those
+steps are kept for reference; steps 3–4 are what each release runs.
 
-## One-time setup
+## One-time setup (done)
 
 ### 1. Create the public GitHub repo
 

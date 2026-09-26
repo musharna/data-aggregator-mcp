@@ -21,7 +21,7 @@ Figshare / Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics**
 **GBIF** (biodiversity), **data.gov** (US federal open data), and **NASA CMR**
 (Earth science) — deduplicated, normalized, and cross-linked. `resolve` any hit to its file
 manifest, citation, trust signals, and the data it points at. `fetch` it to
-disk with checksum verification.
+disk, checksum-verified where the source publishes a checksum.
 
 mcp-name: io.github.musharna/data-aggregator-mcp
 
@@ -33,9 +33,9 @@ mcp-name: io.github.musharna/data-aggregator-mcp
 
 ## ✨ Why this
 
-Most data MCPs wrap a single source. This one **unifies** them behind six tools
-and one `DataResource` model, so an agent searches once and gets back comparable
-records:
+Many research-data MCP servers wrap one source each. This one **unifies** many
+behind six tools and one `DataResource` model, so an agent searches once and gets
+back comparable records:
 
 - **Multi-domain, one model** — generalist archives + raw omics + literature,
   deduplicated by DOI (the fetchable record wins over bare metadata).
@@ -44,9 +44,12 @@ records:
   results.
 - **Paper → data bridge** — resolve a paper and get links to the GEO / SRA /
   BioProject / DataCite records it produced.
-- **Verified fetch** — streams to disk with md5 verification where the source
-  exposes a checksum, optional archive unpacking, and a fail-loud integrity
-  sniff that rejects an HTML paywall page served as a "PDF".
+- **Checked fetch** — streams to disk with md5 / sha-256 verification where the
+  source publishes a checksum (a mismatch raises), and optional archive
+  unpacking. Many sources publish no checksum (see the Checksum column below);
+  those downloads are not verified, and the only content check is an HTML sniff
+  on files declared as PDF or XML, which rejects a paywall page served as a
+  "PDF".
 - **Citations, access & full text** — render a citation in any CSL style, get
   normalized access/license, and pull open-access full text — all in one
   `resolve`.
@@ -69,7 +72,7 @@ ML-dataset tools: **[docs/POSITIONING.md](https://github.com/musharna/data-aggre
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/musharna/data-aggregator-mcp/main/docs/assets/architecture.svg"
-       alt="Architecture: an MCP client speaks stdio to data-aggregator-mcp's six tools, which fan out through one router (DOI dedup, ontology expansion, ranking) to archives (Zenodo, DataCite, HuggingFace, DataONE, OpenML, RCSB PDB), omics (GEO, SRA, BioProject, OmicsDI, DANDI, CELLxGENE, GWAS Catalog), and literature (PubMed, OpenAIRE, EuropePMC, Unpaywall)"
+       alt="Architecture: an MCP client speaks stdio to data-aggregator-mcp's six tools, which fan out through one router (DOI dedup, ontology expansion, ranking) to archives (Zenodo, DataCite, HuggingFace, DataONE, OpenML, RCSB PDB, UniProtKB, GBIF, data.gov, NASA CMR), omics (GEO, SRA, BioProject, OmicsDI, BioStudies, DANDI, CELLxGENE, GWAS Catalog), and literature (PubMed, OpenAIRE, EuropePMC, Unpaywall)"
        width="760">
 </p>
 
@@ -192,23 +195,35 @@ with `421 Invalid Host header`.
 | NCBI SRA                     |    ✅    |  ✅ (ENA FASTQ)   |       md5        |
 | NCBI GEO                     |    ✅    |   ✅ (`suppl/`)   |      none²       |
 | NCBI BioProject              |    ✅    |    → SRA links    |        —         |
-| PubMed / OpenAIRE            |    ✅    | ✅ (OA full text) |      none²       |
-| HuggingFace datasets         |    ✅    | ✅ (resolve URL)  |       none       |
+| PubMed / OpenAIRE            |    ✅    | ✅ (OA full text) |      none³       |
+| HuggingFace datasets         |    ✅    | ✅ (resolve URL)  |      none²       |
 | DataONE (eco/env)            |    ✅    | ✅ (Member Node)  |  md5 / sha-256   |
-| OmicsDI → PRIDE              |    ✅    |  ✅ (HTTPS FTP)   |    size only     |
-| OmicsDI → MetaboLights       |    ✅    |  ✅ (HTTPS FTP)   |       none       |
+| OmicsDI → PRIDE              |    ✅    |  ✅ (HTTPS FTP)   |      none²       |
+| OmicsDI → MetaboLights       |    ✅    |  ✅ (HTTPS FTP)   |      none²       |
 | OmicsDI → other MS repos     |    ✅    |         —         |        —         |
 | DataCite → OpenNeuro         |    ✅    |   ✅ (snapshot)   |      none²       |
 | DANDI (neurophysiology)      |    ✅    |    ✅ (302→S3)    |      none²       |
 | CZ CELLxGENE (single-cell)   |    ✅    |   ✅ (H5AD/RDS)   |      none²       |
 | OpenML (ML datasets)         |    ✅    |     ✅ (ARFF)     |       md5        |
 | RCSB PDB (structures)        |    ✅    |  ✅ (.cif/.pdb)   |      none²       |
+| UniProtKB (proteins)         |    ✅    |    ✅ (FASTA)     |      none²       |
+| BioStudies (EBI)             |    ✅    | ✅ (study files)  |      none²       |
+| GBIF (biodiversity)          |    ✅    | ✅ (Darwin Core)⁴ |      none²       |
+| data.gov (CKAN)              |    ✅    |  ✅ (resource)⁴   |      none³       |
+| NASA CMR (Earth science)     |    ✅    |        —⁵         |        —         |
 | GWAS Catalog                 |    ✅    |   → PMID bridge   |        —         |
 
 ¹ Dryad downloads are token / bot-challenge gated, so `fetch` fails loud;
 `resolve` still lists the files.
-² No upstream checksum — `fetch` verifies content-type instead (rejects an HTML
-page served in place of a binary).
+² No upstream checksum, so `fetch` does not verify these bytes. It still fails
+loud on an HTTP error or when the download exceeds `max_bytes`.
+³ No upstream checksum. Files declared as PDF or XML (literature full text, and
+data.gov resources with that mimetype) get an HTML sniff: an HTML login or
+paywall page served in their place fails loud. Other files are not checked.
+⁴ Only records that carry a downloadable file (a GBIF Darwin Core Archive, a
+data.gov resource URL); metadata-only records are discovery-only.
+⁵ Discovery-only: granule downloads need an Earthdata login, which is not wired.
+`resolve` returns the DOI and a data-access portal link.
 
 ## 🛠️ Tools
 
@@ -243,16 +258,18 @@ dropped.
   (`LLM_API_BASE`); with none configured the search runs unchanged and notes it in
   `errors['understand']`. **Effectiveness is query- and model-dependent — opt-in /
   default-off; validate the recall lift on your own corpus and LLM (see the eval
-  harness below). On our small verified set `multi_query=` is the stronger,
-  always-safe recall lever; `understand=` is approximately neutral with a weak
-  local model.**
+  harness below).** `understand=` was measured once (v0.38.0, 2026-06-11) on a
+  5-query verified gold set: mean recall@20 lift −0.10 against the plain query,
+  with 4 of the 5 queries neutral or better. `multi_query=` has not been measured.
 - `multi_query` — opt into diverse multi-query recall expansion (default false).
   An LLM generates up to a few deliberately-diverse reformulations of your query
   (different facets/synonyms/framings, not paraphrases), each is fanned out across
-  every source, and the deduped union is re-ranked against your **original** query —
-  surfacing relevant records a single keyword query would miss. Bounded at
-  `MAX_QUERY_VARIANTS` (4, incl. the original, which is always kept so recall never
-  drops below baseline), so it costs at most N× the upstream calls. Composes with
+  every source, and the deduped union is re-ranked against your **original** query,
+  aiming to reach records a single keyword query would miss. Bounded at
+  `MAX_QUERY_VARIANTS` (4, incl. the original), so it costs at most N× the upstream
+  calls. The original query's results are always among the candidates, but only the
+  top `size` of the re-ranked union are returned, so a result the plain query would
+  have returned can be displaced by one from a variant. Composes with
   `understand=` (which structures variant 0). The variants used are echoed in
   `query_expansion`. Needs an LLM endpoint (`LLM_API_BASE`); with none configured
   the search runs as a normal single query and notes it in `errors['multi_query']`.
@@ -302,19 +319,26 @@ or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
 ### `fetch(id, dest?, files?, max_bytes?, force?, extract?)`
 
 Download files to disk and return their paths. Streams under a `max_bytes` guard
-(`force` to override) with md5 verification wherever a checksum exists.
+(`force` to override) with md5 / sha-256 verification wherever the source
+publishes a checksum.
 
 - `files` — restrict to a subset of the resolved manifest.
 - `extract` — unpack downloaded zip / tar archives in place, guarded against
   path traversal and runaway extracted size. Off by default.
-- Unverified fetches (GEO `suppl/`, literature full text) get a content-type
-  sniff that fails loud if a declared binary is actually an HTML page.
-- Fetchable: **Zenodo**, **SRA**, **GEO**, **DataONE** (Member-Node objects,
-  md5/sha-256 verified), DataCite-hosted **Figshare** / **Dataverse** / **OSF**,
-  **HuggingFace** datasets, **PRIDE** / **MetaboLights** (via OmicsDI, unverified),
-  and **literature** open-access full text. **Dryad**, other DataCite repos, and
-  other OmicsDI repos (MassIVE / GNPS / ...) are discovery-only and raise
-  `FetchNotSupportedError`.
+- Sources without a checksum are downloaded unverified. The one content check
+  there is an HTML sniff on files declared as PDF or XML (literature full text,
+  some data.gov resources): it fails loud if the body is actually an HTML page.
+- Checksum-verified: **Zenodo**, **SRA** (ENA FASTQ), **DataONE** (Member-Node
+  objects), DataCite-hosted **Figshare** / **Dataverse** / **OSF**, and
+  **OpenML** (ARFF).
+- Fetchable but unverified: **GEO** `suppl/`, **HuggingFace** datasets,
+  **PRIDE** / **MetaboLights** (via OmicsDI), DataCite-hosted **OpenNeuro**,
+  **DANDI**, **CZ CELLxGENE**, **RCSB PDB**, **UniProtKB**, **BioStudies**,
+  **GBIF** (Darwin Core Archives), **data.gov** resources, and **literature**
+  open-access full text.
+- **Dryad**, other DataCite repos, other OmicsDI repos (MassIVE / GNPS / ...),
+  **BioProject**, **NASA CMR**, and the **GWAS Catalog** are discovery-only and
+  raise `FetchNotSupportedError`.
 
 ### `list_sources()`
 
@@ -342,7 +366,7 @@ Backed by the Parquet footer reader + DuckDB `httpfs` range reads. `sql` runs in
 a locked-down DuckDB (read-only, local filesystem disabled, single-SELECT
 validation, row / wall-clock caps). Requires the optional `[operate]` extra
 (`pip install data-aggregator-mcp[operate]`); without it, `operate` returns a
-clear install-the-extra message and the other four tools are unaffected.
+clear install-the-extra message and the other five tools are unaffected.
 
 Any HuggingFace dataset with a datasets-server converted view is operable
 (`schema` / `preview` / `head` / `sql`): `resolve` surfaces the auto-converted
