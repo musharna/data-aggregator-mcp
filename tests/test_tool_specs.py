@@ -62,3 +62,37 @@ def test_tool_specs_stays_free_of_request_handling_imports():
         elif isinstance(node, ast.ImportFrom):
             imported.add(node.module or "")
     assert not {m for m in imported if m.endswith("router") or m == "httpx"}, sorted(imported)
+
+
+# Each fetchable id prefix -> the name the `fetch` description must use for it. A new
+# fetchable prefix without an entry here fails the test, so the list cannot go stale again.
+_FETCH_LABELS = {
+    "zenodo": "Zenodo",
+    "dataone": "DataONE",
+    "gbif": "GBIF",
+    "datagov": "data.gov",
+    "cellxgene": "CELLxGENE",
+    "datacite": "DataCite",
+    "dandi": "DANDI",
+    "geo": "GEO",
+    "sra": "SRA",
+    "openaire": "OpenAIRE",
+    "pubmed": "PubMed",
+    "hf": "HuggingFace",
+    "omicsdi": "OmicsDI",
+    "openml": "OpenML",
+    "pdb": "PDB",
+    "uniprot": "UniProt",
+    "biostudies": "BioStudies",
+}
+
+
+def test_fetch_description_names_every_fetchable_source():
+    from data_aggregator_mcp import sources
+
+    desc = next(t for t in tool_specs.TOOLS if t.name == "fetch").description
+    prefixes = {p.rstrip(":") for p in sources.FETCHABLE_PREFIXES}
+    assert "zenodo" in prefixes and "Zenodo" in desc  # positive control: a known pair matches
+    assert prefixes - _FETCH_LABELS.keys() == set(), "fetchable prefix with no label here"
+    missing = sorted(p for p in prefixes if _FETCH_LABELS[p] not in desc)
+    assert missing == [], f"fetch description omits: {missing}"

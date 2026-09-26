@@ -70,7 +70,8 @@ _VALID_KINDS = {"dataset", "sequencing_run", "study", "publication", "software"}
 
 # A2.P2: hard cap on the number of query variants fanned out (incl. the original as
 # variant 0). The upstream fan-out is N variants × M sources × size, so this bounds the
-# N× cost. The original query is ALWAYS variant 0, so recall never drops below baseline.
+# N× cost. The original query is ALWAYS variant 0, so its hits are always candidates; the
+# merged union is re-ranked and cut to `size`, so they are not guaranteed a place on the page.
 MAX_QUERY_VARIANTS = 4
 
 logger = logging.getLogger(__name__)
@@ -756,7 +757,7 @@ async def search_page(
 
         if multi_query:
             # A2.P2 parallel path. Variant 0 = the post-understand/post-expansion
-            # `effective_query` (so recall never drops below the single-query baseline).
+            # `effective_query` (so the single-query hits are always among the candidates).
             # Ask the LLM for diverse reformulations; on failure, fall through to the
             # byte-identical single-query path below with a transparency note.
             variants_raw = await query_understanding_mod.expand(client, query, n=MAX_QUERY_VARIANTS)
