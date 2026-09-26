@@ -6,6 +6,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.46.1] - 2026-09-26
+
+### Changed
+
+- README and `docs/POSITIONING.md` claims now match the code: only the measured
+  `understand=` recall result is reported (`multi_query=` is unmeasured); the original
+  query's hits are always candidates but not guaranteed a place on the page; `fetch`
+  verifies md5/SHA-256 only where a source publishes one; source tables regenerated.
+- The `fetch` tool description names every fetchable source (UniProt, BioStudies, GBIF and
+  data.gov were missing) and says which are unverified; a test now fails if one is left out.
+- The personal contact email is removed from SECURITY.md, the Code of Conduct and the
+  package metadata; a third-party email in a test fixture is redacted.
+
 ## [0.46.0] - 2026-09-23
 
 ### Fixed
