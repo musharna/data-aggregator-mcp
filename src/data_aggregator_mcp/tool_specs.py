@@ -313,9 +313,14 @@ TOOLS: list[types.Tool] = [
             "DANDI dandisets (302→S3, unverified); "
             "CZ CELLxGENE H5AD/RDS assets (unverified); "
             "OpenML ARFF (md5-verified); "
-            "RCSB PDB .cif/.pdb structure files (unverified). "
+            "RCSB PDB .cif/.pdb structure files (unverified); "
+            "UniProtKB FASTA (unverified); "
+            "BioStudies study files (unverified); "
+            "GBIF Darwin Core Archives (unverified); "
+            "data.gov CKAN resources (unverified). "
             "Fails loud if selected files exceed max_bytes unless force=true. "
-            "Verifies checksums; writes a .dataresource.json sidecar."
+            "Verifies md5/SHA-256 where the source publishes one; files marked "
+            "unverified get no integrity check. Writes a .dataresource.json sidecar."
         ),
         input_schema={
             "type": "object",
