@@ -246,6 +246,64 @@ def test_normalize_metrics_coerces_floats_and_skips_nulls() -> None:
     assert r.metrics.downloads is None
 
 
+def _versioned(recid: int, *, is_last: bool, index: int, related: list[dict]) -> dict:
+    rec = _record()
+    rec["id"] = recid
+    rec["doi"] = f"10.5281/zenodo.{recid}"
+    rec["conceptrecid"] = "13993786"
+    rec["conceptdoi"] = "10.5281/zenodo.13993786"
+    rec["metadata"]["related_identifiers"] = related
+    rec["metadata"]["relations"] = {
+        "version": [
+            {
+                "index": index,
+                "is_last": is_last,
+                "parent": {"pid_type": "recid", "pid_value": "13993786"},
+            }
+        ]
+    }
+    return rec
+
+
+# Shape of live zenodo:13993787 (2026-09-27): NOT the last version of its concept, yet it
+# carries isNewVersionOf -> another record, which the generic inference read as "latest".
+_SUPERSEDED_RELATED = [
+    {"relation": "isNewVersionOf", "identifier": "10.5281/zenodo.11099111", "scheme": "doi"}
+]
+
+
+def test_normalize_version_status_from_relations_version() -> None:
+    old = zenodo._normalize(
+        _versioned(13993787, is_last=False, index=0, related=_SUPERSEDED_RELATED)
+    )
+    assert old.is_latest is False
+    assert old.superseded_by is None  # the newer id is not in the record; never invented
+    new = zenodo._normalize(_versioned(13993788, is_last=True, index=1, related=[]))
+    assert new.is_latest is True  # positive control: Zenodo's own is_last=true
+    assert zenodo._normalize(_record()).is_latest is None  # no version graph -> unknown
+
+
+async def test_resolve_superseded_version_is_not_latest_end_to_end(httpx_mock: HTTPXMock) -> None:
+    """A-H1: router.resolve must report Zenodo's is_last, not the isNewVersionOf inference."""
+    from data_aggregator_mcp import router
+
+    httpx_mock.add_response(
+        url="https://zenodo.org/api/records/13993787",
+        json=_versioned(13993787, is_last=False, index=0, related=_SUPERSEDED_RELATED),
+    )
+    httpx_mock.add_response(
+        url="https://zenodo.org/api/records/13993788",
+        json=_versioned(13993788, is_last=True, index=1, related=_SUPERSEDED_RELATED),
+    )
+    router._RESOLVE_CACHE.clear()
+    zenodo._SEARCH_CACHE.clear()
+    async with httpx.AsyncClient() as client:
+        old = await router.resolve(client, "zenodo:13993787")
+        new = await router.resolve(client, "zenodo:13993788")
+    assert old.is_latest is False and old.superseded_by is None
+    assert new.is_latest is True  # positive control
+
+
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
@@ -266,3 +324,16 @@ async def test_live_resolve_known_record_has_files() -> None:
         resolved = await zenodo.resolve(client, results[0].id)
     assert resolved.id == results[0].id
     assert resolved.doi
+
+
+@live_only
+async def test_live_version_status_from_zenodo_relations() -> None:
+    """A-H1/X-M1 live: 13993787 is not the last version of its concept (is_last=false);
+    10396807 is the last version of concept 7421898 and 7421899 its older sibling."""
+    async with httpx.AsyncClient() as client:
+        superseded = await zenodo.resolve(client, "zenodo:13993787")
+        latest = await zenodo.resolve(client, "zenodo:10396807")
+        older = await zenodo.resolve(client, "zenodo:7421899")
+    assert superseded.is_latest is False
+    assert older.is_latest is False
+    assert latest.is_latest is True

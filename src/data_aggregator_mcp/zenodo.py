@@ -49,6 +49,18 @@ _KIND_MAP = {
 }
 
 
+def _is_last_version(meta: dict[str, Any]) -> bool | None:
+    """Zenodo's authoritative version-currency flag: ``metadata.relations.version[0].is_last``
+    (Zenodo knows the whole version set of the concept). None when the record carries no
+    version graph. The id of the newer version is NOT in the record (only a
+    ``links.latest`` redirect), so superseded_by is left unset rather than guessed."""
+    versions = (meta.get("relations") or {}).get("version") or []
+    if not versions or not isinstance(versions[0], dict):
+        return None
+    is_last = versions[0].get("is_last")
+    return is_last if isinstance(is_last, bool) else None
+
+
 def _normalize(record: dict[str, Any]) -> DataResource:
     meta = record.get("metadata", {}) or {}
     rtype = (meta.get("resource_type") or {}).get("type", "dataset")
@@ -102,6 +114,7 @@ def _normalize(record: dict[str, Any]) -> DataResource:
         ],
         files=files,
         metrics=metrics,
+        is_latest=_is_last_version(meta),
     )
 
 
