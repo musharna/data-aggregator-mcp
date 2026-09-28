@@ -1,0 +1,65 @@
+name: nightly-live
+
+# The live-gated tests (DATA_AGGREGATOR_MCP_LIVE=1) drive the real upstream APIs.
+# Required CI never sets that variable, so for weeks two kinds of break were
+# invisible: data.gov retired its CKAN API (every search 404ed) and a live test
+# still called a handler with its mcp 1.x signature (TypeError). This job runs
+# them every night and keeps ONE tracking issue open while they are red, so an
+# upstream change surfaces within a day instead of at the next manual audit.
+
+on:
+  schedule:
+    - cron: "43 8 * * *" # 08:43 UTC = 04:43 EDT, daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - run: uv sync --extra dev --extra operate
+      - name: Live suite
+        id: live
+        env:
+          DATA_AGGREGATOR_MCP_LIVE: "1"
+        # continue-on-error so the issue step below runs and records the failure;
+        # the verdict step re-raises it so the job itself still goes red.
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          uv run pytest -q -p no:cacheprovider -rf 2>&1 | tee live.log
+      - name: Upsert or close the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.live.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create live-upstream --color B60205 --force >/dev/null
+          num=$(gh issue list --label live-upstream --state open --json number -q '.[0].number')
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -n "$num" ]; then gh issue close "$num" --comment "Live suite green again: $RUN_URL"; fi
+            exit 0
+          fi
+          summary=$(grep -E '^(FAILED|ERROR) ' live.log | head -40 || true)
+          tail_line=$(tail -1 live.log)
+          # shellcheck disable=SC2016  # the backticks are a literal Markdown code fence
+          body=$(printf 'The nightly live suite is red.\n\nRun: %s\n\n```\n%s\n%s\n```\n\nA failure here is either an upstream API change (fix the adapter) or an outage (rerun the workflow).' "$RUN_URL" "$summary" "$tail_line")
+          if [ -n "$num" ]; then
+            gh issue comment "$num" --body "$body"
+          else
+            gh issue create --label live-upstream --title "Nightly live suite failing" --body "$body"
+          fi
+      - name: Verdict
+        if: steps.live.outcome != 'success'
+        run: |
+          echo "::error::live suite failed; see the live-upstream issue"
+          exit 1
