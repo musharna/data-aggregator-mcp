@@ -109,6 +109,37 @@ async def test_resolve_rejects_path_traversal_id_before_network():
             await uniprot.resolve(c, "uniprot:P0/../secret")
 
 
+_ENTRY_DELETED = {  # verbatim shape of rest.uniprot.org/uniprotkb/A0A008APQ8?format=json
+    "entryType": "Inactive",
+    "primaryAccession": "A0A008APQ8",
+    "uniProtkbId": "A0A008APQ8_STAAU",
+    "annotationScore": 0.0,
+    "inactiveReason": {
+        "inactiveReasonType": "DELETED",
+        "deletedReason": "Not part of a reference proteome",
+    },
+    "extraAttributes": {"uniParcId": "UPI0000054276"},
+}
+
+
+@pytest.mark.asyncio
+async def test_resolve_inactive_entry_raises_with_reason():
+    """B-H5 (audit 2026-09-27): UniProt answers a deleted accession with HTTP 200 and an
+    ``entryType: Inactive`` stub. Resolve normalised it into a live-looking record with
+    a .fasta file, and fetch then "succeeded" with 0 bytes."""
+    entries = {"A0A008APQ8": _ENTRY_DELETED, "P01308": _ENTRY_INS}
+
+    def handler(request):
+        return httpx.Response(200, json=entries[request.url.path.rsplit("/", 1)[1]])
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        with pytest.raises(NotFoundError, match=r"inactive.*DELETED.*reference proteome"):
+            await uniprot.resolve(c, "uniprot:A0A008APQ8")
+        # positive control: an active entry still resolves with its FASTA
+        r = await uniprot.resolve(c, "uniprot:P01308")
+    assert r.id == "uniprot:P01308" and [f.name for f in r.files] == ["P01308.fasta"]
+
+
 def test_registered_in_router_and_server():
     from data_aggregator_mcp import router, server
 
@@ -130,3 +161,12 @@ async def test_live_search_then_resolve():
         assert total > 0 and recs and recs[0].id.startswith("uniprot:")
         full = await uniprot.resolve(c, recs[0].id)
         assert any(f.name.endswith(".fasta") for f in full.files)
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_deleted_entry_raises():
+    """B-H5 live: A0A008APQ8 was deleted (not part of a reference proteome)."""
+    async with httpx.AsyncClient(timeout=60) as c:
+        with pytest.raises(NotFoundError, match="DELETED"):
+            await uniprot.resolve(c, "uniprot:A0A008APQ8")
