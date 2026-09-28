@@ -9,12 +9,16 @@ is the standalone openalex MCP's job, not ours.
 
 from __future__ import annotations
 
+import logging
 from urllib.parse import quote
 
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp.errors import DataAggregatorError
 from data_aggregator_mcp.models import Link
+
+logger = logging.getLogger(__name__)
 
 # v1 and v2 are being phased out; v3 (shape-identical) is the documented future.
 SCHOLIX_VERSION = "v3"
@@ -55,17 +59,25 @@ async def _datacite_registered(client: httpx.AsyncClient, dois: list[str]) -> se
     """The (lower-cased) subset of ``dois`` whose registration agency is DataCite.
 
     One batched doi.org RA lookup. A DOI containing a comma cannot be batched (the API
-    splits on commas), so it is left out and stays a bare DOI."""
+    splits on commas), so it is left out and stays a bare DOI. The lookup only decides
+    the label: if it fails, every DOI stays bare (claiming no agency) and the links are
+    still returned — a labelling outage must not sink the resolve they enrich."""
     batch = [d for d in dict.fromkeys(dois) if "," not in d]
     if not batch:
         return set()
-    rows = await _http.request_json(
-        client,
-        "GET",
-        _RA_URL + quote(",".join(batch), safe="/,"),
-        service="DOI registration-agency lookup",
-        expect=list,
-    )
+    try:
+        rows = await _http.request_json(
+            client,
+            "GET",
+            _RA_URL + quote(",".join(batch), safe="/,"),
+            service="DOI registration-agency lookup",
+            expect=list,
+        )
+    except DataAggregatorError as exc:
+        logger.warning(
+            "doi.org RA lookup failed for %d DOI(s); links stay bare: %s", len(batch), exc
+        )
+        return set()
     return {
         str(r["DOI"]).lower()
         for r in rows

@@ -175,6 +175,35 @@ async def test_links_for_keeps_only_data_targets_and_labels_by_registration_agen
     ]
 
 
+async def test_registration_agency_outage_keeps_data_links_as_bare_dois(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """The doi.org RA lookup only decides the ``datacite:`` label. When it fails (here an
+    HTML error page in place of JSON), the data links must still come back — bare, since
+    a bare DOI claims no agency — instead of the lookup failure sinking the whole
+    OpenAIRE resolve that Scholix links merely enrich."""
+    httpx_mock.add_response(
+        url=_URL,
+        json={
+            "totalLinks": 2,
+            "result": [
+                _rec("dataset", "10.5061/dryad.t4b8gtjgj"),
+                _rec("publication", "10.1186/gb-2010-11-2-r14", rel="IsRelatedTo"),
+            ],
+        },
+    )
+    httpx_mock.add_response(
+        url="https://doi.org/ra/10.5061/dryad.t4b8gtjgj",
+        text="<html><body>502 Bad Gateway</body></html>",
+        headers={"Content-Type": "text/html"},
+        is_reusable=True,  # the shared HTTP layer retries a non-JSON 200
+    )
+    async with httpx.AsyncClient() as client:
+        links = await scholix.links_for(client, "10.5061/dryad.x")
+    # Positive control inside: the data target survives and the citation is still dropped.
+    assert [lnk.target_id for lnk in links] == ["10.5061/dryad.t4b8gtjgj"]
+
+
 @live_only
 async def test_live_citation_only_paper_yields_no_data_links() -> None:
     """X-H2 live: every ScholeXplorer edge of 10.3390/plants13060869 is a publication."""
