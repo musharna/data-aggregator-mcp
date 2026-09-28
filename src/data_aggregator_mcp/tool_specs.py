@@ -10,6 +10,8 @@ advertised default cannot drift from the limit actually applied.
 
 Every string here is client-visible: tool/prompt names, argument schemas and descriptions
 are a public contract, so edits are behaviour changes even though nothing executes.
+Every input schema is closed (``additionalProperties: false``): an argument a tool does not
+declare is refused with an input-validation error rather than silently dropped.
 """
 
 from __future__ import annotations
@@ -63,6 +65,7 @@ TOOLS: list[types.Tool] = [
         ),
         input_schema={
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "query": {"type": "string", "description": "Free-text search query"},
                 "size": {
@@ -234,6 +237,7 @@ TOOLS: list[types.Tool] = [
         ),
         input_schema={
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "id": {
                     "type": "string",
@@ -324,6 +328,7 @@ TOOLS: list[types.Tool] = [
         ),
         input_schema={
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "id": {"type": "string", "description": "Source-prefixed id or bare Zenodo id"},
                 "dest": {
@@ -359,6 +364,7 @@ TOOLS: list[types.Tool] = [
         ),
         input_schema={
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "check_health": {
                     "type": "boolean",
@@ -395,6 +401,7 @@ TOOLS: list[types.Tool] = [
         ),
         input_schema={
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "op": {"type": "string", "enum": ["schema", "preview", "head", "sql", "peek"]},
                 "id": {"type": "string", "description": "DataResource id (e.g. 'zenodo:7654321')"},
@@ -433,6 +440,7 @@ TOOLS: list[types.Tool] = [
         ),
         input_schema={
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "ids": {
                     "type": "array",

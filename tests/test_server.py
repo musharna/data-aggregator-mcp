@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
+from mcp import types
 from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import fair as fair_mod
@@ -1177,3 +1178,43 @@ async def test_nested_serve_sessions_fail_loud() -> None:
             async with server.shared_http_client():
                 pass  # pragma: no cover - the enter above raises
     assert server._SHARED_CLIENT is None
+
+
+# The smallest argument set each tool's schema accepts. Set-equality with the tool table
+# below means a new tool cannot escape the unknown-argument check.
+_MINIMAL_ARGS: dict[str, dict] = {
+    "search": {},
+    "resolve": {"id": "zenodo:1"},
+    "fetch": {"id": "zenodo:1"},
+    "list_sources": {},
+    "operate": {"op": "schema", "id": "zenodo:1"},
+    "relate": {"ids": ["zenodo:1", "zenodo:2"]},
+}
+
+
+async def test_every_tool_rejects_an_argument_it_does_not_declare(monkeypatch) -> None:
+    """X-M2 (audit 2026-09-27): the input schemas were open objects, so an argument a tool
+    does not have was accepted and dropped — ``search(limit=3)`` returned 10 hits with no
+    error (the argument is ``size``). A model that guesses an argument name must be told,
+    not handed an unfiltered answer."""
+    assert set(_MINIMAL_ARGS) == set(server._TOOLS_BY_NAME)
+    reached: list[tuple[str, dict]] = []
+
+    async def fake_dispatch(name, arguments, ctx=None):
+        reached.append((name, dict(arguments)))
+        return {}
+
+    monkeypatch.setattr(server, "_dispatch", fake_dispatch)
+    for name, args in _MINIMAL_ARGS.items():
+        await server._call_tool(None, types.CallToolRequestParams(name=name, arguments=args))  # type: ignore[arg-type]
+        bad = await server._call_tool(
+            None,  # type: ignore[arg-type]
+            types.CallToolRequestParams(name=name, arguments={**args, "limit": 3}),
+        )
+        assert bad.is_error is True, name
+        text = bad.content[0].text
+        assert text.startswith("Input validation error:"), (name, text)
+        assert "'limit'" in text, (name, text)
+    # Positive control: every declared-only call passed validation and reached its handler,
+    # and no call carrying the unknown argument did.
+    assert reached == list(_MINIMAL_ARGS.items())
