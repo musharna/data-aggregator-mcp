@@ -1,0 +1,431 @@
+{
+ "after": "WzU5LjAxNjcxMiw1LCIwMWNlOTZjYy1jNGQ0LTQ3ZDUtYmYzZi01ODg1OGY2MWVkMTIiXQ==",
+ "results": [
+  {
+   "_score": 72.37158,
+   "_sort": [
+    72.37158,
+    5,
+    "ddbce385-be78-4ebc-81fd-f07bf434a1d4"
+   ],
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "public",
+    "contactPoint": {
+     "@type": "vcard:Contact",
+     "fn": "ORPP Conservation Unit",
+     "hasEmail": "mailto:orpp-monthly-conservation@waterboards.ca.gov"
+    },
+    "description": "Monthly reports of water use and conservation activities by urban retail water suppliers, which are generally defined as agencies serving over 3,000 service connections or deliveries 3,000 acre-feet of water annually for municipal purposes.",
+    "distribution": [
+     {
+      "@type": "dcat:Distribution",
+      "describedBy": "https://data.ca.gov/api/action/datastore_search?resource_id=264c7888-f7eb-42b4-9a19-ceb162f3ae8a&limit=0",
+      "describedByType": "application/json",
+      "description": "Per-water-system data from the Clearinghouse for urban retail water suppliers, from January 2023 onwards. One row per water system per reporting period. \r\n\r\nColumn header names have been reformatted to eliminate spaces and special characters.",
+      "downloadURL": "https://data.ca.gov/dataset/c69ac02b-adfb-459a-bc58-bf69a8b572d2/resource/264c7888-f7eb-42b4-9a19-ceb162f3ae8a/download/clearinghouse_report.csv",
+      "format": "CSV",
+      "mediaType": "text/csv",
+      "title": "Per-Water-System Supply and Demand, Jan2023 onwards"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "describedBy": "https://data.ca.gov/api/action/datastore_search?resource_id=51b21afe-f0a3-44cb-9a53-c9e358d0134c&limit=0",
+      "describedByType": "application/json",
+      "description": "Reported actions to respond to drought/water shortage and/or encourage conservation, as reported in the DRINC Portal monthly report. In this format, the actions are reported as a comma-separated list under the following categories: \r\n\r\n- demand reduction\r\n- supply augmentation\r\n- water restrictions\r\n- communication\r\n- addressing water waste\r\n- other",
+      "downloadURL": "https://data.ca.gov/dataset/c69ac02b-adfb-459a-bc58-bf69a8b572d2/resource/51b21afe-f0a3-44cb-9a53-c9e358d0134c/download/cons_actions_list.xlsx",
+      "format": "XLSX",
+      "mediaType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "title": "Conservation Actions, Listed Subcategory Format"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "describedBy": "https://data.ca.gov/api/action/datastore_search?resource_id=f4d50112-5fb5-4066-b45c-44696b10a49e&limit=0",
+      "describedByType": "application/json",
+      "description": "Per-supplier reports of selected production and deliveries fields, comprising of a combination of data from the DRINC Portal (June 2014-December 2022) and the SAFER Clearinghouse (January 2023 onwards). This table contains values converted to gallons from the original reported units. The per-water-system data for January 2023 can be viewed in the [Per-Water-System Supply and Demand](https://data.ca.gov/dataset/urws-conservation-supply-demand/resource/264c7888-f7eb-42b4-9a19-ceb162f3ae8a) table in the original units. \r\n\r\nColumn header names have been reformatted to eliminate spaces and special characters.",
+      "downloadURL": "https://data.ca.gov/dataset/c69ac02b-adfb-459a-bc58-bf69a8b572d2/resource/f4d50112-5fb5-4066-b45c-44696b10a49e/download/monthly_combined_dataset.csv",
+      "format": "CSV",
+      "mediaType": "text/csv",
+      "title": "Per-Supplier Water Supply and Demand"
+     }
+    ],
+    "identifier": "c69ac02b-adfb-459a-bc58-bf69a8b572d2",
+    "issued": "2024-05-07T18:33:25.673569",
+    "keyword": [
+     "Conservation",
+     "Urban Water Use",
+     "urban water supplier",
+     "water supply"
+    ],
+    "license": "http://www.opendefinition.org/licenses/odc-by",
+    "modified": "2026-09-14T18:02:36.897643",
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "California State Water Resources Control Board"
+    },
+    "title": "Urban Retail Water Supplier - Water Conservation, Supply, and Demand (June 2014 onwards)"
+   },
+   "description": "Monthly reports of water use and conservation activities by urban retail water suppliers, which are generally defined as agencies serving over 3,000 service connections or deliveries 3,000 acre-feet of water annually for municipal purposes.",
+   "distribution_titles": [
+    "Per-Water-System Supply and Demand, Jan2023 onwards",
+    "Conservation Actions, Listed Subcategory Format",
+    "Per-Supplier Water Supply and Demand",
+    "Guidance to Update Population",
+    "Data Dictionary - Per-Water-System Supply and Demand, Jan2023 onwards",
+    "Data Dictionary - Per-Supplier Water Supply and Demand",
+    "Dataset Documentation",
+    "Conservation Actions, Per-Column Format"
+   ],
+   "harvest_record": "https://catalog.data.gov/harvest_record/3593eec7-be89-411b-a445-2b070a83486e",
+   "harvest_record_raw": "https://catalog.data.gov/harvest_record/3593eec7-be89-411b-a445-2b070a83486e/raw",
+   "has_download": true,
+   "has_spatial": false,
+   "identifier": "c69ac02b-adfb-459a-bc58-bf69a8b572d2",
+   "keyword": [
+    "Conservation",
+    "Urban Water Use",
+    "urban water supplier",
+    "water supply"
+   ],
+   "last_harvested_date": "2026-09-24T20:35:55.489837",
+   "organization": {
+    "aliases": [
+     "ca"
+    ],
+    "code_repo_exempt": false,
+    "code_repo_url": null,
+    "description": null,
+    "id": "ae56c24b-46d3-4688-965e-94bdc208164f",
+    "logo": "https://raw.githubusercontent.com/GSA/logo/refs/heads/master/state_CA.png",
+    "name": "State of California",
+    "organization_type": "State Government",
+    "slug": "california"
+   },
+   "parent_identifier": null,
+   "popularity": 5,
+   "publisher": "California State Water Resources Control Board",
+   "slug": "urban-retail-water-supplier-water-conservation-supply-and-demand-june-2014-onwards",
+   "spatial_centroid": null,
+   "spatial_shape": null,
+   "theme": [],
+   "title": "Urban Retail Water Supplier - Water Conservation, Supply, and Demand (June 2014 onwards)",
+   "type": "dataset"
+  },
+  {
+   "_score": 67.565475,
+   "_sort": [
+    67.565475,
+    1,
+    "e272ad69-2a41-49b0-9235-208e8b2a1cbc"
+   ],
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "non-public",
+    "contactPoint": {
+     "@type": "vcard:Contact",
+     "fn": "U.S. EPA Office of Water (OW) - Office of Ground Water and Drinking Water (OGWDW)",
+     "hasEmail": "mailto:safewater@epa.gov"
+    },
+    "describedByType": "application/octet-steam",
+    "description": "The Drinking Water Mapping Application (DWMA) is a web-based geographic information system (GIS) that enhances the capabilities to identify major contaminant risks to public drinking water supplies. The DWMA includes functionality for both ",
+    "distribution": [
+     {
+      "@type": "dcat:Distribution",
+      "accessURL": "https://geopub.epa.gov/DWWidgetApp/",
+      "describedByType": "application/octet-stream",
+      "description": "The URL providing direct access to the downloadable dataset. ",
+      "mediaType": "text/html",
+      "title": "Download"
+     }
+    ],
+    "identifier": "https://edg.epa.gov/WAFer_harvest/ISO/ow-public-geo-metadata_drinking-water-mapping-application-dwma-public-version.xml",
+    "issued": "2006-12-15T00:00:00.000+00:00",
+    "keyword": [
+     "drinking water",
+     "contaminant",
+     "public water systems",
+     "surface water",
+     "ground water",
+     "wells",
+     "intakes"
+    ],
+    "language": [],
+    "license": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "modified": "2006-12-15T00:00:00.000+00:00",
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "U.S. EPA Office of Water (OW)"
+    },
+    "rights": "otherRestrictions, PUBLIC",
+    "spatial": "-67.434525,17.305182,-173.129822,71.490303",
+    "theme": [
+     "geospatial"
+    ],
+    "title": "Drinking Water Mapping Application (DWMA) - Public Version"
+   },
+   "description": "The Drinking Water Mapping Application (DWMA) is a web-based geographic information system (GIS) that enhances the capabilities to identify major contaminant risks to public drinking water supplies. The DWMA includes functionality for both ",
+   "distribution_titles": [
+    "Download"
+   ],
+   "harvest_record": "https://catalog.data.gov/harvest_record/b86e046e-edc4-4b98-ab92-2436ff1b6932",
+   "harvest_record_raw": "https://catalog.data.gov/harvest_record/b86e046e-edc4-4b98-ab92-2436ff1b6932/raw",
+   "harvest_record_transformed": "https://catalog.data.gov/harvest_record/b86e046e-edc4-4b98-ab92-2436ff1b6932/transformed",
+   "has_download": false,
+   "has_spatial": true,
+   "identifier": "https://edg.epa.gov/WAFer_harvest/ISO/ow-public-geo-metadata_drinking-water-mapping-application-dwma-public-version.xml",
+   "keyword": [
+    "drinking water",
+    "contaminant",
+    "public water systems",
+    "surface water",
+    "ground water",
+    "wells",
+    "intakes"
+   ],
+   "last_harvested_date": "2026-08-03T05:00:11.928186",
+   "organization": {
+    "aliases": [
+     "EPA"
+    ],
+    "code_repo_exempt": false,
+    "code_repo_url": null,
+    "description": null,
+    "id": "82b85475-f85d-404a-b95b-89d1a42e9f6b",
+    "logo": "https://raw.githubusercontent.com/GSA/logo/refs/heads/master/epa.png",
+    "name": "U.S. Environmental Protection Agency",
+    "organization_type": "Federal Government",
+    "slug": "epa"
+   },
+   "parent_identifier": null,
+   "popularity": 1,
+   "publisher": "U.S. EPA Office of Water (OW)",
+   "slug": "drinking-water-mapping-application-dwma-public-version",
+   "spatial_centroid": {
+    "lat": 38.9792304,
+    "lon": -109.7126438
+   },
+   "spatial_shape": {
+    "coordinates": [
+     [
+      [
+       -67.434525,
+       17.305182
+      ],
+      [
+       -67.434525,
+       71.490303
+      ],
+      [
+       -173.129822,
+       71.490303
+      ],
+      [
+       -173.129822,
+       17.305182
+      ],
+      [
+       -67.434525,
+       17.305182
+      ]
+     ]
+    ],
+    "type": "Polygon"
+   },
+   "theme": [
+    "geospatial"
+   ],
+   "title": "Drinking Water Mapping Application (DWMA) - Public Version",
+   "type": "dataset"
+  },
+  {
+   "_score": 82.76867,
+   "_sort": [
+    82.76867,
+    4,
+    "46487f1b-9221-4f09-a06c-ad5d1ff3ff11"
+   ],
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "public",
+    "contactPoint": {
+     "@type": "vcard:Contact",
+     "fn": "Julia Ekstrom",
+     "hasEmail": "mailto:Julia.Ekstrom@water.ca.gov"
+    },
+    "description": "This is the landing page for navigating to all of the water shortage vulnerability datasets provided by California Department of Water Resources. Please click on a dataset to be taken to the download page for that item.",
+    "distribution": [
+     {
+      "@type": "dcat:Distribution",
+      "accessURL": "https://data.cnra.ca.gov/dataset/i07-water-shortage-vulnerability-sections",
+      "description": "This dataset represents a water shortage vulnerability analysis performed by DWR using modified PLSS sections pulled from the Well Completion Report PLSS Section Summaries. The attribute table includes water shortage vulnerability indicators and scores from an analysis done by CA Department of Water Resources, joined to modified PLSS sections. This leads to the most recent analysis.",
+      "title": "Download - Water Shortage Vulnerability (Sections)"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "accessURL": "https://data.cnra.ca.gov/dataset/i07-water-shortage-vulnerability-small-water-systems",
+      "title": "Download - Water Shortage Vulnerability (Small Water Systems)"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "accessURL": "https://data.cnra.ca.gov/dataset/water-shortage-vulnerability-analysis-archive",
+      "description": "Archive of previous water shortage vulnerability analysis efforts.",
+      "title": "Water Shortage Vulnerability Analysis Archive"
+     }
+    ],
+    "identifier": "32a21fd4-7360-4014-bfae-a9b102ac91e8",
+    "issued": "2025-04-10T15:23:44.202149",
+    "keyword": [
+     "California",
+     "california department of water resources",
+     "drought",
+     "water shortage",
+     "water shortage vulnerability"
+    ],
+    "modified": "2026-09-16T02:47:32.481367",
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "California Department of Water Resources"
+    },
+    "theme": [
+     "Natural Resources",
+     "Water"
+    ],
+    "title": "Water Shortage Vulnerability Datasets"
+   },
+   "description": "This is the landing page for navigating to all of the water shortage vulnerability datasets provided by California Department of Water Resources. Please click on a dataset to be taken to the download page for that item.",
+   "distribution_titles": [
+    "Download - Water Shortage Vulnerability (Sections)",
+    "Download - Water Shortage Vulnerability (Small Water Systems)",
+    "Water Shortage Vulnerability Analysis Archive",
+    "Water Shortage Vulnerability Technical Documents",
+    "Water Shortage Vulnerability Small Water Systems Scoring 2026",
+    "Water Shortage Vulnerability 2026 Scoring"
+   ],
+   "harvest_record": "https://catalog.data.gov/harvest_record/4f69663f-2871-4a80-a751-84b3d3da812e",
+   "harvest_record_raw": "https://catalog.data.gov/harvest_record/4f69663f-2871-4a80-a751-84b3d3da812e/raw",
+   "has_download": false,
+   "has_spatial": false,
+   "identifier": "32a21fd4-7360-4014-bfae-a9b102ac91e8",
+   "keyword": [
+    "California",
+    "california department of water resources",
+    "drought",
+    "water shortage",
+    "water shortage vulnerability"
+   ],
+   "last_harvested_date": "2026-09-24T20:35:53.801670",
+   "organization": {
+    "aliases": [
+     "ca"
+    ],
+    "code_repo_exempt": false,
+    "code_repo_url": null,
+    "description": null,
+    "id": "ae56c24b-46d3-4688-965e-94bdc208164f",
+    "logo": "https://raw.githubusercontent.com/GSA/logo/refs/heads/master/state_CA.png",
+    "name": "State of California",
+    "organization_type": "State Government",
+    "slug": "california"
+   },
+   "parent_identifier": null,
+   "popularity": 4,
+   "publisher": "California Department of Water Resources",
+   "slug": "water-shortage-vulnerability-datasets",
+   "spatial_centroid": null,
+   "spatial_shape": null,
+   "theme": [
+    "Natural Resources",
+    "Water"
+   ],
+   "title": "Water Shortage Vulnerability Datasets",
+   "type": "dataset"
+  },
+  {
+   "_score": 61.611294,
+   "_sort": [
+    61.611294,
+    1,
+    "99292efc-c103-45b7-9cdf-0045af139a4e"
+   ],
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "non-public",
+    "bureauCode": [
+     "020:00"
+    ],
+    "contactPoint": {
+     "@type": "vcard:Contact",
+     "fn": "Veronica Aponte-Morales",
+     "hasEmail": "mailto:aponte-morales.veronica@epa.gov"
+    },
+    "dataQuality": true,
+    "description": "The Water Contaminant Information Tool (WCIT) is a secure, on-line database that provides current, reliable information on chemical, biological, and radiological contaminants of concern for water security. The WCIT database assists in plann",
+    "identifier": "c3b1fc8c-3966-46b4-84ba-92cb4529ccfd",
+    "keyword": [
+     "Chemicals",
+     "Drinking Water",
+     "Drinking Water Utilities",
+     "Emergency Response",
+     "United States",
+     "Water",
+     "Water Security",
+     "utilitiesCommunication"
+    ],
+    "license": "https://edg.epa.gov/EPA_Data_License.html",
+    "modified": "2021",
+    "primaryitinvestmentuii": "020-000000087",
+    "programCode": [
+     "020:038"
+    ],
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "U.S. EPA Office of Water (OW)"
+    },
+    "systemofrecords": "https://www.epa.gov/privacy/privacy-act-system-records-epa-central-data-exchange-customer-registration-subsystem-epa-52",
+    "temporal": "2005/2021",
+    "title": "Water Contaminant Information Tool"
+   },
+   "description": "The Water Contaminant Information Tool (WCIT) is a secure, on-line database that provides current, reliable information on chemical, biological, and radiological contaminants of concern for water security. The WCIT database assists in plann",
+   "distribution_titles": [],
+   "harvest_record": "https://catalog.data.gov/harvest_record/7b0a3d3e-cbc6-4948-a616-e613c5a1a022",
+   "harvest_record_raw": "https://catalog.data.gov/harvest_record/7b0a3d3e-cbc6-4948-a616-e613c5a1a022/raw",
+   "has_download": false,
+   "has_spatial": false,
+   "identifier": "c3b1fc8c-3966-46b4-84ba-92cb4529ccfd",
+   "keyword": [
+    "Chemicals",
+    "Drinking Water",
+    "Drinking Water Utilities",
+    "Emergency Response",
+    "United States",
+    "Water",
+    "Water Security",
+    "utilitiesCommunication"
+   ],
+   "last_harvested_date": "2026-09-10T19:11:07.949167",
+   "organization": {
+    "aliases": [
+     "EPA"
+    ],
+    "code_repo_exempt": false,
+    "code_repo_url": null,
+    "description": null,
+    "id": "82b85475-f85d-404a-b95b-89d1a42e9f6b",
+    "logo": "https://raw.githubusercontent.com/GSA/logo/refs/heads/master/epa.png",
+    "name": "U.S. Environmental Protection Agency",
+    "organization_type": "Federal Government",
+    "slug": "epa"
+   },
+   "parent_identifier": null,
+   "popularity": 1,
+   "publisher": "U.S. EPA Office of Water (OW)",
+   "slug": "water-contaminant-information-tool",
+   "spatial_centroid": null,
+   "spatial_shape": null,
+   "theme": [],
+   "title": "Water Contaminant Information Tool",
+   "type": "dataset"
+  }
+ ],
+ "sort": "relevance"
+}

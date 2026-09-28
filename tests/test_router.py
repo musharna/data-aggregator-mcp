@@ -448,8 +448,8 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     )
     # datagov is also a default source: returns empty here
     httpx_mock.add_response(
-        url=re.compile(r"https://api\.gsa\.gov/technology/datagov/v3/action/package_search.*"),
-        json={"success": True, "result": {"count": 0, "results": []}},
+        url=re.compile(r"https://catalog\.data\.gov/search\?.*"),
+        json={"results": [], "sort": "relevance"},
     )
     # nasacmr is also a default source: returns empty here
     httpx_mock.add_response(

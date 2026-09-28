@@ -1,0 +1,100 @@
+{
+ "aggregations": null,
+ "results": [
+  {
+   "_score": 0.0,
+   "_sort": null,
+   "dcat": {
+    "@type": "dcat:Dataset",
+    "accessLevel": "public",
+    "contactPoint": {
+     "@type": "vcard:Contact",
+     "fn": "NYC OpenData",
+     "hasEmail": "mailto:no-reply@data.cityofnewyork.us"
+    },
+    "description": "This dataset rates all projects in the capital budget with their climate alignment and categorizes investments that are related to climate. Amounts are in thousands. This dataset will be updated once a year during the Executive Budget. \n\nTh",
+    "distribution": [
+     {
+      "@type": "dcat:Distribution",
+      "describedBy": "https://data.cityofnewyork.us/api/views/c99a-c5ux/columns.json",
+      "describedByType": "application/json",
+      "downloadURL": "https://data.cityofnewyork.us/api/v3/views/c99a-c5ux/query.json?accessType=DOWNLOAD",
+      "mediaType": "application/json"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "describedBy": "https://data.cityofnewyork.us/api/views/c99a-c5ux/columns.xml",
+      "describedByType": "application/xml",
+      "downloadURL": "https://data.cityofnewyork.us/api/v3/views/c99a-c5ux/query.xml?accessType=DOWNLOAD",
+      "mediaType": "application/xml"
+     },
+     {
+      "@type": "dcat:Distribution",
+      "downloadURL": "https://data.cityofnewyork.us/api/v3/views/c99a-c5ux/export.csv?accessType=DOWNLOAD",
+      "mediaType": "text/csv"
+     }
+    ],
+    "identifier": "https://data.cityofnewyork.us/api/views/c99a-c5ux",
+    "issued": "2025-07-28",
+    "keyword": [
+     "capital climate investments",
+     "climate",
+     "climate alignment assessment",
+     "climate budgeting",
+     "executive budget"
+    ],
+    "landingPage": "https://data.cityofnewyork.us/d/c99a-c5ux",
+    "modified": "2026-08-11",
+    "publisher": {
+     "@type": "org:Organization",
+     "name": "data.cityofnewyork.us"
+    },
+    "theme": [
+     "City Government"
+    ],
+    "title": "NYC Climate Budgeting Report: Climate Alignment Assessment and Capital Climate Investments"
+   },
+   "description": "This dataset rates all projects in the capital budget with their climate alignment and categorizes investments that are related to climate. Amounts are in thousands. This dataset will be updated once a year during the Executive Budget. \n\nTh",
+   "distribution_titles": [],
+   "harvest_record": "https://catalog.data.gov/harvest_record/4ab63389-0847-4486-809b-bd1e131c0d73",
+   "harvest_record_raw": "https://catalog.data.gov/harvest_record/4ab63389-0847-4486-809b-bd1e131c0d73/raw",
+   "has_download": true,
+   "has_spatial": false,
+   "identifier": "https://data.cityofnewyork.us/api/views/c99a-c5ux",
+   "keyword": [
+    "capital climate investments",
+    "climate",
+    "climate alignment assessment",
+    "climate budgeting",
+    "executive budget"
+   ],
+   "last_harvested_date": "2026-09-10T18:31:45.676808",
+   "organization": {
+    "aliases": [
+     ""
+    ],
+    "code_repo_exempt": false,
+    "code_repo_url": null,
+    "description": null,
+    "id": "1149ee63-2fff-494e-82e5-9aace9d3b3bf",
+    "logo": "https://raw.githubusercontent.com/GSA/logo/refs/heads/master/city_new_york_ny.png",
+    "name": "City of New York",
+    "organization_type": "City Government",
+    "slug": "nyc-ny"
+   },
+   "parent_identifier": null,
+   "popularity": 132,
+   "publisher": "data.cityofnewyork.us",
+   "slug": "nyc-climate-budgeting-report-climate-alignment-assessment-and-capital-climate-investments",
+   "spatial_centroid": null,
+   "spatial_shape": null,
+   "theme": [
+    "City Government"
+   ],
+   "title": "NYC Climate Budgeting Report: Climate Alignment Assessment and Capital Climate Investments",
+   "type": "dataset"
+  }
+ ],
+ "search_after": null,
+ "total": 1
+}

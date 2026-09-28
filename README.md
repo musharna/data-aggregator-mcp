@@ -209,7 +209,7 @@ with `421 Invalid Host header`.
 | UniProtKB (proteins)         |    ✅    |    ✅ (FASTA)     |      none²       |
 | BioStudies (EBI)             |    ✅    | ✅ (study files)  |      none²       |
 | GBIF (biodiversity)          |    ✅    | ✅ (Darwin Core)⁴ |      none²       |
-| data.gov (CKAN)              |    ✅    |  ✅ (resource)⁴   |      none³       |
+| data.gov (DCAT-US)           |    ✅    |  ✅ (file URL)⁴   |      none³       |
 | NASA CMR (Earth science)     |    ✅    |        —⁵         |        —         |
 | GWAS Catalog                 |    ✅    |   → PMID bridge   |        —         |
 
@@ -218,10 +218,10 @@ with `421 Invalid Host header`.
 ² No upstream checksum, so `fetch` does not verify these bytes. It still fails
 loud on an HTTP error or when the download exceeds `max_bytes`.
 ³ No upstream checksum. Files declared as PDF or XML (literature full text, and
-data.gov resources with that mimetype) get an HTML sniff: an HTML login or
+data.gov distributions with that mediaType) get an HTML sniff: an HTML login or
 paywall page served in their place fails loud. Other files are not checked.
 ⁴ Only records that carry a downloadable file (a GBIF Darwin Core Archive, a
-data.gov resource URL); metadata-only records are discovery-only.
+data.gov distribution URL); metadata-only records are discovery-only.
 ⁵ Discovery-only: granule downloads need an Earthdata login, which is not wired.
 `resolve` returns the DOI and a data-access portal link.
 
@@ -327,14 +327,14 @@ publishes a checksum.
   path traversal and runaway extracted size. Off by default.
 - Sources without a checksum are downloaded unverified. The one content check
   there is an HTML sniff on files declared as PDF or XML (literature full text,
-  some data.gov resources): it fails loud if the body is actually an HTML page.
+  some data.gov distributions): it fails loud if the body is actually an HTML page.
 - Checksum-verified: **Zenodo**, **SRA** (ENA FASTQ), **DataONE** (Member-Node
   objects), DataCite-hosted **Figshare** / **Dataverse** / **OSF**, and
   **OpenML** (ARFF).
 - Fetchable but unverified: **GEO** `suppl/`, **HuggingFace** datasets,
   **PRIDE** / **MetaboLights** (via OmicsDI), DataCite-hosted **OpenNeuro**,
   **DANDI**, **CZ CELLxGENE**, **RCSB PDB**, **UniProtKB**, **BioStudies**,
-  **GBIF** (Darwin Core Archives), **data.gov** resources, and **literature**
+  **GBIF** (Darwin Core Archives), **data.gov** distributions, and **literature**
   open-access full text.
 - **Dryad**, other DataCite repos, other OmicsDI repos (MassIVE / GNPS / ...),
   **BioProject**, **NASA CMR**, and the **GWAS Catalog** are discovery-only and
@@ -404,10 +404,10 @@ All optional, set via environment variables:
 
 - `NCBI_API_KEY` — raises the NCBI E-utilities rate limit (3 → 10 req/s) used by
   the omics, literature, and taxonomy lookups.
-- `DATA_GOV_API_KEY` — a free [api.data.gov](https://api.data.gov/signup/) key for
-  the data.gov source. Absent ⇒ requests fall back to the shared public
-  `DEMO_KEY`, rate-limited to roughly 30 requests/hour per IP — fine for light
-  discovery, worth setting for anything heavier.
+- `DATA_GOV_API_KEY` — optional; data.gov works without it through the keyless
+  catalog API (`catalog.data.gov`). With a free
+  [api.data.gov](https://api.data.gov/signup/) key set, data.gov requests go
+  through the api.data.gov gateway instead (1,000 requests/hour per key).
 - `UNPAYWALL_EMAIL` — enables the Unpaywall fallback leg of literature full-text
   retrieval (the EuropePMC leg works without it).
 - `NCBI_EMAIL` — contact address sent to NCBI's ID converter; falls back to
