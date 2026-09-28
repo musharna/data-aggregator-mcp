@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-09-28
+
 ### Fixed
 
 - A failed Zenodo latest-version lookup, or a failed ScholeXplorer / doi.org lookup
