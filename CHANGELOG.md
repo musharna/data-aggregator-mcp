@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A literature or Hugging Face record whose enrichment lookup failed is reported in
+  `errors` and no longer cached: the NCBI ID Converter (`identifiers`), the EuropePMC /
+  Unpaywall full-text check (`files`), the PubMed abstract (`description`) and the
+  Hugging Face datasets-server parquet list (`files`). Each failure came back as the
+  same value as a real "none", so during a EuropePMC outage an open-access paper was
+  cached with no full text and read as "no open-access copy" for the cache TTL.
+
 ## [0.49.0] - 2026-09-28
 
 ### Fixed
