@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-09-27
+
 ### Fixed
 
 - data.gov search, resolve and fetch work again. data.gov retired its CKAN API (every
