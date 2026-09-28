@@ -405,19 +405,21 @@ def strip_html(text: str | None) -> str | None:
 
 # links[].rel values that say "a NEWER version of me exists" (I am superseded).
 _SUPERSEDED_BY_RELS = {"is_previous_version_of", "is_obsoleted_by"}
-# links[].rel values that say "I supersede / version an OLDER record".
-_SUPERSEDES_RELS = {"is_new_version_of", "obsoletes", "has_version", "is_version_of"}
 
 
 def derive_version_status(links: list[Link]) -> tuple[bool | None, str | None]:
     """Infer (is_latest, superseded_by) from version relations in links[].
-    Returns (None, None) when links carry no version information at all —
-    absence of evidence, not a claim of latest."""
+
+    Links can prove a record is SUPERSEDED (a newer version is named), never that it
+    is the LATEST: "latest" is a claim that no newer version exists, which only the
+    owner of the whole version set can make (e.g. Zenodo's ``relations.version[].is_last``,
+    set by the adapter). A relation to an older version or to the concept
+    (is_new_version_of / obsoletes / has_version / is_version_of) is carried by middle
+    versions too — Zenodo and Mendeley attach IsVersionOf to EVERY version — so it is
+    not evidence of being latest. Returns (None, None) when links name no newer version."""
     for lnk in links:
         if lnk.rel in _SUPERSEDED_BY_RELS:
             return False, lnk.target_id
-    if any(lnk.rel in _SUPERSEDES_RELS for lnk in links):
-        return True, None
     return None, None
 
 

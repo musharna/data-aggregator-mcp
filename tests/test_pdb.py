@@ -5,6 +5,7 @@ import pytest
 
 from data_aggregator_mcp import pdb
 from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.models import Link
 
 _SEARCH = {
     "total_count": 1997,
@@ -23,6 +24,10 @@ _GRAPHQL = {
                     "pdbx_database_id_PubMed": 11707393,
                 },
                 "rcsb_entry_info": {"experimental_method": "X-ray"},
+                "database_2": [
+                    {"database_id": "PDB", "pdbx_DOI": "10.2210/pdb1goj/pdb"},
+                    {"database_id": "WWPDB", "pdbx_DOI": None},
+                ],
             },
             {
                 "rcsb_id": "1BG2",
@@ -34,6 +39,10 @@ _GRAPHQL = {
                     "pdbx_database_id_PubMed": 8606779,
                 },
                 "rcsb_entry_info": {"experimental_method": "X-ray"},
+                "database_2": [
+                    {"database_id": "PDB", "pdbx_DOI": "10.2210/pdb1bg2/pdb"},
+                    {"database_id": "WWPDB", "pdbx_DOI": None},
+                ],
             },
         ]
     }
@@ -53,7 +62,8 @@ async def test_search_hydrates_titles_and_doi():
     assert total == 1997
     assert [r.id for r in recs] == ["pdb:1GOJ", "pdb:1BG2"]
     assert recs[1].title == "Human kinesin motor domain"
-    assert recs[1].doi == "10.1038/380550a0" and recs[1].year == 1996
+    assert recs[1].doi == "10.2210/pdb1bg2/pdb" and recs[1].year == 1996  # the entry's own DOI
+    assert Link(rel="described_in", target_id="10.1038/380550a0") in recs[1].links
     assert recs[1].source == "pdb" and recs[1].kind == "dataset"
     assert recs[1].identifiers.get("pmid") == "8606779"
 
@@ -78,7 +88,7 @@ async def test_resolve_attaches_structure_files():
     exts = {f.name.rsplit(".", 1)[-1] for f in r.files}
     assert {"cif", "pdb"} <= exts
     assert all(f.url and f.url.startswith("https://files.rcsb.org/") for f in r.files)
-    assert r.identifiers.get("pmid") == "8606779" and r.doi == "10.1038/380550a0"
+    assert r.identifiers.get("pmid") == "8606779" and r.doi == "10.2210/pdb1bg2/pdb"
 
 
 @pytest.mark.asyncio
@@ -167,6 +177,47 @@ def test_normalize_provenance_sparse_is_clean():
     assert rec.funding == [] and rec.taxa == [] and rec.creators == []
 
 
+def _entry(rid: str, entry_doi: str | None, paper_doi: str) -> dict:
+    """Live shape of 6VYB/6VXX (2026-09-27): distinct entry DOIs, one shared paper."""
+    return {
+        "rcsb_id": rid,
+        "struct": {"title": f"SARS-CoV-2 spike {rid}"},
+        "rcsb_primary_citation": {
+            "year": 2020,
+            "pdbx_database_id_DOI": paper_doi,
+            "pdbx_database_id_PubMed": 32155444,
+        },
+        "database_2": [
+            {"database_id": "PDB", "pdbx_DOI": entry_doi},
+            {"database_id": "EMDB", "pdbx_DOI": None},
+        ],
+    }
+
+
+def test_sibling_structures_from_one_paper_survive_doi_dedup():
+    """B-H4: doi was the primary-citation (paper) DOI, so dedup_by_doi folded every
+    structure published in one paper into one (search kept 14 of 20). doi must be the
+    entry's own DOI; the paper DOI stays reachable as a described_in link."""
+    from data_aggregator_mcp import relate
+    from data_aggregator_mcp._mirror import dedup_by_doi
+    from data_aggregator_mcp.models import DataResource
+
+    paper = "10.1016/j.cell.2020.02.058"
+    a = pdb._normalize(_entry("6VYB", "10.2210/pdb6vyb/pdb", paper))
+    b = pdb._normalize(_entry("6VXX", "10.2210/pdb6vxx/pdb", paper))
+    assert [r.id for r in dedup_by_doi([a, b])] == ["pdb:6VYB", "pdb:6VXX"]
+    # positive control: the same entry seen twice still collapses on its own DOI
+    assert [r.id for r in dedup_by_doi([a, a.model_copy()])] == ["pdb:6VYB"]
+    # the paper bridge survives: explicit described_in link to the paper record
+    paper_rec = DataResource(
+        id="pubmed:32155444", source="pubmed", kind="publication", title="Walls", doi=paper
+    )
+    kinds = {(h.kind, tuple(h.resources)) for h in relate.detect([a, paper_rec])}
+    assert ("explicit_link", ("pdb:6VYB", "pubmed:32155444")) in kinds
+    # an entry with no registered PDB DOI keeps doi=None (never a constructed guess)
+    assert pdb._normalize(_entry("9ZZZ", None, paper)).doi is None
+
+
 def test_registered_in_router_and_server():
     from data_aggregator_mcp import router, server
 
@@ -220,3 +271,15 @@ async def test_search_204_zero_hits_is_empty_not_outage(monkeypatch):
             await pdb.search(c, "gone", size=10)
         total, recs = await pdb.search(c, "kinesin", size=2)  # positive control
     assert total == 1997 and [r.id for r in recs] == ["pdb:1GOJ", "pdb:1BG2"]
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_sibling_entries_have_own_dois():
+    """B-H4 live: 6VYB and 6VXX share the Walls 2020 paper but are distinct entries."""
+    async with httpx.AsyncClient(timeout=60) as c:
+        a = await pdb.resolve(c, "pdb:6VYB")
+        b = await pdb.resolve(c, "pdb:6VXX")
+    assert a.doi == "10.2210/pdb6vyb/pdb" and b.doi == "10.2210/pdb6vxx/pdb"
+    paper = Link(rel="described_in", target_id="10.1016/j.cell.2020.02.058")
+    assert paper in a.links and paper in b.links
