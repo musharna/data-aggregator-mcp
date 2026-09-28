@@ -2,7 +2,8 @@
 
 A single GET to www.ncbi.nlm.nih.gov/pmc/utils/idconv (NOT the eutils host).
 Used by the literature adapters to populate DataResource.identifiers. Best
-effort: any failure logs a warning and returns {} — never raises (spec §8).
+effort: never raises (spec §8), but a failure is returned as a reason next to the
+empty result, so it is never indistinguishable from "this DOI is not in PMC".
 """
 
 from __future__ import annotations
@@ -20,11 +21,14 @@ BASE_URL = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
 TOOL = "data-aggregator-mcp"
 
 
-async def identifiers_for(client: httpx.AsyncClient, doi: str | None) -> dict[str, str]:
-    """Resolve ``doi`` to {doi, pmid, pmcid} (missing ids omitted). Empty doi or
-    any failure → {}."""
+async def identifiers_for(
+    client: httpx.AsyncClient, doi: str | None
+) -> tuple[dict[str, str], str | None]:
+    """Resolve ``doi`` to {doi, pmid, pmcid} (missing ids omitted), and why that is
+    incomplete (None when nothing failed). Empty doi or a DOI idconv reports as not in
+    PMC → ``({}, None)``; a failed or off-contract lookup → ``({}, reason)``."""
     if not doi:
-        return {}
+        return {}, None
     params = {"ids": doi, "format": "json", "tool": TOOL}
     email = os.environ.get("NCBI_EMAIL") or os.environ.get("UNPAYWALL_EMAIL")
     if email:
@@ -34,14 +38,17 @@ async def identifiers_for(client: httpx.AsyncClient, doi: str | None) -> dict[st
             client, "GET", BASE_URL, service="NCBI idconv", params=params
         )
         rec = (resp.json().get("records") or [{}])[0]
-        if not isinstance(rec, dict) or rec.get("status") == "error":
-            return {}
-        out: dict[str, str] = {}
-        for key in ("doi", "pmid", "pmcid"):
-            val = rec.get(key)
-            if val:
-                out[key] = str(val)
-        return out
     except Exception as exc:  # noqa: BLE001 — enrichment: never raise (spec §8)
         logger.warning("idconv failed for %r: %r", doi, exc)
-        return {}
+        return {}, f"NCBI idconv lookup failed: {type(exc).__name__}: {exc}"
+    if not isinstance(rec, dict):
+        logger.warning("idconv answered an off-contract record for %r: %r", doi, rec)
+        return {}, f"NCBI idconv answered records[0] = {rec!r}, not an object"
+    if rec.get("status") == "error":  # idconv's answer for a DOI that is not in PMC
+        return {}, None
+    out: dict[str, str] = {}
+    for key in ("doi", "pmid", "pmcid"):
+        val = rec.get(key)
+        if val:
+            out[key] = str(val)
+    return out, None

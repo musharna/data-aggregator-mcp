@@ -54,22 +54,22 @@ def _normalize_pubmed(doc: dict) -> DataResource:
     )
 
 
-async def _abstract_for(client: httpx.AsyncClient, pmid: str) -> str | None:
-    """Fetch + join the article AbstractText(s). Best-effort: any failure → None."""
+async def _abstract_for(client: httpx.AsyncClient, pmid: str) -> tuple[str | None, str | None]:
+    """Fetch + join the article AbstractText(s), and why that failed (None when it did
+    not). Enrichment: never raises, but a failure is returned next to the None so it is
+    never indistinguishable from "this article has no abstract"."""
     try:
         xml_text = await _eutils.efetch(client, "pubmed", [pmid], retmode="xml")
         if not xml_text:
-            return None
+            return None, None
         root = ET.fromstring(xml_text)
-        parts = [
-            t.strip()
-            for t in ("".join(el.itertext()) for el in root.iter("AbstractText"))
-            if t.strip()
-        ]
-        return " ".join(parts) or None
     except Exception as exc:  # noqa: BLE001 — enrichment: never raise (spec §8)
         logger.warning("pubmed abstract fetch failed for %r: %r", pmid, exc)
-        return None
+        return None, f"NCBI efetch (abstract) failed: {type(exc).__name__}: {exc}"
+    parts = [
+        t.strip() for t in ("".join(el.itertext()) for el in root.iter("AbstractText")) if t.strip()
+    ]
+    return " ".join(parts) or None, None
 
 
 async def search(
@@ -119,8 +119,16 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     resource = _normalize_pubmed(docs[0])
     links = await _links_via_elink(client, pmid)
     ft = await fulltext.find(client, pmcid=resource.identifiers.get("pmcid"), doi=resource.doi)
-    abstract = await _abstract_for(client, pmid)
+    abstract, abstract_error = await _abstract_for(client, pmid)
     update: dict = {}
+    # Each failed lookup is recorded, so the router does not cache a degraded record.
+    errors = {**resource.errors}
+    if ft.error:
+        errors["files"] = ft.error
+    if abstract_error:
+        errors["description"] = abstract_error
+    if errors != resource.errors:
+        update["errors"] = errors
     if links:
         update["links"] = links
     if ft.file is not None:

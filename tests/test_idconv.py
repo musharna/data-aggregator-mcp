@@ -21,13 +21,14 @@ async def test_identifiers_for_maps_doi(httpx_mock, monkeypatch) -> None:
         json={"records": [{"doi": "10.7554/eLife.00013", "pmcid": "PMC3463246", "pmid": 23066504}]},
     )
     async with httpx.AsyncClient() as client:
-        out = await idconv.identifiers_for(client, "10.7554/eLife.00013")
+        out, err = await idconv.identifiers_for(client, "10.7554/eLife.00013")
     assert out == {"doi": "10.7554/eLife.00013", "pmid": "23066504", "pmcid": "PMC3463246"}
+    assert err is None
 
 
 async def test_identifiers_for_empty_doi_makes_no_call() -> None:
     async with httpx.AsyncClient() as client:
-        assert await idconv.identifiers_for(client, "") == {}
+        assert await idconv.identifiers_for(client, "") == ({}, None)
 
 
 async def test_identifiers_for_error_record_returns_empty(httpx_mock, monkeypatch) -> None:
@@ -38,7 +39,8 @@ async def test_identifiers_for_error_record_returns_empty(httpx_mock, monkeypatc
         json={"records": [{"status": "error", "errmsg": "invalid article id"}]},
     )
     async with httpx.AsyncClient() as client:
-        assert await idconv.identifiers_for(client, "10.0/bad") == {}
+        # "not in PMC" is an answer, not a failure: no ids and no error.
+        assert await idconv.identifiers_for(client, "10.0/bad") == ({}, None)
 
 
 async def test_identifiers_for_fails_soft_on_transport_error(httpx_mock, monkeypatch) -> None:
@@ -50,7 +52,10 @@ async def test_identifiers_for_fails_soft_on_transport_error(httpx_mock, monkeyp
             url=f"{_URL}?ids=10.1/x&format=json&tool=data-aggregator-mcp",
         )
     async with httpx.AsyncClient() as client:
-        assert await idconv.identifiers_for(client, "10.1/x") == {}  # never raises
+        ids, err = await idconv.identifiers_for(client, "10.1/x")  # never raises
+    # ...but says it failed: {} alone reads exactly like "this DOI is not in PMC".
+    assert ids == {}
+    assert err is not None and "NCBI idconv" in err and "ConnectError" in err
 
 
 async def test_identifiers_for_off_contract_body_fails_soft(httpx_mock, monkeypatch) -> None:
@@ -62,12 +67,15 @@ async def test_identifiers_for_off_contract_body_fails_soft(httpx_mock, monkeypa
         json={"records": ["not-a-dict"]},
     )
     async with httpx.AsyncClient() as client:
-        assert await idconv.identifiers_for(client, "10.2/x") == {}
+        ids, err = await idconv.identifiers_for(client, "10.2/x")
+    assert ids == {}
+    assert err is not None and "NCBI idconv" in err
 
 
 @live_only
 async def test_live_idconv_roundtrip() -> None:
     async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
-        out = await idconv.identifiers_for(client, "10.7554/eLife.00013")
+        out, err = await idconv.identifiers_for(client, "10.7554/eLife.00013")
     assert out.get("pmid") == "23066504"
     assert out.get("pmcid") == "PMC3463246"
+    assert err is None
