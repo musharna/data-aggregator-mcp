@@ -74,7 +74,10 @@ def range_clause(field: str, low: str | None, high: str | None) -> str | None:
 
 def with_clauses(query: str, clauses: list[str]) -> str:
     """AND the clauses onto the query. The query is parenthesized so a top-level OR in
-    it cannot capture a clause; with no clauses the query is returned unchanged."""
+    it cannot capture a clause; with no clauses the query is returned unchanged. A blank
+    query (a filters-only search) contributes no clause: ``()`` is a parse error upstream
+    (DataCite answers HTTP 400)."""
     if not clauses:
         return query
-    return " AND ".join([f"({query})", *clauses])
+    head = [f"({query})"] if query.strip() else []
+    return " AND ".join([*head, *clauses])

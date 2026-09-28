@@ -276,3 +276,33 @@ async def test_live_kind_clauses_partition_the_upstream(adapter) -> None:
         ]
     assert all(p > 0 for p in parts), parts
     assert sum(parts) == whole, (parts, whole)
+
+
+def test_blank_query_sends_the_clauses_alone() -> None:
+    """Review finding: a filters-only search (blank query) sent ``() AND ...``, which
+    DataCite rejects with HTTP 400 ("Encountered ')'"). A blank query adds no clause of
+    its own, so only the filter clauses go upstream. Positive control: a real query is
+    still parenthesized so its top-level OR cannot capture a clause."""
+    from data_aggregator_mcp import _pushdown
+
+    clause = "publicationYear:[2019 TO 2020]"
+    assert _pushdown.with_clauses("", [clause]) == clause
+    assert _pushdown.with_clauses("   ", [clause]) == clause
+    assert _pushdown.with_clauses("a OR b", [clause]) == f"(a OR b) AND {clause}"
+
+
+@live_only
+async def test_live_filters_only_search_is_accepted_by_both_upstreams() -> None:
+    """A blank query with a year range: both upstreams answer (no HTTP 400) with records
+    in range."""
+    async with httpx.AsyncClient(timeout=60) as client:
+        page = await router.search_page(
+            client,
+            query="",
+            sources=["zenodo", "datacite"],
+            published_after=2019,
+            published_before=2020,
+        )
+    assert not {k for k in page.errors if k in ("zenodo", "datacite")}, page.errors
+    assert page.count > 0
+    assert all(r.year is not None and 2019 <= r.year <= 2020 for r in page.results)
