@@ -6,6 +6,48 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- data.gov search, resolve and fetch work again. data.gov retired its CKAN API (every
+  call 404ed), so the source now uses the new DCAT-US catalog API, which needs no key;
+  `DATA_GOV_API_KEY`, when set, routes through the api.gsa.gov v4 gateway.
+- Resolving a GEO sample, platform or DataSet id returns that record instead of a related
+  series (`geo:GSM613466` resolved to `GSE24974`, `geo:GPL570` to an unrelated series).
+- A deleted or merged UniProt entry raises NotFoundError with UniProt's reason instead of
+  resolving normally and "fetching" an empty FASTA.
+- A Figshare DOI ending in `.vN` fetches that version's files, not the latest version's.
+- File manifests are complete: OSF lists files inside folders, Dryad and PRIDE read every
+  page (not the first 20 / 100), OpenNeuro lists the whole snapshot tree including
+  subject folders, and BioStudies reads studies' external file lists. Each walk raises
+  rather than returning a partial list.
+- Dataverse tabular files that were converted on upload are listed as the original
+  upload their md5 describes, so fetch's checksum check passes.
+- Superseded Zenodo and Mendeley versions are no longer reported as `is_latest=true`.
+  Zenodo records take `is_latest` from Zenodo's own version flag, and resolving an older
+  Zenodo version names the latest in `superseded_by`, so `relate` reports a
+  `version_lineage` between two versions of one record.
+- PDB search no longer drops structures published in the same paper: each entry carries
+  its own DOI (`10.2210/pdbXXXX/pdb`) and the paper DOI moves to a `described_in` link.
+  `resolve(trust=true)` also checks `described_in` paper DOIs, so a structure whose
+  paper was retracted is still flagged.
+- GBIF search results carry their publication year, so year filters no longer drop every
+  GBIF dataset.
+- GWAS Catalog and DANDI no longer return zero results when an organism or ontology
+  filter is set; they receive the plain query, and the page says so.
+- OpenAIRE papers no longer list the papers they cite as `datacite:` data links: only
+  dataset and software targets are kept, labelled `datacite:` only when DataCite
+  registered them.
+
+### Changed
+
+- `sra:SRP…` (study) and `sra:SRR…` (run) ids raise NotFoundError naming the
+  experiment(s) to resolve, instead of returning the first experiment with the whole
+  study's files. `sra:SRX…` is unchanged.
+- A record whose links name only an older version or its concept now reports
+  `is_latest=None` (unknown) rather than `true`; links can prove "superseded", never
+  "latest".
+- data.gov search `total` is a lower bound: the new catalog API reports no hit count.
+
 ### Security
 
 - `operate` `sql`: a user query could still reach the network through the S3-family

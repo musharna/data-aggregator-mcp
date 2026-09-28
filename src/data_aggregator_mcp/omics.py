@@ -34,6 +34,15 @@ MAX_SIZE = 50
 # a flat NotFoundError. Keyed by db so a new db must state its own field.
 _ACCESSION_FIELD = {"gds": "ACCN", "sra": "ACCN", "bioproject": "PRJA"}
 
+# An accession search is a MATCH, not an identity lookup: GEO indexes every related
+# accession under ACCN (``GSM613466[ACCN]`` hits the sample AND its parent series, which
+# NCBI lists first; ``GPL570[ACCN]`` hits ~184k series run on that platform) and an SRA
+# study/run matches each experiment that carries it. Resolve therefore restricts GEO to
+# the entry type the accession names (GEO's ``ETYP`` values are the lowercase prefixes)
+# and keeps only the candidate whose own id IS the requested one — never ``docs[0]``.
+_GEO_ENTRY_TYPES = frozenset({"gse", "gsm", "gpl", "gds"})
+_RESOLVE_CANDIDATES = 20
+
 # Cap on SRA run links attached to a BioProject. elink is unbounded — real projects
 # reach into the thousands (PRJNA231221 links 7,314 runs) — and every uid had to be
 # turned into an accession through one esummary GET, which overflowed the URL length
@@ -197,29 +206,49 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     filereport manifest (FASTQ files). For GEO, attaches the supplementary files
     listed under the record's ``ftplink`` ``suppl/`` directory (when present).
     BioProject stays files=[]; its data lives in linked SRA runs.
+
+    Returns the record whose own id IS ``resource_id`` or raises NotFoundError — an
+    SRA study/run id names the experiments that carry it instead of becoming one.
     """
     prefix, _, acc = resource_id.partition(":")
     db = _DB.get(prefix)
     if db is None or not acc:
         raise NotFoundError(f"unroutable omics id {resource_id!r}")
-    _count, ids = await _eutils.esearch(client, db, f"{acc}[{_ACCESSION_FIELD[db]}]", retmax=1)
-    if not ids:
-        raise NotFoundError(f"no omics record for {acc!r} in {prefix}")
+    term = f"{acc}[{_ACCESSION_FIELD[db]}]"
+    entry_type = acc[:3].lower()
+    if db == "gds" and entry_type in _GEO_ENTRY_TYPES:
+        term += f" AND {entry_type}[ETYP]"
+    count, ids = await _eutils.esearch(client, db, term, retmax=_RESOLVE_CANDIDATES)
     docs = await _eutils.esummary(client, db, ids)
-    if not docs:
+    wanted = f"{prefix}:{acc}".lower()
+    candidates = [(doc, _NORMALIZERS[db](doc)) for doc in docs]
+    matches = [(doc, rec) for doc, rec in candidates if rec.id.lower() == wanted]
+    if not matches:
+        # Candidates that merely CARRY the accession (an SRA study/run inside an
+        # experiment) are named, never substituted: they are different records.
+        parents = [
+            rec.id for _, rec in candidates if acc.lower() in {a.lower() for a in rec.accessions}
+        ]
+        if parents:
+            raise NotFoundError(
+                f"{resource_id!r} is not itself a {prefix} record; it belongs to "
+                f"{', '.join(parents)}"
+                + (f" (first {len(docs)} of {count})" if count > len(docs) else "")
+                + " — resolve one of those ids"
+            )
         raise NotFoundError(f"no omics record for {acc!r} in {prefix}")
-    resource = _NORMALIZERS[db](docs[0])
+    doc, resource = matches[0]
     if prefix == "sra":
-        files = await ena.filereport(client, acc)
+        files = await ena.filereport(client, resource.id.partition(":")[2])
         if files:
             resource = resource.model_copy(update={"files": files})
     elif prefix == "geo":
-        ftplink = docs[0].get("ftplink") or ""
+        ftplink = doc.get("ftplink") or ""
         files = await geo.supplementary_files(client, ftplink)
         if files:
             resource = resource.model_copy(update={"files": files})
     elif prefix == "bioproject":
-        links = await _bioproject_sra_links(client, ids[0])
+        links = await _bioproject_sra_links(client, str(doc["uid"]))
         if links:
             resource = resource.model_copy(update={"links": links})
     return resource

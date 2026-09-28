@@ -907,7 +907,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     - ``pubmed:``/``openaire:``          → literature
     - ``dataone:<pid>``                  → DataONE (verified fetch)
     - ``gbif:<dataset-key>``             → GBIF (unverified DwC-A fetch)
-    - ``datagov:<name-slug>``            → data.gov (CKAN; unverified resource fetch)
+    - ``datagov:<name-slug>``            → data.gov (DCAT-US catalog; unverified distribution fetch)
     - ``nasacmr:<concept-id>``           → NASA CMR (Earthdata; discovery-only)
     - ``omicsdi:<source>:<acc>``         → OmicsDI (routes fetch to PRIDE/MetaboLights)
     - ``datacite:<doi>``                 → DataCite

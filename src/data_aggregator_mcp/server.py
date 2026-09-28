@@ -100,7 +100,7 @@ def _ensure_gbif_fetchable(fid: str, resource: DataResource) -> None:
 
 def _ensure_datagov_fetchable(fid: str, resource: DataResource) -> None:
     """Fail loud when a datagov: id resolved to no downloadable resource — a metadata-
-    only / link-only package is discovery-only; packages with CKAN resources pass."""
+    only / link-only package is discovery-only; datasets with a downloadable distribution pass."""
     if fid.startswith("datagov:") and not resource.files:
         raise FetchNotSupportedError(
             f"'{fid}' is discovery-only for fetch — this data.gov package publishes no "

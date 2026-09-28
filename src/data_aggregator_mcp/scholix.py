@@ -1,17 +1,24 @@
 """ScholeXplorer (Scholix) link client — OpenAIRE's paper↔data link service.
 
-Given a source DOI, returns the data resources it links to as ``Link``s whose
-``target_id`` is in our canonical scheme (``datacite:<doi>``). Publication↔
-publication citation edges (``target.Type == "literature"``) are dropped — that
+Given a source DOI, returns the data resources (``dataset`` / ``software`` targets) it
+links to as ``Link``s. A target DataCite registered becomes ``datacite:<doi>``; any other
+data DOI stays bare, claiming no registration agency. Every other target type — v3 calls
+papers ``publication`` (v1/v2: ``literature``) — is a citation edge and is dropped; that
 is the standalone openalex MCP's job, not ours.
 """
 
 from __future__ import annotations
 
+import logging
+from urllib.parse import quote
+
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp.errors import DataAggregatorError
 from data_aggregator_mcp.models import Link
+
+logger = logging.getLogger(__name__)
 
 # v1 and v2 are being phased out; v3 (shape-identical) is the documented future.
 SCHOLIX_VERSION = "v3"
@@ -28,8 +35,12 @@ _REL_MAP = {
     "isreferencedby": "is_referenced_by",
     "isrelatedto": "is_related_to",
 }
-# target.Type values that are NOT data — dropped.
-_DROP_TYPES = {"literature"}
+# target.Type values that ARE data — kept. An allow-list: the old deny-list named
+# ``literature``, which v3 never emits (papers are ``publication``), so every citation
+# edge leaked through as a "data link".
+_DATA_TYPES = frozenset({"dataset", "software"})
+# doi.org's registration-agency API; takes a comma-separated batch in one GET.
+_RA_URL = "https://doi.org/ra/"
 
 
 def _map_rel(relationship: dict) -> str:
@@ -44,11 +55,42 @@ def _doi_of(identifiers: list[dict]) -> str | None:
     return None
 
 
+async def _datacite_registered(client: httpx.AsyncClient, dois: list[str]) -> set[str]:
+    """The (lower-cased) subset of ``dois`` whose registration agency is DataCite.
+
+    One batched doi.org RA lookup. A DOI containing a comma cannot be batched (the API
+    splits on commas), so it is left out and stays a bare DOI. The lookup only decides
+    the label: if it fails, every DOI stays bare (claiming no agency) and the links are
+    still returned — a labelling outage must not sink the resolve they enrich."""
+    batch = [d for d in dict.fromkeys(dois) if "," not in d]
+    if not batch:
+        return set()
+    try:
+        rows = await _http.request_json(
+            client,
+            "GET",
+            _RA_URL + quote(",".join(batch), safe="/,"),
+            service="DOI registration-agency lookup",
+            expect=list,
+        )
+    except DataAggregatorError as exc:
+        logger.warning(
+            "doi.org RA lookup failed for %d DOI(s); links stay bare: %s", len(batch), exc
+        )
+        return set()
+    return {
+        str(r["DOI"]).lower()
+        for r in rows
+        if isinstance(r, dict) and r.get("RA") == "DataCite" and r.get("DOI")
+    }
+
+
 async def links_for(client: httpx.AsyncClient, doi: str | None) -> list[Link]:
     """Return data ``Link``s for the publication/dataset with ``doi``.
 
     No DOI → ``[]`` (cannot query without a source PID). 404 → ``[]``. Each
-    non-literature target with a DOI becomes ``datacite:<doi>``.
+    dataset/software target with a DOI becomes a Link: ``datacite:<doi>`` when DataCite
+    registered it, else the bare DOI.
 
     Reads only the first Scholix page: callers query publication source DOIs,
     where data targets are sparse (most edges are citations, which we drop), so
@@ -72,15 +114,16 @@ async def links_for(client: httpx.AsyncClient, doi: str | None) -> list[Link]:
         # Non-JSON body (e.g. HTML error page from a WAF/proxy) — Scholix links
         # are enrichment only; degrade gracefully rather than surface a parse error.
         return []
-    out: list[Link] = []
+    edges: list[tuple[str, str]] = []
     for rec in payload.get("result", []) or []:
         target = rec.get("target", {}) or {}
-        if (target.get("Type") or "").lower() in _DROP_TYPES:
+        if (target.get("Type") or "").lower() not in _DATA_TYPES:
             continue
         target_doi = _doi_of(target.get("Identifier", []))
         if not target_doi:
             continue
-        out.append(
-            Link(rel=_map_rel(rec.get("RelationshipType", {})), target_id=f"datacite:{target_doi}")
-        )
-    return out
+        edges.append((_map_rel(rec.get("RelationshipType", {})), target_doi))
+    datacite = await _datacite_registered(client, [d for _, d in edges])
+    return [
+        Link(rel=rel, target_id=f"datacite:{d}" if d.lower() in datacite else d) for rel, d in edges
+    ]

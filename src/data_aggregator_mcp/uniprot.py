@@ -80,6 +80,17 @@ def _normalize(entry: dict) -> DataResource:
     )
 
 
+def _inactive_message(acc: str, reason: dict) -> str:
+    kind = reason.get("inactiveReasonType") or "unknown reason"
+    msg = f"UniProtKB entry {acc} is inactive ({kind})"
+    if reason.get("deletedReason"):
+        msg += f": {reason['deletedReason']}"
+    targets = reason.get("mergeDemergeTo") or []
+    if targets:
+        msg += "; now " + ", ".join(f"uniprot:{t}" for t in targets)
+    return msg
+
+
 async def search(
     client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
 ) -> tuple[int, list[DataResource]]:
@@ -124,6 +135,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         )
     except NotFoundError:
         raise NotFoundError(f"UniProtKB has no entry {acc}") from None
+    if body.get("entryType") == "Inactive":
+        # A deleted/merged accession is answered with HTTP 200 and a stub carrying no
+        # sequence (its .fasta is empty). It is not a live entry: say why, don't normalise.
+        raise NotFoundError(_inactive_message(acc, body.get("inactiveReason") or {}))
     resource = _normalize(body)
     fasta = FileEntry(
         name=f"{acc}.fasta",

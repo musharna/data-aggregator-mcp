@@ -1,7 +1,8 @@
 """RCSB Protein Data Bank — macromolecular structures.
 
 Two endpoints: the search API returns ranked entry IDs only, so a single GraphQL
-batch call hydrates titles + primary-citation DOI/PubMed (the literature bridge)
+batch call hydrates titles, the entry's own DOI (10.2210/pdbXXXX/pdb) and the
+primary-citation DOI/PubMed (the literature bridge: a ``described_in`` link + pmid)
 for the whole page. Structure files (.cif/.pdb) stream from files.rcsb.org with no
 upstream checksum -> fetch is unverified, not operable. kind="dataset".
 """
@@ -44,6 +45,7 @@ _GQL = (
     "rcsb_accession_info{{initial_release_date}} "
     "rcsb_primary_citation{{year pdbx_database_id_DOI pdbx_database_id_PubMed}} "
     "rcsb_entry_info{{experimental_method}} "
+    "database_2{{database_id pdbx_DOI}} "
     "audit_author{{name pdbx_ordinal}} "
     "pdbx_audit_support{{funding_organization grant_number}} "
     "polymer_entities{{rcsb_entity_source_organism{{ncbi_taxonomy_id ncbi_scientific_name}}}}}}}}"
@@ -114,6 +116,17 @@ def _taxa(entry: dict) -> list[Taxon]:
     return list(seen.values())
 
 
+def _entry_doi(entry: dict) -> str | None:
+    """The structure's OWN DOI as registered by wwPDB (database_2 row with
+    database_id == "PDB"), e.g. 10.2210/pdb6vxx/pdb. None when absent — never
+    constructed from the id. Not the primary-citation DOI: many entries share one
+    paper, and a shared ``doi`` makes DOI dedup fold distinct structures together."""
+    for row in entry.get("database_2") or []:
+        if (row or {}).get("database_id") == "PDB" and row.get("pdbx_DOI"):
+            return str(row["pdbx_DOI"])
+    return None
+
+
 def _normalize(entry: dict) -> DataResource:
     rid = entry["rcsb_id"]
     cite = entry.get("rcsb_primary_citation") or {}
@@ -121,6 +134,10 @@ def _normalize(entry: dict) -> DataResource:
     identifiers: dict[str, str] = {}
     if pubmed:
         identifiers["pmid"] = str(pubmed)
+    links = [Link(rel="landing_page", target_id=_LANDING.format(id=rid))]
+    paper_doi = cite.get("pdbx_database_id_DOI")
+    if paper_doi:
+        links.append(Link(rel="described_in", target_id=paper_doi))
     method = (entry.get("rcsb_entry_info") or {}).get("experimental_method")
     return DataResource(
         id=f"pdb:{rid}",
@@ -129,14 +146,14 @@ def _normalize(entry: dict) -> DataResource:
         title=(entry.get("struct") or {}).get("title") or "",
         creators=_creators(entry),
         funding=_funding(entry),
-        doi=cite.get("pdbx_database_id_DOI"),
+        doi=_entry_doi(entry),
         year=cite.get("year"),
         identifiers=identifiers,
         taxa=_taxa(entry),
         subjects=[method] if method else [],
         last_updated=(entry.get("rcsb_accession_info") or {}).get("initial_release_date"),
         files=[],
-        links=[Link(rel="landing_page", target_id=_LANDING.format(id=rid))],
+        links=links,
     )
 
 

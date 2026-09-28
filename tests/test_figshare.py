@@ -38,7 +38,9 @@ def test_article_id_from_doi() -> None:
 
 
 async def test_files_parses_article(httpx_mock) -> None:
-    httpx_mock.add_response(url="https://api.figshare.com/v2/articles/31375579", json=_ARTICLE)
+    httpx_mock.add_response(
+        url="https://api.figshare.com/v2/articles/31375579/versions/2", json=_ARTICLE
+    )
     async with httpx.AsyncClient() as client:
         files = await figshare.files(client, "10.6084/m9.figshare.31375579.v2")
     assert {f.name for f in files} == {"small.csv"}  # is_link_only dropped
@@ -57,7 +59,7 @@ async def test_figshare_malformed_body_raises_upstream(httpx_mock, monkeypatch) 
     monkeypatch.setattr("data_aggregator_mcp._http.asyncio.sleep", _no_sleep)
     for _ in range(3):
         httpx_mock.add_response(
-            url="https://api.figshare.com/v2/articles/31375579",
+            url="https://api.figshare.com/v2/articles/31375579/versions/2",
             text="<html>throttled</html>",
         )
     async with httpx.AsyncClient() as client:
@@ -92,8 +94,54 @@ async def test_files_institutional_doi_lists_files_and_rejects_mismatch(httpx_mo
     ours = dict(_ARTICLE, id=33951526, doi="10.25405/ncl.33951526.v1")
     httpx_mock.add_response(url="https://api.figshare.com/v2/articles/33951526", json=ours)
     other = dict(_ARTICLE, id=9918287, doi="10.1021/acs.orglett.9b03122.s001")
-    httpx_mock.add_response(url="https://api.figshare.com/v2/articles/9918287", json=other)
+    httpx_mock.add_response(
+        url="https://api.figshare.com/v2/articles/9918287/versions/1", json=other
+    )
     async with httpx.AsyncClient() as client:
         files = await figshare.files(client, "10.25405/ncl.33951526")
         assert {f.name for f in files} == {"small.csv"}
         assert await figshare.files(client, "10.25405/data.ncl.9918287.v1") == []
+
+
+def _fs_file(name: str, fid: int, md5: str) -> dict:
+    return {
+        "name": name,
+        "size": 10,
+        "is_link_only": False,
+        "download_url": f"https://ndownloader.figshare.com/files/{fid}",
+        "computed_md5": md5,
+    }
+
+
+async def test_versioned_doi_lists_that_versions_files_not_the_latest(httpx_mock) -> None:
+    """A-H2 (audit 2026-09-27, shapes captured live): 10.6084/m9.figshare.32732757.v1 has
+    one file (Data_Icarus.xlsx); /articles/32732757 is v3 (two other files). The version
+    suffix was stripped before the request AND on both sides of the DOI check, so a v1
+    DOI fetched v3's bytes with v3's md5s — verified, and wrong."""
+    base = "https://api.figshare.com/v2/articles/32732757"
+    v3 = {
+        "id": 32732757,
+        "doi": "10.6084/m9.figshare.32732757.v3",
+        "files": [_fs_file("Supplementary_Table_S1.xlsx", 69381495, "3abb")],
+    }
+    v1 = dict(
+        v3,
+        doi="10.6084/m9.figshare.32732757.v1",
+        files=[_fs_file("Data_Icarus.xlsx", 65685420, "c9eb")],
+    )
+    httpx_mock.add_response(url=f"{base}/versions/1", json=v1)
+    httpx_mock.add_response(url=base, json=v3)
+    async with httpx.AsyncClient() as client:
+        files = await figshare.files(client, "10.6084/m9.figshare.32732757.v1")
+        assert [(f.name, f.checksum) for f in files] == [("Data_Icarus.xlsx", "md5:c9eb")]
+        # positive control: an unversioned DOI still means the current version
+        latest = await figshare.files(client, "10.6084/m9.figshare.32732757")
+    assert [f.name for f in latest] == ["Supplementary_Table_S1.xlsx"]
+
+
+@live_only
+async def test_live_versioned_doi_gets_that_versions_files() -> None:
+    async with httpx.AsyncClient(timeout=60) as client:
+        v1 = await figshare.files(client, "10.6084/m9.figshare.32732757.v1")
+    assert [f.name for f in v1] == ["Data_Icarus.xlsx"]
+    assert v1[0].checksum == "md5:c9ebf56c529764aba41f2648d83db3e8"

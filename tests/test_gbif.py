@@ -231,3 +231,33 @@ async def test_live_resolve_attaches_archive():
         # resolve the first result that is an occurrence-type dataset (has an archive)
         r = await gbif.resolve(c, recs[0].id)
     assert r.id == recs[0].id and r.doi
+
+
+@pytest.mark.asyncio
+async def test_search_year_comes_from_the_search_index_publication_date():
+    """A-H7 (audit 2026-09-27): the dataset/search index names the date
+    ``publicationDate``; only the dataset record has ``pubDate``/``created``. Search
+    records therefore all had year=None and any year filter zeroed GBIF (0 of 428)."""
+    hit = {  # search-index shape, captured live 2026-09-27
+        "key": "6482ae05-0258-40b2-9880-9eaeeb212f6e",
+        "title": "t",
+        "publicationDate": "2015-04-08T12:00:00.000+00:00",
+        "modified": "2026-09-07T11:00:53.351+00:00",
+    }
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda r: httpx.Response(200, json={"count": 1, "results": [hit]})
+        )
+    ) as c:
+        _, recs = await gbif.search(c, "q")
+    assert recs[0].year == 2015
+    # positive control: the dataset-record shape (pubDate) still yields its year
+    assert gbif._normalize(_DATASET).year == 2025
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_search_records_carry_a_year():
+    async with httpx.AsyncClient(timeout=60) as c:
+        _, recs = await gbif.search(c, "orchid", size=5)
+    assert recs and any(r.year for r in recs), [(r.id, r.year) for r in recs]

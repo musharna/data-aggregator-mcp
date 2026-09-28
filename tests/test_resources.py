@@ -47,11 +47,22 @@ _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=
 
 @_live_only
 async def test_live_read_resource_resolves_real_record() -> None:
+    # Driven over a real MCP stdio session, not by calling the private handler: the
+    # handler's signature changed in the mcp 2.x migration and this live-only test kept
+    # calling the 1.x form, so it raised TypeError for weeks while CI (which never sets
+    # DATA_AGGREGATOR_MCP_LIVE) stayed green. The wire contract is what clients see.
     import json
+    import sys
 
-    from data_aggregator_mcp import server
+    from mcp import ClientSession
+    from mcp.client.stdio import StdioServerParameters, stdio_client
 
-    contents = await server._read_resource(AnyUrl(resources.record_uri("pdb:1bg2")))
-    rec = json.loads(list(contents)[0].content)
+    params = StdioServerParameters(command=sys.executable, args=["-m", "data_aggregator_mcp"])
+    async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+        await session.initialize()
+        catalog = await session.read_resource(resources.CATALOG_URI)
+        record = await session.read_resource(resources.record_uri("pdb:1bg2"))
+    assert any(s["name"] == "pdb" for s in json.loads(catalog.contents[0].text)["sources"])
+    rec = json.loads(record.contents[0].text)
     # resolve canonicalizes the id (PDB returns the upper-cased accession, e.g. pdb:1BG2)
     assert rec["id"].lower() == "pdb:1bg2" and rec["source"] == "pdb"

@@ -267,12 +267,11 @@ SOURCES: tuple[SourceSpec, ...] = (
         layer="archives",
         kinds=("dataset",),
         filters_supported=("query", "size", "cursor"),
-        auth_required=True,
-        rate_limit="api.data.gov key; DEMO_KEY fallback ~30/hour per IP",
-        status="live (US government open-data catalog; CKAN via the GSA Catalog API)",
+        rate_limit="keyless catalog API by default; with DATA_GOV_API_KEY, the api.data.gov gateway (1,000/hour per key)",
+        status="live (US government open-data catalog; DCAT-US Catalog API, cursor-paged; search total is a lower bound - the API reports no hit count)",
         fetchable="per-dataset",
         operable=False,
-        fetchable_notes="CKAN resources fetched by direct URL (unverified - no reliable upstream checksum); metadata-only packages are discovery-only. Needs an api.data.gov key via DATA_GOV_API_KEY (else the rate-limited DEMO_KEY).",
+        fetchable_notes="DCAT distributions fetched by direct URL (downloadURL, else accessURL; unverified - no upstream checksum); datasets without a distribution URL are discovery-only.",
         id_example="datagov:civil-rights-data-collection-crdc",
         description="data.gov - the US government open-data catalog (climate, agriculture, economic, civic & scientific datasets); non-biological breadth beyond the omics core.",
     ),
@@ -318,6 +317,9 @@ SOURCES: tuple[SourceSpec, ...] = (
     _spec(
         "dandi",
         dandi,
+        # Live probe 2026-09-27: "mouse" 325 hits, the neutral expansion
+        # (mouse) AND ("mouse" OR "mouse") 0 — any organism/ontology param zeroed DANDI.
+        boolean_query=False,
         layer="omics",
         kinds=("dataset",),
         filters_supported=("query", "size"),
@@ -470,6 +472,9 @@ SOURCES: tuple[SourceSpec, ...] = (
     _spec(
         "gwas",
         gwas,
+        # findByDiseaseTrait is exact trait matching: the boolean expansion is no trait
+        # (live probe 2026-09-27: "Type 2 diabetes" 148 hits, expanded 0).
+        boolean_query=False,
         layer="omics",
         kinds=("study",),
         filters_supported=("query", "size"),

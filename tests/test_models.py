@@ -323,9 +323,21 @@ def test_derive_version_status() -> None:
     obs = [Link(rel="is_obsoleted_by", target_id="datacite:10.x/v3")]
     assert derive_version_status(obs) == (False, "datacite:10.x/v3")
 
-    # latest: it supersedes an older one but nothing supersedes it
-    newest = [Link(rel="is_new_version_of", target_id="datacite:10.x/v1")]
-    assert derive_version_status(newest) == (True, None)
+    # A-H1: a relation to an OLDER version or to the concept (is_new_version_of,
+    # has_version, is_version_of) says nothing about whether a NEWER version exists.
+    # Zenodo v1-of-3 carries is_new_version_of (13993787) and every Mendeley version
+    # carries is_version_of — none of these may be read as "I am the latest".
+    for rel in ("is_new_version_of", "has_version", "is_version_of", "obsoletes"):
+        assert derive_version_status([Link(rel=rel, target_id="datacite:10.x/v1")]) == (
+            None,
+            None,
+        ), rel
+    # ...while a superseded-by relation alongside them still wins (positive control)
+    mixed = [
+        Link(rel="is_version_of", target_id="datacite:10.x"),
+        Link(rel="is_previous_version_of", target_id="datacite:10.x/v2"),
+    ]
+    assert derive_version_status(mixed) == (False, "datacite:10.x/v2")
 
     # no version info at all
     assert derive_version_status([Link(rel="is_supplement_to", target_id="x")]) == (None, None)

@@ -23,6 +23,10 @@ from data_aggregator_mcp.errors import NotFoundError
 FX = pathlib.Path(__file__).parent / "fixtures"
 STUDY = json.loads((FX / "biostudies_study.json").read_text())
 SEARCH = json.loads((FX / "biostudies_search.json").read_text())
+# S-BIAD8, captured 2026-09-27: its 449 files live in two external "File List"s,
+# none inline. FILE_LISTS holds the first rows of each list, verbatim.
+FL_STUDY = json.loads((FX / "biostudies_filelist_study.json").read_text())
+FILE_LISTS = json.loads((FX / "biostudies_filelists.json").read_text())
 
 
 # --------------------------------------------------------------------------
@@ -171,6 +175,71 @@ async def test_resolve_fetches_and_normalizes() -> None:
     assert r.files
 
 
+def _filelist_server(study, lists, missing=()):
+    """The study endpoint, plus each file list at /biostudies/files/<acc>/<name>."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.host == "www.ebi.ac.uk"
+        path = request.url.path
+        if path.startswith("/biostudies/api/v1/studies/"):
+            return httpx.Response(200, json=study)
+        prefix = f"/biostudies/files/{study['accno']}/"
+        assert path.startswith(prefix), path
+        name = path[len(prefix) :]
+        if name in missing or name not in lists:
+            return httpx.Response(404)
+        return httpx.Response(200, json=lists[name])
+
+    return httpx.MockTransport(handler)
+
+
+@pytest.mark.asyncio
+async def test_resolve_expands_external_file_lists() -> None:
+    """B-H3: a study whose files sit in external "File List"s resolved with 0 files
+    (S-BIAD144: 223 public), and fetch then called it restricted. Every list is read
+    and the manifest is the union of their rows, relative directories kept."""
+    async with httpx.AsyncClient(transport=_filelist_server(FL_STUDY, FILE_LISTS)) as c:
+        r = await biostudies.resolve(c, "biostudies:S-BIAD8")
+    expected = [row["path"] for rows in FILE_LISTS.values() for row in rows]
+    assert sorted(f.name for f in r.files) == sorted(expected)
+    assert len(r.files) == len(expected) == 7
+    first = FILE_LISTS["smlm_data.json"][0]
+    f = next(x for x in r.files if x.name == first["path"])
+    assert f.size == first["size"]
+    assert f.url == f"https://www.ebi.ac.uk/biostudies/files/S-BIAD8/{first['path']}"
+    assert f.checksum is None
+
+
+@pytest.mark.asyncio
+async def test_resolve_missing_file_list_raises_not_empty(monkeypatch) -> None:
+    """A referenced list that will not load is an upstream failure naming the study and
+    the list, never an empty or partial manifest. Positive control: the same study with
+    every list present resolves in full."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    async with httpx.AsyncClient(transport=_filelist_server(FL_STUDY, FILE_LISTS)) as c:
+        assert len((await biostudies.resolve(c, "biostudies:S-BIAD8")).files) == 7
+    missing = _filelist_server(FL_STUDY, FILE_LISTS, missing={"non-smlm_data.json"})
+    async with httpx.AsyncClient(transport=missing) as c:
+        with pytest.raises(UpstreamUnavailableError, match=r"S-BIAD8.*non-smlm_data\.json"):
+            await biostudies.resolve(c, "biostudies:S-BIAD8")
+
+
+@pytest.mark.asyncio
+async def test_resolve_file_list_guard_raises(monkeypatch) -> None:
+    """More file lists than _MAX_FILE_LISTS raises before any is read. Positive control:
+    a count at the guard is read in full."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    monkeypatch.setattr(biostudies, "_MAX_FILE_LISTS", 2)
+    async with httpx.AsyncClient(transport=_filelist_server(FL_STUDY, FILE_LISTS)) as c:
+        assert len((await biostudies.resolve(c, "biostudies:S-BIAD8")).files) == 7
+    monkeypatch.setattr(biostudies, "_MAX_FILE_LISTS", 1)
+    async with httpx.AsyncClient(transport=_filelist_server(FL_STUDY, FILE_LISTS)) as c:
+        with pytest.raises(UpstreamUnavailableError, match=r"BioStudies.*S-BIAD8.*2 file lists"):
+            await biostudies.resolve(c, "biostudies:S-BIAD8")
+
+
 @pytest.mark.asyncio
 async def test_resolve_missing_study_raises_notfound() -> None:
     async with httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(404))) as c:
@@ -243,6 +312,18 @@ async def test_live_search_then_resolve() -> None:
         full = await biostudies.resolve(c, recs[0].id)
         assert full.id == recs[0].id
         assert full.title
+
+
+@_live_only
+@pytest.mark.asyncio
+@pytest.mark.parametrize("acc", ["S-BIAD144", "S-BIAD8", "E-GEOD-30436"])
+async def test_live_file_count_matches_info_endpoint(acc: str) -> None:
+    """Cross-check against BioStudies' own count (/studies/<acc>/info "files"):
+    S-BIAD144 (1 external list, 223), S-BIAD8 (2 lists, 449), E-GEOD-30436 (inline, 50)."""
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        r = await biostudies.resolve(c, f"biostudies:{acc}")
+        info = (await c.get(f"https://www.ebi.ac.uk/biostudies/api/v1/studies/{acc}/info")).json()
+    assert len(r.files) == len({f.name for f in r.files}) == info["files"]
 
 
 @_live_only

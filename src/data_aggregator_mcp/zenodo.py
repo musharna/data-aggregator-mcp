@@ -7,7 +7,10 @@ exercises the full search → resolve → fetch loop.
 
 from __future__ import annotations
 
+import logging
+import re
 from typing import Any
+from urllib.parse import urljoin
 
 import httpx
 
@@ -28,7 +31,11 @@ from data_aggregator_mcp.models import (
     normalize_access,
 )
 
+logger = logging.getLogger(__name__)
+
 BASE_URL = "https://zenodo.org"
+# Location of the /versions/latest redirect: the latest record's API url.
+_RECORD_URL_RE = re.compile(r"^https://zenodo\.org/api/records/(\d+)$")
 PREFIXES = frozenset({"zenodo"})  # bare-numeric ids also route here (see router.resolve)
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 3
@@ -47,6 +54,19 @@ _KIND_MAP = {
     "publication": "publication",
     "software": "software",
 }
+
+
+def _is_last_version(meta: dict[str, Any]) -> bool | None:
+    """Zenodo's authoritative version-currency flag: ``metadata.relations.version[0].is_last``
+    (Zenodo knows the whole version set of the concept). None when the record carries no
+    version graph. The id of the newer version is NOT in the record (only a
+    ``links.latest`` redirect) — resolve() follows that redirect for a non-latest record
+    (``_latest_version_id``); search never does."""
+    versions = (meta.get("relations") or {}).get("version") or []
+    if not versions or not isinstance(versions[0], dict):
+        return None
+    is_last = versions[0].get("is_last")
+    return is_last if isinstance(is_last, bool) else None
 
 
 def _normalize(record: dict[str, Any]) -> DataResource:
@@ -102,6 +122,7 @@ def _normalize(record: dict[str, Any]) -> DataResource:
         ],
         files=files,
         metrics=metrics,
+        is_latest=_is_last_version(meta),
     )
 
 
@@ -142,12 +163,53 @@ async def search(
     return total, [compact(_normalize(r)) for r in sliced]
 
 
+async def _latest_version_id(client: httpx.AsyncClient, rid: str) -> str | None:
+    """``zenodo:<id>`` of the latest version of ``rid``'s concept, read from the 301
+    Location of ``HEAD /api/records/{rid}/versions/latest`` (the redirect is not
+    followed). Enrichment: any failure or unexpected answer logs and returns None —
+    superseded_by stays unknown, the resolve still succeeds."""
+    url = f"{BASE_URL}/api/records/{rid}/versions/latest"
+    try:
+        resp = await _http.request_with_retry(
+            client,
+            "HEAD",
+            url,
+            service="Zenodo latest version",
+            timeout=DEFAULT_TIMEOUT,
+            max_retries=2,
+            follow_redirects=False,
+        )
+        location = resp.headers.get("location") if resp.is_redirect else None
+        m = _RECORD_URL_RE.match(urljoin(url, location)) if location else None
+        if m is None:
+            logger.warning(
+                "zenodo latest-version lookup for %s: HTTP %s, Location %r — no record id",
+                rid,
+                resp.status_code,
+                location,
+            )
+            return None
+        return None if m.group(1) == rid else f"zenodo:{m.group(1)}"
+    except Exception as exc:  # noqa: BLE001 — enrichment: never sink a valid resolve
+        logger.warning("zenodo latest-version lookup failed for %s: %r", rid, exc)
+        return None
+
+
+async def _with_superseded_by(client: httpx.AsyncClient, rid: str, r: DataResource) -> DataResource:
+    """Resolve-only: a record Zenodo says is NOT the last version gets superseded_by from
+    one HEAD. Latest / unversioned records make no extra call."""
+    if r.is_latest is not False:
+        return r
+    newer = await _latest_version_id(client, rid)
+    return r.model_copy(update={"superseded_by": newer}) if newer else r
+
+
 async def resolve(client: httpx.AsyncClient, record_id: str) -> DataResource:
     """Resolve a Zenodo record by id (``zenodo:123`` or bare ``123``)."""
     rid = local_id(record_id, "zenodo")
     cached = _SEARCH_CACHE.get(f"zenodo:{rid}")
     if cached is not MISS:  # seeded by a recent search — full record already in hand
-        return _normalize(cached)
+        return await _with_superseded_by(client, rid, _normalize(cached))
     try:
         record = await _http.request_json(
             client,
@@ -160,4 +222,4 @@ async def resolve(client: httpx.AsyncClient, record_id: str) -> DataResource:
         )
     except NotFoundError:
         raise NotFoundError(f"Zenodo has no record id={rid!r}") from None
-    return _normalize(record)
+    return await _with_superseded_by(client, rid, _normalize(record))
