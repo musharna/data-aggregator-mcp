@@ -1,0 +1,419 @@
+{
+  "smlm_data.json": [
+    {
+      "path": "Library/Counting Fig 4/Yeast Counting/Nic96C/Yeast_mMaple_Nic96C-Counting_171011_all_sml.csv",
+      "size": 35582619,
+      "attributes": [
+        {
+          "name": "Characteristics [Organism]",
+          "value": "Saccharomyces cerevisiae"
+        },
+        {
+          "name": "Term Source 1 REF",
+          "value": "4932"
+        },
+        {
+          "name": "Characteristics [Cell Line]",
+          "value": "NA"
+        },
+        {
+          "name": "Assay Name",
+          "value": "Yeast SMLM counting"
+        },
+        {
+          "name": "Experimental Condition [tagged protein]",
+          "value": "Nic96"
+        },
+        {
+          "name": "Experimental Condition [labelling]",
+          "value": "C-terminal mMaple"
+        },
+        {
+          "name": "Experimental Condition [buffer]",
+          "value": "50 mM Tris in D2O"
+        },
+        {
+          "name": "Experimental Condition [specimen status]",
+          "value": "fixed"
+        },
+        {
+          "name": "Dataset Name",
+          "value": "Yeast SMLM counting Nic96C"
+        },
+        {
+          "name": "Image File",
+          "value": "Yeast_mMaple_Nic96C-Counting_171011_all_sml.csv"
+        },
+        {
+          "name": "Comment [Image File Comments]",
+          "value": "Fig4m"
+        },
+        {
+          "name": "Comment [Image File Type]",
+          "value": "derived"
+        },
+        {
+          "name": "Channels",
+          "value": "layer1:Nic96-mMaple"
+        }
+      ],
+      "type": "file"
+    },
+    {
+      "path": "Library/Counting Fig 4/Yeast Counting/Nic96C/Yeast_mMaple_Nic96C-Counting_171011_all_sml.mat",
+      "size": 262479341,
+      "attributes": [
+        {
+          "name": "Characteristics [Organism]",
+          "value": "Saccharomyces cerevisiae"
+        },
+        {
+          "name": "Term Source 1 REF",
+          "value": "4932"
+        },
+        {
+          "name": "Characteristics [Cell Line]",
+          "value": "NA"
+        },
+        {
+          "name": "Assay Name",
+          "value": "Yeast SMLM counting"
+        },
+        {
+          "name": "Experimental Condition [tagged protein]",
+          "value": "Nic96"
+        },
+        {
+          "name": "Experimental Condition [labelling]",
+          "value": "C-terminal mMaple"
+        },
+        {
+          "name": "Experimental Condition [buffer]",
+          "value": "50 mM Tris in D2O"
+        },
+        {
+          "name": "Experimental Condition [specimen status]",
+          "value": "fixed"
+        },
+        {
+          "name": "Dataset Name",
+          "value": "Yeast SMLM counting Nic96C"
+        },
+        {
+          "name": "Image File",
+          "value": "Yeast_mMaple_Nic96C-Counting_171011_all_sml.mat"
+        },
+        {
+          "name": "Comment [Image File Comments]",
+          "value": "Fig4m"
+        },
+        {
+          "name": "Comment [Image File Type]",
+          "value": "derived"
+        },
+        {
+          "name": "Channels",
+          "value": "layer1:Nic96-mMaple"
+        }
+      ],
+      "type": "file"
+    },
+    {
+      "path": "Library/Counting Fig 4/Yeast Counting/Nic96C/Yeast_mMaple_Nic96C-Counting_171125_all_sml.csv",
+      "size": 63450730,
+      "attributes": [
+        {
+          "name": "Characteristics [Organism]",
+          "value": "Saccharomyces cerevisiae"
+        },
+        {
+          "name": "Term Source 1 REF",
+          "value": "4932"
+        },
+        {
+          "name": "Characteristics [Cell Line]",
+          "value": "NA"
+        },
+        {
+          "name": "Assay Name",
+          "value": "Yeast SMLM counting"
+        },
+        {
+          "name": "Experimental Condition [tagged protein]",
+          "value": "Nic96"
+        },
+        {
+          "name": "Experimental Condition [labelling]",
+          "value": "C-terminal mMaple"
+        },
+        {
+          "name": "Experimental Condition [buffer]",
+          "value": "50 mM Tris in D2O"
+        },
+        {
+          "name": "Experimental Condition [specimen status]",
+          "value": "fixed"
+        },
+        {
+          "name": "Dataset Name",
+          "value": "Yeast SMLM counting Nic96C"
+        },
+        {
+          "name": "Image File",
+          "value": "Yeast_mMaple_Nic96C-Counting_171125_all_sml.csv"
+        },
+        {
+          "name": "Comment [Image File Comments]",
+          "value": "Fig4m"
+        },
+        {
+          "name": "Comment [Image File Type]",
+          "value": "derived"
+        },
+        {
+          "name": "Channels",
+          "value": "layer1:Nic96-mMaple"
+        }
+      ],
+      "type": "file"
+    },
+    {
+      "path": "Library/Counting Fig 4/Yeast Counting/Nic96C/Yeast_mMaple_Nic96C-Counting_171125_all_sml.mat",
+      "size": 324263128,
+      "attributes": [
+        {
+          "name": "Characteristics [Organism]",
+          "value": "Saccharomyces cerevisiae"
+        },
+        {
+          "name": "Term Source 1 REF",
+          "value": "4932"
+        },
+        {
+          "name": "Characteristics [Cell Line]",
+          "value": "NA"
+        },
+        {
+          "name": "Assay Name",
+          "value": "Yeast SMLM counting"
+        },
+        {
+          "name": "Experimental Condition [tagged protein]",
+          "value": "Nic96"
+        },
+        {
+          "name": "Experimental Condition [labelling]",
+          "value": "C-terminal mMaple"
+        },
+        {
+          "name": "Experimental Condition [buffer]",
+          "value": "50 mM Tris in D2O"
+        },
+        {
+          "name": "Experimental Condition [specimen status]",
+          "value": "fixed"
+        },
+        {
+          "name": "Dataset Name",
+          "value": "Yeast SMLM counting Nic96C"
+        },
+        {
+          "name": "Image File",
+          "value": "Yeast_mMaple_Nic96C-Counting_171125_all_sml.mat"
+        },
+        {
+          "name": "Comment [Image File Comments]",
+          "value": "Fig4m"
+        },
+        {
+          "name": "Comment [Image File Type]",
+          "value": "derived"
+        },
+        {
+          "name": "Channels",
+          "value": "layer1:Nic96-mMaple"
+        }
+      ],
+      "type": "file"
+    }
+  ],
+  "non-smlm_data.json": [
+    {
+      "path": "Library/Counting Fig 4/Confocal Counting/107GFP/GFP_Nup107-countingConfocal_181004_1.tif",
+      "size": 2149596,
+      "attributes": [
+        {
+          "name": "Characteristics [Organism]",
+          "value": "Homo sapiens"
+        },
+        {
+          "name": "Term Source 1 REF",
+          "value": "9606"
+        },
+        {
+          "name": "Characteristics [Cell Line]",
+          "value": "HeLaK"
+        },
+        {
+          "name": "Assay Name",
+          "value": "Confocal counting"
+        },
+        {
+          "name": "Experimental Condition [tagged protein]",
+          "value": "Nup107"
+        },
+        {
+          "name": "Experimental Condition [labelling]",
+          "value": "mEGFP"
+        },
+        {
+          "name": "Experimental Condition [buffer]",
+          "value": "PBS"
+        },
+        {
+          "name": "Experimental Condition [specimen status]",
+          "value": "fixed"
+        },
+        {
+          "name": "Dataset Name",
+          "value": "Confocal counting reference Nup107"
+        },
+        {
+          "name": "Image File",
+          "value": "GFP_Nup107-countingConfocal_181004_1.tif"
+        },
+        {
+          "name": "Comment [Image File Comments]",
+          "value": "Fig4d"
+        },
+        {
+          "name": "Comment [Image File Type]",
+          "value": "derived"
+        },
+        {
+          "name": "Channels",
+          "value": "layer1:Nup107-mEGFP"
+        }
+      ],
+      "type": "file"
+    },
+    {
+      "path": "Library/Counting Fig 4/Confocal Counting/107GFP/GFP_Nup107-countingConfocal_181004_2.tif",
+      "size": 2149546,
+      "attributes": [
+        {
+          "name": "Characteristics [Organism]",
+          "value": "Homo sapiens"
+        },
+        {
+          "name": "Term Source 1 REF",
+          "value": "9606"
+        },
+        {
+          "name": "Characteristics [Cell Line]",
+          "value": "HeLaK"
+        },
+        {
+          "name": "Assay Name",
+          "value": "Confocal counting"
+        },
+        {
+          "name": "Experimental Condition [tagged protein]",
+          "value": "Nup107"
+        },
+        {
+          "name": "Experimental Condition [labelling]",
+          "value": "mEGFP"
+        },
+        {
+          "name": "Experimental Condition [buffer]",
+          "value": "PBS"
+        },
+        {
+          "name": "Experimental Condition [specimen status]",
+          "value": "fixed"
+        },
+        {
+          "name": "Dataset Name",
+          "value": "Confocal counting reference Nup107"
+        },
+        {
+          "name": "Image File",
+          "value": "GFP_Nup107-countingConfocal_181004_2.tif"
+        },
+        {
+          "name": "Comment [Image File Comments]",
+          "value": "Fig4d"
+        },
+        {
+          "name": "Comment [Image File Type]",
+          "value": "derived"
+        },
+        {
+          "name": "Channels",
+          "value": "layer1:Nup107-mEGFP"
+        }
+      ],
+      "type": "file"
+    },
+    {
+      "path": "Library/Counting Fig 4/Confocal Counting/107GFP/GFP_Nup107-countingConfocal_181004_3.tif",
+      "size": 1624936,
+      "attributes": [
+        {
+          "name": "Characteristics [Organism]",
+          "value": "Homo sapiens"
+        },
+        {
+          "name": "Term Source 1 REF",
+          "value": "9606"
+        },
+        {
+          "name": "Characteristics [Cell Line]",
+          "value": "HeLaK"
+        },
+        {
+          "name": "Assay Name",
+          "value": "Confocal counting"
+        },
+        {
+          "name": "Experimental Condition [tagged protein]",
+          "value": "Nup107"
+        },
+        {
+          "name": "Experimental Condition [labelling]",
+          "value": "mEGFP"
+        },
+        {
+          "name": "Experimental Condition [buffer]",
+          "value": "PBS"
+        },
+        {
+          "name": "Experimental Condition [specimen status]",
+          "value": "fixed"
+        },
+        {
+          "name": "Dataset Name",
+          "value": "Confocal counting reference Nup107"
+        },
+        {
+          "name": "Image File",
+          "value": "GFP_Nup107-countingConfocal_181004_3.tif"
+        },
+        {
+          "name": "Comment [Image File Comments]",
+          "value": "Fig4d"
+        },
+        {
+          "name": "Comment [Image File Type]",
+          "value": "derived"
+        },
+        {
+          "name": "Channels",
+          "value": "layer1:Nup107-mEGFP"
+        }
+      ],
+      "type": "file"
+    }
+  ]
+}
