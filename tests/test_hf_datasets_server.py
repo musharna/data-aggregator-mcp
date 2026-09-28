@@ -95,7 +95,7 @@ def test_converted_parquet_file_advertises_operate_modes():
             source="hf-datasets-server",
         )
     ]
-    assert derive_access_modes(files, operate=True) == [
+    assert derive_access_modes(files, operate=True, fetchable=True) == [
         "fetch",
         "schema",
         "preview",

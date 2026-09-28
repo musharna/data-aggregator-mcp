@@ -1731,6 +1731,45 @@ async def test_resolve_sets_access_modes(monkeypatch) -> None:
     assert "sql" in out.access_modes and "fetch" in out.access_modes
 
 
+@pytest.mark.asyncio
+async def test_access_modes_are_empty_for_a_record_fetch_refuses(monkeypatch) -> None:
+    """A-M4 (audit 2026-09-27): access_modes said fetch/sql whenever a file had a URL,
+    while fetch refused the record by a separate gate — a Dryad CSV record (bot-challenge
+    gated, 403 live) and a NASA CMR granule (no fetch backend) advertised modes that
+    always fail. access_modes now asks the fetch gate itself."""
+    from data_aggregator_mcp import operate
+    from data_aggregator_mcp.models import FileEntry
+
+    csv = [FileEntry(name="d.csv", url="https://h/d.csv")]
+
+    def fake(res):
+        async def _resolve(client, rid):
+            return res
+
+        return _resolve
+
+    dryad = DataResource(
+        id="datacite:10.5061/dryad.am4", source="dryad", kind="dataset", title="t", files=csv
+    )
+    cmr = DataResource(id="nasacmr:G1-AM4", source="nasacmr", kind="dataset", title="t", files=csv)
+    ok = DataResource(id="zenodo:9904", source="zenodo", kind="dataset", title="t", files=csv)
+    monkeypatch.setattr(router.datacite, "resolve", fake(dryad))
+    monkeypatch.setattr(router._ADAPTERS["nasacmr"], "resolve", fake(cmr))
+    monkeypatch.setattr(router.zenodo, "resolve", fake(ok))
+    monkeypatch.setattr(operate, "OPERATE_AVAILABLE", True)
+    async with httpx.AsyncClient() as c:
+        got = {
+            rid: (await router.resolve(c, rid)).access_modes
+            for rid in ("datacite:10.5061/dryad.am4", "nasacmr:G1-AM4", "zenodo:9904")
+        }
+    assert got == {
+        "datacite:10.5061/dryad.am4": [],
+        "nasacmr:G1-AM4": [],
+        # Positive control: a record fetch streams keeps every mode.
+        "zenodo:9904": ["fetch", "schema", "preview", "head", "sql"],
+    }
+
+
 # ---------------------------------------------------------------------------
 # A2.P1: search(understand=true) LLM NL→structured-query rewriting
 # ---------------------------------------------------------------------------

@@ -35,6 +35,7 @@ from data_aggregator_mcp import (
     _ontology,
     datacite,
     embeddings,
+    fetch_gate,
     operate,
     sources,
     taxonomy,
@@ -950,7 +951,11 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         )
     resource = resource.model_copy(
         update={
-            "access_modes": derive_access_modes(resource.files, operate=operate.OPERATE_AVAILABLE)
+            "access_modes": derive_access_modes(
+                resource.files,
+                operate=operate.OPERATE_AVAILABLE,
+                fetchable=fetch_gate.refusal(resource) is None,
+            )
         }
     )
     _RESOLVE_CACHE.set(rid, resource)

@@ -350,19 +350,39 @@ def test_access_modes_defaults_empty():
 
 def test_derive_access_modes_tabular_with_extra():
     files = [FileEntry(name="data.parquet", url="https://h/data.parquet")]
-    assert derive_access_modes(files, operate=True) == ["fetch", "schema", "preview", "head", "sql"]
+    assert derive_access_modes(files, operate=True, fetchable=True) == [
+        "fetch",
+        "schema",
+        "preview",
+        "head",
+        "sql",
+    ]
 
 
 def test_derive_access_modes_tabular_without_extra_is_fetch_only():
     files = [FileEntry(name="data.parquet", url="https://h/data.parquet")]
-    assert derive_access_modes(files, operate=False) == ["fetch"]
+    assert derive_access_modes(files, operate=False, fetchable=True) == ["fetch"]
 
 
 def test_derive_access_modes_non_tabular_is_fetch_only():
     files = [FileEntry(name="img.png", url="https://h/img.png")]
-    assert derive_access_modes(files, operate=True) == ["fetch"]
+    assert derive_access_modes(files, operate=True, fetchable=True) == ["fetch"]
 
 
 def test_derive_access_modes_no_url_is_empty():
     files = [FileEntry(name="data.parquet", url=None)]
-    assert derive_access_modes(files, operate=True) == []
+    assert derive_access_modes(files, operate=True, fetchable=True) == []
+
+
+def test_derive_access_modes_is_empty_when_fetch_refuses_the_record():
+    """A-M4: a tabular file with a URL on a record the fetch gate refuses advertises
+    nothing — every mode would fail. Positive control: the same files, fetchable."""
+    files = [FileEntry(name="d.csv", url="https://h/d.csv")]
+    assert derive_access_modes(files, operate=True, fetchable=False) == []
+    assert derive_access_modes(files, operate=True, fetchable=True) == [
+        "fetch",
+        "schema",
+        "preview",
+        "head",
+        "sql",
+    ]
