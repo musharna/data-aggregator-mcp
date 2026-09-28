@@ -1445,9 +1445,13 @@ def _pres(rid, *, doi=None, year=2020, kind="dataset", source="zenodo"):
 
 
 def _mock_adapter(monkeypatch, name, pages):
-    """pages: dict offset -> (total, [DataResource]). search() looks up by offset."""
+    """pages: dict offset -> (total, [DataResource]). search() looks up by offset.
 
-    async def search(client, query, *, size, offset=0):
+    A pushdown adapter (zenodo, datacite) is sent ``filters=``; the mock accepts and
+    IGNORES it, i.e. plays an upstream that returns records the filter should have
+    excluded — so the router's post-filter, the correctness net, is what these tests pin."""
+
+    async def search(client, query, *, size, offset=0, filters=None):
         return pages.get(offset, (0, []))
 
     adapter = router._ADAPTERS[name]
@@ -1971,7 +1975,7 @@ async def test_understand_year_applied_kind_echo_only_when_caller_none(monkeypat
         ParsedRewrite(keyword_core="genomes", kind="dataset", year_min=2018, year_max=2022),
     )
 
-    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+    async def fake_zenodo_search(client, query, *, size=10, offset=0, filters=None):
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
