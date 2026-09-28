@@ -240,7 +240,8 @@ dropped.
 - `sources` — restrict the fan-out, e.g. `["omics"]`.
 - `size` — max results (1–50).
 - `kind` — keep only `dataset` / `sequencing_run` / `study` / `publication` /
-  `software`.
+  `software`. A record whose upstream type none of these covers (a Zenodo image, a
+  DataCite `Audiovisual`, an untyped record) is kind `other` and matches no filter.
 - `published_after` / `published_before` — filter by publication year.
 - `rank` — `relevance` (default) or `semantic` (re-rank the fetched page by
   embedding similarity to the query; needs `EMBEDDING_API_BASE`, degrades to
