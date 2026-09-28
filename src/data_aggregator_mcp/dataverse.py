@@ -72,12 +72,14 @@ async def files(
         if fid is None:
             continue
         md5 = df.get("md5")
-        out.append(
-            FileEntry(
-                name=df.get("filename") or f.get("label") or "",
-                size=df.get("filesize"),
-                url=f"{base}/api/access/datafile/{fid}",
-                checksum=f"md5:{md5}" if md5 else None,
-            )
-        )
+        url = f"{base}/api/access/datafile/{fid}"
+        if df.get("originalFileName"):
+            # Ingested tabular file: Dataverse serves a derived .tab by default, but the
+            # md5 it publishes is the ORIGINAL upload's. List the original so name, size,
+            # url and md5 all describe the same bytes.
+            name, size = df["originalFileName"], df.get("originalFileSize")
+            url += "?format=original"
+        else:
+            name, size = df.get("filename") or f.get("label") or "", df.get("filesize")
+        out.append(FileEntry(name=name, size=size, url=url, checksum=f"md5:{md5}" if md5 else None))
     return out

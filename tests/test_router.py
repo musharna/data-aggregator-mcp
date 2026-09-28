@@ -509,7 +509,7 @@ async def test_resolve_routes_omics_prefixes(httpx_mock: HTTPXMock, monkeypatch)
     router._RESOLVE_CACHE.clear()
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]&retmax=1&retmode=json",
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]+AND+gse[ETYP]&retmax=20&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["1"]}},
     )
     httpx_mock.add_response(
@@ -1258,7 +1258,7 @@ async def test_resolve_enriches_with_taxon(httpx_mock: HTTPXMock, monkeypatch) -
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=_plant_info()))
     httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]&retmax=1&retmode=json",
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]+AND+gse[ETYP]&retmax=20&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["1"]}},
     )
     httpx_mock.add_response(
@@ -1288,7 +1288,7 @@ async def test_resolve_survives_taxonomy_failure(httpx_mock: HTTPXMock, monkeypa
         taxonomy, "resolve_taxon", AsyncMock(side_effect=UpstreamUnavailableError("down"))
     )
     httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]&retmax=1&retmode=json",
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]+AND+gse[ETYP]&retmax=20&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["1"]}},
     )
     httpx_mock.add_response(

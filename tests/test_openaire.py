@@ -156,6 +156,10 @@ async def test_resolve_fetches_entity_and_attaches_scholix_links(
         },
     )
     httpx_mock.add_response(
+        url="https://doi.org/ra/10.5061/dryad.z",
+        json=[{"DOI": "10.5061/dryad.z", "RA": "DataCite"}],
+    )
+    httpx_mock.add_response(
         url='https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:"10.1101/844522"&format=json&resultType=core&pageSize=1',
         json={"resultList": {"result": [{"inEPMC": "N"}]}},
     )

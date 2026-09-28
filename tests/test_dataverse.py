@@ -84,3 +84,73 @@ async def test_live_dataverse_files_have_md5() -> None:
         files = await dataverse.files(client, "10.7910/DVN/TJCLKP")
     assert files
     assert all(f.checksum and f.checksum.startswith("md5:") for f in files)
+
+
+async def test_ingested_tabular_file_is_listed_as_the_original_its_md5_describes(
+    httpx_mock,
+) -> None:
+    """A-H3 (audit 2026-09-27, shapes captured live from 10.7910/DVN/GSRD3R): Dataverse
+    ingests an uploaded .xlsx into a derived .tab, but ``dataFile.md5`` stays the md5 of
+    the ORIGINAL upload. Listing the .tab name/size/url with the original's md5 made
+    every ingested file fail its checksum. Name, size, url and md5 must describe the
+    same bytes: the original (``?format=original``)."""
+    tab = {
+        "label": "Soil properties.tab",
+        "restricted": False,
+        "dataFile": {
+            "id": 3087285,
+            "filename": "Soil properties.tab",
+            "contentType": "text/tab-separated-values",
+            "filesize": 1123,
+            "originalFileFormat": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "originalFileSize": 19234,
+            "originalFileName": "Soil properties.xlsx",
+            "md5": "0935c3bdfa3a1048ac8dc4ca586b5c86",
+            "tabularData": True,
+        },
+    }
+    plain = {
+        "label": "Dataset Description.docx",
+        "restricted": False,
+        "dataFile": {
+            "id": 3087284,
+            "filename": "Dataset Description.docx",
+            "filesize": 20608,
+            "md5": "38f01a6a36a2e8e376c959a1e1d4b74a",
+            "tabularData": False,
+        },
+    }
+    httpx_mock.add_response(
+        url="https://dataverse.harvard.edu/api/datasets/:persistentId/?persistentId=doi:10.7910/DVN/GSRD3R",
+        json={"data": {"latestVersion": {"files": [tab, plain]}}},
+    )
+    async with httpx.AsyncClient() as client:
+        files = await dataverse.files(client, "10.7910/DVN/GSRD3R")
+    base = "https://dataverse.harvard.edu/api/access/datafile"
+    assert [(f.name, f.size, f.url, f.checksum) for f in files] == [
+        (
+            "Soil properties.xlsx",
+            19234,
+            f"{base}/3087285?format=original",
+            "md5:0935c3bdfa3a1048ac8dc4ca586b5c86",
+        ),
+        # positive control: a non-ingested file is listed exactly as before
+        (
+            "Dataset Description.docx",
+            20608,
+            f"{base}/3087284",
+            "md5:38f01a6a36a2e8e376c959a1e1d4b74a",
+        ),
+    ]
+
+
+@live_only
+async def test_live_ingested_file_md5_matches_the_bytes_at_its_url() -> None:
+    import hashlib
+
+    async with httpx.AsyncClient(follow_redirects=True, timeout=60) as client:
+        files = await dataverse.files(client, "10.7910/DVN/GSRD3R")
+        f = next(f for f in files if f.name == "Soil properties.xlsx")
+        body = (await client.get(f.url)).content
+    assert len(body) == f.size
+    assert f.checksum == f"md5:{hashlib.md5(body).hexdigest()}"  # nosec B324 - md5 is the upstream's checksum algorithm, compared not trusted

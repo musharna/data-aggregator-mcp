@@ -73,7 +73,7 @@ async def test_supplementary_files_404_returns_empty(httpx_mock) -> None:
 async def test_resolve_geo_attaches_supplementary_files(httpx_mock, monkeypatch) -> None:
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE10072[ACCN]&retmax=1&retmode=json",
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE10072[ACCN]+AND+gse[ETYP]&retmax=20&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["1"]}},
     )
     httpx_mock.add_response(
