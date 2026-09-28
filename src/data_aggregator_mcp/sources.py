@@ -318,6 +318,9 @@ SOURCES: tuple[SourceSpec, ...] = (
     _spec(
         "dandi",
         dandi,
+        # Live probe 2026-09-27: "mouse" 325 hits, the neutral expansion
+        # (mouse) AND ("mouse" OR "mouse") 0 — any organism/ontology param zeroed DANDI.
+        boolean_query=False,
         layer="omics",
         kinds=("dataset",),
         filters_supported=("query", "size"),
@@ -470,6 +473,9 @@ SOURCES: tuple[SourceSpec, ...] = (
     _spec(
         "gwas",
         gwas,
+        # findByDiseaseTrait is exact trait matching: the boolean expansion is no trait
+        # (live probe 2026-09-27: "Type 2 diabetes" 148 hits, expanded 0).
+        boolean_query=False,
         layer="omics",
         kinds=("study",),
         filters_supported=("query", "size"),

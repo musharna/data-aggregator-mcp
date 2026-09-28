@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from types import SimpleNamespace
 from typing import Any
 
@@ -199,3 +200,86 @@ def test_no_advertised_id_example_is_a_placeholder():
             prefix = part.split(":", 1)[0]
             assert prefix in routable, f"{spec.name}: {part!r} has unroutable prefix {prefix!r}"
             assert part.split(":", 1)[1].strip(), f"{spec.name}: {part!r} has an empty local id"
+
+
+# --- boolean_query: a declaration about someone else's parser, so probe it live ------
+
+# One query per registered source that has hits on its own upstream. The live probe
+# below sends it plain and inside a semantically NEUTRAL ontology-shaped expansion
+# ``(q) AND ("q" OR "q")``: a boolean parser returns hits for both, a keyword-only one
+# substring-matches the literal (0 hits) or rejects it (HTTP 4xx/5xx).
+BOOLEAN_PROBE_QUERY = {
+    "zenodo": "arabidopsis",
+    "dataone": "soil",
+    "gbif": "amphibian",
+    "datagov": "climate",
+    "cellxgene": "lung",
+    "datacite": "arabidopsis",
+    "dandi": "mouse",
+    "omics": "arabidopsis",
+    "literature": "arabidopsis",
+    "huggingface": "arabidopsis",
+    "omicsdi": "proteome",
+    "openml": "iris",
+    "pdb": "hemoglobin",
+    "uniprot": "insulin",
+    "gwas": "Type 2 diabetes",
+    "nasacmr": "sea surface temperature",
+    "biostudies": "arabidopsis",
+}
+
+
+def test_every_source_has_a_boolean_probe_query():
+    """B-H6 (audit 2026-09-27): ``boolean_query`` defaults to True, so a new source is
+    ASSUMED to parse the ontology expansion. M9 (2026-09-22) fixed four sources by hand
+    and missed gwas + dandi, which zeroed silently (148 → 0, 66 → 0) under any
+    organism/disease/tissue param. A source added without a probe query is a declaration
+    nothing checks — fail here so the live probe covers it."""
+    assert set(BOOLEAN_PROBE_QUERY) == {s.name for s in sources.SOURCES}
+
+
+def test_keyword_only_set_is_the_live_probed_set():
+    """Pinned from the live probe (2026-09-27; plain → expanded hits): cellxgene 58→0,
+    dandi 325→0, huggingface 5→0, openml 5→HTTP 500, gwas 148→0, nasacmr 4115→HTTP 400;
+    every other source kept its hits (pdb 9193→4112, omics 504008→435752 — phrase
+    matching, still parsed)."""
+    assert {
+        "cellxgene",
+        "huggingface",
+        "openml",
+        "nasacmr",
+        "gwas",
+        "dandi",
+    } == sources.KEYWORD_ONLY
+    # positive control: the boolean-capable majority still gets the expansion
+    assert {"zenodo", "datacite", "omics", "pdb", "uniprot"}.isdisjoint(sources.KEYWORD_ONLY)
+
+
+_LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
+
+
+@pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+@pytest.mark.parametrize("spec", sources.SOURCES, ids=lambda s: s.name)
+async def test_live_boolean_query_declaration_matches_the_upstream(spec) -> None:
+    import httpx
+
+    from data_aggregator_mcp import _ontology
+    from data_aggregator_mcp.errors import RateLimitError, UpstreamUnavailableError
+
+    q = BOOLEAN_PROBE_QUERY[spec.name]
+    expanded = f"({q}) AND ({_ontology.or_group([q, q])})"
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+        try:
+            total, recs = await spec.module.search(client, q, size=3)
+        except (RateLimitError, UpstreamUnavailableError) as e:
+            pytest.skip(f"{spec.name}: plain-query control unavailable, probe inconclusive: {e}")
+        assert total > 0 and recs, f"{spec.name}: probe query {q!r} has no hits — pick another"
+        try:
+            etotal, erecs = await spec.module.search(client, expanded, size=3)
+            parses = etotal > 0 and bool(erecs)
+        except UpstreamUnavailableError:  # 4xx/5xx on the boolean string = cannot parse
+            parses = False
+    assert parses == spec.boolean_query, (
+        f"{spec.name}: boolean_query={spec.boolean_query} but the expansion "
+        f"{'kept' if parses else 'lost'} its hits ({total} plain)"
+    )
