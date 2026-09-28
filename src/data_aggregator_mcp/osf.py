@@ -20,9 +20,8 @@ from data_aggregator_mcp.errors import UpstreamUnavailableError
 from data_aggregator_mcp.models import FileEntry
 
 API = "https://api.osf.io/v2"
-_PAGE_SIZE = 100  # OSF's maximum page[size]; its default of 10 multiplies requests 10x
-# Runaway guard on listing requests per node, across every folder and page: ~200k
-# files at 100 per page. Tripping it raises; a partial manifest is never returned.
+# Runaway guard on listing requests per node, across every folder and page: ~20k
+# files at OSF's 10 per page. Tripping it raises; a partial manifest is never returned.
 _MAX_REQUESTS = 2000
 
 
@@ -31,17 +30,13 @@ def _guid(doi: str) -> str | None:
     return seg[-1].lower() if len(seg) == 2 and seg[-1] else None
 
 
-def _sized(url: str) -> str:
-    return f"{url}{'&' if '?' in url else '?'}page%5Bsize%5D={_PAGE_SIZE}"
-
-
 async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
     guid = _guid(doi)
     if not guid:
         return []
     out: list[FileEntry] = []
     # (first-page url, path prefix) per folder still to list; the root has prefix "".
-    folders: deque[tuple[str, str]] = deque([(_sized(f"{API}/nodes/{guid}/files/osfstorage/"), "")])
+    folders: deque[tuple[str, str]] = deque([(f"{API}/nodes/{guid}/files/osfstorage/", "")])
     requested: set[str] = set()
     while folders:
         url: str | None
@@ -69,7 +64,7 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
                         raise UpstreamUnavailableError(
                             f"OSF files for {guid}: folder {prefix}{name!r} has no listing link"
                         )
-                    folders.append((_sized(href), f"{prefix}{name}/"))
+                    folders.append((href, f"{prefix}{name}/"))
                     continue
                 if kind != "file":
                     continue
