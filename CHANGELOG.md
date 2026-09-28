@@ -48,6 +48,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   "latest".
 - data.gov search `total` is a lower bound: the new catalog API reports no hit count.
 
+### Security
+
+- `operate` `sql`: a user query could still reach the network through the S3-family
+  (`s3://`, `s3a://`, `s3n://`, `r2://`, `gcs://`, `gs://`) and HuggingFace (`hf://`)
+  filesystems, including an arbitrary host via a per-URL `s3_endpoint` — the lockdown
+  disabled only the local and HTTP filesystems. All external access is now switched off
+  once the source is loaded, so every such read is refused.
+
 ## [0.46.1] - 2026-09-26
 
 ### Changed
