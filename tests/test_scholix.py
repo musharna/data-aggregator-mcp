@@ -21,11 +21,20 @@ def _rec(target_type: str, doi: str | None, rel: str = "IsSupplementedBy") -> di
     }
 
 
+def _ra_datacite(httpx_mock: HTTPXMock, *dois: str) -> None:
+    """doi.org RA answer registering every DOI with DataCite."""
+    httpx_mock.add_response(
+        url="https://doi.org/ra/" + ",".join(dois),
+        json=[{"DOI": d, "RA": "DataCite"} for d in dois],
+    )
+
+
 async def test_links_for_maps_dataset_target_to_datacite(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
         url=_URL,
         json={"totalLinks": 1, "result": [_rec("dataset", "10.1594/PANGAEA.1")]},
     )
+    _ra_datacite(httpx_mock, "10.1594/PANGAEA.1")
     async with httpx.AsyncClient() as client:
         links = await scholix.links_for(client, "10.5061/dryad.x")
     assert len(links) == 1
@@ -45,6 +54,7 @@ async def test_links_for_drops_literature_citation_edges(httpx_mock: HTTPXMock) 
             ],
         },
     )
+    _ra_datacite(httpx_mock, "10.5281/zenodo.9")
     async with httpx.AsyncClient() as client:
         links = await scholix.links_for(client, "10.5061/dryad.x")
     # literature (citation) dropped; software kept as datacite:
@@ -123,6 +133,52 @@ async def test_links_for_keeps_relation_direction(
     httpx_mock.add_response(
         url=_URL, json={"totalLinks": 1, "result": [_rec("dataset", "10.1/d", rel=scholix_rel)]}
     )
+    _ra_datacite(httpx_mock, "10.1/d")
     async with httpx.AsyncClient() as client:
         links = await scholix.links_for(client, "10.5061/dryad.x")
     assert [(lnk.rel, lnk.target_id) for lnk in links] == [(ours, "datacite:10.1/d")]
+
+
+async def test_links_for_keeps_only_data_targets_and_labels_by_registration_agency(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """X-H2 (audit 2026-09-27): Scholix v3 types papers ``publication`` (never the
+    ``literature`` the drop-list named), so every citation edge survived and was
+    force-labelled ``datacite:`` — the Phelipanche paper (10.3390/plants13060869) got 9
+    "data links", all Crossref journal articles. Keep dataset/software targets only, and
+    claim ``datacite:`` only for DOIs DataCite registered (doi.org RA API)."""
+    httpx_mock.add_response(
+        url=_URL,
+        json={
+            "totalLinks": 5,
+            "result": [
+                _rec("publication", "10.1186/gb-2010-11-2-r14", rel="IsRelatedTo"),
+                _rec("literature", "10.1093/nar/gky1", rel="IsRelatedTo"),
+                _rec("other", "10.1234/other.1", rel="IsRelatedTo"),
+                _rec("dataset", "10.5061/dryad.t4b8gtjgj"),
+                _rec("dataset", "10.1016/j.dib.2020.1"),  # a Crossref-registered dataset
+            ],
+        },
+    )
+    httpx_mock.add_response(
+        url="https://doi.org/ra/10.5061/dryad.t4b8gtjgj,10.1016/j.dib.2020.1",
+        json=[
+            {"DOI": "10.5061/dryad.t4b8gtjgj", "RA": "DataCite"},
+            {"DOI": "10.1016/j.dib.2020.1", "RA": "Crossref"},
+        ],
+    )
+    async with httpx.AsyncClient() as client:
+        links = await scholix.links_for(client, "10.5061/dryad.x")
+    assert [lnk.target_id for lnk in links] == [
+        "datacite:10.5061/dryad.t4b8gtjgj",  # positive control: a DataCite dataset
+        "10.1016/j.dib.2020.1",  # data, but not DataCite's: the bare DOI claims no agency
+    ]
+
+
+@live_only
+async def test_live_citation_only_paper_yields_no_data_links() -> None:
+    """X-H2 live: every ScholeXplorer edge of 10.3390/plants13060869 is a publication."""
+    async with httpx.AsyncClient() as client:
+        assert await scholix.links_for(client, "10.3390/plants13060869") == []
+        pangaea = await scholix.links_for(client, "10.1594/PANGAEA.745671")  # control
+    assert pangaea and all(lnk.target_id.startswith("datacite:") for lnk in pangaea)
