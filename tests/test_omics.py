@@ -149,7 +149,7 @@ async def test_search_fans_out_across_three_dbs(httpx_mock: HTTPXMock, monkeypat
 async def test_resolve_geo_by_accession(httpx_mock: HTTPXMock, monkeypatch) -> None:
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]&retmax=1&retmode=json",
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE1[ACCN]+AND+gse[ETYP]&retmax=20&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["1"]}},
     )
     httpx_mock.add_response(
@@ -157,7 +157,7 @@ async def test_resolve_geo_by_accession(httpx_mock: HTTPXMock, monkeypatch) -> N
         json={
             "result": {
                 "uids": ["1"],
-                "1": {"accession": "GSE1", "title": "g", "pdat": "2024/01/01"},
+                "1": {"uid": "1", "accession": "GSE1", "title": "g", "pdat": "2024/01/01"},
             }
         },
     )
@@ -170,7 +170,7 @@ async def test_resolve_geo_by_accession(httpx_mock: HTTPXMock, monkeypatch) -> N
 async def test_resolve_sra_attaches_ena_manifest(httpx_mock: HTTPXMock, monkeypatch) -> None:
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=sra&term=SRX9[ACCN]&retmax=1&retmode=json",
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=sra&term=SRX9[ACCN]&retmax=20&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["2"]}},
     )
     httpx_mock.add_response(
@@ -207,7 +207,7 @@ async def test_resolve_sra_attaches_ena_manifest(httpx_mock: HTTPXMock, monkeypa
 async def test_resolve_unknown_accession_raises(httpx_mock: HTTPXMock, monkeypatch) -> None:
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE404[ACCN]&retmax=1&retmode=json",
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=GSE404[ACCN]+AND+gse[ETYP]&retmax=20&retmode=json",
         json={"esearchresult": {"count": "0", "idlist": []}},
     )
     async with httpx.AsyncClient() as client:
@@ -227,13 +227,18 @@ async def test_resolve_bioproject_attaches_sra_links(httpx_mock: HTTPXMock, monk
     eut = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
     # 1) esearch bioproject by accession
     httpx_mock.add_response(
-        url=f"{eut}/esearch.fcgi?db=bioproject&term=PRJNA1[PRJA]&retmax=1&retmode=json",
+        url=f"{eut}/esearch.fcgi?db=bioproject&term=PRJNA1[PRJA]&retmax=20&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["111"]}},
     )
     # 2) esummary bioproject
     httpx_mock.add_response(
         url=f"{eut}/esummary.fcgi?db=bioproject&id=111&version=2.0&retmode=json",
-        json={"result": {"uids": ["111"], "111": {"project_acc": "PRJNA1", "project_title": "P"}}},
+        json={
+            "result": {
+                "uids": ["111"],
+                "111": {"uid": "111", "project_acc": "PRJNA1", "project_title": "P"},
+            }
+        },
     )
     # 3) elink bioproject -> sra
     httpx_mock.add_response(
@@ -327,7 +332,7 @@ async def test_resolve_uses_the_right_accession_field_per_prefix(monkeypatch):
             await omics.resolve(None, rid)
     assert seen == [
         ("bioproject", "PRJNA231221[PRJA]"),
-        ("gds", "GSE10072[ACCN]"),
+        ("gds", "GSE10072[ACCN] AND gse[ETYP]"),
         ("sra", "SRX079566[ACCN]"),
     ]
 
@@ -353,3 +358,90 @@ async def test_bioproject_links_are_capped_and_logged(monkeypatch, caplog):
         await omics._bioproject_sra_links(None, "231221")
     assert len(asked[0]) == omics.MAX_LINKED_RUNS
     assert "7314" in caplog.text or str(len(many)) in caplog.text
+
+
+def _stub_eutils(monkeypatch, db_docs: dict[str, list[dict]]) -> list[tuple[str, str]]:
+    """NCBI stub: esearch returns every doc's uid for ``db`` (ACCN matches related records,
+    not just the named one); esummary returns those docs in idlist order."""
+    from data_aggregator_mcp import _eutils
+
+    terms: list[tuple[str, str]] = []
+
+    async def fake_esearch(client, db, term, *, retmax, retstart=0):
+        terms.append((db, term))
+        uids = [d["uid"] for d in db_docs[db]][:retmax]
+        return len(db_docs[db]), uids
+
+    async def fake_esummary(client, db, ids):
+        by_uid = {d["uid"]: d for d in db_docs[db]}
+        return [by_uid[u] for u in ids]
+
+    async def no_files(client, arg):
+        return []
+
+    monkeypatch.setattr(_eutils, "esearch", fake_esearch)
+    monkeypatch.setattr(_eutils, "esummary", fake_esummary)
+    monkeypatch.setattr(omics.geo, "supplementary_files", no_files)
+    monkeypatch.setattr(omics.ena, "filereport", no_files)
+    return terms
+
+
+async def test_resolve_returns_the_named_accession_never_a_related_one(monkeypatch) -> None:
+    """B-H1 (audit 2026-09-27): ``GSM613466[ACCN]`` matches the GSM *and* its parent
+    GSE24974 (listed first), and ``GPL570[ACCN]`` matches ~184k series that use the
+    platform. Resolve took docs[0], so geo:GSM613466 came back as geo:GSE24974 and
+    search→resolve→fetch downloaded another record's files."""
+    gse = {"uid": "200024974", "accession": "GSE24974", "title": "series", "ftplink": ""}
+    gsm = {"uid": "300613466", "accession": "GSM613466", "title": "sample", "ftplink": ""}
+    other = {"uid": "200330848", "accession": "GSE330848", "title": "unrelated", "ftplink": ""}
+    terms = _stub_eutils(monkeypatch, {"gds": [gse, gsm]})
+    r = await omics.resolve(None, "geo:GSM613466")
+    assert r.id == "geo:GSM613466"
+    assert r.title == "sample"
+    # the query names the entry type the accession prefix denotes
+    assert terms[-1] == ("gds", "GSM613466[ACCN] AND gsm[ETYP]")
+    # positive control: the series resolves to itself, case-insensitively
+    r = await omics.resolve(None, "geo:gse24974")
+    assert r.id == "geo:GSE24974"
+    assert terms[-1] == ("gds", "gse24974[ACCN] AND gse[ETYP]")
+
+    # NCBI matched only other records (GPL570 → series on the platform): fail loud
+    _stub_eutils(monkeypatch, {"gds": [other]})
+    with pytest.raises(NotFoundError, match="GPL570"):
+        await omics.resolve(None, "geo:GPL570")
+
+
+async def test_resolve_sra_study_or_run_is_not_swapped_for_its_first_experiment(
+    monkeypatch,
+) -> None:
+    """B-M1, same lines as B-H1: an SRP/SRR matches its experiments; resolve returned the
+    first SRX's metadata while attaching ENA files for the whole study. A study or run
+    is not an SRA record — name the experiment(s) that carry it instead."""
+
+    def exp(uid: str, srx: str, srr: str) -> dict:
+        return {
+            "uid": uid,
+            "expxml": f'<Experiment acc="{srx}"/><Study acc="SRP1" name="s"/>',
+            "runs": f'<Run acc="{srr}"/>',
+        }
+
+    _stub_eutils(monkeypatch, {"sra": [exp("1", "SRX1", "SRR1"), exp("2", "SRX2", "SRR2")]})
+    with pytest.raises(NotFoundError, match=r"sra:SRX1.*sra:SRX2"):
+        await omics.resolve(None, "sra:SRP1")
+    with pytest.raises(NotFoundError, match=r"sra:SRX2"):
+        await omics.resolve(None, "sra:SRR2")
+    # positive control: an experiment id resolves to that experiment, not the first hit
+    r = await omics.resolve(None, "sra:SRX2")
+    assert r.id == "sra:SRX2"
+
+
+@live_only
+async def test_live_geo_sample_and_platform_resolve_to_themselves() -> None:
+    """B-H1 live: NCBI ranks the parent series first for ``GSM613466[ACCN]`` and a
+    derived platform/series for ``GPL570[ACCN]`` — the resolved id must be the input."""
+    async with httpx.AsyncClient() as client:
+        for rid in ("geo:GSM613466", "geo:GPL570", "geo:GDS4879", "geo:GSE24974"):
+            r = await omics.resolve(client, rid)
+            assert r.id == rid
+        with pytest.raises(NotFoundError, match="sra:SRX"):
+            await omics.resolve(client, "sra:SRR292241")  # a run of SRX079566
