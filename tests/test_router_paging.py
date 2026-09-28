@@ -201,6 +201,60 @@ async def test_multi_query_walk_returns_every_record_once(monkeypatch) -> None:
     assert set(ids) == {r.id for v in held.values() for r in v}
 
 
+# --- A-M6: a pushed-down stream and a post-filtered stream in one walk -----------------
+
+
+async def test_walk_mixing_pushed_down_and_post_filtered_streams(monkeypatch) -> None:
+    """zenodo evaluates the year filter upstream (its offsets index the FILTERED order);
+    dataone cannot and is post-filtered (offsets index its unfiltered order). The walk
+    must still return every in-range record of both exactly once — and zenodo's
+    mis-dated record, which its upstream wrongly returns, never."""
+    lo, hi = 2019, 2020
+    z = [
+        DataResource(id=f"zenodo:{i}", source="zenodo", kind="dataset", title="z", year=y)
+        for i, y in enumerate([2019, 2001, 2020, 2019, 2030, 2020, 2019, 2012])
+    ]
+    d = [
+        DataResource(id=f"dataone:{i}", source="dataone", kind="dataset", title="d", year=y)
+        for i, y in enumerate([2001, 2019, 2002, 2003, 2020, 2004, 2019])
+    ]
+    misdated = "zenodo:4"  # 2030, but the upstream returns it for [2019, 2020]
+    seen: list = []
+
+    def pushable(filters, /):
+        return {k: v for k, v in filters.items() if k in ("published_after", "published_before")}
+
+    async def z_search(client, q, *, size=10, offset=0, filters=None):
+        seen.append(filters)
+        f = filters or {}
+        held = [
+            r
+            for r in z
+            if r.id == misdated
+            or f.get("published_after", 0) <= r.year <= f.get("published_before", 9999)
+        ]
+        return len(held), held[offset : offset + size]
+
+    monkeypatch.setattr(
+        router,
+        "_ADAPTERS",
+        {
+            "zenodo": types.SimpleNamespace(search=z_search, pushable=pushable, PREFIXES=()),
+            "dataone": _adapter(d),
+        },
+    )
+    ids, pages = await _walk(
+        {"query": "q", "size": 2, "published_after": lo, "published_before": hi}
+    )
+    assert seen and all(f == {"published_after": lo, "published_before": hi} for f in seen)
+    assert _dupes(ids) == {}
+    expected = {r.id for r in z + d if lo <= r.year <= hi}
+    assert set(ids) == expected, (sorted(set(ids)), sorted(expected))
+    assert misdated not in ids
+    # total = zenodo's FILTERED upstream total (5 + the mis-dated one) + dataone unfiltered.
+    assert pages[0].total == 6 + len(d)
+
+
 # --- continuation must search the same (expanded) query as page 1 ----------------------
 
 

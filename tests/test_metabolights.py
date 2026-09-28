@@ -25,6 +25,8 @@ _LISTING = """<html><head><title>Index</title></head><body>
 @pytest.mark.asyncio
 async def test_files_from_ftp_listing_real_names_skip_subdirs():
     async def handler(request):
+        if request.url.path.endswith("/HASHES/metadata_sha256.json"):
+            return httpx.Response(404)  # a study that publishes no hashes
         assert request.url.path.endswith("/public/MTBLS1/")
         return httpx.Response(200, text=_LISTING)
 
@@ -43,6 +45,35 @@ async def test_files_from_ftp_listing_real_names_skip_subdirs():
     )
     assert all(f.checksum is None and f.size is None for f in files)
     assert all(f.source == "metabolights" for f in files)
+
+
+_A_SHA = "cd615abd1532ae3ba70efb35681710a6de985aef1c03a836ec2c3c824cffde7a"
+_I_SHA = "2cd04c9ff1f252d15d1638355b958363adec535acf3ba7d8f118f2514bf20d1d"
+
+
+@pytest.mark.asyncio
+async def test_files_carry_the_sha256_metabolights_publishes():
+    """B-M6 (audit 2026-09-27): every study publishes HASHES/metadata_sha256.json
+    (verified live: MTBLS1's entries equal the sha256 of the served bytes), but the
+    manifest set checksum=None, so fetch could not verify a download. A file the hash
+    list omits stays unverified rather than getting a made-up checksum."""
+    hashes = {  # s_MTBLS1.txt deliberately absent
+        "a_MTBLS1_metabolite_profiling_NMR_spectroscopy.txt": _A_SHA,
+        "i_Investigation.txt": _I_SHA,
+    }
+
+    async def handler(request):
+        if request.url.path.endswith("/MTBLS1/HASHES/metadata_sha256.json"):
+            return httpx.Response(200, json=hashes)
+        return httpx.Response(200, text=_LISTING)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        files = await metabolights.files(c, "MTBLS1")
+    assert {f.name: f.checksum for f in files} == {
+        "a_MTBLS1_metabolite_profiling_NMR_spectroscopy.txt": f"sha256:{_A_SHA}",
+        "i_Investigation.txt": f"sha256:{_I_SHA}",
+        "s_MTBLS1.txt": None,
+    }
 
 
 def test_listing_files_filters_sort_links_parent_and_dirs():
@@ -65,3 +96,16 @@ async def test_live_metabolights_files_serves():
         assert files
         head = await c.head(files[0].url)
         assert head.status_code < 400
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_metabolights_checksum_matches_the_served_bytes():
+    """B-M6 live: the attached sha256 is the hash of the bytes the listed URL serves."""
+    import hashlib
+
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        files = await metabolights.files(c, "MTBLS1")
+        inv = next(f for f in files if f.name == "i_Investigation.txt")
+        body = (await c.get(inv.url)).content
+    assert inv.checksum == f"sha256:{hashlib.sha256(body).hexdigest()}"

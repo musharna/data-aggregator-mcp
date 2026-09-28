@@ -23,6 +23,7 @@ async def test_entrypoint_serves_over_stdio() -> None:
         refused = await session.call_tool("fetch", {"id": "bioproject:PRJNA111"})
         ok = await session.call_tool("list_sources", {})
         bad_args = await session.call_tool("search", {"size": "not-an-int"})
+        unknown_arg = await session.call_tool("search", {"query": "x", "limit": 3})
     assert init.server_info.name == "data-aggregator-mcp"
     names = {t.name for t in tools.tools}
     assert names == {"search", "resolve", "fetch", "list_sources", "operate", "relate"}
@@ -34,3 +35,6 @@ async def test_entrypoint_serves_over_stdio() -> None:
     # Input validation against inputSchema was the 1.x decorator's; it is ours now.
     assert bad_args.is_error is True
     assert bad_args.content[0].text.startswith("Input validation error:")
+    # An argument the tool does not declare is refused over the wire, not dropped (X-M2).
+    assert unknown_arg.is_error is True
+    assert "'limit'" in unknown_arg.content[0].text

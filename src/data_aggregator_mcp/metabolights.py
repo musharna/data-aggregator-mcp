@@ -8,7 +8,9 @@ as ``a_MTBLS1_NMR_metabolite_profiling…`` but stored as
 same mirror we download from, so its names are guaranteed to resolve.
 
 Top-level ISA-Tab metadata files only (raw data lives under the ``FILES/``
-subdir, not descended). Returned unverified — no checksum or size.
+subdir, not descended). Each carries the sha256 the study publishes in
+``HASHES/metadata_sha256.json``; a study without that file, or a file it omits,
+stays unverified. No size.
 """
 
 from __future__ import annotations
@@ -40,6 +42,23 @@ def _listing_files(html: str) -> list[str]:
     return out
 
 
+async def _published_sha256(client: httpx.AsyncClient, base: str) -> dict[str, str]:
+    """``{filename: sha256}`` from the study's ``HASHES/metadata_sha256.json``. A 404 is
+    a study that publishes none (its files stay unverified); any other failure raises —
+    the hashes sit on the same mirror as the files, so hiding it would only defer it."""
+    body = await _http.request_json(
+        client,
+        "GET",
+        base + "HASHES/metadata_sha256.json",
+        service="MetaboLights hashes",
+        timeout=DEFAULT_TIMEOUT,
+        max_retries=MAX_RETRIES,
+        not_found_returns={},
+        expect=dict,
+    )
+    return {str(k): str(v) for k, v in body.items() if isinstance(v, str) and v}
+
+
 async def files(client: httpx.AsyncClient, accession: str) -> list[FileEntry]:
     base = FTP_DIR.format(acc=accession)
     resp = await _http.request_with_retry(
@@ -50,12 +69,13 @@ async def files(client: httpx.AsyncClient, accession: str) -> list[FileEntry]:
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
     )
+    sha256 = await _published_sha256(client, base)
     return [
         FileEntry(
             name=name,
             url=base + name,
             size=None,
-            checksum=None,
+            checksum=f"sha256:{sha256[name]}" if name in sha256 else None,
             source="metabolights",
         )
         for name in _listing_files(resp.text)

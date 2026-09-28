@@ -37,6 +37,7 @@ from data_aggregator_mcp import (
     citation,
     egress,
     elicitation,
+    fetch_gate,
     operate,
     router,
     run_crate,
@@ -55,85 +56,20 @@ from data_aggregator_mcp import resources as resources_mod
 from data_aggregator_mcp import ro_crate as ro_crate_mod
 from data_aggregator_mcp import trust as trust_mod
 from data_aggregator_mcp.errors import FetchNotSupportedError, ValidationError
-from data_aggregator_mcp.models import DataResource
 
 logger = logging.getLogger(__name__)
 
-# id prefixes with a working fetch backend — derived from the central registry (which
-# also feeds router's adapter map + discovery-only set), so the gate can't drift from it.
-_FETCHABLE_SOURCES = sources.FETCHABLE_PREFIXES
-
-
-def _is_fetchable(fid: str) -> bool:
-    """True if ``fid`` has a wired fetch backend (allowlisted prefix or bare Zenodo id)."""
-    return fid.startswith(_FETCHABLE_SOURCES) or fid.isdigit()
-
-
-# DataCite ids all share the `datacite:` prefix, so fetchability is decided
-# post-resolve from the detected host repo. Dryad is manifest-only (downloads are
-# token/bot-challenge gated), so it is NOT here.
-_DATACITE_FETCHABLE = ("figshare", "dataverse", "osf", "zenodo", "openneuro")
-
-
-def _ensure_repo_fetchable(fid: str, resource: DataResource) -> None:
-    """Fail loud when a datacite: id resolves to a host repo we can't stream."""
-    if fid.startswith("datacite:") and resource.source not in _DATACITE_FETCHABLE:
-        hint = (
-            " Dryad downloads are token/bot-challenge gated." if resource.source == "dryad" else ""
-        )
-        raise FetchNotSupportedError(
-            f"'{fid}' (repo: {resource.source}) is discovery-only for fetch — its file "
-            f"manifest is available via resolve, but no adapter streams its bytes.{hint}"
-        )
-
-
-def _ensure_gbif_fetchable(fid: str, resource: DataResource) -> None:
-    """Fail loud when a gbif: id resolved to no Darwin Core Archive — a metadata-only
-    (or feed-only) dataset is discovery-only; occurrence/checklist/sampling-event
-    datasets carry a DWC_ARCHIVE and pass."""
-    if fid.startswith("gbif:") and not resource.files:
-        raise FetchNotSupportedError(
-            f"'{fid}' is discovery-only for fetch — this GBIF dataset publishes no "
-            "Darwin Core Archive (metadata-only). Resolve it for the DOI / landing page instead."
-        )
-
-
-def _ensure_datagov_fetchable(fid: str, resource: DataResource) -> None:
-    """Fail loud when a datagov: id resolved to no downloadable resource — a metadata-
-    only / link-only package is discovery-only; datasets with a downloadable distribution pass."""
-    if fid.startswith("datagov:") and not resource.files:
-        raise FetchNotSupportedError(
-            f"'{fid}' is discovery-only for fetch — this data.gov package publishes no "
-            "downloadable resource. Resolve it for the landing page / metadata instead."
-        )
-
-
-def _ensure_omicsdi_fetchable(fid: str, resource: DataResource) -> None:
-    """Fail loud when an omicsdi: id resolved to no files — its repo (MassIVE,
-    Metabolomics Workbench, GNPS, PeptideAtlas) is discovery-only this wave.
-    PRIDE/MetaboLights populate files[] at resolve and pass."""
-    if fid.startswith("omicsdi:") and not resource.files:
-        landing = next((lnk.target_id for lnk in resource.links if lnk.rel == "landing_page"), None)
-        where = f" Fetch from the source repo directly: {landing}" if landing else ""
-        raise FetchNotSupportedError(
-            f"'{fid}' is discovery-only for fetch — only PRIDE and MetaboLights records "
-            f"are streamable; this repo exposes no wired fetch backend.{where}"
-        )
-
-
-_LITERATURE_PREFIXES = ("pubmed:", "openaire:")
-
-
-def _ensure_fulltext_available(fid: str, resource: DataResource) -> None:
-    """Fail loud when a literature id has no open-access full text to fetch
-    (paywalled, or not in EuropePMC/Unpaywall) — don't return a silently empty
-    result (spec §8)."""
-    if fid.startswith(_LITERATURE_PREFIXES) and not resource.files:
-        raise FetchNotSupportedError(
-            f"no open-access full text was found for '{fid}' — it may be paywalled, absent "
-            "from EuropePMC/Unpaywall, or the lookup itself may have failed. Resolve it for "
-            "the landing page / DOI instead."
-        )
+# The fetch gate lives in fetch_gate — resolve's access_modes and operate ask it too —
+# and is re-exported here under its historical names.
+_FETCHABLE_SOURCES = fetch_gate.FETCHABLE_PREFIXES
+_is_fetchable = fetch_gate.id_has_backend
+_DATACITE_FETCHABLE = fetch_gate.DATACITE_FETCHABLE
+_LITERATURE_PREFIXES = fetch_gate.LITERATURE_PREFIXES
+_ensure_repo_fetchable = fetch_gate.ensure_repo_fetchable
+_ensure_gbif_fetchable = fetch_gate.ensure_gbif_fetchable
+_ensure_datagov_fetchable = fetch_gate.ensure_datagov_fetchable
+_ensure_omicsdi_fetchable = fetch_gate.ensure_omicsdi_fetchable
+_ensure_fulltext_available = fetch_gate.ensure_fulltext_available
 
 
 # The catalog advertised by list_sources. Defined once, per-source, in sources.py —
@@ -361,18 +297,10 @@ async def _dispatch(
                 return resource.model_dump()
             case "fetch":
                 fid = args["id"].strip()
-                if not _is_fetchable(fid):
-                    raise FetchNotSupportedError(
-                        f"'{fid}' has no wired fetch backend. Fetchable id prefixes: "
-                        f"{', '.join(_FETCHABLE_SOURCES)} (and bare Zenodo ids). "
-                        "Resolve it for the landing page / DOI instead."
-                    )
+                if not fetch_gate.id_has_backend(fid):
+                    raise FetchNotSupportedError(fetch_gate.no_backend_message(fid))
                 resource = await router.resolve(client, fid)
-                _ensure_repo_fetchable(fid, resource)
-                _ensure_fulltext_available(fid, resource)
-                _ensure_omicsdi_fetchable(fid, resource)
-                _ensure_gbif_fetchable(fid, resource)
-                _ensure_datagov_fetchable(fid, resource)
+                fetch_gate.ensure_fetchable(fid, resource)
                 # Wire MCP progress notifications when the caller supplied a
                 # progressToken (in the request meta). The notification is
                 # auxiliary telemetry: a send failure is logged and swallowed so

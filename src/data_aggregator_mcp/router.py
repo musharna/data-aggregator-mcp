@@ -33,8 +33,10 @@ from data_aggregator_mcp import (
     _cursor,
     _mirror,
     _ontology,
+    _pushdown,
     datacite,
     embeddings,
+    fetch_gate,
     operate,
     sources,
     taxonomy,
@@ -219,6 +221,9 @@ def _passes_filters(r: DataResource, f: dict[str, Any]) -> bool:
     """Apply the E2 facet filters to a normalized resource. A record with
     ``year is None`` is dropped whenever either year bound is set (cannot prove
     it satisfies the bound — fail toward exclusion).
+
+    Runs on EVERY stream, including those that pushed the filters upstream
+    (``_pushdown``): it is the correctness net for a record the upstream mis-dates.
     """
     pa, pb, kind = f.get("published_after"), f.get("published_before"), f.get("kind")
     if kind is not None and r.kind != kind:
@@ -270,6 +275,10 @@ class _Stream:
     key: str  # cursor offset key
     label: str  # errors[] key when the stream fails
     call: Callable[..., Awaitable[tuple[int, list[DataResource]]]]  # (size=, offset=)
+    source: str  # source / sub-source name, without the multi-query variant
+    # Some active filter was NOT pushed upstream: this stream's total is unfiltered and
+    # its window can be thinned by the post-filter (reported in errors["filters"]).
+    post_filtered: bool
 
 
 def _source_streams(
@@ -278,29 +287,45 @@ def _source_streams(
     *,
     expanded: str,
     plain: str,
+    filters: dict[str, Any],
+    pushdown: bool = True,
     vi: int | None = None,
 ) -> list[_Stream]:
     """One stream per adapter, or per sub-source for composite adapters (``SUBSOURCES``
     + ``search_subsource``). Keyword-only sources are sent ``plain`` (the query before
     ontology expansion), the rest ``expanded``. ``vi`` namespaces the keys for a
-    multi-query variant."""
+    multi-query variant.
+
+    An adapter implementing ``_pushdown.FilterPushdown`` is sent the active filters it
+    can evaluate upstream (unless ``pushdown`` is off: a cursor minted before pushdown
+    holds offsets into the UNFILTERED upstream order). Only the pushed subset is sent,
+    and with no active filter the call is exactly the unfiltered one."""
+    wanted = _pushdown.active(filters)
     out: list[_Stream] = []
     for name, adapter in adapters.items():
         q = plain if name in sources.KEYWORD_ONLY else expanded
         subs = getattr(adapter, "SUBSOURCES", None)
         parts: list[tuple[str, Callable[..., Awaitable[tuple[int, list[DataResource]]]]]]
+        pushed: dict[str, Any] = {}
         if subs:
             parts = [
                 (f"{name}/{sub}", functools.partial(adapter.search_subsource, client, sub, q))  # type: ignore[attr-defined]
                 for sub in subs
             ]
+        elif pushdown and wanted and isinstance(adapter, _pushdown.FilterPushdown):
+            pushed = adapter.pushable(wanted)
+            call = (
+                functools.partial(adapter.search, client, q, filters=pushed)
+                if pushed
+                else functools.partial(adapter.search, client, q)
+            )
+            parts = [(name, call)]
         else:
             parts = [(name, functools.partial(adapter.search, client, q))]
-        for skey, call in parts:
-            if vi is None:
-                out.append(_Stream(key=skey, label=skey, call=call))
-            else:
-                out.append(_Stream(key=_comp_key(vi, skey), label=f"{skey}#v{vi}", call=call))
+        residual = any(k not in pushed for k in wanted)
+        for skey, fn in parts:
+            key, label = (skey, skey) if vi is None else (_comp_key(vi, skey), f"{skey}#v{vi}")
+            out.append(_Stream(key=key, label=label, call=fn, source=skey, post_filtered=residual))
     return out
 
 
@@ -384,6 +409,7 @@ async def _fetch_page(
     handled_ids: set[str] = set()
     handled_dois: set[str] = set()
     emitted: list[DataResource] = []
+    removed: dict[str, int] = {}  # handled records the post-filter dropped, per stream key
     for key, i, r in kept:
         if len(emitted) == size:
             break
@@ -393,6 +419,8 @@ async def _fetch_page(
             handled_dois.add(r.doi.lower())
         if _passes_filters(r, filters):
             emitted.append(r)
+        else:
+            removed[key] = removed.get(key, 0) + 1
     for key, i, r in dropped:
         if r.id in handled_ids or (r.doi and r.doi.lower() in handled_dois):
             handled[key].add(i)
@@ -415,7 +443,38 @@ async def _fetch_page(
     # No record fetched from any stream => nothing can advance; a cursor would replay the
     # identical window forever (e.g. an adapter reporting total>0 but returning []).
     more = remaining and any(fetched.values())
+    if note := _filters_note(streams, removed, filters, more=more):
+        errors["filters"] = note
     return _Page(emitted, total, new_offsets, new_ahead, more)
+
+
+def _filters_note(
+    streams: list[_Stream], removed: dict[str, int], filters: dict[str, Any], *, more: bool
+) -> str | None:
+    """Advisory for streams the filters were applied to only AFTER fetch, when they
+    thinned this page. Without it an empty page next to a large ``total`` reads as
+    "nothing matches" when the matches are just further down the unfiltered order.
+    A stream that pushed every filter upstream is not named: its total is filtered."""
+    per_source: dict[str, int] = {}
+    for s in streams:
+        if s.post_filtered and removed.get(s.key):
+            per_source[s.source] = per_source.get(s.source, 0) + removed[s.key]
+    if not per_source:
+        return None
+    names = ", ".join(per_source)
+    applied = ", ".join(f"{k}={v}" for k, v in _pushdown.active(filters).items())
+    counts = ", ".join(f"{n}: {c}" for n, c in per_source.items())
+    tail = (
+        "a short or empty page does not mean no matches: next_cursor continues past the "
+        "removed records"
+        if more
+        else "this is the last page"
+    )
+    return (
+        f"filters ({applied}) could not be sent upstream to {names}, so they were applied "
+        f"after fetch and removed {sum(per_source.values())} fetched record(s) from this "
+        f"page ({counts}). `total` counts {names} UNFILTERED; {tail}"
+    )
 
 
 def _query_syntax_note(names: list[str], plain: list[str], expanded: list[str]) -> str | None:
@@ -490,6 +549,7 @@ async def _multi_query_page(
     collapse_mirrors: bool,
     errors: dict[str, str],
     query_expansion: QueryExpansion | None,
+    pushdown: bool = True,
     taxon_expansion: TaxonExpansion | None = None,
     mesh_expansion: MeshExpansion | None = None,
     tissue_expansion: TissueExpansion | None = None,
@@ -511,7 +571,15 @@ async def _multi_query_page(
     plain = raw_variants if raw_variants is not None else variants
     streams: list[_Stream] = []
     for vi in range(len(variants)):
-        streams += _source_streams(client, adapters, expanded=variants[vi], plain=plain[vi], vi=vi)
+        streams += _source_streams(
+            client,
+            adapters,
+            expanded=variants[vi],
+            plain=plain[vi],
+            filters=filters,
+            pushdown=pushdown,
+            vi=vi,
+        )
     if note := _query_syntax_note(names, list(plain), variants):
         errors["query_syntax"] = note
     # Window-rank ALWAYS for multi-query: the union has no single coherent upstream order,
@@ -540,6 +608,7 @@ async def _multi_query_page(
                 "offsets": page.offsets,
                 "ahead": page.ahead,
                 "collapse_mirrors": collapse_mirrors,
+                "pd": pushdown,
             }
         )
         if page.more
@@ -618,6 +687,7 @@ async def search_page(
                 collapse_mirrors=st.get("collapse_mirrors", False),
                 errors={},
                 query_expansion=None,  # echo is page-1 only; frozen None on continuation
+                pushdown=bool(st.get("pd")),
             )
         query = st["q"]
         sources = st.get("sources")
@@ -647,6 +717,10 @@ async def search_page(
         # the ontology restriction from page 2 on — the offsets then indexed a different,
         # wider result set. (A pre-fix cursor has no `eq`; it keeps the old behaviour.)
         effective_query = st.get("eq", query)
+        # Offsets count positions in the order the stream was searched in. A cursor
+        # minted before filter pushdown (no `pd`) indexes the UNFILTERED upstream order,
+        # so it keeps being continued without pushdown.
+        pushdown = bool(st.get("pd"))
         errors: dict[str, str] = {}
     else:
         if query is None:
@@ -808,10 +882,18 @@ async def search_page(
                 )
         offsets = {}
         ahead = {}
+        pushdown = True
 
     adapters = _select(sources)
     names = list(adapters)
-    streams = _source_streams(client, adapters, expanded=effective_query, plain=query)
+    streams = _source_streams(
+        client,
+        adapters,
+        expanded=effective_query,
+        plain=query,
+        filters=filters,
+        pushdown=pushdown,
+    )
     if note := _query_syntax_note(names, [query], [effective_query]):
         errors["query_syntax"] = note
     # rank=semantic re-ranks the fetched window against the raw `query`, not the
@@ -845,6 +927,7 @@ async def search_page(
                 "ahead": page.ahead,
                 "rank": rank,
                 "collapse_mirrors": collapse_mirrors,
+                "pd": pushdown,
             }
         )
         if page.more
@@ -943,6 +1026,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             resource = await _enrich_resource(client, resource)
         except Exception as exc:  # additive enrichment must not sink a valid resolve
             logger.warning("resolve enrichment failed for %s: %r", rid, exc)
+            resource = resource.model_copy(
+                update={"errors": {**resource.errors, "taxonomy": f"{type(exc).__name__}: {exc}"}}
+            )
     is_latest, superseded_by = derive_version_status(resource.links)
     if is_latest is not None or superseded_by is not None:
         resource = resource.model_copy(
@@ -950,10 +1036,17 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         )
     resource = resource.model_copy(
         update={
-            "access_modes": derive_access_modes(resource.files, operate=operate.OPERATE_AVAILABLE)
+            "access_modes": derive_access_modes(
+                resource.files,
+                operate=operate.OPERATE_AVAILABLE,
+                fetchable=fetch_gate.refusal(resource) is None,
+            )
         }
     )
-    _RESOLVE_CACHE.set(rid, resource)
+    # A record an enrichment step failed on is not cached: the failure is usually
+    # transient (a rate limit), and a cached copy would serve it degraded for the TTL.
+    if not resource.errors:
+        _RESOLVE_CACHE.set(rid, resource)
     return resource
 
 

@@ -7,8 +7,12 @@ import asyncio
 
 import httpx
 
-from data_aggregator_mcp import egress, router
-from data_aggregator_mcp.errors import OperateNotSupportedError, ValidationError
+from data_aggregator_mcp import egress, fetch_gate, router
+from data_aggregator_mcp.errors import (
+    FetchNotSupportedError,
+    OperateNotSupportedError,
+    ValidationError,
+)
 from data_aggregator_mcp.models import FileEntry
 
 ROW_CAP = 1000
@@ -120,6 +124,10 @@ async def run(
     from data_aggregator_mcp import duckquery, tabular
 
     resource = await router.resolve(client, resource_id)
+    # operate downloads the same bytes fetch would: a record fetch refuses (Dryad's
+    # downloads are bot-challenge gated) is refused here too, with fetch's reason.
+    if (why := fetch_gate.refusal(resource)) is not None:
+        raise FetchNotSupportedError(why)
     target = _select_file(resource.files, file)
     # _select_file only returns operable files, and _operable() requires a truthy url,
     # so target.url is guaranteed non-None here. Bind it to a local str so the narrowed

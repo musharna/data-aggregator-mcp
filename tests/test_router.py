@@ -201,6 +201,48 @@ async def test_enrich_is_concurrent_and_records_failure_without_aborting(monkeyp
     assert out[1].taxa and out[1].taxa[0].taxid == 9606  # human enriched despite boom failing first
 
 
+@pytest.mark.asyncio
+async def test_resolve_reports_a_taxonomy_failure_and_does_not_cache_it(monkeypatch) -> None:
+    """B-M2 (audit 2026-09-27): during an NCBI rate limit, resolve logged the taxonomy
+    failure server-side, returned the record without taxa as if none resolved, and cached
+    that for the TTL, so the next resolve kept serving it. The record now says which
+    enrichment failed, and a degraded resolve is not cached."""
+    from data_aggregator_mcp import taxonomy
+    from data_aggregator_mcp.errors import RateLimitError
+
+    class _Info:
+        taxid, canonical_name, is_plant = 3702, "Arabidopsis thaliana", True
+
+    ncbi_up = False
+    adapter_calls = 0
+
+    async def fake_resolve_taxon(client, name):
+        if not ncbi_up:
+            raise RateLimitError("NCBI taxonomy: 429 Too Many Requests")
+        return _Info()
+
+    async def fake_zenodo_resolve(client, rid):
+        nonlocal adapter_calls
+        adapter_calls += 1
+        return DataResource(
+            id=rid, source="zenodo", kind="dataset", title="t", organism=["Arabidopsis"]
+        )
+
+    monkeypatch.setattr(taxonomy, "resolve_taxon", fake_resolve_taxon)
+    monkeypatch.setattr(router.zenodo, "resolve", fake_zenodo_resolve)
+    router._RESOLVE_CACHE.clear()
+    async with httpx.AsyncClient() as c:
+        degraded = await router.resolve(c, "zenodo:77001")
+        ncbi_up = True
+        healed = await router.resolve(c, "zenodo:77001")
+        again = await router.resolve(c, "zenodo:77001")
+    assert degraded.taxa == [] and "429" in degraded.errors["taxonomy"]
+    # Positive control: once NCBI answers, the retry enriches (it was not served the
+    # cached degraded record), reports no error, and that complete record is cached.
+    assert [t.taxid for t in healed.taxa] == [3702] and healed.errors == {}
+    assert again == healed and adapter_calls == 2
+
+
 def test_select_unknown_source_raises() -> None:
     with pytest.raises(ValueError, match="unknown source 'bogus'"):
         router._select(["bogus"])
@@ -1403,9 +1445,13 @@ def _pres(rid, *, doi=None, year=2020, kind="dataset", source="zenodo"):
 
 
 def _mock_adapter(monkeypatch, name, pages):
-    """pages: dict offset -> (total, [DataResource]). search() looks up by offset."""
+    """pages: dict offset -> (total, [DataResource]). search() looks up by offset.
 
-    async def search(client, query, *, size, offset=0):
+    A pushdown adapter (zenodo, datacite) is sent ``filters=``; the mock accepts and
+    IGNORES it, i.e. plays an upstream that returns records the filter should have
+    excluded — so the router's post-filter, the correctness net, is what these tests pin."""
+
+    async def search(client, query, *, size, offset=0, filters=None):
         return pages.get(offset, (0, []))
 
     adapter = router._ADAPTERS[name]
@@ -1731,6 +1777,45 @@ async def test_resolve_sets_access_modes(monkeypatch) -> None:
     assert "sql" in out.access_modes and "fetch" in out.access_modes
 
 
+@pytest.mark.asyncio
+async def test_access_modes_are_empty_for_a_record_fetch_refuses(monkeypatch) -> None:
+    """A-M4 (audit 2026-09-27): access_modes said fetch/sql whenever a file had a URL,
+    while fetch refused the record by a separate gate — a Dryad CSV record (bot-challenge
+    gated, 403 live) and a NASA CMR granule (no fetch backend) advertised modes that
+    always fail. access_modes now asks the fetch gate itself."""
+    from data_aggregator_mcp import operate
+    from data_aggregator_mcp.models import FileEntry
+
+    csv = [FileEntry(name="d.csv", url="https://h/d.csv")]
+
+    def fake(res):
+        async def _resolve(client, rid):
+            return res
+
+        return _resolve
+
+    dryad = DataResource(
+        id="datacite:10.5061/dryad.am4", source="dryad", kind="dataset", title="t", files=csv
+    )
+    cmr = DataResource(id="nasacmr:G1-AM4", source="nasacmr", kind="dataset", title="t", files=csv)
+    ok = DataResource(id="zenodo:9904", source="zenodo", kind="dataset", title="t", files=csv)
+    monkeypatch.setattr(router.datacite, "resolve", fake(dryad))
+    monkeypatch.setattr(router._ADAPTERS["nasacmr"], "resolve", fake(cmr))
+    monkeypatch.setattr(router.zenodo, "resolve", fake(ok))
+    monkeypatch.setattr(operate, "OPERATE_AVAILABLE", True)
+    async with httpx.AsyncClient() as c:
+        got = {
+            rid: (await router.resolve(c, rid)).access_modes
+            for rid in ("datacite:10.5061/dryad.am4", "nasacmr:G1-AM4", "zenodo:9904")
+        }
+    assert got == {
+        "datacite:10.5061/dryad.am4": [],
+        "nasacmr:G1-AM4": [],
+        # Positive control: a record fetch streams keeps every mode.
+        "zenodo:9904": ["fetch", "schema", "preview", "head", "sql"],
+    }
+
+
 # ---------------------------------------------------------------------------
 # A2.P1: search(understand=true) LLM NL→structured-query rewriting
 # ---------------------------------------------------------------------------
@@ -1890,7 +1975,7 @@ async def test_understand_year_applied_kind_echo_only_when_caller_none(monkeypat
         ParsedRewrite(keyword_core="genomes", kind="dataset", year_min=2018, year_max=2022),
     )
 
-    async def fake_zenodo_search(client, query, *, size=10, offset=0):
+    async def fake_zenodo_search(client, query, *, size=10, offset=0, filters=None):
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)

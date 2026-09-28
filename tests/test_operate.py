@@ -316,3 +316,29 @@ async def test_tsv_ops_split_on_tabs_end_to_end(patch_resolve, tmp_path):
     assert [col["name"] for col in sch["columns"]] == ["gene", "sample", "count"]
     assert pre["rows"][1]["sample"] == "s2"
     assert head["rows"][1]["sample"] == "s2"
+
+
+@pytest.mark.asyncio
+async def test_operate_refuses_a_record_fetch_refuses(patch_resolve):
+    """A-M4 (audit 2026-09-27): operate read a file URL straight from the record, so a
+    record the fetch gate refuses (Dryad: downloads are bot-challenge gated, 403 live)
+    was advertised operable and failed with nothing but the URL as its error. operate
+    now applies the same gate as fetch, before any download."""
+    from data_aggregator_mcp.errors import FetchNotSupportedError
+
+    dryad = DataResource(
+        id="datacite:10.5061/dryad.x",
+        source="dryad",
+        kind="dataset",
+        title="t",
+        files=[FileEntry(name="sample.parquet", url=PARQUET_URL)],
+    )
+    patch_resolve(dryad)
+    async with httpx.AsyncClient() as c:
+        with pytest.raises(FetchNotSupportedError, match="discovery-only for fetch"):
+            await operate.run(c, "datacite:10.5061/dryad.x", "head", n=1)
+    # Positive control: the same file on a fetchable record still operates.
+    patch_resolve(_res([FileEntry(name="sample.parquet", url=PARQUET_URL)]))
+    async with httpx.AsyncClient() as c:
+        out = await operate.run(c, "zenodo:1", "head", n=1)
+    assert out["op"] == "head" and len(out["rows"]) == 1

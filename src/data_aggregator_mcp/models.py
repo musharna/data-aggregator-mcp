@@ -163,6 +163,9 @@ class DataResource(BaseModel):
     mirrors: list[Mirror] = Field(
         default_factory=list
     )  # same-dataset copies folded by opt-in search collapse_mirrors; empty otherwise
+    # {stage: message} for an enrichment step that failed on this record (e.g. taxonomy
+    # during an NCBI rate limit); the rest of the record is complete. Empty = none failed.
+    errors: dict[str, str] = Field(default_factory=dict)
 
 
 class TaxonExpansion(BaseModel):
@@ -426,16 +429,17 @@ def derive_version_status(links: list[Link]) -> tuple[bool | None, str | None]:
 _TABULAR_EXTS = (".parquet", ".pq", ".csv", ".tsv")
 
 
-def derive_access_modes(files: list[FileEntry], *, operate: bool) -> list[str]:
+def derive_access_modes(files: list[FileEntry], *, operate: bool, fetchable: bool) -> list[str]:
     """Best-effort Tier-1 capability claim for a resolved record.
 
-    ``fetch`` when any file has a download url; the operate modes
+    Nothing when the fetch gate refuses the record (``fetchable`` False: fetch and
+    operate would both fail); else ``fetch`` when any file has a download url; the operate modes
     (schema/preview/head/sql) when a tabular file is present AND the [operate]
     extra is installed. Format-dependent modes are *claims* — operate verifies
     them per-file and fails loud if the claim does not hold.
     """
     has_url = any(f.url for f in files)
-    if not has_url:
+    if not fetchable or not has_url:
         return []
     modes = ["fetch"]
     if operate and any((f.name or "").lower().endswith(_TABULAR_EXTS) for f in files if f.url):
