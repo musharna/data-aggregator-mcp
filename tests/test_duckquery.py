@@ -1,4 +1,5 @@
 # tests/test_duckquery.py
+import contextlib
 import pathlib
 
 import pytest
@@ -160,7 +161,7 @@ async def test_local_file_read_rejected():
     # A query reaching outside the registered view into the local FS must fail loud,
     # NOT return /etc/passwd contents. DuckDB's PermissionException is not one of our
     # typed errors, so we catch broadly but then POSITIVELY require evidence that the
-    # SET disabled_filesystems='LocalFileSystem' hardening (not just "any error") fired.
+    # SET enable_external_access=false hardening (not just "any error") fired.
     with pytest.raises(duckdb.PermissionException) as ei:
         await duckquery.run_sql(
             PARQUET_URL, "sample.parquet", "SELECT * FROM read_csv_auto('/etc/passwd')"
@@ -202,20 +203,11 @@ async def test_head_column_quote_is_escaped():
 # ---------------------------------------------------------------------------
 
 
-async def test_user_sql_cannot_reach_the_network() -> None:
-    """Disabling only LocalFileSystem left httpfs loaded, so a crafted
-    ``read_csv_auto('http://...')`` made the server GET any URL and hand the body back as
-    rows — SSRF with response exfiltration once the server is not the caller's own stdio
-    child.
-
-    The source is served over HTTP, not from a file:// fixture, because that is what
-    production allows (operate's scheme allowlist is http/https) AND because a local
-    source makes the attack fail for the unrelated reason that LocalFileSystem is
-    disabled — which would let this test pass against vulnerable code.
-
-    A real listener is used rather than a mock: the assertion that carries the weight is
-    that the secret path is NEVER requested, which a mocked transport cannot establish.
-    """
+@contextlib.contextmanager
+def _listener():
+    """A real HTTP listener on 127.0.0.1 serving ``source.csv`` (legit) and anything else
+    as a secret. Yields ``(port, hits)``; ``hits`` records every requested path, so a test
+    can assert a path was NEVER requested — which a mocked transport cannot establish."""
     import http.server
     import socket
     import threading
@@ -265,6 +257,23 @@ async def test_user_sql_cannot_reach_the_network() -> None:
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", port), _H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     try:
+        yield port, hits
+    finally:
+        srv.shutdown()
+
+
+async def test_user_sql_cannot_reach_the_network() -> None:
+    """Disabling only LocalFileSystem left httpfs loaded, so a crafted
+    ``read_csv_auto('http://...')`` made the server GET any URL and hand the body back as
+    rows — SSRF with response exfiltration once the server is not the caller's own stdio
+    child.
+
+    The source is served over HTTP, not from a file:// fixture, because that is what
+    production allows (operate's scheme allowlist is http/https) AND because a local
+    source makes the attack fail for the unrelated reason that LocalFileSystem is
+    disabled — which would let this test pass against vulnerable code.
+    """
+    with _listener() as (port, hits):
         source = f"http://127.0.0.1:{port}/source.csv"
         target = f"http://127.0.0.1:{port}/secret.csv"
         # The legitimate source still loads: it is materialized before the lockdown.
@@ -272,11 +281,52 @@ async def test_user_sql_cannot_reach_the_network() -> None:
         assert ok["rows"] == [{"col": "legit"}]
         assert any("source.csv" in h for h in hits)
         hits.clear()
-        with pytest.raises(duckdb.PermissionException) as exc:
+        with pytest.raises(duckdb.PermissionException):
             await duckquery.run_sql(
                 source, "source.csv", f"SELECT * FROM read_csv_auto('{target}')"
             )
-        assert "httpfilesystem" in str(exc.value).lower().replace(" ", "")
         assert not any("secret.csv" in h for h in hits), f"server egressed: {hits}"
-    finally:
-        srv.shutdown()
+
+
+# Every remote filesystem httpfs registers, not only HTTPFileSystem. Disabling the two
+# named filesystems left S3FileSystem (s3/s3a/s3n/r2/gcs) and HuggingFaceFileSystem
+# (hf://) live: a user SELECT read public buckets and, with a per-URL ``s3_endpoint``,
+# made the server connect to any host — the same SSRF through a different scheme.
+_REMOTE_SCHEMES = ["s3", "s3a", "s3n", "r2", "gcs", "gs"]
+
+
+@pytest.mark.parametrize("scheme", _REMOTE_SCHEMES)
+async def test_user_sql_cannot_reach_the_network_via_any_remote_filesystem(scheme) -> None:
+    with _listener() as (port, hits):
+        source = f"http://127.0.0.1:{port}/source.csv"
+        # Positive control: the legitimate source is still readable in the same run.
+        ok = await duckquery.run_sql(source, "source.csv", "SELECT * FROM data")
+        assert ok["rows"] == [{"col": "legit"}]
+        hits.clear()
+        # The S3-family endpoint is steered at our listener, so an egress is observable
+        # as a request for secret.csv rather than inferred from an error message.
+        target = (
+            f"{scheme}://bucket/secret.csv?s3_endpoint=127.0.0.1:{port}"
+            "&s3_url_style=path&s3_use_ssl=false"
+        )
+        with pytest.raises(duckdb.PermissionException):
+            await duckquery.run_sql(
+                source, "source.csv", f"SELECT * FROM read_csv_auto('{target}')"
+            )
+        assert not any("secret.csv" in h for h in hits), f"server egressed: {hits}"
+
+
+async def test_user_sql_cannot_read_huggingface_filesystem() -> None:
+    """hf:// cannot be steered at a local listener, so this asserts the refusal type:
+    on the vulnerable code the read goes to huggingface.co (rows or a network error),
+    never a PermissionException."""
+    with _listener() as (port, _hits):
+        source = f"http://127.0.0.1:{port}/source.csv"
+        ok = await duckquery.run_sql(source, "source.csv", "SELECT * FROM data")
+        assert ok["rows"] == [{"col": "legit"}]
+        with pytest.raises(duckdb.PermissionException):
+            await duckquery.run_sql(
+                source,
+                "source.csv",
+                "SELECT * FROM read_csv_auto('hf://datasets/scikit-learn/iris/Iris.csv')",
+            )
