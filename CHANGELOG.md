@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-09-28
+
 ### Fixed
 
 - `published_after` / `published_before` / `kind` filters reach Zenodo and DataCite, so
