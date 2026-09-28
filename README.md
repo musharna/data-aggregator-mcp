@@ -199,10 +199,10 @@ with `421 Invalid Host header`.
 | HuggingFace datasets         |    ✅    | ✅ (resolve URL)  |      none²       |
 | DataONE (eco/env)            |    ✅    | ✅ (Member Node)  |  md5 / sha-256   |
 | OmicsDI → PRIDE              |    ✅    |  ✅ (HTTPS FTP)   |      none²       |
-| OmicsDI → MetaboLights       |    ✅    |  ✅ (HTTPS FTP)   |      none²       |
+| OmicsDI → MetaboLights       |    ✅    |  ✅ (HTTPS FTP)   |     sha-256      |
 | OmicsDI → other MS repos     |    ✅    |         —         |        —         |
 | DataCite → OpenNeuro         |    ✅    |   ✅ (snapshot)   |      none²       |
-| DANDI (neurophysiology)      |    ✅    |    ✅ (302→S3)    |      none²       |
+| DANDI (neurophysiology)      |    ✅    |    ✅ (302→S3)    |     sha-256      |
 | CZ CELLxGENE (single-cell)   |    ✅    |   ✅ (H5AD/RDS)   |      none²       |
 | OpenML (ML datasets)         |    ✅    |     ✅ (ARFF)     |       md5        |
 | RCSB PDB (structures)        |    ✅    |  ✅ (.cif/.pdb)   |      none²       |
@@ -329,11 +329,12 @@ publishes a checksum.
   there is an HTML sniff on files declared as PDF or XML (literature full text,
   some data.gov distributions): it fails loud if the body is actually an HTML page.
 - Checksum-verified: **Zenodo**, **SRA** (ENA FASTQ), **DataONE** (Member-Node
-  objects), DataCite-hosted **Figshare** / **Dataverse** / **OSF**, and
-  **OpenML** (ARFF).
+  objects), DataCite-hosted **Figshare** / **Dataverse** / **OSF**, **OpenML**
+  (ARFF), **MetaboLights** (via OmicsDI; sha-256 from the study's `HASHES/`) and
+  **DANDI** (sha-256; an asset whose hash DANDI has not computed yet is unverified).
 - Fetchable but unverified: **GEO** `suppl/`, **HuggingFace** datasets,
-  **PRIDE** / **MetaboLights** (via OmicsDI), DataCite-hosted **OpenNeuro**,
-  **DANDI**, **CZ CELLxGENE**, **RCSB PDB**, **UniProtKB**, **BioStudies**,
+  **PRIDE** (via OmicsDI), DataCite-hosted **OpenNeuro**,
+  **CZ CELLxGENE**, **RCSB PDB**, **UniProtKB**, **BioStudies**,
   **GBIF** (Darwin Core Archives), **data.gov** distributions, and **literature**
   open-access full text.
 - **Dryad**, other DataCite repos, other OmicsDI repos (MassIVE / GNPS / ...),

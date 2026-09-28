@@ -170,6 +170,46 @@ async def test_resolve_malformed_id_raises():
             await dandi.resolve(c, "dandi:")
 
 
+_SHA = "1a765509384ea96b7b12136353d9c5b94f23d764ad0431e049197f7875eb352c"
+
+
+@pytest.mark.asyncio
+async def test_asset_manifest_carries_dandis_sha256():
+    """B-M6 (audit 2026-09-27): DANDI records a sha256 for each asset, but the manifest
+    read the bare asset list and set no checksum, so fetch could not verify a download.
+    The list returns each asset's metadata (with its digest) when asked. An asset whose
+    sha256 is not computed yet stays unverified."""
+    seen: list[httpx.URL] = []
+    assets = {
+        "count": 2,
+        "results": [
+            {
+                "asset_id": "aaa-111",
+                "path": "sub-01/sub-01_ecephys.nwb",
+                "size": 18792,
+                "metadata": {"digest": {"dandi:dandi-etag": "x-1", "dandi:sha2-256": _SHA}},
+            },
+            {
+                "asset_id": "bbb-222",
+                "path": "sub-02/sub-02_ecephys.nwb",
+                "size": 5,
+                "metadata": {"digest": {"dandi:dandi-etag": "y-1"}},
+            },
+        ],
+    }
+
+    def handler(request):
+        if request.url.path.endswith("/assets/"):
+            seen.append(request.url)
+            return httpx.Response(200, json=assets)
+        return _resolve_router(request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        r = await dandi.resolve(c, "dandi:000004")
+    assert seen and all(u.params.get("metadata") == "true" for u in seen)
+    assert [f.checksum for f in r.files] == [f"sha256:{_SHA}", None]
+
+
 def test_registered_in_router_and_server():
     from data_aggregator_mcp import router, server
 
@@ -239,3 +279,17 @@ async def test_resolve_assets_404_raises_not_empty_manifest(monkeypatch):
     async with httpx.AsyncClient(transport=httpx.MockTransport(_resolve_router)) as c:
         r = await dandi.resolve(c, "dandi:000004")  # positive control
     assert len(r.files) == 2
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_asset_checksum_matches_the_downloaded_bytes():
+    """B-M6 live: dandiset 000027's one asset (18,792 bytes) carries a sha256 equal to
+    the hash of the bytes its download URL serves (302 to S3)."""
+    import hashlib
+
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        r = await dandi.resolve(c, "dandi:000027")
+        f = r.files[0]
+        body = (await c.get(f.url)).content
+    assert f.checksum == f"sha256:{hashlib.sha256(body).hexdigest()}"

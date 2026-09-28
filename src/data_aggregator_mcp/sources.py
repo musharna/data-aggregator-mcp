@@ -327,7 +327,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         status="live (DANDI Archive search/resolve; asset-manifest fetch on resolve)",
         fetchable=True,
         operable=False,
-        fetchable_notes="Assets stream from the DANDI API (302→S3, unverified — no checksum in the listing); the manifest is capped at the first 100 assets for large dandisets.",
+        fetchable_notes="Assets stream from the DANDI API (302→S3), sha-256-verified where DANDI has computed the hash; the manifest is capped at the first 100 assets for large dandisets.",
         id_example="dandi:000004",
         description="DANDI Archive — neurophysiology dandisets (NWB); search + resolve with a per-asset download manifest.",
     ),
@@ -408,7 +408,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         rate_limit="public; courtesy only",
         status="live (proteomics/metabolomics discovery; first page only)",
         fetchable="per-repo",
-        fetchable_notes="PRIDE + MetaboLights records are fetchable (unverified - no upstream checksum); MassIVE/Metabolomics Workbench/GNPS/PeptideAtlas are discovery-only.",
+        fetchable_notes="PRIDE records are fetchable (unverified - no upstream checksum); MetaboLights records are fetchable and sha-256-verified; MassIVE/Metabolomics Workbench/GNPS/PeptideAtlas are discovery-only.",
         id_example="omicsdi:pride:PXD000001",
         # Deliberately NO default_license, for the same reason as dataone: OmicsDI is an
         # INDEX over other repositories (PRIDE, MetaboLights, MassIVE, GNPS, ...), so the

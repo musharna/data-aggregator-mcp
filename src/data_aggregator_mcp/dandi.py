@@ -111,7 +111,9 @@ async def _asset_manifest(client: httpx.AsyncClient, ident: str, version: str) -
         "GET",
         f"{API}/dandisets/{ident}/versions/{version}/assets/",
         service="DANDI assets",
-        params={"page_size": ASSET_PAGE},
+        # metadata=true returns each asset's metadata, whose digest carries the sha256
+        # DANDI computed — the bare list has none, and fetch could not verify.
+        params={"page_size": ASSET_PAGE, "metadata": "true"},
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
@@ -124,11 +126,14 @@ async def _asset_manifest(client: httpx.AsyncClient, ident: str, version: str) -
         aid = a.get("asset_id")
         if not aid:
             continue
+        digest = ((a.get("metadata") or {}).get("digest") or {}).get("dandi:sha2-256")
         out.append(
             FileEntry(
                 name=a.get("path") or aid,
                 size=a.get("size"),
                 url=_DOWNLOAD.format(asset_id=aid),
+                # Not yet computed for a fresh upload: that asset stays unverified.
+                checksum=f"sha256:{digest}" if digest else None,
                 source="dandi",
             )
         )
