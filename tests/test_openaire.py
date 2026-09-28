@@ -137,7 +137,7 @@ async def test_resolve_fetches_entity_and_attaches_scholix_links(
     # resolve() now also enriches via idconv + full text; stub idconv to {} and
     # let the EuropePMC leg find no OA full text so this test isolates Scholix.
     async def _no_ids(client, doi):
-        return {}
+        return {}, None
 
     monkeypatch.setattr("data_aggregator_mcp.idconv.identifiers_for", _no_ids)
     httpx_mock.add_response(url=_ENT, json=_oa_record())
@@ -242,7 +242,7 @@ async def test_resolve_attaches_identifiers_and_fulltext(httpx_mock, monkeypatch
         return [], None
 
     async def _ids(client, doi):
-        return {"doi": doi, "pmid": "23066504", "pmcid": "PMC3463246"}
+        return {"doi": doi, "pmid": "23066504", "pmcid": "PMC3463246"}, None
 
     monkeypatch.setattr("data_aggregator_mcp.scholix.links_for", _no_scholix)
     monkeypatch.setattr("data_aggregator_mcp.idconv.identifiers_for", _ids)
@@ -274,7 +274,7 @@ async def test_resolve_fills_access_license_from_fulltext_when_absent(
         return [], None
 
     async def _ids(client, doi):
-        return {"doi": doi, "pmcid": "PMC3463246"}
+        return {"doi": doi, "pmcid": "PMC3463246"}, None
 
     monkeypatch.setattr("data_aggregator_mcp.scholix.links_for", _no_scholix)
     monkeypatch.setattr("data_aggregator_mcp.idconv.identifiers_for", _ids)
@@ -316,7 +316,7 @@ async def test_resolve_records_a_failed_link_label_lookup_and_is_not_cached(
         return None
 
     async def _no_ids(client, doi):
-        return {}
+        return {}, None
 
     async def _no_fulltext(client, pmcid=None, doi=None):
         return fulltext.FullText()
@@ -375,4 +375,71 @@ async def test_resolve_records_a_failed_link_label_lookup_and_is_not_cached(
     assert entity_gets.count("oaibad") == 2  # not cached: the second resolve re-fetched
     # Positive control: a lookup that answers labels the link, reports nothing, IS cached.
     assert [lnk.target_id for lnk in ok.links] == ["datacite:10.5061/dryad.ok"]
+    assert ok.errors == {} and entity_gets.count("oaiok") == 1
+
+
+async def test_resolve_records_failed_idconv_and_fulltext_lookups_and_is_not_cached(
+    httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    """idconv and the EuropePMC full-text check are enrichment. A failure of either came
+    back as {} / no file, the same values as "not in PMC" / "no open-access copy", and
+    router.resolve cached the record for the TTL. Each failure is now named in errors,
+    which keeps the record out of the cache; a record whose lookups answered is cached."""
+    from data_aggregator_mcp import _http, router
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    async def _no_scholix(client, doi):
+        return [], None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
+    monkeypatch.setattr("data_aggregator_mcp.scholix.links_for", _no_scholix)
+    monkeypatch.delenv("NCBI_EMAIL", raising=False)
+    monkeypatch.delenv("UNPAYWALL_EMAIL", raising=False)
+    for oid, doi in (("oaibad", "10.1/bad"), ("oaiok", "10.1/ok")):
+        httpx_mock.add_response(
+            url=f"https://api.openaire.eu/graph/v1/researchProducts/{oid}",
+            json={
+                "id": oid,
+                "mainTitle": "t",
+                "type": "publication",
+                "pids": [{"scheme": "doi", "value": doi}],
+            },
+            is_reusable=True,
+        )
+    html = {
+        "text": "<html><body>502 Bad Gateway</body></html>",
+        "headers": {"Content-Type": "text/html"},
+    }
+    idc = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids={}&format=json&tool=data-aggregator-mcp"
+    epmc = (
+        "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+        "?query={}&format=json&resultType=core&pageSize=1"
+    )
+    httpx_mock.add_response(url=idc.format("10.1/bad"), is_reusable=True, **html)
+    httpx_mock.add_response(url=epmc.format('DOI:"10.1/bad"'), is_reusable=True, **html)
+    httpx_mock.add_response(
+        url=idc.format("10.1/ok"), json={"records": [{"doi": "10.1/ok", "pmcid": "PMC7"}]}
+    )
+    httpx_mock.add_response(
+        url=epmc.format("PMCID:PMC7"),
+        json={"resultList": {"result": [{"inEPMC": "Y", "pmcid": "PMC7"}]}},
+    )
+    router._RESOLVE_CACHE.clear()
+    async with httpx.AsyncClient() as client:
+        bad = await router.resolve(client, "openaire:oaibad")
+        await router.resolve(client, "openaire:oaibad")
+        ok = await router.resolve(client, "openaire:oaiok")
+        await router.resolve(client, "openaire:oaiok")
+    entity_gets = [
+        r.url.path.rsplit("/", 1)[-1]
+        for r in httpx_mock.get_requests()
+        if r.url.host == "api.openaire.eu"
+    ]
+    assert bad.identifiers == {} and "NCBI idconv" in bad.errors["identifiers"]
+    assert bad.files == [] and "EuropePMC" in bad.errors["files"]
+    assert entity_gets.count("oaibad") == 2  # not cached: the second resolve re-fetched
+    # Positive control: lookups that answer fill the record, report nothing, ARE cached.
+    assert ok.identifiers["pmcid"] == "PMC7" and [f.source for f in ok.files] == ["europepmc"]
     assert ok.errors == {} and entity_gets.count("oaiok") == 1

@@ -118,15 +118,23 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     record["id"] = record.get("id") or oid  # single-entity payload may omit/null its own id
     resource = _normalize_openaire(record)
     links, links_error = await scholix.links_for(client, resource.doi)
-    ids = await idconv.identifiers_for(client, resource.doi)
+    ids, ids_error = await idconv.identifiers_for(client, resource.doi)
     ft = await fulltext.find(client, pmcid=ids.get("pmcid"), doi=resource.doi)
     update: dict = {}
+    # Each failed lookup is recorded, so the router does not cache a degraded record.
+    errors = {**resource.errors}
     if ids:
         update["identifiers"] = ids
     if links:
         update["links"] = links
-    if links_error:  # recorded, so the router does not cache a degraded link set
-        update["errors"] = {**resource.errors, "links": links_error}
+    if links_error:
+        errors["links"] = links_error
+    if ids_error:
+        errors["identifiers"] = ids_error
+    if ft.error:
+        errors["files"] = ft.error
+    if errors != resource.errors:
+        update["errors"] = errors
     if ft.file is not None:
         update["files"] = [ft.file]
     if resource.access is None and ft.access:

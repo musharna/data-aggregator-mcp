@@ -150,6 +150,7 @@ async def test_resolve_survives_datasets_server_404(monkeypatch):
     ) as c:
         r = await huggingface.resolve(c, "hf:owner/name")
     assert [f.name for f in r.files] == ["data/train.parquet"]  # raw siblings only
+    assert r.errors == {}  # no converted view is an answer, not a failure
 
 
 @pytest.mark.asyncio
@@ -171,6 +172,37 @@ async def test_resolve_logs_on_datasets_server_error(monkeypatch, caplog):
             r = await huggingface.resolve(c, "hf:owner/name")
     assert [f.name for f in r.files] == ["data/train.parquet"]  # never breaks resolve
     assert any("datasets-server" in m.lower() for m in caplog.messages)
+    assert "RuntimeError" in r.errors["files"]  # and the record says so
+
+
+@pytest.mark.asyncio
+async def test_router_does_not_cache_a_failed_datasets_server_lookup(monkeypatch):
+    """A datasets-server failure dropped the parquet files with only a log line, so the
+    record read like "no converted view" and router.resolve cached it for the TTL."""
+    from data_aggregator_mcp import hf_datasets_server, router
+
+    calls: list[str] = []
+
+    async def fake_parquet(client, ds_id):
+        calls.append(ds_id)
+        if ds_id == "owner/bad":
+            raise RuntimeError("datasets-server 503")
+        return []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        ds_id = "/".join(request.url.path.split("/")[-2:])
+        return httpx.Response(200, json={**_DS, "id": ds_id, "siblings": []})
+
+    monkeypatch.setattr(hf_datasets_server, "parquet_files", fake_parquet)
+    router._RESOLVE_CACHE.clear()
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        for _ in range(2):
+            bad = await router.resolve(c, "hf:owner/bad")
+            ok = await router.resolve(c, "hf:owner/ok")
+    assert "RuntimeError" in bad.errors["files"]
+    assert calls.count("owner/bad") == 2  # not cached: the second resolve re-fetched
+    # Positive control: a lookup that answers (no converted view) IS cached.
+    assert ok.errors == {} and calls.count("owner/ok") == 1
 
 
 @_live_only

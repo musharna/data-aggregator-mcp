@@ -70,6 +70,7 @@ async def test_find_none_when_no_oa_and_no_email(httpx_mock, monkeypatch) -> Non
     async with httpx.AsyncClient() as client:
         ft = await fulltext.find(client, pmcid=None, doi="10.1/x")
     assert ft.file is None  # EPMC miss + Unpaywall skipped (no email)
+    assert ft.error is None  # a miss and an unconfigured leg are answers, not failures
 
 
 async def test_find_unpaywall_landing_only_returns_none(httpx_mock, monkeypatch) -> None:
@@ -88,6 +89,7 @@ async def test_find_unpaywall_landing_only_returns_none(httpx_mock, monkeypatch)
     async with httpx.AsyncClient() as client:
         ft = await fulltext.find(client, pmcid=None, doi="10.1/g")
     assert ft.file is None  # only attach a real PDF, never the HTML landing
+    assert ft.error is None
 
 
 async def test_find_fails_soft_on_transport_error(httpx_mock) -> None:
@@ -99,6 +101,8 @@ async def test_find_fails_soft_on_transport_error(httpx_mock) -> None:
     async with httpx.AsyncClient() as client:
         ft = await fulltext.find(client, pmcid="PMC9", doi=None)
     assert ft.file is None  # transport error must not raise out of enrichment
+    # ...but is named: no file alone reads exactly like "no open-access copy".
+    assert ft.error is not None and "EuropePMC" in ft.error and "ConnectError" in ft.error
 
 
 async def test_find_europepmc_off_contract_body_fails_soft(httpx_mock) -> None:
@@ -110,6 +114,7 @@ async def test_find_europepmc_off_contract_body_fails_soft(httpx_mock) -> None:
     async with httpx.AsyncClient() as client:
         ft = await fulltext.find(client, pmcid="PMC1", doi=None)
     assert ft.file is None
+    assert ft.error is not None and "EuropePMC" in ft.error
 
 
 async def test_find_unpaywall_off_contract_body_fails_soft(httpx_mock, monkeypatch) -> None:
@@ -126,6 +131,28 @@ async def test_find_unpaywall_off_contract_body_fails_soft(httpx_mock, monkeypat
     async with httpx.AsyncClient() as client:
         ft = await fulltext.find(client, pmcid=None, doi="10.3/x")
     assert ft.file is None
+    assert ft.error is not None and "Unpaywall" in ft.error
+
+
+async def test_find_names_a_failed_europepmc_leg_even_when_unpaywall_finds_a_pdf(
+    httpx_mock, monkeypatch
+) -> None:
+    # The PDF is real, but EuropePMC (the preferred XML, and its licence) was never
+    # asked: the record is incomplete, so the failure stays on it.
+    monkeypatch.setenv("UNPAYWALL_EMAIL", "x@y.z")
+    httpx_mock.add_response(
+        url=f'{_SEARCH}?query=DOI:"10.4/x"&format=json&resultType=core&pageSize=1',
+        text="<html><body>502 Bad Gateway</body></html>",
+        headers={"Content-Type": "text/html"},
+    )
+    httpx_mock.add_response(
+        url="https://api.unpaywall.org/v2/10.4/x?email=x@y.z",
+        json={"is_oa": True, "best_oa_location": {"url_for_pdf": "https://repo/x.pdf"}},
+    )
+    async with httpx.AsyncClient() as client:
+        ft = await fulltext.find(client, pmcid=None, doi="10.4/x")
+    assert ft.file is not None and ft.file.source == "unpaywall"
+    assert ft.error is not None and "EuropePMC" in ft.error
 
 
 # ---------------------------------------------------------------------------

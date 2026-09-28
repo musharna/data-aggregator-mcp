@@ -5,12 +5,14 @@ the record's rights (access/license). EuropePMC fullTextXML (HTTPS, covers the
 PMC OA subset) is tried first via a PMCID/DOI existence check (inEPMC=='Y'); its
 ``resultType=core`` record also carries ``license`` + ``isOpenAccess``. Unpaywall
 (gated on UNPAYWALL_EMAIL) is the fallback for an OA PDF hosted elsewhere and
-carries ``oa_status`` + ``best_oa_location.license``. Enrichment: any failure logs
-a warning and the leg is skipped — never raises into a valid resolve (spec §8).
+carries ``oa_status`` + ``best_oa_location.license``. Enrichment: a failed leg never
+raises into a valid resolve (spec §8), but is named in ``FullText.error`` so "no
+open-access copy" and "the lookup failed" never look the same.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import os
 import re
@@ -34,11 +36,13 @@ _PMCID_RE = re.compile(r"PMC\d+")
 
 @dataclass(frozen=True)
 class FullText:
-    """OA full-text discovery result: the file (if any) + the record's rights."""
+    """OA full-text discovery result: the file (if any) + the record's rights, and
+    which lookup failed (None when every leg that ran answered)."""
 
     file: FileEntry | None = None
     access: str | None = None
     license: str | None = None
+    error: str | None = None
 
 
 async def _europepmc(client: httpx.AsyncClient, pmcid: str | None, doi: str | None) -> FullText:
@@ -71,7 +75,8 @@ async def _europepmc(client: httpx.AsyncClient, pmcid: str | None, doi: str | No
         )
         res = (resp.json().get("resultList", {}).get("result") or [{}])[0]
         if not isinstance(res, dict):
-            return FullText()
+            logger.warning("EuropePMC answered an off-contract result for %r: %r", query, res)
+            return FullText(error=f"EuropePMC answered result[0] = {res!r}, not an object")
         access = "open" if str(res.get("isOpenAccess", "")).upper() == "Y" else None
         license_ = res.get("license") or None
         if res.get("inEPMC") != "Y":
@@ -86,7 +91,7 @@ async def _europepmc(client: httpx.AsyncClient, pmcid: str | None, doi: str | No
         return FullText(file=fe, access=access, license=license_)
     except Exception as exc:  # noqa: BLE001 — enrichment: never raise (spec §8)
         logger.warning("EuropePMC lookup failed for %r: %r", pmcid or doi, exc)
-        return FullText()
+        return FullText(error=f"EuropePMC lookup failed: {type(exc).__name__}: {exc}")
 
 
 async def _unpaywall(client: httpx.AsyncClient, doi: str | None) -> FullText:
@@ -108,7 +113,10 @@ async def _unpaywall(client: httpx.AsyncClient, doi: str | None) -> FullText:
         if resp is None:
             return FullText()
         data = resp.json()
-        if not isinstance(data, dict) or not data.get("is_oa"):
+        if not isinstance(data, dict):
+            logger.warning("Unpaywall answered an off-contract body for %r: %r", doi, data)
+            return FullText(error=f"Unpaywall answered {type(data).__name__}, not an object")
+        if not data.get("is_oa"):
             return FullText()
         access = "open"
         loc = data.get("best_oa_location") or {}
@@ -120,22 +128,26 @@ async def _unpaywall(client: httpx.AsyncClient, doi: str | None) -> FullText:
         return FullText(file=fe, access=access, license=license_)
     except Exception as exc:  # noqa: BLE001 — enrichment: never raise (spec §8)
         logger.warning("Unpaywall lookup failed for %r: %r", doi, exc)
-        return FullText()
+        return FullText(error=f"Unpaywall lookup failed: {type(exc).__name__}: {exc}")
 
 
 async def find(
     client: httpx.AsyncClient, *, pmcid: str | None = None, doi: str | None = None
 ) -> FullText:
     """First OA full text (EuropePMC XML, then Unpaywall PDF) + the record's rights.
-    Never raises — enrichment. Returns a FullText (``.file`` is None when no OA file)."""
+    Never raises — enrichment. Returns a FullText (``.file`` is None when no OA file);
+    ``.error`` names every leg that ran and failed, even when a later leg found a file,
+    since the preferred copy and its licence were then never checked."""
     epmc = await _europepmc(client, pmcid, doi)
     if epmc.file is not None:
         return epmc
     upw = await _unpaywall(client, doi)
+    error = "; ".join(e for e in (epmc.error, upw.error) if e) or None
     if upw.file is not None:
-        return upw
+        return dataclasses.replace(upw, error=error)
     return FullText(
         file=None,
         access=epmc.access or upw.access,
         license=epmc.license or upw.license,
+        error=error,
     )

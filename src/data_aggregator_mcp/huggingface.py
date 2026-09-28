@@ -110,4 +110,14 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         pass  # no converted view — normal (gated / too-big / non-tabular / pending)
     except Exception as exc:  # noqa: BLE001 — best-effort; never break resolve
         logger.warning("datasets-server enrichment failed for %s: %r", ds_id, exc)
+        # Recorded, so the router does not cache a record missing its parquet files.
+        resource = resource.model_copy(
+            update={
+                "errors": {
+                    **resource.errors,
+                    "files": f"HuggingFace datasets-server lookup failed: "
+                    f"{type(exc).__name__}: {exc}; converted parquet files unknown",
+                }
+            }
+        )
     return resource

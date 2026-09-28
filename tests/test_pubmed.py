@@ -390,3 +390,80 @@ async def test_resolve_bad_pmid_real_ncbi_shape_raises(httpx_mock: HTTPXMock, mo
     async with httpx.AsyncClient() as client:
         with pytest.raises(NotFoundError, match="no pubmed record"):
             await pubmed.resolve(client, "pubmed:99999999999")
+
+
+async def test_resolve_records_failed_abstract_and_fulltext_lookups_and_is_not_cached(
+    httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    """The abstract (efetch) and the EuropePMC full-text check are enrichment. A failure
+    of either came back as None / no file, the same values as "no abstract" / "no
+    open-access copy", and router.resolve cached the record for the TTL. Each failure is
+    now named in errors, which keeps the record out of the cache."""
+    from data_aggregator_mcp import _http, router
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    async def _no_links(client, pmid):
+        return []
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
+    monkeypatch.setattr("data_aggregator_mcp.pubmed._links_via_elink", _no_links)
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    monkeypatch.delenv("UNPAYWALL_EMAIL", raising=False)
+    for pmid, doi in (("1", "10.1/bad"), ("2", "10.1/ok")):
+        httpx_mock.add_response(
+            url=f"{_EUT}/esummary.fcgi?db=pubmed&id={pmid}&version=2.0&retmode=json",
+            json={
+                "result": {
+                    "uids": [pmid],
+                    pmid: {
+                        "uid": pmid,
+                        "title": "t",
+                        "articleids": [{"idtype": "doi", "value": doi}],
+                    },
+                }
+            },
+            is_reusable=True,
+        )
+    epmc = (
+        "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+        "?query={}&format=json&resultType=core&pageSize=1"
+    )
+    httpx_mock.add_response(
+        url=f"{_EUT}/efetch.fcgi?db=pubmed&id=1&retmode=xml", status_code=500, is_reusable=True
+    )
+    httpx_mock.add_response(
+        url=epmc.format('DOI:"10.1/bad"'),
+        text="<html><body>502 Bad Gateway</body></html>",
+        headers={"Content-Type": "text/html"},
+        is_reusable=True,
+    )
+    httpx_mock.add_response(
+        url=f"{_EUT}/efetch.fcgi?db=pubmed&id=2&retmode=xml",
+        text=(
+            "<PubmedArticleSet><PubmedArticle><MedlineCitation><Article><Abstract>"
+            "<AbstractText>An abstract.</AbstractText>"
+            "</Abstract></Article></MedlineCitation></PubmedArticle></PubmedArticleSet>"
+        ),
+    )
+    httpx_mock.add_response(
+        url=epmc.format('DOI:"10.1/ok"'), json={"resultList": {"result": [{"inEPMC": "N"}]}}
+    )
+    router._RESOLVE_CACHE.clear()
+    async with httpx.AsyncClient() as client:
+        bad = await router.resolve(client, "pubmed:1")
+        await router.resolve(client, "pubmed:1")
+        ok = await router.resolve(client, "pubmed:2")
+        await router.resolve(client, "pubmed:2")
+    summaries = [
+        r.url.params["id"]
+        for r in httpx_mock.get_requests()
+        if r.url.path.endswith("/esummary.fcgi")
+    ]
+    assert bad.description is None and "efetch" in bad.errors["description"]
+    assert bad.files == [] and "EuropePMC" in bad.errors["files"]
+    assert summaries.count("1") == 2  # not cached: the second resolve re-fetched
+    # Positive control: lookups that answer (an abstract; "not in EPMC") ARE cached.
+    assert ok.description == "An abstract." and ok.files == []
+    assert ok.errors == {} and summaries.count("2") == 1
