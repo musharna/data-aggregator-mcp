@@ -219,7 +219,7 @@ def _normalize(item: dict[str, Any]) -> DataResource:
     return DataResource(
         id=f"datacite:{doi}",
         source=_source_for_client(client_id),
-        kind=_KIND_MAP.get(rt, "dataset"),
+        kind=_KIND_MAP.get(rt, _pushdown.OTHER_KIND),
         title=_first(a.get("titles"), "title") or "",
         creators=[_creator(c) for c in (a.get("creators") or [])],
         funding=[

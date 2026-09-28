@@ -126,7 +126,7 @@ class LicenseVerdict(BaseModel):
 class DataResource(BaseModel):
     id: str  # source-prefixed canonical id, e.g. "zenodo:123"
     source: str
-    kind: str  # dataset | sequencing_run | study | publication | software
+    kind: str  # dataset | sequencing_run | study | publication | software | other
     title: str
     creators: list[Creator] = Field(default_factory=list)
     funding: list[FundingRef] = Field(default_factory=list)

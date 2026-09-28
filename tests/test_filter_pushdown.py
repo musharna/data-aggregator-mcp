@@ -46,11 +46,12 @@ async def _sent(httpx_mock: HTTPXMock, body: dict, **kw) -> httpx.Request:
         ),
         ({"published_after": 2019}, "(soil moisture) AND publication_date:[2019-01-01 TO *]"),
         ({"kind": "software"}, "(soil moisture) AND resource_type.type:(software)"),
-        # dataset is the COMPLEMENT: _normalize maps image/poster/other/... to dataset.
+        # A-M5: dataset is its own mapped types, no longer the complement — an image or
+        # a poster normalizes to "other", so it must not come back for kind=dataset.
         (
             {"kind": "dataset", "published_before": 2020},
             "(soil moisture) AND publication_date:[* TO 2020-12-31]"
-            " AND NOT resource_type.type:(publication OR software)",
+            " AND resource_type.type:(dataset)",
         ),
     ],
 )
@@ -78,6 +79,10 @@ async def test_zenodo_request_without_filters_is_unchanged(httpx_mock: HTTPXMock
         (
             {"kind": "software"},
             "(soil moisture) AND types.resourceTypeGeneral:(ComputationalNotebook OR Software)",
+        ),
+        (
+            {"kind": "dataset"},
+            "(soil moisture) AND types.resourceTypeGeneral:(Collection OR Dataset)",
         ),
         (
             {"kind": "publication", "published_after": 2019},
@@ -108,6 +113,40 @@ def test_a_kind_with_no_upstream_type_is_left_to_the_post_filter(adapter) -> Non
     assert got == {"published_after": 2019}
     # Positive control: a mapped kind IS pushed, and a None filter is never "active".
     assert adapter.pushable({"kind": "software", "published_before": None}) == {"kind": "software"}
+
+
+def test_unmapped_types_normalize_to_other_not_dataset() -> None:
+    """A-M5: a type neither archive maps (a Zenodo image, a DataCite Image or Other, or no
+    type at all) was normalized to kind="dataset", so figures and posters passed a
+    kind=dataset filter. It is "other" now, and the upstream "other" is the complement of
+    every mapped type — so the four kinds still partition the upstream (live test below).
+    Positive control: mapped types keep their kinds."""
+    from data_aggregator_mcp import _pushdown
+
+    def zen(rtype: str | None) -> str:
+        meta = {"title": "t", "resource_type": {"type": rtype} if rtype else {}}
+        return zenodo._normalize({"id": 1, "metadata": meta}).kind
+
+    def dc(rtg: str | None) -> str:
+        types_ = {"resourceTypeGeneral": rtg} if rtg else {}
+        return datacite._normalize({"attributes": {"doi": "10.1/x", "types": types_}}).kind
+
+    assert [zen(t) for t in ("image", "poster", "other", None)] == ["other"] * 4
+    assert [dc(t) for t in ("Image", "Audiovisual", "Other", None)] == ["other"] * 4
+    assert [zen(t) for t in ("dataset", "software", "publication")] == [
+        "dataset",
+        "software",
+        "publication",
+    ]
+    assert [dc(t) for t in ("Dataset", "Collection", "Software", "Text")] == [
+        "dataset",
+        "dataset",
+        "software",
+        "publication",
+    ]
+    assert _pushdown.kind_clause("t", zenodo._KIND_MAP, "other") == (
+        "NOT t:(dataset OR publication OR software)"
+    )
 
 
 # --- sources that cannot push down say so -------------------------------------------
@@ -266,13 +305,13 @@ async def test_live_kind_software_is_pushed_down() -> None:
 @pytest.mark.parametrize("adapter", [zenodo, datacite])
 async def test_live_kind_clauses_partition_the_upstream(adapter) -> None:
     """The pushdown invariant: the upstream kind predicate must keep every record the
-    post-filter keeps. dataset + publication + software must add up to the unfiltered
-    total exactly — ``type:dataset`` instead of the complement fell ~20k short on Zenodo."""
+    post-filter keeps. dataset + publication + software + other must add up to the
+    unfiltered total exactly (other = no mapped type: images, posters, untyped, ...)."""
     async with httpx.AsyncClient(timeout=60) as client:
         whole, _ = await adapter.search(client, "soil moisture", size=1)
         parts = [
             (await adapter.search(client, "soil moisture", size=1, filters={"kind": k}))[0]
-            for k in ("dataset", "publication", "software")
+            for k in ("dataset", "publication", "software", "other")
         ]
     assert all(p > 0 for p in parts), parts
     assert sum(parts) == whole, (parts, whole)

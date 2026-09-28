@@ -212,7 +212,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         "zenodo",
         zenodo,
         layer="archives",
-        kinds=("dataset", "publication", "software"),
+        kinds=("dataset", "publication", "software", "other"),
         filters_supported=(
             "query",
             "size",
@@ -305,7 +305,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         "datacite",
         datacite,
         layer="archives",
-        kinds=("dataset", "publication", "software"),
+        kinds=("dataset", "publication", "software", "other"),
         filters_supported=("query", "published_after", "published_before", "kind", "cursor"),
         rate_limit="respects 429/Retry-After",
         status="live (discovery; fetch on resolve for Figshare/Dataverse/OSF/Zenodo, manifest-only for Dryad)",

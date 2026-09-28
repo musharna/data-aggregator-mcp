@@ -9,10 +9,10 @@ implements :class:`FilterPushdown`, so its ``total`` and its windows are the fil
 ones.
 
 The invariant every clause here must keep: the upstream predicate may never exclude a
-record the post-filter would keep, or pushdown silently loses results. That is why
-``kind="dataset"`` is pushed as the COMPLEMENT of the non-dataset types — both adapters
-normalize every unmapped type (image, poster, Other, a missing type, ...) to
-``"dataset"``, so ``type:dataset`` upstream would drop records the post-filter keeps.
+record the post-filter would keep, or pushdown silently loses results. It holds because
+the clause and the normalizer read the same ``kind_map``: a kind is exactly the upstream
+types mapped to it, and every unmapped type (image, poster, Other, a missing type, ...)
+normalizes to ``"other"`` — the complement of all mapped types.
 """
 
 from __future__ import annotations
@@ -26,8 +26,9 @@ from data_aggregator_mcp.models import DataResource
 
 YEAR_FILTERS = ("published_after", "published_before")
 
-# The kind a normalizer assigns to any upstream type it does not map.
-_DEFAULT_KIND = "dataset"
+# The kind a normalizer assigns to any upstream type it does not map. Not "dataset": an
+# image or a poster is not a dataset, and must not pass a kind=dataset filter.
+OTHER_KIND = "other"
 
 
 @runtime_checkable
@@ -57,10 +58,10 @@ def active(filters: Mapping[str, Any]) -> dict[str, Any]:
 
 def kind_clause(field: str, kind_map: Mapping[str, str], kind: str) -> str | None:
     """Upstream clause selecting exactly the records ``kind_map`` normalizes to ``kind``,
-    or None when no upstream type maps to it (the post-filter then decides)."""
-    others = sorted(t for t, k in kind_map.items() if k != _DEFAULT_KIND)
-    if kind == _DEFAULT_KIND:
-        return f"NOT {field}:({' OR '.join(others)})" if others else None
+    or None when no upstream type maps to it (the post-filter then decides). ``other`` is
+    every type the map does not name."""
+    if kind == OTHER_KIND:
+        return f"NOT {field}:({' OR '.join(sorted(kind_map))})" if kind_map else None
     mine = sorted(t for t, k in kind_map.items() if k == kind)
     return f"{field}:({' OR '.join(mine)})" if mine else None
 

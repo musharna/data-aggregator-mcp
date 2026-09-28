@@ -72,7 +72,7 @@ def _is_last_version(meta: dict[str, Any]) -> bool | None:
 
 def _normalize(record: dict[str, Any]) -> DataResource:
     meta = record.get("metadata", {}) or {}
-    rtype = (meta.get("resource_type") or {}).get("type", "dataset")
+    rtype = (meta.get("resource_type") or {}).get("type")
     pub_date = meta.get("publication_date") or ""
     year = int(pub_date[:4]) if pub_date[:4].isdigit() else None
     files: list[FileEntry] = []
@@ -99,7 +99,7 @@ def _normalize(record: dict[str, Any]) -> DataResource:
     return DataResource(
         id=f"zenodo:{record.get('id')}",
         source="zenodo",
-        kind=_KIND_MAP.get(rtype, "dataset"),
+        kind=_KIND_MAP.get(rtype or "", _pushdown.OTHER_KIND),
         title=meta.get("title", ""),
         creators=[
             Creator(name=c.get("name", ""), orcid=_orcid(c.get("orcid")))
