@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-09-28
+
 ### Fixed
 
 - A literature or Hugging Face record whose enrichment lookup failed is reported in
