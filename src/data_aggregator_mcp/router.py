@@ -944,6 +944,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             resource = await _enrich_resource(client, resource)
         except Exception as exc:  # additive enrichment must not sink a valid resolve
             logger.warning("resolve enrichment failed for %s: %r", rid, exc)
+            resource = resource.model_copy(
+                update={"errors": {**resource.errors, "taxonomy": f"{type(exc).__name__}: {exc}"}}
+            )
     is_latest, superseded_by = derive_version_status(resource.links)
     if is_latest is not None or superseded_by is not None:
         resource = resource.model_copy(
@@ -958,7 +961,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             )
         }
     )
-    _RESOLVE_CACHE.set(rid, resource)
+    # A record an enrichment step failed on is not cached: the failure is usually
+    # transient (a rate limit), and a cached copy would serve it degraded for the TTL.
+    if not resource.errors:
+        _RESOLVE_CACHE.set(rid, resource)
     return resource
 
 

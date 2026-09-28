@@ -163,6 +163,9 @@ class DataResource(BaseModel):
     mirrors: list[Mirror] = Field(
         default_factory=list
     )  # same-dataset copies folded by opt-in search collapse_mirrors; empty otherwise
+    # {stage: message} for an enrichment step that failed on this record (e.g. taxonomy
+    # during an NCBI rate limit); the rest of the record is complete. Empty = none failed.
+    errors: dict[str, str] = Field(default_factory=dict)
 
 
 class TaxonExpansion(BaseModel):

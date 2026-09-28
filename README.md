@@ -301,6 +301,9 @@ or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
 - **trust signals** — `metrics` (citations / views / downloads / likes),
   `is_latest` / `superseded_by` (derived from version links), and `last_updated`
   freshness, where the source provides them.
+- **`errors`** — `{step: message}` when an enrichment step failed on this record
+  (e.g. `taxonomy` during an NCBI rate limit); the rest of the record stands. Such a
+  record is not cached, so the next resolve retries the step.
 - **`trust=true`** — attach retraction status (via Crossref) under `trust{}`.
   One extra Crossref call; meaningful for DOI-bearing records only.
 - **`fair=true`** — attach an RDA-grounded FAIRness score (0–100 + F/A/I/R

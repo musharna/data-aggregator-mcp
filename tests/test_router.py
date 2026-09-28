@@ -201,6 +201,48 @@ async def test_enrich_is_concurrent_and_records_failure_without_aborting(monkeyp
     assert out[1].taxa and out[1].taxa[0].taxid == 9606  # human enriched despite boom failing first
 
 
+@pytest.mark.asyncio
+async def test_resolve_reports_a_taxonomy_failure_and_does_not_cache_it(monkeypatch) -> None:
+    """B-M2 (audit 2026-09-27): during an NCBI rate limit, resolve logged the taxonomy
+    failure server-side, returned the record without taxa as if none resolved, and cached
+    that for the TTL, so the next resolve kept serving it. The record now says which
+    enrichment failed, and a degraded resolve is not cached."""
+    from data_aggregator_mcp import taxonomy
+    from data_aggregator_mcp.errors import RateLimitError
+
+    class _Info:
+        taxid, canonical_name, is_plant = 3702, "Arabidopsis thaliana", True
+
+    ncbi_up = False
+    adapter_calls = 0
+
+    async def fake_resolve_taxon(client, name):
+        if not ncbi_up:
+            raise RateLimitError("NCBI taxonomy: 429 Too Many Requests")
+        return _Info()
+
+    async def fake_zenodo_resolve(client, rid):
+        nonlocal adapter_calls
+        adapter_calls += 1
+        return DataResource(
+            id=rid, source="zenodo", kind="dataset", title="t", organism=["Arabidopsis"]
+        )
+
+    monkeypatch.setattr(taxonomy, "resolve_taxon", fake_resolve_taxon)
+    monkeypatch.setattr(router.zenodo, "resolve", fake_zenodo_resolve)
+    router._RESOLVE_CACHE.clear()
+    async with httpx.AsyncClient() as c:
+        degraded = await router.resolve(c, "zenodo:77001")
+        ncbi_up = True
+        healed = await router.resolve(c, "zenodo:77001")
+        again = await router.resolve(c, "zenodo:77001")
+    assert degraded.taxa == [] and "429" in degraded.errors["taxonomy"]
+    # Positive control: once NCBI answers, the retry enriches (it was not served the
+    # cached degraded record), reports no error, and that complete record is cached.
+    assert [t.taxid for t in healed.taxa] == [3702] and healed.errors == {}
+    assert again == healed and adapter_calls == 2
+
+
 def test_select_unknown_source_raises() -> None:
     with pytest.raises(ValueError, match="unknown source 'bogus'"):
         router._select(["bogus"])
