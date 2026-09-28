@@ -51,8 +51,8 @@ Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics** (GEO / SRA / BioProject)
 **HuggingFace** datasets, **DataONE** (eco/environmental federation,
 checksum-verified fetch via Member Nodes), **GBIF** (biodiversity
 occurrence / checklist / sampling-event datasets, DOI-normalized, Darwin Core
-Archive fetch), **data.gov** (US government open-data catalog via the CKAN
-Catalog API; free api.data.gov key), **NASA CMR** (Earthdata earth-science
+Archive fetch), **data.gov** (US government open-data catalog via its DCAT-US
+catalog API; no key needed), **NASA CMR** (Earthdata earth-science
 collection discovery; keyless), **OmicsDI** (proteomics / metabolomics,
 with direct PRIDE / MetaboLights fetch), **DANDI** (neurophysiology),
 **CZ CELLxGENE** (single-cell), **OpenML**, **RCSB PDB**, **UniProtKB**, and the

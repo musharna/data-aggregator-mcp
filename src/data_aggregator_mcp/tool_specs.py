@@ -317,7 +317,7 @@ TOOLS: list[types.Tool] = [
             "UniProtKB FASTA (unverified); "
             "BioStudies study files (unverified); "
             "GBIF Darwin Core Archives (unverified); "
-            "data.gov CKAN resources (unverified). "
+            "data.gov dataset distributions (unverified). "
             "Fails loud if selected files exceed max_bytes unless force=true. "
             "Verifies md5/SHA-256 where the source publishes one; files marked "
             "unverified get no integrity check. Writes a .dataresource.json sidecar."
