@@ -12,7 +12,10 @@ Three properties earn this source its keep beyond raw coverage:
   the literal shared value as evidence.
 * **Publications carry a DOI**, wired into ``doi`` for the paper<->data bridge and
   for cross-source DOI dedup.
-* **Files are enumerable**, nested arbitrarily deep in ``section.subsections``.
+* **Files are enumerable**, nested arbitrarily deep in ``section.subsections`` —
+  or, for large studies (BioImage Archive, big ArrayExpress deposits), in external
+  "File List" JSON documents a subsection names by attribute. resolve() reads every
+  such list; skipping them resolved S-BIAD144 to 0 of its 223 public files.
 
 FETCH IS UNVERIFIED. The API exposes no md5/sha256 for study files (checked
 against the live payload 2026-07-21), so ``FileEntry.checksum`` is None and the
@@ -29,11 +32,12 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
 from data_aggregator_mcp import _http
-from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import DataResource, FileEntry, Link, Metrics, compact, local_id
 
 SEARCH = "https://www.ebi.ac.uk/biostudies/api/v1/search"
@@ -49,6 +53,9 @@ DEFAULT_SIZE = 10
 MAX_SIZE = 100
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+#: Runaway guard on external file lists read per study (one request each). Real studies
+#: name a handful; past this, resolve raises rather than return a partial manifest.
+_MAX_FILE_LISTS = 1000
 
 #: Cross-reference link types worth promoting into ``accessions`` so ``relate``
 #: and dedup can see them. Anything else stays out — a bad accession is worse
@@ -82,16 +89,39 @@ def _iter_subsections(node: Any) -> Any:
         yield from _iter_subsections(node.get("subsections") or [])
 
 
-def _collect_files(section: dict[str, Any], acc: str) -> list[FileEntry]:
-    """Walk the section tree and flatten every file entry.
+def _file_lists(section: dict[str, Any]) -> list[str]:
+    """Names of the external file lists the study's subsections point at, in order.
+
+    A subsection carries ``{"name": "File List", "value": "<list>.json"}`` instead of
+    inline ``files``; the list itself is a JSON array of file rows served next to the
+    study's files.
+    """
+    out: list[str] = []
+    for node in _iter_subsections(section):
+        for a in node.get("attributes") or []:
+            if not isinstance(a, dict):
+                continue
+            name = str(a.get("name") or "").strip().lower()
+            value = str(a.get("value") or "").strip()
+            if name == "file list" and value and value not in out:
+                out.append(value)
+    return out
+
+
+def _collect_files(
+    section: dict[str, Any], acc: str, listed: list[Any] | None = None
+) -> list[FileEntry]:
+    """Walk the section tree and flatten every file entry, then the rows of any
+    external file lists (``listed``, already fetched by resolve).
 
     ``files`` is frequently a list OF LISTS, and lives on nested subsections
     rather than the top-level section.
     """
     out: list[FileEntry] = []
     seen: set[str] = set()
-    for node in _iter_subsections(section):
-        raw = node.get("files") or []
+    groups: list[Any] = [node.get("files") or [] for node in _iter_subsections(section)]
+    groups.append(listed or [])
+    for raw in groups:
         stack: list[Any] = [raw]
         while stack:
             cur = stack.pop()
@@ -179,8 +209,9 @@ def _normalize_hit(hit: dict[str, Any]) -> DataResource:
     )
 
 
-def _normalize_study(body: dict[str, Any]) -> DataResource:
-    """Build the full record from a study detail payload."""
+def _normalize_study(body: dict[str, Any], listed: list[Any] | None = None) -> DataResource:
+    """Build the full record from a study detail payload; ``listed`` holds the rows of
+    its external file lists (see ``_file_lists``)."""
     acc = str(body.get("accno") or "")
     top = _attrs(body)
     section = body.get("section") or {}
@@ -223,7 +254,7 @@ def _normalize_study(body: dict[str, Any]) -> DataResource:
         subjects=subjects,
         access="open",  # the search API only surfaces isPublic records
         last_updated=release or None,
-        files=_collect_files(section, acc),
+        files=_collect_files(section, acc, listed),
         links=links,
     )
 
@@ -279,4 +310,36 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         )
     except NotFoundError:
         raise NotFoundError(f"BioStudies has no study {acc}") from None
-    return _normalize_study(body)
+    return _normalize_study(body, await _read_file_lists(client, acc, body))
+
+
+async def _read_file_lists(client: httpx.AsyncClient, acc: str, body: Any) -> list[Any]:
+    """Fetch every external file list the study names; their rows, concatenated."""
+    names = _file_lists((body or {}).get("section") or {}) if isinstance(body, dict) else []
+    if len(names) > _MAX_FILE_LISTS:
+        raise UpstreamUnavailableError(
+            f"BioStudies {acc}: {len(names)} file lists, over the {_MAX_FILE_LISTS}-list "
+            "guard; refusing to return a partial manifest"
+        )
+    rows: list[Any] = []
+    for name in names:
+        try:
+            rows.extend(
+                await _http.request_json(
+                    client,
+                    "GET",
+                    _FILES.format(acc=acc, path=quote(name, safe="/")),
+                    service="BioStudies file list",
+                    headers={"Accept": "application/json"},
+                    timeout=DEFAULT_TIMEOUT,
+                    max_retries=MAX_RETRIES,
+                    expect=list,
+                )
+            )
+        except NotFoundError:
+            # The study names this list, so its absence is an upstream inconsistency;
+            # dropping it would pass a partial manifest off as the whole study.
+            raise UpstreamUnavailableError(
+                f"BioStudies {acc}: file list {name!r} is referenced but returns 404"
+            ) from None
+    return rows

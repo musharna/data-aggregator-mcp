@@ -1,0 +1,544 @@
+{
+  "accno": "S-BIAD8",
+  "attributes": [
+    {
+      "name": "Title",
+      "value": "Nuclear pores as versatile reference standards for quantitative superresolution microscopy "
+    },
+    {
+      "name": "ReleaseDate",
+      "value": "2019-09-15"
+    },
+    {
+      "name": "AttachTo",
+      "value": "Bioimages"
+    },
+    {
+      "name": "AttachTo",
+      "value": "BioImages"
+    }
+  ],
+  "section": {
+    "accno": "std_1",
+    "type": "Study",
+    "attributes": [
+      {
+        "name": "Title",
+        "value": "Nuclear pores as versatile reference standards for quantitative superresolution microscopy "
+      },
+      {
+        "name": "Description",
+        "value": "Quantitative fluorescence and superresolution microscopy are often limited by insufficient data quality or artifacts. In this context, it is essential to have biologically relevant control samples to benchmark and optimize the quality of microscopes, labels and imaging conditions. \n\nHere we exploit the stereotypic arrangement of proteins in the nuclear pore complex as in situ reference structures to characterize the performance of a variety of microscopy modalities. We created four genome edited cell lines in which we endogenously labeled the nucleoporin Nup96 with mEGFP, SNAP-tag, HaloTag or the photoconvertible fluorescent protein mMaple. We demonstrate their use a) as 3D resolution standards for calibration and quality control, b) to quantify absolute labeling efficiencies and c) as precise reference standards for molecular counting. \n\nThese cell lines will enable the broad community to assess the quality of their microscopes and labels, and to perform quantitative, absolute measurements. "
+      },
+      {
+        "name": "Study type",
+        "value": "SMLM and other fluorescence microscopy"
+      },
+      {
+        "name": "Key words",
+        "value": "Single molecule localization microscopy, superresolution microscopy, fluorescence microscopy, labeling efficiency, molecular counting"
+      },
+      {
+        "name": "Study Organism",
+        "value": "homo sapiens"
+      },
+      {
+        "name": "Study Organism",
+        "value": "saccharomyces cerevisiae"
+      }
+    ],
+    "subsections": [
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Jervis Vermal Thevathasan"
+          },
+          {
+            "name": "Email",
+            "value": "thevatha@embl.de"
+          },
+          {
+            "name": "Role",
+            "value": "main author"
+          },
+          {
+            "name": "ORCID",
+            "value": "0000-0002-0628-6156"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1, o2",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Maurice Kahnwald"
+          },
+          {
+            "name": "Email",
+            "value": "maurice.kahnwald@embl.de"
+          },
+          {
+            "name": "Role",
+            "value": "main author, curator"
+          },
+          {
+            "name": "ORCID",
+            "value": "0000-0001-5648-6482"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Konstanty Cieśliński"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Philipp Hoess"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1, o2",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Sudheer Kumar Peneti"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Manuel Reitberger"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Daniel Heid"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Krishna Chaitanya Kasuba"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Sarah Janice Hoerner"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Yiming Li"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Yu-Le Wu"
+          },
+          {
+            "name": "Email",
+            "value": "yu-le.wu@embl.de"
+          },
+          {
+            "name": "Role",
+            "value": "co-author, curator"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1, o2",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Markus Mund"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Ulf Matti"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Pedro Matos Pereira"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o3",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Ricardo Henriques"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o3",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Bianca Nijmeijer"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Moritz Kueblbeck"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Vilma Jimenez Sabinina"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Jan Ellenberg"
+          },
+          {
+            "name": "Role",
+            "value": "co-author"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "type": "Author",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Jonas Ries"
+          },
+          {
+            "name": "Email",
+            "value": "jonas.ries@embl.de"
+          },
+          {
+            "name": "Role",
+            "value": "corresponding author"
+          },
+          {
+            "name": "ORCID",
+            "value": "0000-0002-6640-9250"
+          },
+          {
+            "name": "affiliation",
+            "value": "o1",
+            "reference": true
+          }
+        ]
+      },
+      {
+        "accno": "o1",
+        "type": "Organization",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "EMBL, Cell Biology and Biophysics"
+          },
+          {
+            "name": "Address",
+            "value": "Meyerhofstr. 1, 69117 Heidelberg, Germany"
+          }
+        ]
+      },
+      {
+        "accno": "o2",
+        "type": "Organization",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "Collaboration for joint PhD degree between EMBL and Heidelberg University, Faculty of Biosciences "
+          }
+        ]
+      },
+      {
+        "accno": "o3",
+        "type": "Organization",
+        "attributes": [
+          {
+            "name": "Name",
+            "value": "MRC-Laboratory for Molecular Cell Biology, University College London"
+          },
+          {
+            "name": "Address",
+            "value": "Gower St, London, WC1E 6BT, United Kingdom "
+          }
+        ]
+      },
+      {
+        "accno": "2",
+        "type": "Number of Experiments"
+      },
+      {
+        "accno": "e-a",
+        "type": "Experiment 1",
+        "attributes": [
+          {
+            "name": "Experiment Name",
+            "value": "Experiment 1"
+          },
+          {
+            "name": "Description",
+            "value": "SMLM data"
+          },
+          {
+            "name": "Imaging method",
+            "value": "light microscopy"
+          },
+          {
+            "name": "Technology type",
+            "value": "Single molecule localisation microscopy"
+          },
+          {
+            "name": "Type",
+            "value": "main results"
+          },
+          {
+            "name": "File List",
+            "value": "smlm_data.json"
+          }
+        ]
+      },
+      {
+        "accno": "e-b",
+        "type": "Experiment 2",
+        "attributes": [
+          {
+            "name": "Experiment Name",
+            "value": "Experiment 2"
+          },
+          {
+            "name": "Description",
+            "value": "Non-SMLM data"
+          },
+          {
+            "name": "Imaging method",
+            "value": "light microscopy"
+          },
+          {
+            "name": "Technology type",
+            "value": "confocal, airy scan, stractural illumination, superresolution radial fluctuations, wildfield, stimulated emission depletion, extension microscopy"
+          },
+          {
+            "name": "Type",
+            "value": "main results"
+          },
+          {
+            "name": "File List",
+            "value": "non-smlm_data.json"
+          }
+        ]
+      }
+    ]
+  },
+  "type": "submission"
+}
