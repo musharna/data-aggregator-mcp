@@ -6,6 +6,31 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A failed Zenodo latest-version lookup, or a failed ScholeXplorer / doi.org lookup
+  behind a publication's data links, is reported in the record's `errors`
+  (`superseded_by`, `links`) and the record is no longer cached. The degraded record
+  read as "no newer version", "not a DataCite DOI" or "no data links" for the cache TTL.
+- DataCite records from Harvard Dataverse, DataverseNO and Mendeley Data carry their
+  licence (e.g. `cc-by-4.0`). Those publishers list an access status first, and the
+  licence was read from that entry, so it came back empty. The status now sets
+  `access`: an embargoed CC-BY record is `embargoed`, not `open`.
+- A BioProject's SRA links list each run once. NCBI returns the runs in two
+  overlapping link sets, which were concatenated, so every run appeared twice.
+
+### Changed
+
+- Zenodo and DataCite records whose type none of the kinds covers (images, posters,
+  audiovisual, untyped) are kind `other`. They were `dataset`, so they passed a
+  `kind=dataset` filter: 7,853 of Zenodo's and 2,206 of DataCite's "soil moisture" hits.
+
+### Added
+
+- Records carry `truncated` (`{field: note}`) when a list is deliberately partial. A
+  BioProject with more than 100 SRA runs says `first 100 of 891 SRA runs; …` instead of
+  only logging it server-side.
+
 ## [0.48.0] - 2026-09-28
 
 ### Fixed
