@@ -22,7 +22,7 @@ _ARTICLE_ID = re.compile(r"figshare\.(\d+)")
 # Institutional portals: the id is the final all-digit dot segment, before an optional
 # ``.vN`` version suffix. Only reached for DOIs DataCite attributes to a figshare client.
 _TRAILING_ID = re.compile(r"\.(\d+)(?:\.v\d+)?$", re.IGNORECASE)
-_VERSION = re.compile(r"\.v\d+$", re.IGNORECASE)
+_VERSION = re.compile(r"\.v(\d+)$", re.IGNORECASE)
 
 logger = logging.getLogger(__name__)
 
@@ -36,15 +36,23 @@ def _unversioned(doi: str) -> str:
     return _VERSION.sub("", doi.strip().lower())
 
 
+def _version(doi: str) -> str | None:
+    m = _VERSION.search(doi.strip())
+    return m.group(1) if m else None
+
+
 async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
     aid = _article_id(doi)
     if not aid:
         return []
-    data = await _http.request_json(
-        client, "GET", f"{BASE_URL}/articles/{aid}", service="Figshare article"
-    )
+    # A ``.vN`` DOI names one immutable version; /articles/{id} is whatever is current.
+    # Versioned → that version's endpoint and an exact DOI match; unversioned → current.
+    version = _version(doi)
+    url = f"{BASE_URL}/articles/{aid}" + (f"/versions/{version}" if version else "")
+    data = await _http.request_json(client, "GET", url, service="Figshare article")
     got = data.get("doi")
-    if isinstance(got, str) and got and _unversioned(got) != _unversioned(doi):
+    same = (lambda d: d.strip().lower()) if version else _unversioned
+    if isinstance(got, str) and got and same(got) != same(doi):
         # The id was parsed from the DOI's shape; the article it names is someone
         # else's. Attaching its files would be wrong data, so attach none (logged).
         logger.warning(
