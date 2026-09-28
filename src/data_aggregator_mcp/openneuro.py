@@ -4,9 +4,12 @@ OpenNeuro discovery rides the DataCite firehose (its 10.18112/openneuro.* DOIs,
 client `sul.openneuro`, are indexed there), so there is no native search adapter.
 This module is the bespoke fetch backend: datacite.resolve() dispatches an
 OpenNeuro-sourced DOI here to populate files[]. The dataset id + version are
-parsed from the DOI (10.18112/openneuro.<dsID>.v<tag>) and the snapshot's
-top-level file manifest is fetched via GraphQL. Nested directories (directory:true)
-are skipped in v1 — a documented follow-up. Files are unverified (no checksum).
+parsed from the DOI (10.18112/openneuro.<dsID>.v<tag>) and the snapshot's whole
+file tree is fetched in ONE GraphQL request, ``files(recursive: true)``: every file
+comes back with its path from the dataset root ("sub-01/anat/sub-01_T1w.nii.gz"),
+which fetch keeps as the relative directory. The top-level-only listing this
+replaced dropped every subject (ds000001: 6 of 136 files). Files are unverified
+(no checksum).
 """
 
 from __future__ import annotations
@@ -27,7 +30,11 @@ _DOI_RE = re.compile(r"openneuro\.(ds\d+)\.v([\w.]+)", re.IGNORECASE)
 # document when a variable's declared type does not match the argument's ("Variable
 # $ds of type String! used in position expecting type ID!"), so declaring it String!
 # meant every snapshot lookup returned HTTP 400 and no dataset ever got a manifest.
-_QUERY = "query($ds:ID!,$tag:String!){snapshot(datasetId:$ds,tag:$tag){files{filename size directory urls}}}"
+# ``recursive:true`` walks the tree server-side; without it only the top level returns.
+_QUERY = (
+    "query($ds:ID!,$tag:String!){snapshot(datasetId:$ds,tag:$tag)"
+    "{files(recursive:true){filename size directory urls}}}"
+)
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
 
@@ -66,8 +73,24 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
         )
         raise UpstreamUnavailableError(f"OpenNeuro GraphQL error for {ds}@{tag}: {messages}")
     snapshot = (body.get("data") or {}).get("snapshot") or {}
+    listing = snapshot.get("files") or []
+    # Every directory that holds a listed file, at any depth.
+    parents: set[str] = set()
+    for f in listing:
+        if not f.get("directory"):
+            name = str(f.get("filename") or "")
+            parents.update(name[:i] for i, ch in enumerate(name) if ch == "/")
+    # A directory entry is only redundant if its files are listed too. One with nothing
+    # under it means the tree came back unexpanded, and dropping it would silently
+    # truncate the manifest (git/datalad snapshots cannot hold empty directories).
+    for f in listing:
+        if f.get("directory") and str(f.get("filename") or "").rstrip("/") not in parents:
+            raise UpstreamUnavailableError(
+                f"OpenNeuro snapshot {ds}@{tag}: directory {f.get('filename')!r} came back "
+                "without its files; refusing to return a partial manifest"
+            )
     out: list[FileEntry] = []
-    for f in snapshot.get("files") or []:
+    for f in listing:
         if f.get("directory"):
             continue
         urls = f.get("urls") or []

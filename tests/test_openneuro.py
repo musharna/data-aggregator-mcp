@@ -20,6 +20,12 @@ _GQL = {
                 },
                 {"filename": "sub-01", "size": None, "directory": True, "urls": []},
                 {
+                    "filename": "sub-01/anat/sub-01_T1w.nii.gz",
+                    "size": 9,
+                    "directory": False,
+                    "urls": ["https://s3.amazonaws.com/openneuro.org/ds000001/sub-01/anat/t1"],
+                },
+                {
                     "filename": "dataset_description.json",
                     "size": 615,
                     "directory": False,
@@ -50,9 +56,75 @@ async def test_files_builds_manifest_from_doi():
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
         files = await openneuro.files(c, _DOI)
-    assert [f.name for f in files] == ["README", "dataset_description.json"]  # directory skipped
+    assert [f.name for f in files] == [  # directory entry itself dropped, its file kept
+        "README",
+        "sub-01/anat/sub-01_T1w.nii.gz",
+        "dataset_description.json",
+    ]
     assert files[0].url.startswith("https://openneuro.org/crn/datasets/ds000001/objects/")
     assert files[0].source == "openneuro" and files[0].size == 1175
+
+
+# A BIDS snapshot as OpenNeuro stores it: nested directories under each subject.
+_TREE = {
+    "README": 1175,
+    "dataset_description.json": 615,
+    "sub-01/anat/sub-01_T1w.nii.gz": 100,
+    "sub-01/func/sub-01_run-01_bold.nii.gz": 200,
+    "sub-01/func/sub-01_run-01_events.tsv": 30,
+    "sub-02/anat/sub-02_T1w.nii.gz": 101,
+}
+
+
+def _entry(filename, size=None, directory=False):
+    urls = [] if directory else [f"https://openneuro.org/crn/objects/x?filename={filename}"]
+    return {"filename": filename, "size": size, "directory": directory, "urls": urls}
+
+
+def _fake_snapshot_server(request):
+    """Answer like the real API: files(recursive:true) returns every file with its path
+    from the dataset root; plain files returns the top level, directories unexpanded."""
+    import json
+
+    query = "".join(json.loads(request.content.decode())["query"].split())
+    if "files(recursive:true)" in query:
+        listing = [_entry(name, size) for name, size in _TREE.items()]
+    else:
+        tops = {name.split("/", 1)[0] for name in _TREE}
+        listing = [_entry(t, _TREE.get(t), directory=t not in _TREE) for t in sorted(tops)]
+    return httpx.Response(200, json={"data": {"snapshot": {"files": listing}}})
+
+
+@pytest.mark.asyncio
+async def test_files_lists_the_whole_snapshot_tree():
+    """A-H6: only the top level was listed (ds000001: 6 metadata files, sub-01..sub-16
+    skipped). The manifest is every file in the tree, each keeping its relative path."""
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_fake_snapshot_server)) as c:
+        files = await openneuro.files(c, _DOI)
+    assert sorted(f.name for f in files) == sorted(_TREE)
+    bold = next(f for f in files if f.name == "sub-01/func/sub-01_run-01_bold.nii.gz")
+    assert bold.size == 200 and bold.url
+
+
+@pytest.mark.asyncio
+async def test_files_directory_without_contents_raises():
+    """A recursive listing that still carries a directory with nothing under it has not
+    been expanded: raise naming OpenNeuro and the snapshot. Positive control: a
+    recursive listing whose directory entries sit beside their files succeeds."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    ok = [_entry("sub-01", directory=True), _entry("sub-01/anat/a.nii.gz", 5), _entry("README", 1)]
+    bad = [_entry("sub-01", directory=True), _entry("README", 1)]
+    for listing, expect_ok in ((ok, True), (bad, False)):
+        body = {"data": {"snapshot": {"files": listing}}}
+        transport = httpx.MockTransport(lambda r, body=body: httpx.Response(200, json=body))
+        async with httpx.AsyncClient(transport=transport) as c:
+            if expect_ok:
+                files = await openneuro.files(c, _DOI)
+                assert [f.name for f in files] == ["sub-01/anat/a.nii.gz", "README"]
+            else:
+                with pytest.raises(UpstreamUnavailableError, match=r"OpenNeuro.*ds000001.*sub-01"):
+                    await openneuro.files(c, _DOI)
 
 
 @pytest.mark.asyncio
@@ -86,6 +158,21 @@ def test_wired_into_datacite_and_fetchable():
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_snapshot_tree_is_complete():
+    """ds000001 v1.0.0 is immutable: 136 files, sub-01..sub-16 each with anat/ and func/.
+    OpenNeuro's own summary counts 133 (it leaves out the 3 git/datalad dotfiles)."""
+    async with httpx.AsyncClient(timeout=120) as c:
+        fs = await openneuro.files(c, "10.18112/openneuro.ds000001.v1.0.0")
+    names = {f.name for f in fs}
+    assert len(fs) == len(names) == 136
+    assert len({n for n in names if not n.startswith(".")}) == 133
+    for i in range(1, 17):
+        assert any(n.startswith(f"sub-{i:02d}/anat/") for n in names)
+        assert any(n.startswith(f"sub-{i:02d}/func/") for n in names)
 
 
 @_live_only
