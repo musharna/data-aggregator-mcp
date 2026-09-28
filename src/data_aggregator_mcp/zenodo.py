@@ -17,7 +17,7 @@ import httpx
 
 from data_aggregator_mcp import _http, _pushdown
 from data_aggregator_mcp._cache import MISS, TTLCache
-from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import (
     Creator,
     DataResource,
@@ -72,7 +72,7 @@ def _is_last_version(meta: dict[str, Any]) -> bool | None:
 
 def _normalize(record: dict[str, Any]) -> DataResource:
     meta = record.get("metadata", {}) or {}
-    rtype = (meta.get("resource_type") or {}).get("type", "dataset")
+    rtype = (meta.get("resource_type") or {}).get("type")
     pub_date = meta.get("publication_date") or ""
     year = int(pub_date[:4]) if pub_date[:4].isdigit() else None
     files: list[FileEntry] = []
@@ -99,7 +99,7 @@ def _normalize(record: dict[str, Any]) -> DataResource:
     return DataResource(
         id=f"zenodo:{record.get('id')}",
         source="zenodo",
-        kind=_KIND_MAP.get(rtype, "dataset"),
+        kind=_KIND_MAP.get(rtype or "", _pushdown.OTHER_KIND),
         title=meta.get("title", ""),
         creators=[
             Creator(name=c.get("name", ""), orcid=_orcid(c.get("orcid")))
@@ -203,41 +203,42 @@ async def search(
 async def _latest_version_id(client: httpx.AsyncClient, rid: str) -> str | None:
     """``zenodo:<id>`` of the latest version of ``rid``'s concept, read from the 301
     Location of ``HEAD /api/records/{rid}/versions/latest`` (the redirect is not
-    followed). Enrichment: any failure or unexpected answer logs and returns None —
-    superseded_by stays unknown, the resolve still succeeds."""
+    followed). None means ``rid`` is itself the latest; a failed lookup or an answer
+    with no record id raises, so it is never read as "no newer version"."""
     url = f"{BASE_URL}/api/records/{rid}/versions/latest"
-    try:
-        resp = await _http.request_with_retry(
-            client,
-            "HEAD",
-            url,
-            service="Zenodo latest version",
-            timeout=DEFAULT_TIMEOUT,
-            max_retries=2,
-            follow_redirects=False,
+    resp = await _http.request_with_retry(
+        client,
+        "HEAD",
+        url,
+        service="Zenodo latest version",
+        timeout=DEFAULT_TIMEOUT,
+        max_retries=2,
+        follow_redirects=False,
+    )
+    location = resp.headers.get("location") if resp.is_redirect else None
+    m = _RECORD_URL_RE.match(urljoin(url, location)) if location else None
+    if m is None:
+        raise UpstreamUnavailableError(
+            f"Zenodo latest-version lookup for {rid}: HTTP {resp.status_code}, "
+            f"Location {location!r} — no record id"
         )
-        location = resp.headers.get("location") if resp.is_redirect else None
-        m = _RECORD_URL_RE.match(urljoin(url, location)) if location else None
-        if m is None:
-            logger.warning(
-                "zenodo latest-version lookup for %s: HTTP %s, Location %r — no record id",
-                rid,
-                resp.status_code,
-                location,
-            )
-            return None
-        return None if m.group(1) == rid else f"zenodo:{m.group(1)}"
-    except Exception as exc:  # noqa: BLE001 — enrichment: never sink a valid resolve
-        logger.warning("zenodo latest-version lookup failed for %s: %r", rid, exc)
-        return None
+    return None if m.group(1) == rid else f"zenodo:{m.group(1)}"
 
 
 async def _with_superseded_by(client: httpx.AsyncClient, rid: str, r: DataResource) -> DataResource:
     """Resolve-only: a record Zenodo says is NOT the last version gets superseded_by from
-    one HEAD. Latest / unversioned records make no extra call."""
+    one HEAD. Latest / unversioned records make no extra call. The lookup is enrichment:
+    a failure leaves superseded_by unknown, is recorded in ``errors["superseded_by"]``
+    (which also keeps the record out of the resolve cache), and the resolve succeeds."""
     if r.is_latest is not False:
         return r
-    newer = await _latest_version_id(client, rid)
+    try:
+        newer = await _latest_version_id(client, rid)
+    except Exception as exc:  # noqa: BLE001 — enrichment: never sink a valid resolve
+        logger.warning("zenodo latest-version lookup failed for %s: %r", rid, exc)
+        return r.model_copy(
+            update={"errors": {**r.errors, "superseded_by": f"{type(exc).__name__}: {exc}"}}
+        )
     return r.model_copy(update={"superseded_by": newer}) if newer else r
 
 

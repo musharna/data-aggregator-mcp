@@ -129,9 +129,44 @@ def _year(value: Any) -> int | None:
     return None
 
 
+# rightsList mixes two kinds of entry: licences, and an access STATUS from the
+# info:eu-repo vocabulary (Harvard Dataverse, DataverseNO and Mendeley list it first,
+# with rights/rightsIdentifier null). A status is never a licence.
+_EU_REPO_ACCESS = {
+    "info:eu-repo/semantics/openaccess": "open",
+    "info:eu-repo/semantics/embargoedaccess": "embargoed",
+    "info:eu-repo/semantics/restrictedaccess": "restricted",
+    "info:eu-repo/semantics/closedaccess": "closed",
+}
+
+
+def _access_status(r: dict[str, Any]) -> str | None:
+    """The access status an info:eu-repo rights entry states; None for any other entry."""
+    for field in ("rightsUri", "rights"):
+        status = _EU_REPO_ACCESS.get((r.get(field) or "").strip().lower())
+        if status:
+            return status
+    return None
+
+
+def _license_from_rights(rights_list: list[dict[str, Any]]) -> str | None:
+    """The first entry that is a licence (not an access status): its identifier, else
+    its name."""
+    for r in rights_list:
+        if _access_status(r) is None and (r.get("rightsIdentifier") or r.get("rights")):
+            return r.get("rightsIdentifier") or r.get("rights")
+    return None
+
+
 def _access_from_rights(rights_list: list[dict[str, Any]] | None) -> str | None:
-    """DataCite has no access field; infer 'open' from an open-content license
-    (Creative Commons / public domain). Otherwise None — do not guess."""
+    """DataCite has no access field. An info:eu-repo access status, when listed, is the
+    answer — an embargoed record with a CC licence is embargoed, not open. Otherwise
+    infer 'open' from an open-content license (Creative Commons / public domain), and
+    else None — do not guess."""
+    for r in rights_list or []:
+        status = _access_status(r)
+        if status:
+            return status
     for r in rights_list or []:
         ident = (r.get("rightsIdentifier") or "").lower()
         uri = (r.get("rightsUri") or "").lower()
@@ -179,14 +214,12 @@ def _normalize(item: dict[str, Any]) -> DataResource:
     )
     rt = (a.get("types") or {}).get("resourceTypeGeneral", "")
     rights = a.get("rightsList") or []
-    license_ = None
-    if rights:
-        license_ = rights[0].get("rightsIdentifier") or rights[0].get("rights")
+    license_ = _license_from_rights(rights)
     doi = a.get("doi")
     return DataResource(
         id=f"datacite:{doi}",
         source=_source_for_client(client_id),
-        kind=_KIND_MAP.get(rt, "dataset"),
+        kind=_KIND_MAP.get(rt, _pushdown.OTHER_KIND),
         title=_first(a.get("titles"), "title") or "",
         creators=[_creator(c) for c in (a.get("creators") or [])],
         funding=[

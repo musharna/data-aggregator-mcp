@@ -126,7 +126,7 @@ class LicenseVerdict(BaseModel):
 class DataResource(BaseModel):
     id: str  # source-prefixed canonical id, e.g. "zenodo:123"
     source: str
-    kind: str  # dataset | sequencing_run | study | publication | software
+    kind: str  # dataset | sequencing_run | study | publication | software | other
     title: str
     creators: list[Creator] = Field(default_factory=list)
     funding: list[FundingRef] = Field(default_factory=list)
@@ -166,6 +166,10 @@ class DataResource(BaseModel):
     # {stage: message} for an enrichment step that failed on this record (e.g. taxonomy
     # during an NCBI rate limit); the rest of the record is complete. Empty = none failed.
     errors: dict[str, str] = Field(default_factory=dict)
+    # {field: note} for a list field this record holds only part of, by design (a cap, not
+    # a failure — so unlike errors it does not keep the record out of the cache), e.g.
+    # {"links": "first 100 of 891 SRA runs; ..."}. Empty = every list is complete.
+    truncated: dict[str, str] = Field(default_factory=dict)
 
 
 class TaxonExpansion(BaseModel):

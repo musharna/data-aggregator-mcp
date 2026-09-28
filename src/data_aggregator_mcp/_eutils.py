@@ -132,8 +132,11 @@ async def elink(
 ) -> list[str]:
     """Return target uids linking ``ids`` in ``dbfrom`` to records in ``db``.
 
-    Flattens every ``linksetdbs[].links`` across all linksets. Empty ids or no
-    edges → ``[]`` (a PMID with no link in ``db`` is normal, not an error).
+    The union of every ``linksetdbs[].links`` across all linksets, in first-seen order:
+    NCBI can answer one request with overlapping linksets (bioproject->sra returns
+    ``bioproject_sra`` and ``bioproject_sra_all`` with the same runs), so a flat concat
+    listed each uid twice. Empty ids or no edges → ``[]`` (a PMID with no link in ``db``
+    is normal, not an error).
     """
     if not ids:
         return []
@@ -147,11 +150,11 @@ async def elink(
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
     )
-    out: list[str] = []
+    out: dict[str, None] = {}
     for linkset in data.get("linksets", []) or []:
         for linksetdb in linkset.get("linksetdbs", []) or []:
-            out.extend(linksetdb.get("links", []) or [])
-    return out
+            out.update(dict.fromkeys(linksetdb.get("links", []) or []))
+    return list(out)
 
 
 async def efetch(

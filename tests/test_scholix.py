@@ -36,8 +36,8 @@ async def test_links_for_maps_dataset_target_to_datacite(httpx_mock: HTTPXMock) 
     )
     _ra_datacite(httpx_mock, "10.1594/PANGAEA.1")
     async with httpx.AsyncClient() as client:
-        links = await scholix.links_for(client, "10.5061/dryad.x")
-    assert len(links) == 1
+        links, error = await scholix.links_for(client, "10.5061/dryad.x")
+    assert len(links) == 1 and error is None
     assert links[0].target_id == "datacite:10.1594/PANGAEA.1"
     # source IsSupplementedBy target: the dataset supplements the queried record
     assert links[0].rel == "is_supplemented_by"
@@ -56,7 +56,7 @@ async def test_links_for_drops_literature_citation_edges(httpx_mock: HTTPXMock) 
     )
     _ra_datacite(httpx_mock, "10.5281/zenodo.9")
     async with httpx.AsyncClient() as client:
-        links = await scholix.links_for(client, "10.5061/dryad.x")
+        links, error = await scholix.links_for(client, "10.5061/dryad.x")
     # literature (citation) dropped; software kept as datacite:
     assert [lnk.target_id for lnk in links] == ["datacite:10.5281/zenodo.9"]
     assert links[0].rel == "references"
@@ -65,19 +65,19 @@ async def test_links_for_drops_literature_citation_edges(httpx_mock: HTTPXMock) 
 async def test_links_for_skips_target_without_doi(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(url=_URL, json={"totalLinks": 1, "result": [_rec("dataset", None)]})
     async with httpx.AsyncClient() as client:
-        assert await scholix.links_for(client, "10.5061/dryad.x") == []
+        assert await scholix.links_for(client, "10.5061/dryad.x") == ([], None)
 
 
 async def test_links_for_empty_doi_returns_empty() -> None:
     async with httpx.AsyncClient() as client:
-        assert await scholix.links_for(client, None) == []
-        assert await scholix.links_for(client, "") == []
+        assert await scholix.links_for(client, None) == ([], None)
+        assert await scholix.links_for(client, "") == ([], None)
 
 
 async def test_links_for_404_returns_empty(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(url=_URL, status_code=404)
     async with httpx.AsyncClient() as client:
-        assert await scholix.links_for(client, "10.5061/dryad.x") == []
+        assert await scholix.links_for(client, "10.5061/dryad.x") == ([], None)
 
 
 # ---------------------------------------------------------------------------
@@ -94,8 +94,9 @@ async def test_links_for_html_body_returns_empty(httpx_mock: HTTPXMock) -> None:
         headers={"Content-Type": "text/html"},
     )
     async with httpx.AsyncClient() as client:
-        result = await scholix.links_for(client, "10.5061/dryad.x")
-    assert result == []
+        links, error = await scholix.links_for(client, "10.5061/dryad.x")
+    assert links == []
+    assert error is not None and "non-JSON" in error and "text/html" in error
 
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
@@ -106,7 +107,7 @@ live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 
 async def test_live_scholix_pangaea_returns_mappable_targets() -> None:
     # PANGAEA 10.1594/PANGAEA.745671 is densely linked; targets map to datacite:
     async with httpx.AsyncClient() as client:
-        links = await scholix.links_for(client, "10.1594/PANGAEA.745671")
+        links, error = await scholix.links_for(client, "10.1594/PANGAEA.745671")
     assert links  # non-empty
     assert all(lnk.target_id.startswith("datacite:") for lnk in links)
 
@@ -135,7 +136,7 @@ async def test_links_for_keeps_relation_direction(
     )
     _ra_datacite(httpx_mock, "10.1/d")
     async with httpx.AsyncClient() as client:
-        links = await scholix.links_for(client, "10.5061/dryad.x")
+        links, error = await scholix.links_for(client, "10.5061/dryad.x")
     assert [(lnk.rel, lnk.target_id) for lnk in links] == [(ours, "datacite:10.1/d")]
 
 
@@ -168,7 +169,7 @@ async def test_links_for_keeps_only_data_targets_and_labels_by_registration_agen
         ],
     )
     async with httpx.AsyncClient() as client:
-        links = await scholix.links_for(client, "10.5061/dryad.x")
+        links, error = await scholix.links_for(client, "10.5061/dryad.x")
     assert [lnk.target_id for lnk in links] == [
         "datacite:10.5061/dryad.t4b8gtjgj",  # positive control: a DataCite dataset
         "10.1016/j.dib.2020.1",  # data, but not DataCite's: the bare DOI claims no agency
@@ -199,15 +200,17 @@ async def test_registration_agency_outage_keeps_data_links_as_bare_dois(
         is_reusable=True,  # the shared HTTP layer retries a non-JSON 200
     )
     async with httpx.AsyncClient() as client:
-        links = await scholix.links_for(client, "10.5061/dryad.x")
+        links, error = await scholix.links_for(client, "10.5061/dryad.x")
     # Positive control inside: the data target survives and the citation is still dropped.
     assert [lnk.target_id for lnk in links] == ["10.5061/dryad.t4b8gtjgj"]
+    # ...and the bare DOI is reported as unchecked, not passed off as "not DataCite".
+    assert error is not None and "registration-agency lookup failed" in error
 
 
 @live_only
 async def test_live_citation_only_paper_yields_no_data_links() -> None:
     """X-H2 live: every ScholeXplorer edge of 10.3390/plants13060869 is a publication."""
     async with httpx.AsyncClient() as client:
-        assert await scholix.links_for(client, "10.3390/plants13060869") == []
-        pangaea = await scholix.links_for(client, "10.1594/PANGAEA.745671")  # control
+        assert await scholix.links_for(client, "10.3390/plants13060869") == ([], None)
+        pangaea, _ = await scholix.links_for(client, "10.1594/PANGAEA.745671")  # control
     assert pangaea and all(lnk.target_id.startswith("datacite:") for lnk in pangaea)

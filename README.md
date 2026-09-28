@@ -240,7 +240,8 @@ dropped.
 - `sources` — restrict the fan-out, e.g. `["omics"]`.
 - `size` — max results (1–50).
 - `kind` — keep only `dataset` / `sequencing_run` / `study` / `publication` /
-  `software`.
+  `software`. A record whose upstream type none of these covers (a Zenodo image, a
+  DataCite `Audiovisual`, an untyped record) is kind `other` and matches no filter.
 - `published_after` / `published_before` — filter by publication year.
 - `rank` — `relevance` (default) or `semantic` (re-rank the fetched page by
   embedding similarity to the query; needs `EMBEDDING_API_BASE`, degrades to
@@ -304,6 +305,9 @@ or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
 - **`errors`** — `{step: message}` when an enrichment step failed on this record
   (e.g. `taxonomy` during an NCBI rate limit); the rest of the record stands. Such a
   record is not cached, so the next resolve retries the step.
+- **`truncated`** — `{field: note}` when a list on this record is deliberately partial,
+  e.g. a BioProject's `links` past 100 SRA runs: `first 100 of 891 SRA runs; …`. Empty
+  when every list is complete.
 - **`trust=true`** — attach retraction status (via Crossref) under `trust{}`.
   One extra Crossref call; meaningful for DOI-bearing records only.
 - **`fair=true`** — attach an RDA-grounded FAIRness score (0–100 + F/A/I/R

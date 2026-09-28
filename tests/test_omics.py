@@ -355,9 +355,70 @@ async def test_bioproject_links_are_capped_and_logged(monkeypatch, caplog):
     monkeypatch.setattr(_eutils, "elink", fake_elink)
     monkeypatch.setattr(_eutils, "esummary", fake_esummary)
     with caplog.at_level("WARNING"):
-        await omics._bioproject_sra_links(None, "231221")
+        _, note = await omics._bioproject_sra_links(None, "231221")
     assert len(asked[0]) == omics.MAX_LINKED_RUNS
     assert "7314" in caplog.text or str(len(many)) in caplog.text
+    assert note is not None and f"first {omics.MAX_LINKED_RUNS} of {len(many)}" in note
+
+
+async def test_elink_returns_the_union_of_overlapping_linksets(httpx_mock: HTTPXMock, monkeypatch):
+    """B-M3: NCBI answers bioproject->sra with two linksets, bioproject_sra and
+    bioproject_sra_all, which carry the same runs (live PRJNA257197: 891 + 891). elink
+    concatenated them, so every run was listed twice and the count doubled. It is the
+    union now, in first-seen order. Positive control: a uid only one linkset has is kept."""
+    from data_aggregator_mcp import _eutils
+
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    httpx_mock.add_response(
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi"
+        "?dbfrom=bioproject&db=sra&id=111&retmode=json",
+        json={
+            "linksets": [
+                {
+                    "linksetdbs": [
+                        {"linkname": "bioproject_sra", "links": ["1", "2"]},
+                        {"linkname": "bioproject_sra_all", "links": ["1", "2", "3"]},
+                    ]
+                }
+            ]
+        },
+    )
+    async with httpx.AsyncClient() as client:
+        uids = await _eutils.elink(client, dbfrom="bioproject", db="sra", ids=["111"])
+    assert uids == ["1", "2", "3"]
+
+
+async def test_resolve_says_when_bioproject_links_are_capped(monkeypatch) -> None:
+    """B-M3: past MAX_LINKED_RUNS the attached links are the first N runs, which the
+    record said only on stderr — a caller read N links as the whole project. The record
+    now says so in truncated["links"], with the true run count. Positive control: a
+    project under the cap resolves with every run and no truncated entry."""
+    from data_aggregator_mcp import _eutils
+
+    runs = {"big": [str(i) for i in range(5)], "small": ["0", "1"]}
+    monkeypatch.setattr(omics, "MAX_LINKED_RUNS", 3)
+
+    async def fake_esearch(client, db, term, *, retmax, retstart=0):
+        return 1, ["big" if "PRJNA2" in term else "small"]
+
+    async def fake_esummary(client, db, ids):
+        if db == "bioproject":
+            acc = "PRJNA2" if ids == ["big"] else "PRJNA1"
+            return [{"uid": ids[0], "project_acc": acc, "project_title": "P"}]
+        return [{"expxml": f'<Experiment acc="SRX{u}"/>', "runs": ""} for u in ids]
+
+    async def fake_elink(client, *, dbfrom, db, ids):
+        return runs[ids[0]]
+
+    monkeypatch.setattr(_eutils, "esearch", fake_esearch)
+    monkeypatch.setattr(_eutils, "esummary", fake_esummary)
+    monkeypatch.setattr(_eutils, "elink", fake_elink)
+    big = await omics.resolve(None, "bioproject:PRJNA2")
+    small = await omics.resolve(None, "bioproject:PRJNA1")
+    assert [lnk.target_id for lnk in big.links] == ["sra:SRX0", "sra:SRX1", "sra:SRX2"]
+    assert "first 3 of 5" in big.truncated["links"]
+    assert [lnk.target_id for lnk in small.links] == ["sra:SRX0", "sra:SRX1"]
+    assert small.truncated == {}
 
 
 def _stub_eutils(monkeypatch, db_docs: dict[str, list[dict]]) -> list[tuple[str, str]]:

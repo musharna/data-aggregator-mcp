@@ -182,6 +182,50 @@ def test_normalize_access_none_without_open_license() -> None:
     assert datacite._normalize(item).access is None
 
 
+_CC_BY = {
+    "rights": "Creative Commons Attribution 4.0 International",
+    "rightsUri": "https://creativecommons.org/licenses/by/4.0/legalcode",
+    "rightsIdentifier": "cc-by-4.0",
+}
+
+
+def _eu_repo(status: str) -> dict:
+    # Live shape (Harvard Dataverse 10.7910, DataverseNO 10.18710, Mendeley 10.17632 —
+    # 2026-09-28): an access-status entry FIRST, rights/rightsIdentifier null.
+    return {
+        "rights": None,
+        "rightsUri": f"info:eu-repo/semantics/{status}",
+        "rightsIdentifier": None,
+    }
+
+
+def _rights_item(rights: list[dict]) -> dict:
+    return {
+        "attributes": {
+            "doi": "10.7910/dvn/x",
+            "titles": [{"title": "t"}],
+            "types": {"resourceTypeGeneral": "Dataset"},
+            "rightsList": rights,
+        },
+        "relationships": {"client": {"data": {"id": "gdcc.harvard-dv"}}},
+    }
+
+
+def test_normalize_reads_the_licence_past_an_access_status_entry() -> None:
+    """A-M2: the licence is the first entry that is a licence, not rightsList[0] — an
+    info:eu-repo access status first left the licence null. That status, not the
+    licence, decides access: an embargoed CC-BY record is embargoed, not open."""
+    opened = datacite._normalize(_rights_item([_eu_repo("openAccess"), _CC_BY]))
+    assert opened.license == "cc-by-4.0" and opened.access == "open"
+    embargoed = datacite._normalize(_rights_item([_eu_repo("embargoedAccess"), _CC_BY]))
+    assert embargoed.license == "cc-by-4.0" and embargoed.access == "embargoed"
+    restricted = datacite._normalize(_rights_item([_eu_repo("restrictedAccess")]))
+    assert restricted.license is None and restricted.access == "restricted"
+    # Positive control: a list holding only a licence still reads as before.
+    plain = datacite._normalize(_rights_item([_CC_BY]))
+    assert plain.license == "cc-by-4.0" and plain.access == "open"
+
+
 @pytest.mark.asyncio
 async def test_search_offset_requests_page_number_and_slices():
     captured = {}

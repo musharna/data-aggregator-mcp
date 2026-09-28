@@ -352,14 +352,18 @@ async def test_resolve_latest_lookup_failure_is_enrichment_not_error(
     httpx_mock: HTTPXMock, monkeypatch
 ) -> None:
     """The /versions/latest HEAD is enrichment: an outage leaves superseded_by None and
-    the resolve still succeeds with Zenodo's is_last."""
-    from data_aggregator_mcp import _http
+    the resolve still succeeds with Zenodo's is_last — but the record says the lookup
+    failed (errors["superseded_by"]) and router.resolve does not cache it, so the next
+    resolve retries. A silent None read exactly like "no newer version known" and was
+    served from cache for the TTL."""
+    from data_aggregator_mcp import _http, router
 
     async def _no_sleep(*_a, **_k):
         return None
 
     monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
-    httpx_mock.add_response(
+    _concept_pair_mock(httpx_mock)
+    httpx_mock.add_response(  # the older record's GET is needed again: it is not cached
         url=f"https://zenodo.org/api/records/{_CONCEPT_OLD}",
         json=_versioned(_CONCEPT_OLD, is_last=False, index=0, related=[]),
     )
@@ -369,11 +373,21 @@ async def test_resolve_latest_lookup_failure_is_enrichment_not_error(
         status_code=503,
         is_reusable=True,
     )
+    router._RESOLVE_CACHE.clear()
     zenodo._SEARCH_CACHE.clear()
     async with httpx.AsyncClient() as client:
-        old = await zenodo.resolve(client, f"zenodo:{_CONCEPT_OLD}")
+        old = await router.resolve(client, f"zenodo:{_CONCEPT_OLD}")
+        heads = sum(r.method == "HEAD" for r in httpx_mock.get_requests())
+        await router.resolve(client, f"zenodo:{_CONCEPT_OLD}")
+        # Positive control: a record with no failed step resolves clean and IS cached.
+        new = await router.resolve(client, f"zenodo:{_CONCEPT_NEW}")
+        await router.resolve(client, f"zenodo:{_CONCEPT_NEW}")
     assert old.is_latest is False and old.superseded_by is None
-    assert any(r.method == "HEAD" for r in httpx_mock.get_requests())  # it was attempted
+    assert "503" in old.errors["superseded_by"]
+    assert heads >= 1 and sum(r.method == "HEAD" for r in httpx_mock.get_requests()) == 2 * heads
+    assert new.is_latest is True and new.errors == {}
+    new_gets = [r for r in httpx_mock.get_requests() if str(r.url).endswith(str(_CONCEPT_NEW))]
+    assert len(new_gets) == 1
 
 
 async def test_search_never_makes_the_latest_lookup(httpx_mock: HTTPXMock) -> None:

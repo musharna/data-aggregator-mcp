@@ -136,18 +136,26 @@ async def _search_db(
     return count, [normalize(d) for d in docs]
 
 
-async def _bioproject_sra_links(client: httpx.AsyncClient, bioproject_uid: str) -> list[Link]:
+async def _bioproject_sra_links(
+    client: httpx.AsyncClient, bioproject_uid: str
+) -> tuple[list[Link], str | None]:
     """Links to the SRA runs under a BioProject (elink bioproject→sra), each as a
-    directly-resolvable ``sra:`` id. No edges → [].
+    directly-resolvable ``sra:`` id, and a truncation note when capped. No edges → [].
 
     Bounded by ``MAX_LINKED_RUNS``: elink returns every run in the project, which for a
     large one is thousands of uids — more than a single esummary URL can carry, and more
-    links than a resolve payload should hold. Truncation is logged, never silent.
+    links than a resolve payload should hold. Truncation is logged AND returned as a note
+    for the record's ``truncated["links"]``, never silent.
     """
     uids = await _eutils.elink(client, dbfrom="bioproject", db="sra", ids=[bioproject_uid])
     if not uids:
-        return []
+        return [], None
+    note = None
     if len(uids) > MAX_LINKED_RUNS:
+        note = (
+            f"first {MAX_LINKED_RUNS} of {len(uids)} SRA runs; search sources=['omics'] "
+            "for the project accession to page them all"
+        )
         logger.warning(
             "BioProject uid=%s links %d SRA runs; attaching the first %d "
             "(search sources=['omics'] for the project accession to page them all)",
@@ -157,7 +165,7 @@ async def _bioproject_sra_links(client: httpx.AsyncClient, bioproject_uid: str) 
         )
         uids = uids[:MAX_LINKED_RUNS]
     docs = await _eutils.esummary(client, "sra", uids)
-    return [Link(rel="has_data", target_id=_normalize_sra(doc).id) for doc in docs]
+    return [Link(rel="has_data", target_id=_normalize_sra(doc).id) for doc in docs], note
 
 
 # The router pages each NCBI db as its own stream (``omics/geo`` ...) so each keeps its own
@@ -248,7 +256,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         if files:
             resource = resource.model_copy(update={"files": files})
     elif prefix == "bioproject":
-        links = await _bioproject_sra_links(client, str(doc["uid"]))
+        links, note = await _bioproject_sra_links(client, str(doc["uid"]))
         if links:
             resource = resource.model_copy(update={"links": links})
+        if note:
+            resource = resource.model_copy(update={"truncated": {"links": note}})
     return resource
