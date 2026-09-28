@@ -17,12 +17,21 @@ server fetch guard.
 from __future__ import annotations
 
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
 import httpx
 
-from data_aggregator_mcp import _http, dataverse, dryad, figshare, openneuro, osf, zenodo
+from data_aggregator_mcp import (
+    _http,
+    _pushdown,
+    dataverse,
+    dryad,
+    figshare,
+    openneuro,
+    osf,
+    zenodo,
+)
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.license_compat import host_matches
 from data_aggregator_mcp.models import (
@@ -202,17 +211,50 @@ def _normalize(item: dict[str, Any]) -> DataResource:
     )
 
 
+def _filter_clauses(filters: Mapping[str, Any]) -> list[str]:
+    """DataCite query clauses for the pushable facet filters. ``publicationYear`` is the
+    same field ``_normalize`` reads ``year`` from, so the bound is identical."""
+    pa, pb = filters.get("published_after"), filters.get("published_before")
+    clauses = [
+        _pushdown.range_clause(
+            "publicationYear",
+            str(pa) if pa is not None else None,
+            str(pb) if pb is not None else None,
+        )
+    ]
+    if (kind := filters.get("kind")) is not None:
+        clauses.append(_pushdown.kind_clause("types.resourceTypeGeneral", _KIND_MAP, kind))
+    return [c for c in clauses if c is not None]
+
+
+def pushable(filters: Mapping[str, Any], /) -> dict[str, Any]:
+    """The active filters DataCite can evaluate: both year bounds, and any ``kind`` a
+    ``resourceTypeGeneral`` normalizes to (``_pushdown.FilterPushdown``)."""
+    act = _pushdown.active(filters)
+    out = {k: v for k, v in act.items() if k in _pushdown.YEAR_FILTERS}
+    kind = act.get("kind")
+    if kind is not None and _pushdown.kind_clause("types.resourceTypeGeneral", _KIND_MAP, kind):
+        out["kind"] = kind
+    return out
+
+
 async def search(
     client: httpx.AsyncClient,
     query: str,
     *,
     size: int = DEFAULT_SIZE,
     offset: int = 0,
+    filters: Mapping[str, Any] | None = None,
 ) -> tuple[int, list[DataResource]]:
     """Search DataCite DOIs. Returns (total_hits, COMPACT resources).
-    ``offset`` → page ``offset // size + 1`` then drop first ``offset % size``."""
+    ``offset`` → page ``offset // size + 1`` then drop first ``offset % size``.
+
+    ``filters`` (the subset :func:`pushable` accepted) are ANDed onto ``query``, so
+    DataCite evaluates them and ``total_hits`` is the filtered total. None/empty sends
+    ``query`` unchanged."""
     capped = min(size, MAX_SIZE)
-    params = {"query": query, "page[size]": str(capped)}
+    q = _pushdown.with_clauses(query, _filter_clauses(filters or {}))
+    params = {"query": q, "page[size]": str(capped)}
     if offset:  # only when paging past page 1, so offset=0 request stays byte-identical
         params["page[number]"] = str(offset // capped + 1)
     body = await _http.request_json(

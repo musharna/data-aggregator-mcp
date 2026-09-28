@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urljoin
 
 import httpx
 
-from data_aggregator_mcp import _http
+from data_aggregator_mcp import _http, _pushdown
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import (
@@ -126,21 +127,57 @@ def _normalize(record: dict[str, Any]) -> DataResource:
     )
 
 
+def _filter_clauses(filters: Mapping[str, Any]) -> list[str]:
+    """Zenodo query clauses for the pushable facet filters. Dates are whole years, so the
+    range spans Jan 1 of ``published_after`` to Dec 31 of ``published_before`` — the same
+    bound ``_normalize``'s ``publication_date[:4]`` year is post-filtered against."""
+    pa, pb = filters.get("published_after"), filters.get("published_before")
+    clauses = [
+        _pushdown.range_clause(
+            "publication_date",
+            f"{pa:04d}-01-01" if pa is not None else None,
+            f"{pb:04d}-12-31" if pb is not None else None,
+        )
+    ]
+    if (kind := filters.get("kind")) is not None:
+        clauses.append(_pushdown.kind_clause("resource_type.type", _KIND_MAP, kind))
+    return [c for c in clauses if c is not None]
+
+
+def pushable(filters: Mapping[str, Any], /) -> dict[str, Any]:
+    """The active filters Zenodo can evaluate: both year bounds, and any ``kind`` a
+    Zenodo ``resource_type.type`` normalizes to (``_pushdown.FilterPushdown``)."""
+    act = _pushdown.active(filters)
+    out = {k: v for k, v in act.items() if k in _pushdown.YEAR_FILTERS}
+    kind = act.get("kind")
+    if kind is not None and _pushdown.kind_clause("resource_type.type", _KIND_MAP, kind):
+        out["kind"] = kind
+    return out
+
+
 async def search(
     client: httpx.AsyncClient,
     query: str,
     *,
     size: int = DEFAULT_SIZE,
     offset: int = 0,
+    filters: Mapping[str, Any] | None = None,
 ) -> tuple[int, list[DataResource]]:
     """Search Zenodo records. Returns (total_hits, COMPACT resources).
 
     ``offset`` selects the window [offset, offset+size): request page
     ``offset // size + 1`` at page-size ``size`` and drop the first
     ``offset % size`` records (page-boundary slice; see pagination spec).
+
+    ``filters`` (the subset :func:`pushable` accepted) are ANDed onto ``q``, so Zenodo
+    evaluates them and ``total_hits`` is the filtered total. None/empty sends ``q``
+    unchanged.
     """
     capped = min(size, MAX_SIZE)
-    params = {"q": query, "size": str(capped)}
+    params = {
+        "q": _pushdown.with_clauses(query, _filter_clauses(filters or {})),
+        "size": str(capped),
+    }
     if offset:  # only when paging past page 1, so offset=0 request stays byte-identical
         params["page"] = str(offset // capped + 1)
     data = await _http.request_json(
