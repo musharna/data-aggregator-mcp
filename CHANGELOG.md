@@ -6,6 +6,35 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `published_after` / `published_before` / `kind` filters reach Zenodo and DataCite, so
+  those sources return matching records and a filtered `total`. They were applied only
+  to the first fetched window: "soil moisture" 2019–2020 returned 0 results against a
+  total of 127,525.
+- Fetching a large PDB entry (e.g. 4V6X) works: resolve lists the legacy `.pdb` file only
+  when wwPDB makes one. It listed one for every entry, and the missing file's 404 failed
+  the whole fetch.
+- Dryad, NASA CMR and other records `fetch` refuses no longer advertise `fetch` or the
+  operate modes in `access_modes`, and `operate` refuses them with fetch's reason instead
+  of failing on the download with only the URL as its error.
+- DANDI and MetaboLights downloads are checksum-verified: both publish a sha256 per file
+  (DANDI in each asset's metadata, MetaboLights in the study's `HASHES/`), which the
+  manifests now carry.
+- A resolve whose taxonomy enrichment failed (e.g. an NCBI rate limit) is no longer
+  cached for the TTL, so the next resolve retries it.
+
+### Changed
+
+- Every tool refuses an argument it does not declare, with an input-validation error.
+  It was silently dropped: `search(limit=3)` returned 10 results (the argument is `size`).
+- Records carry `errors` (`{step: message}`), naming an enrichment step that failed on
+  the record; empty when none did.
+- Sources that cannot take those filters upstream (omics, literature, HuggingFace) are
+  still filtered after fetch, and a page the filters thinned now says so in
+  `errors["filters"]`: which sources, how many records were removed, that their `total`
+  is unfiltered, and that `next_cursor` continues.
+
 ## [0.47.0] - 2026-09-27
 
 ### Fixed
