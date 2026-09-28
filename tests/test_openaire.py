@@ -239,7 +239,7 @@ async def test_live_openaire_resolve_fetches_entity() -> None:
 async def test_resolve_attaches_identifiers_and_fulltext(httpx_mock, monkeypatch) -> None:
     # Stub Scholix links + idconv to isolate this test's assertions.
     async def _no_scholix(client, doi):
-        return []
+        return [], None
 
     async def _ids(client, doi):
         return {"doi": doi, "pmid": "23066504", "pmcid": "PMC3463246"}
@@ -271,7 +271,7 @@ async def test_resolve_fills_access_license_from_fulltext_when_absent(
     # OpenAIRE record carries no P8 bestAccessRight → access/license None; the EuropePMC
     # core record fills them. (P8 rights, when present, stay primary — see consumer guard.)
     async def _no_scholix(client, doi):
-        return []
+        return [], None
 
     async def _ids(client, doi):
         return {"doi": doi, "pmcid": "PMC3463246"}
@@ -301,3 +301,78 @@ async def test_resolve_fills_access_license_from_fulltext_when_absent(
         r = await openaire.resolve(client, "openaire:oai123")
     assert r.access == "open"
     assert r.license == "cc by"
+
+
+async def test_resolve_records_a_failed_link_label_lookup_and_is_not_cached(
+    httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    """When the doi.org registration-agency lookup fails, the Scholix data link still
+    comes back (bare), but the record says so in errors["links"] and router.resolve does
+    not cache it — the next resolve retries. A silent bare DOI read exactly like "not a
+    DataCite DOI" and was served from cache for the TTL."""
+    from data_aggregator_mcp import _http, fulltext, router
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    async def _no_ids(client, doi):
+        return {}
+
+    async def _no_fulltext(client, pmcid=None, doi=None):
+        return fulltext.FullText()
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
+    monkeypatch.setattr("data_aggregator_mcp.idconv.identifiers_for", _no_ids)
+    monkeypatch.setattr("data_aggregator_mcp.fulltext.find", _no_fulltext)
+    for oid, doi, data_doi in (
+        ("oaibad", "10.1/bad", "10.5061/dryad.bad"),
+        ("oaiok", "10.1/ok", "10.5061/dryad.ok"),
+    ):
+        httpx_mock.add_response(
+            url=f"https://api.openaire.eu/graph/v1/researchProducts/{oid}",
+            json={
+                "id": oid,
+                "mainTitle": "t",
+                "type": "publication",
+                "pids": [{"scheme": "doi", "value": doi}],
+            },
+            is_reusable=True,
+        )
+        httpx_mock.add_response(
+            url=f"https://api.scholexplorer.openaire.eu/v3/Links?sourcePid={doi}",
+            json={
+                "result": [
+                    {
+                        "RelationshipType": {"Name": "IsSupplementedBy"},
+                        "target": {
+                            "Identifier": [{"ID": data_doi, "IDScheme": "doi"}],
+                            "Type": "dataset",
+                        },
+                    }
+                ]
+            },
+            is_reusable=True,
+        )
+    httpx_mock.add_response(
+        url="https://doi.org/ra/10.5061/dryad.bad",
+        text="<html><body>502 Bad Gateway</body></html>",
+        headers={"Content-Type": "text/html"},
+        is_reusable=True,
+    )
+    httpx_mock.add_response(
+        url="https://doi.org/ra/10.5061/dryad.ok",
+        json=[{"DOI": "10.5061/dryad.ok", "RA": "DataCite"}],
+    )
+    router._RESOLVE_CACHE.clear()
+    async with httpx.AsyncClient() as client:
+        bad = await router.resolve(client, "openaire:oaibad")
+        await router.resolve(client, "openaire:oaibad")
+        ok = await router.resolve(client, "openaire:oaiok")
+        await router.resolve(client, "openaire:oaiok")
+    entity_gets = [str(r.url).rsplit("/", 1)[-1] for r in httpx_mock.get_requests()]
+    assert [lnk.target_id for lnk in bad.links] == ["10.5061/dryad.bad"]
+    assert "registration-agency lookup failed" in bad.errors["links"]
+    assert entity_gets.count("oaibad") == 2  # not cached: the second resolve re-fetched
+    # Positive control: a lookup that answers labels the link, reports nothing, IS cached.
+    assert [lnk.target_id for lnk in ok.links] == ["datacite:10.5061/dryad.ok"]
+    assert ok.errors == {} and entity_gets.count("oaiok") == 1
