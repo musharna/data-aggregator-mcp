@@ -115,7 +115,8 @@ def _normalize(doc: dict) -> DataResource:
         kind="dataset",
         title=doc.get("title") or "",
         creators=_creators(doc),
-        year=year_from(doc.get("pubDate"), doc.get("created")),
+        # The dataset record says ``pubDate``; the search index says ``publicationDate``.
+        year=year_from(doc.get("pubDate"), doc.get("publicationDate"), doc.get("created")),
         description=strip_html(doc.get("description")),
         doi=doc.get("doi"),
         subjects=_subjects(doc),
