@@ -45,6 +45,7 @@ _GQL = (
     "rcsb_accession_info{{initial_release_date}} "
     "rcsb_primary_citation{{year pdbx_database_id_DOI pdbx_database_id_PubMed}} "
     "rcsb_entry_info{{experimental_method}} "
+    "pdbx_database_status{{pdb_format_compatible}} "
     "database_2{{database_id pdbx_DOI}} "
     "audit_author{{name pdbx_ordinal}} "
     "pdbx_audit_support{{funding_organization grant_number}} "
@@ -191,6 +192,12 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     if entry is None:
         raise NotFoundError(f"RCSB PDB has no entry {pid}")
     resource = _normalize(entry)
+    # mmCIF exists for every entry. wwPDB makes a legacy PDB-format file only for entries
+    # that fit that format (pdb_format_compatible "Y"); a large one (4V6X) has none, and
+    # listing it made fetch 404 and fail as a whole.
+    exts = ["cif"]
+    if (entry.get("pdbx_database_status") or {}).get("pdb_format_compatible") == "Y":
+        exts.append("pdb")
     files = [
         FileEntry(
             name=f"{pid}.{ext}",
@@ -198,6 +205,6 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             mime="chemical/x-cif" if ext == "cif" else "chemical/x-pdb",
             source="rcsb",
         )
-        for ext in ("cif", "pdb")
+        for ext in exts
     ]
     return resource.model_copy(update={"files": files})

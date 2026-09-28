@@ -16,6 +16,7 @@ _GRAPHQL = {
         "entries": [
             {
                 "rcsb_id": "1GOJ",
+                "pdbx_database_status": {"pdb_format_compatible": "Y"},
                 "struct": {"title": "Fast kinesin"},
                 "rcsb_accession_info": {"initial_release_date": "2001-11-30T00:00:00Z"},
                 "rcsb_primary_citation": {
@@ -31,6 +32,7 @@ _GRAPHQL = {
             },
             {
                 "rcsb_id": "1BG2",
+                "pdbx_database_status": {"pdb_format_compatible": "Y"},
                 "struct": {"title": "Human kinesin motor domain"},
                 "rcsb_accession_info": {"initial_release_date": "1998-10-14T00:00:00Z"},
                 "rcsb_primary_citation": {
@@ -89,6 +91,35 @@ async def test_resolve_attaches_structure_files():
     assert {"cif", "pdb"} <= exts
     assert all(f.url and f.url.startswith("https://files.rcsb.org/") for f in r.files)
     assert r.identifiers.get("pmid") == "8606779" and r.doi == "10.2210/pdb1bg2/pdb"
+
+
+@pytest.mark.asyncio
+async def test_resolve_lists_legacy_pdb_file_only_when_rcsb_produces_one():
+    """B-M4 (audit 2026-09-27): resolve always listed ``<id>.pdb``, but wwPDB makes no
+    legacy PDB-format file for entries too large for it (4V6X: 237,685 atoms,
+    ``pdb_format_compatible = "N"``). That URL 404s, so ``fetch`` of 4V6X failed as a
+    whole, valid .cif included. List the .pdb only when RCSB says it exists."""
+    big = {
+        "data": {
+            "entries": [
+                {
+                    "rcsb_id": "4V6X",
+                    "pdbx_database_status": {"pdb_format_compatible": "N"},
+                    "struct": {"title": "Human 80S ribosome"},
+                    "database_2": [{"database_id": "PDB", "pdbx_DOI": "10.2210/pdb4v6x/pdb"}],
+                }
+            ]
+        }
+    }
+
+    def handler(request):
+        return httpx.Response(200, json=big if b"4V6X" in request.content else _GRAPHQL)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        large = await pdb.resolve(c, "pdb:4V6X")
+        small = await pdb.resolve(c, "pdb:1BG2")  # positive control: both formats exist
+    assert [f.name for f in large.files] == ["4V6X.cif"]
+    assert [f.name for f in small.files] == ["1BG2.cif", "1BG2.pdb"]
 
 
 @pytest.mark.asyncio
@@ -283,3 +314,15 @@ async def test_live_sibling_entries_have_own_dois():
     assert a.doi == "10.2210/pdb6vyb/pdb" and b.doi == "10.2210/pdb6vxx/pdb"
     paper = Link(rel="described_in", target_id="10.1016/j.cell.2020.02.058")
     assert paper in a.links and paper in b.links
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_every_listed_structure_file_exists():
+    """B-M4 live: 4V6X has no legacy .pdb (404 upstream); 1BG2 has both formats. Every
+    URL resolve lists must answer 200."""
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        large = await pdb.resolve(c, "pdb:4V6X")
+        small = await pdb.resolve(c, "pdb:1BG2")
+        statuses = {f.name: (await c.head(f.url)).status_code for f in large.files + small.files}
+    assert statuses == {"4V6X.cif": 200, "1BG2.cif": 200, "1BG2.pdb": 200}
