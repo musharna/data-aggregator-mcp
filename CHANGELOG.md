@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- The `gwas` source works again. The GWAS Catalog retired its v1 REST API (kept
+  until May 2026), which now refuses every request with HTTP 429, so every GWAS
+  search and resolve failed as "rate limited". It now uses the v2 API, with the same
+  exact disease-trait matching. A study's paper title and year come from a second
+  request on `resolve`; if that fails, the record says so in `errors["publication"]`
+  and is not cached. Search results are titled by the trait.
+
 ## [0.50.0] - 2026-09-28
 
 ### Fixed
