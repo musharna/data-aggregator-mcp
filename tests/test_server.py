@@ -47,7 +47,7 @@ async def test_dispatch_search_routes_to_zenodo(httpx_mock: HTTPXMock) -> None:
         json={"hits": {"total": 0, "hits": []}},
     )
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=rice&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=rice&sort=relevance&page%5Bsize%5D=10",
         json={"data": [], "meta": {"total": 0}},
     )
     out = await server._dispatch("search", {"query": "rice", "sources": ["zenodo", "datacite"]})
@@ -78,7 +78,7 @@ async def test_dispatch_search_merges_and_surfaces_errors(httpx_mock: HTTPXMock)
         },
     )
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=rice&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=rice&sort=relevance&page%5Bsize%5D=10",
         status_code=500,
         is_reusable=True,
     )

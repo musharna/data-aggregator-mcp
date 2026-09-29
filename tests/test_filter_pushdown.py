@@ -100,9 +100,12 @@ async def test_datacite_request_carries_the_filters(
 
 
 async def test_datacite_request_without_filters_is_unchanged(httpx_mock: HTTPXMock) -> None:
-    """Positive control: byte-identical to the request 7fcd85b sent."""
+    """Positive control: no filter clause is added — the request 7fcd85b sent, plus the
+    relevance sort every DataCite search now asks for."""
     req = await _sent(httpx_mock, _DATACITE_EMPTY, sources=["datacite"])
-    assert str(req.url) == "https://api.datacite.org/dois?query=soil+moisture&page%5Bsize%5D=10"
+    assert str(req.url) == (
+        "https://api.datacite.org/dois?query=soil+moisture&sort=relevance&page%5Bsize%5D=10"
+    )
 
 
 @pytest.mark.parametrize("adapter", [zenodo, datacite])

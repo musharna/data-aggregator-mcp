@@ -278,7 +278,7 @@ async def test_search_fans_out_and_merges(httpx_mock: HTTPXMock) -> None:
         json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
     )
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=rna&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=rna&sort=relevance&page%5Bsize%5D=10",
         json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
     )
     async with httpx.AsyncClient() as client:
@@ -298,7 +298,7 @@ async def test_search_captures_per_source_error_without_failing(httpx_mock: HTTP
         json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
     )
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=rna&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=rna&sort=relevance&page%5Bsize%5D=10",
         status_code=500,
         is_reusable=True,
     )
@@ -313,7 +313,7 @@ async def test_search_captures_per_source_error_without_failing(httpx_mock: HTTP
 
 async def test_search_respects_sources_filter(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=rna&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=rna&sort=relevance&page%5Bsize%5D=10",
         json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
     )
     async with httpx.AsyncClient() as client:
@@ -370,7 +370,7 @@ async def test_search_does_not_starve_later_source(httpx_mock: HTTPXMock) -> Non
         json={"hits": {"total": 5, "hits": zen_hits}},
     )
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=x&page%5Bsize%5D=5",
+        url="https://api.datacite.org/dois?query=x&sort=relevance&page%5Bsize%5D=5",
         json={"data": dc_hits, "meta": {"total": 5}},
     )
     async with httpx.AsyncClient() as client:
@@ -443,7 +443,7 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
         json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
     )
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=rna&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=rna&sort=relevance&page%5Bsize%5D=10",
         json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
     )
     httpx_mock.add_response(
@@ -1397,19 +1397,58 @@ async def test_live_search_synonym_expansion_fires() -> None:
 
 
 @_live_only
-async def test_live_pagination_walks_zenodo_datacite() -> None:
-    """Real-execution boundary probe: page 2 (via next_cursor) returns records
-    disjoint from page 1 against the live Zenodo + DataCite APIs."""
-    async with httpx.AsyncClient() as client:
-        p1 = await router.search_page(
-            client, query="climate", size=5, sources=["zenodo", "datacite"]
-        )
-        assert p1.next_cursor is not None
-        p2 = await router.search_page(client, cursor=p1.next_cursor)
-    ids1 = {r.id for r in p1.results}
-    ids2 = {r.id for r in p2.results}
-    assert ids1 and ids2
-    assert ids1.isdisjoint(ids2)  # paging advanced, did not repeat page 1
+async def test_live_pagination_walks_zenodo_datacite(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Real-execution boundary probe: page 2 (via next_cursor) resumes each live source
+    at the position the cursor recorded and repeats nothing from page 1.
+
+    A live index can move a record across the page boundary between the two requests
+    (DataCite records with tied relevance swap order). A repeat is traced to its cause
+    from what each upstream returned: a record page 1 had passed coming back means the
+    upstream moved it, and the walk is retried; a record page 1 emitted but the cursor
+    never recorded is the router's fault and fails at once."""
+    from data_aggregator_mcp import datacite, zenodo
+
+    names = ("zenodo", "datacite")
+    returned: dict[tuple[str, int], list[str]] = {}  # (source, offset) -> ids, upstream order
+
+    def recording(name, real):
+        async def search(*args, **kwargs):
+            total, recs = await real(*args, **kwargs)
+            returned[(name, kwargs.get("offset", 0))] = [r.id for r in recs]
+            return total, recs
+
+        return search
+
+    monkeypatch.setattr(zenodo, "search", recording("zenodo", zenodo.search))
+    monkeypatch.setattr(datacite, "search", recording("datacite", datacite.search))
+
+    moved: list[str] = []
+    for _ in range(3):
+        returned.clear()
+        async with httpx.AsyncClient() as client:
+            p1 = await router.search_page(client, query="climate", size=5, sources=list(names))
+            assert p1.next_cursor is not None
+            state = _cursor.decode(p1.next_cursor)
+            p2 = await router.search_page(client, cursor=p1.next_cursor)
+        offsets, ahead = state["offsets"], state.get("ahead", {})
+        ids1 = [r.id for r in p1.results]
+        ids2 = {r.id for r in p2.results}
+        assert ids1 and ids2
+        for name in names:
+            took = [i for i in ids1 if i.startswith(f"{name}:")]
+            assert not took or offsets[name] > 0, (name, took, offsets)
+        # Page 2 asked every source to resume exactly where the cursor said.
+        assert {k for k in returned if k[1]} == {(n, offsets[n]) for n in names if offsets[n]}
+        repeats = [i for i in ids1 if i in ids2]
+        if not repeats:
+            return
+        for rid in repeats:
+            name = rid.split(":", 1)[0]
+            pos = returned[(name, 0)].index(rid)
+            passed = pos < offsets[name] or pos - offsets[name] in ahead.get(name, [])
+            assert passed, f"router re-emitted {rid}: page-1 position {pos}, cursor {state}"
+        moved = repeats
+    pytest.fail(f"upstream moved records across the page boundary in 3 walks: {moved}")
 
 
 @_live_only

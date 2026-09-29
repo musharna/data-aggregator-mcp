@@ -287,7 +287,12 @@ async def search(
     ``query`` unchanged."""
     capped = min(size, MAX_SIZE)
     q = _pushdown.with_clauses(query, _filter_clauses(filters or {}))
-    params = {"query": q, "page[size]": str(capped)}
+    # With no sort (or an unknown one) DataCite orders by most recently updated, so a
+    # search returned a feed of recent edits and page 2 shifted whenever a record was
+    # touched between requests (probe 2026-09-29). Records with tied relevance scores can
+    # still swap between requests; a second sort key ("relevance,name") is not accepted
+    # and falls back to the update order.
+    params = {"query": q, "sort": "relevance", "page[size]": str(capped)}
     if offset:  # only when paging past page 1, so offset=0 request stays byte-identical
         params["page[number]"] = str(offset // capped + 1)
     body = await _http.request_json(
