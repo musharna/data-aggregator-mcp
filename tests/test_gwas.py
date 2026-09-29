@@ -97,8 +97,14 @@ async def test_resolve_normalizes_study_with_its_publication():
 
 
 @pytest.mark.asyncio
-async def test_resolve_wrong_shape_publication_is_a_failed_lookup():
+async def test_resolve_wrong_shape_publication_is_a_failed_lookup(monkeypatch):
     # A 200 whose body is not a publication object is a failure, not "no publication".
+    from data_aggregator_mcp import _http
+
+    async def _no_sleep(*_a, **_k):  # the wrong shape is retried; skip the real backoff
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
     wrong = httpx.Response(200, json=[_PUBLICATION])
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(_study_handler(publication=wrong))
