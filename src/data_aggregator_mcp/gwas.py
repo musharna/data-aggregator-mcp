@@ -7,6 +7,12 @@ metadata plus the PubMed cross-link (the paper<->data bridge). No fetch backend:
 summary-statistics retrieval (FTP path derivation for fullPvalueSet studies) is a
 documented follow-up, so gwas: ids are intentionally absent from
 server._FETCHABLE_SOURCES and fail loud at fetch. kind="study".
+
+REST API v2. The v1 API (``/gwas/rest/api/studies/search/findByDiseaseTrait``) was
+kept alongside v2 only until May 2026 and now answers every request with HTTP 429.
+A v2 study carries its PubMed id but not the paper: ``resolve`` reads the title and
+date from ``/publications/{pmid}``; ``search`` does not spend a request per row on
+it, so a search row is titled by its trait.
 """
 
 from __future__ import annotations
@@ -14,28 +20,32 @@ from __future__ import annotations
 import httpx
 
 from data_aggregator_mcp import _http
-from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.errors import DataAggregatorError, NotFoundError
 from data_aggregator_mcp.models import DataResource, Link, compact, local_id
 
-SEARCH = "https://www.ebi.ac.uk/gwas/rest/api/studies/search/findByDiseaseTrait"
-RECORD = "https://www.ebi.ac.uk/gwas/rest/api/studies/{acc}"
+_API = "https://www.ebi.ac.uk/gwas/rest/api/v2"
+SEARCH = f"{_API}/studies"
+RECORD = f"{_API}/studies/{{acc}}"
+PUBLICATION = f"{_API}/publications/{{pmid}}"
 _LANDING = "https://www.ebi.ac.uk/gwas/studies/{acc}"
 PREFIXES = {"gwas"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 DEFAULT_TIMEOUT = 30.0
-MAX_RETRIES = 2
+# v2 is often slow: 9 of 20 study GETs answered within 30 s, the rest stalled, and
+# some answered HTTP 500 (probe 2026-09-28 ~20:15 EDT). A retry usually lands.
+MAX_RETRIES = 3
 
 
-def _normalize(s: dict) -> DataResource:
-    acc = s.get("accessionId") or ""
-    pub = s.get("publicationInfo") or {}
-    pubmed = pub.get("pubmedId")
+def _normalize(s: dict, pub: dict | None = None) -> DataResource:
+    acc = s.get("accession_id") or ""
+    pub = pub or {}
+    pubmed = s.get("pubmed_id")
     identifiers: dict[str, str] = {}
     if pubmed:
         identifiers["pmid"] = str(pubmed)
-    trait = (s.get("diseaseTrait") or {}).get("trait")
-    pubdate = pub.get("publicationDate") or ""
+    trait = s.get("disease_trait") or None
+    pubdate = pub.get("publication_date") or ""
     year = int(pubdate[:4]) if pubdate[:4].isdigit() else None
     return DataResource(
         id=f"gwas:{acc}",
@@ -45,7 +55,7 @@ def _normalize(s: dict) -> DataResource:
         year=year,
         identifiers=identifiers,
         subjects=[trait] if trait else [],
-        last_updated=pub.get("publicationDate") or None,
+        last_updated=pub.get("publication_date") or None,
         files=[],
         links=[Link(rel="landing_page", target_id=_LANDING.format(acc=acc))],
     )
@@ -61,7 +71,9 @@ async def search(
         "GET",
         SEARCH,
         service="GWAS Catalog search",
-        params={"diseaseTrait": query, "size": capped, "page": page},
+        # disease_trait is the v2 form of v1's findByDiseaseTrait: case-insensitive exact
+        # match on the trait (efo_trait is a broader ontology match; not used).
+        params={"disease_trait": query, "size": capped, "page": page},
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
@@ -95,6 +107,35 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         max_retries=MAX_RETRIES,
         not_found_returns=None,
     )
-    if not body or not body.get("accessionId"):
+    if not body or not body.get("accession_id"):
         raise NotFoundError(f"GWAS Catalog has no study {acc}")
-    return _normalize(body)
+    pub, pub_error = await _publication(client, body.get("pubmed_id"))
+    resource = _normalize(body, pub)
+    if pub_error:  # recorded, so the router does not cache a study missing its paper
+        resource = resource.model_copy(
+            update={"errors": {**resource.errors, "publication": pub_error}}
+        )
+    return resource
+
+
+async def _publication(client: httpx.AsyncClient, pmid: object) -> tuple[dict, str | None]:
+    """The study's paper (title, publication_date), and why it is missing (None when the
+    Catalog answered). No PMID, or a PMID the Catalog has no publication for → ``({},
+    None)``; a failed lookup → ``({}, reason)``."""
+    if not pmid:
+        return {}, None
+    try:
+        body = await _http.request_json(
+            client,
+            "GET",
+            PUBLICATION.format(pmid=pmid),
+            service="GWAS Catalog publication",
+            headers={"Accept": "application/json"},
+            timeout=DEFAULT_TIMEOUT,
+            max_retries=MAX_RETRIES,
+            not_found_returns=None,
+            expect=dict,  # a wrong-shape body is a failed lookup, not "no publication"
+        )
+    except DataAggregatorError as exc:
+        return {}, f"{type(exc).__name__}: {exc}"
+    return body or {}, None

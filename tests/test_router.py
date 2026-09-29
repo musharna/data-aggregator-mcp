@@ -524,9 +524,7 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     )
     # gwas is also a default source (discovery-only): returns empty here
     httpx_mock.add_response(
-        url=re.compile(
-            r"https://www\.ebi\.ac\.uk/gwas/rest/api/studies/search/findByDiseaseTrait.*"
-        ),
+        url=re.compile(r"https://www\.ebi\.ac\.uk/gwas/rest/api/v2/studies\?.*"),
         json={"_embedded": {"studies": []}, "page": {"totalElements": 0}},
     )
     # uniprot is also a default source: empty results here

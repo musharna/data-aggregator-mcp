@@ -1,0 +1,222 @@
+{
+ "pubmed_id": "17463246",
+ "publication_date": "2007-04-26",
+ "journal": "Science",
+ "title": "Genome-wide association analysis identifies loci for type 2 diabetes and triglyceride levels.",
+ "authors": [
+  {
+   "full_name": "Diabetes Genetics Initiative of Broad Institute of Harvard and MIT, Lund University, and Novartis Institutes of BioMedical Research"
+  },
+  {
+   "full_name": "Saxena R"
+  },
+  {
+   "full_name": "Voight BF"
+  },
+  {
+   "full_name": "Lyssenko V"
+  },
+  {
+   "full_name": "Burtt NP"
+  },
+  {
+   "full_name": "de Bakker PI"
+  },
+  {
+   "full_name": "Chen H"
+  },
+  {
+   "full_name": "Roix JJ"
+  },
+  {
+   "full_name": "Kathiresan S"
+  },
+  {
+   "full_name": "Hirschhorn JN"
+  },
+  {
+   "full_name": "Daly MJ"
+  },
+  {
+   "full_name": "Hughes TE"
+  },
+  {
+   "full_name": "Groop L"
+  },
+  {
+   "full_name": "Altshuler D"
+  },
+  {
+   "full_name": "Almgren P"
+  },
+  {
+   "full_name": "Florez JC"
+  },
+  {
+   "full_name": "Meyer J"
+  },
+  {
+   "full_name": "Ardlie K"
+  },
+  {
+   "full_name": "Bengtsson Boström K"
+  },
+  {
+   "full_name": "Isomaa B"
+  },
+  {
+   "full_name": "Lettre G"
+  },
+  {
+   "full_name": "Lindblad U"
+  },
+  {
+   "full_name": "Lyon HN"
+  },
+  {
+   "full_name": "Melander O"
+  },
+  {
+   "full_name": "Newton-Cheh C"
+  },
+  {
+   "full_name": "Nilsson P"
+  },
+  {
+   "full_name": "Orho-Melander M"
+  },
+  {
+   "full_name": "Råstam L"
+  },
+  {
+   "full_name": "Speliotes EK"
+  },
+  {
+   "full_name": "Taskinen MR"
+  },
+  {
+   "full_name": "Tuomi T",
+   "orcid": "0000-0002-8306-6202"
+  },
+  {
+   "full_name": "Guiducci C"
+  },
+  {
+   "full_name": "Berglund A"
+  },
+  {
+   "full_name": "Carlson J"
+  },
+  {
+   "full_name": "Gianniny L"
+  },
+  {
+   "full_name": "Hackett R"
+  },
+  {
+   "full_name": "Hall L"
+  },
+  {
+   "full_name": "Holmkvist J"
+  },
+  {
+   "full_name": "Laurila E"
+  },
+  {
+   "full_name": "Sjögren M"
+  },
+  {
+   "full_name": "Sterner M"
+  },
+  {
+   "full_name": "Surti A"
+  },
+  {
+   "full_name": "Svensson M"
+  },
+  {
+   "full_name": "Svensson M"
+  },
+  {
+   "full_name": "Tewhey R"
+  },
+  {
+   "full_name": "Blumenstiel B"
+  },
+  {
+   "full_name": "Parkin M"
+  },
+  {
+   "full_name": "Defelice M"
+  },
+  {
+   "full_name": "Barry R"
+  },
+  {
+   "full_name": "Brodeur W"
+  },
+  {
+   "full_name": "Camarata J"
+  },
+  {
+   "full_name": "Chia N"
+  },
+  {
+   "full_name": "Fava M"
+  },
+  {
+   "full_name": "Gibbons J"
+  },
+  {
+   "full_name": "Handsaker B"
+  },
+  {
+   "full_name": "Healy C"
+  },
+  {
+   "full_name": "Nguyen K"
+  },
+  {
+   "full_name": "Gates C"
+  },
+  {
+   "full_name": "Sougnez C"
+  },
+  {
+   "full_name": "Gage D"
+  },
+  {
+   "full_name": "Nizzari M"
+  },
+  {
+   "full_name": "Gabriel SB"
+  },
+  {
+   "full_name": "Chirn GW"
+  },
+  {
+   "full_name": "Ma Q"
+  },
+  {
+   "full_name": "Parikh H"
+  },
+  {
+   "full_name": "Richardson D"
+  },
+  {
+   "full_name": "Ricke D",
+   "orcid": "0000-0002-2842-2809"
+  },
+  {
+   "full_name": "Purcell S"
+  }
+ ],
+ "first_author": {
+  "full_name": "Saxena R"
+ },
+ "_links": {
+  "self": {
+   "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/publications/17463246"
+  }
+ }
+}

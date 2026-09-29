@@ -1,4 +1,7 @@
+import copy
+import json
 import os
+from pathlib import Path
 
 import httpx
 import pytest
@@ -6,56 +9,49 @@ import pytest
 from data_aggregator_mcp import gwas
 from data_aggregator_mcp.errors import NotFoundError
 
-_SEARCH = {
-    "_embedded": {
-        "studies": [
-            {
-                "accessionId": "GCST000910",
-                "diseaseTrait": {"trait": "Asthma"},
-                "publicationInfo": {
-                    "title": "Association near ORMDL3",
-                    "publicationDate": "2010-12-08",
-                    "pubmedId": 21150878,
-                    "author": {"fullname": "Moffatt MF"},
-                },
-                "fullPvalueSet": True,
-                "initialSampleSize": "10,365 cases",
-                "snpCount": 561466,
-            },
-            {
-                "accessionId": "GCST000576",
-                "diseaseTrait": {"trait": "Asthma"},
-                "publicationInfo": {
-                    "title": "GWAS of asthma",
-                    "publicationDate": "2010-02-01",
-                    "pubmedId": 20159242,
-                    "author": {"fullname": "Li X"},
-                },
-                "fullPvalueSet": False,
-                "snpCount": 0,
-            },
-        ]
-    },
-    "page": {"size": 2, "totalElements": 87, "totalPages": 44, "number": 0},
-}
+# Verbatim GWAS Catalog REST API v2 responses (captured 2026-09-28): the v1 API these
+# tests used to mimic was retired and answers every request with HTTP 429.
+_FIX = Path(__file__).parent / "fixtures"
+_SEARCH = json.loads((_FIX / "gwas_v2_search.json").read_text())  # disease_trait=asthma
+_RECORD = json.loads((_FIX / "gwas_v2_study.json").read_text())  # GCST000028
+_PUBLICATION = json.loads((_FIX / "gwas_v2_publication.json").read_text())  # PMID 17463246
+
+
+def _study_handler(*, publication=None):
+    """Serve GCST000028 and its publication; ``publication`` overrides that response."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/api/v2/studies/GCST000028"):
+            return httpx.Response(200, json=_RECORD)
+        if request.url.path.endswith("/api/v2/publications/17463246"):
+            return publication or httpx.Response(200, json=_PUBLICATION)
+        return httpx.Response(404, json={"errorCode": 404, "error": "Not Found"})
+
+    return handler
 
 
 @pytest.mark.asyncio
 async def test_search_normalizes_studies():
+    seen: list[str] = []
+
     async def handler(request):
-        assert request.url.path.endswith("/studies/search/findByDiseaseTrait")
-        assert request.url.params.get("diseaseTrait") == "asthma"
+        seen.append(request.url.path)
+        assert request.url.path.endswith("/gwas/rest/api/v2/studies")
+        assert request.url.params.get("disease_trait") == "asthma"
         return httpx.Response(200, json=_SEARCH)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
         total, recs = await gwas.search(c, "asthma", size=2)
     assert total == 87
-    assert [r.id for r in recs] == ["gwas:GCST000910", "gwas:GCST000576"]
+    assert [r.id for r in recs] == ["gwas:GCST90480249", "gwas:GCST90476698"]
     r0 = recs[0]
     assert r0.source == "gwas" and r0.kind == "study"
-    assert r0.title == "Association near ORMDL3" and r0.year == 2010
-    assert r0.identifiers.get("pmid") == "21150878"
+    # A v2 study carries no publication; search does not spend a call per row on one,
+    # so the row is titled by its trait (resolve fills the paper title and year).
+    assert r0.title == "Asthma" and r0.year is None
+    assert r0.identifiers.get("pmid") == "39024449"
     assert "Asthma" in r0.subjects
+    assert len(seen) == 1  # one request for the page, none per study
 
 
 @pytest.mark.asyncio
@@ -85,39 +81,95 @@ async def test_search_paginates_by_page_number():
     assert captured["page"] == "2"
 
 
-_RECORD = {
-    "accessionId": "GCST000028",
-    "diseaseTrait": {"trait": "Type 2 diabetes"},
-    "publicationInfo": {
-        "title": "GWAS identifies loci for T2D",
-        "publicationDate": "2007-06-01",
-        "pubmedId": 17463249,
-        "author": {"fullname": "Sladek R"},
-    },
-    "fullPvalueSet": True,
-    "initialSampleSize": "1,924 cases",
-    "snpCount": 392935,
-}
+@pytest.mark.asyncio
+async def test_resolve_normalizes_study_with_its_publication():
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_study_handler())) as c:
+        r = await gwas.resolve(c, "gwas:GCST000028")
+    assert r.id == "gwas:GCST000028" and r.kind == "study"
+    assert r.title == (
+        "Genome-wide association analysis identifies loci for type 2 diabetes and "
+        "triglyceride levels."
+    )
+    assert r.year == 2007 and r.last_updated == "2007-04-26"
+    assert r.identifiers.get("pmid") == "17463246"
+    assert "Type 2 diabetes" in r.subjects and r.files == []
+    assert r.errors == {}
 
 
 @pytest.mark.asyncio
-async def test_resolve_normalizes_study():
-    async def handler(request):
-        assert request.url.path.endswith("/studies/GCST000028")
-        return httpx.Response(200, json=_RECORD)
+async def test_resolve_wrong_shape_publication_is_a_failed_lookup(monkeypatch):
+    # A 200 whose body is not a publication object is a failure, not "no publication".
+    from data_aggregator_mcp import _http
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+    async def _no_sleep(*_a, **_k):  # the wrong shape is retried; skip the real backoff
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
+    wrong = httpx.Response(200, json=[_PUBLICATION])
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(_study_handler(publication=wrong))
+    ) as c:
         r = await gwas.resolve(c, "gwas:GCST000028")
-    assert r.id == "gwas:GCST000028" and r.kind == "study"
-    assert r.title == "GWAS identifies loci for T2D" and r.year == 2007
-    assert r.identifiers.get("pmid") == "17463249"
-    assert "Type 2 diabetes" in r.subjects and r.files == []
+    assert r.title == "Type 2 diabetes" and r.year is None
+    assert "GWAS Catalog publication" in r.errors["publication"]
+
+
+@pytest.mark.asyncio
+async def test_resolve_publication_the_catalog_lacks_is_an_answer():
+    # 404 on /publications: the study stands, titled by its trait, and nothing failed.
+    missing = httpx.Response(404, json={"errorCode": 404, "error": "Not Found"})
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(_study_handler(publication=missing))
+    ) as c:
+        r = await gwas.resolve(c, "gwas:GCST000028")
+    assert r.title == "Type 2 diabetes" and r.year is None
+    assert r.errors == {}
+
+
+@pytest.mark.asyncio
+async def test_router_does_not_cache_a_failed_publication_lookup(monkeypatch):
+    """The publication is a second request; when it fails the study is still returned
+    (titled by its trait) but says so in errors["publication"], and router.resolve does
+    not cache it. A study whose lookups answered is cached."""
+    from data_aggregator_mcp import _http, router
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
+    ok_study = copy.deepcopy(_RECORD)
+    ok_study["accession_id"], ok_study["pubmed_id"] = "GCST000029", 17463249
+    ok_pub = dict(_PUBLICATION, pubmed_id="17463249")
+    study_gets: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if "/studies/" in path:
+            acc = path.rsplit("/", 1)[-1]
+            study_gets.append(acc)
+            return httpx.Response(200, json=_RECORD if acc == "GCST000028" else ok_study)
+        if path.endswith("/publications/17463246"):
+            return httpx.Response(500, json={"status": 500, "error": "Internal Server Error"})
+        return httpx.Response(200, json=ok_pub)
+
+    router._RESOLVE_CACHE.clear()
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        bad = await router.resolve(c, "gwas:GCST000028")
+        await router.resolve(c, "gwas:GCST000028")
+        ok = await router.resolve(c, "gwas:GCST000029")
+        await router.resolve(c, "gwas:GCST000029")
+    assert bad.title == "Type 2 diabetes" and bad.year is None
+    assert "GWAS Catalog publication" in bad.errors["publication"]
+    assert study_gets.count("GCST000028") == 2  # not cached: the second resolve re-fetched
+    # Positive control: the publication answered, so the record is complete and cached.
+    assert ok.year == 2007 and ok.errors == {} and study_gets.count("GCST000029") == 1
 
 
 @pytest.mark.asyncio
 async def test_resolve_unknown_raises():
+    body = {"errorCode": 404, "error": "Not Found", "errorMessage": "Studies not found"}
     async with httpx.AsyncClient(
-        transport=httpx.MockTransport(lambda r: httpx.Response(404, json={}))
+        transport=httpx.MockTransport(lambda r: httpx.Response(404, json=body))
     ) as c:
         with pytest.raises(NotFoundError):
             await gwas.resolve(c, "gwas:GCST999999")
@@ -174,7 +226,23 @@ async def test_live_search_then_resolve():
         total, recs = await gwas.search(c, "asthma", size=3)
         assert total > 0 and recs and recs[0].id.startswith("gwas:")
         full = await gwas.resolve(c, recs[0].id)
-        assert full.kind == "study" and full.identifiers.get("pmid")
+    assert full.kind == "study" and full.identifiers.get("pmid")
+    # The publication lookup answered: the paper title and year are on the record.
+    assert full.errors == {} and full.year and full.title != "Asthma"
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_trait_search_is_exact_as_the_source_declares():
+    """sources.py tells the model the query must be an exact GWAS trait term. Check the
+    upstream still behaves that way: every hit's trait is the query, and a non-term
+    finds nothing (not a fuzzy match)."""
+    async with httpx.AsyncClient(timeout=60) as c:
+        total, recs = await gwas.search(c, "Type 2 diabetes", size=10)
+        none_total, none_recs = await gwas.search(c, "Type 2 diabetes mellitus xyz", size=3)
+    assert total > 0 and recs
+    assert {s.lower() for r in recs for s in r.subjects} == {"type 2 diabetes"}
+    assert (none_total, none_recs) == (0, [])
 
 
 @pytest.mark.asyncio
@@ -190,7 +258,7 @@ async def test_search_offset_not_on_page_boundary_starts_at_offset():
         return httpx.Response(
             200,
             json={
-                "_embedded": {"studies": [{"accessionId": a} for a in chunk]},
+                "_embedded": {"studies": [{"accession_id": a} for a in chunk]},
                 "page": {"totalElements": len(accs)},
             },
         )

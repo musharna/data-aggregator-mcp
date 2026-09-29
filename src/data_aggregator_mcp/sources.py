@@ -472,8 +472,9 @@ SOURCES: tuple[SourceSpec, ...] = (
     _spec(
         "gwas",
         gwas,
-        # findByDiseaseTrait is exact trait matching: the boolean expansion is no trait
-        # (live probe 2026-09-27: "Type 2 diabetes" 148 hits, expanded 0).
+        # The v2 disease_trait filter is exact trait matching (as v1's findByDiseaseTrait
+        # was): the boolean expansion is no trait (live probe 2026-09-27 on v1: "Type 2
+        # diabetes" 148 hits, expanded 0; re-checked on v2 by test_sources' live probe).
         boolean_query=False,
         layer="omics",
         kinds=("study",),
@@ -487,7 +488,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         # standard terms, but "with a small number of exceptions" — individual studies carry
         # their own Usage License. A blanket default would be wrong for precisely the records
         # where the licence matters, so these stay honestly unknown.
-        description="GWAS Catalog (EBI) — genome-wide association studies keyed by disease trait; DOI/PMID-rich, reinforces the paper-data bridge. NOTE: query must be an exact GWAS Catalog disease-trait vocabulary term (e.g. 'Type 2 diabetes'), not free text — the EBI findByDiseaseTrait API performs case-insensitive exact trait matching.",
+        description="GWAS Catalog (EBI) — genome-wide association studies keyed by disease trait; DOI/PMID-rich, reinforces the paper-data bridge. NOTE: query must be an exact GWAS Catalog disease-trait vocabulary term (e.g. 'Type 2 diabetes'), not free text — the GWAS Catalog REST API v2 disease_trait filter performs case-insensitive exact trait matching.",
     ),
     _spec(
         "nasacmr",
