@@ -1403,9 +1403,10 @@ async def test_live_pagination_walks_zenodo_datacite(monkeypatch: pytest.MonkeyP
 
     A live index can move a record across the page boundary between the two requests
     (DataCite records with tied relevance swap order). A repeat is traced to its cause
-    from what each upstream returned: a record page 1 had passed coming back means the
-    upstream moved it, and the walk is retried; a record page 1 emitted but the cursor
-    never recorded is the router's fault and fails at once."""
+    from what each upstream returned (``_repeat_cause``): a record the cursor never
+    recorded, or one page 2 emitted from a position the cursor marked as returned, is the
+    router's fault and fails at once; a record the upstream served again at a new
+    position means the upstream moved it, and the walk is retried."""
     from data_aggregator_mcp import datacite, zenodo
 
     names = ("zenodo", "datacite")
@@ -1442,13 +1443,44 @@ async def test_live_pagination_walks_zenodo_datacite(monkeypatch: pytest.MonkeyP
         repeats = [i for i in ids1 if i in ids2]
         if not repeats:
             return
+        causes = {}
         for rid in repeats:
-            name = rid.split(":", 1)[0]
-            pos = returned[(name, 0)].index(rid)
-            passed = pos < offsets[name] or pos - offsets[name] in ahead.get(name, [])
-            assert passed, f"router re-emitted {rid}: page-1 position {pos}, cursor {state}"
+            n = rid.split(":", 1)[0]
+            causes[rid] = _repeat_cause(
+                rid, returned[(n, 0)], returned[(n, offsets[n])], offsets[n], ahead.get(n, [])
+            )
+        router_faults = {r: c for r, c in causes.items() if c != "upstream"}
+        assert not router_faults, (router_faults, state)
         moved = repeats
     pytest.fail(f"upstream moved records across the page boundary in 3 walks: {moved}")
+
+
+def _repeat_cause(
+    rid: str, page1: list[str], page2: list[str], offset: int, ahead: list[int]
+) -> str:
+    """Why one source's record ``rid`` is on both pages. ``page1`` is the source's reply
+    at offset 0, ``page2`` its reply at the cursor's ``offset`` (index 0 = that
+    position), ``ahead`` the positions past ``offset`` the cursor marked as returned."""
+    pos = page1.index(rid)
+    if not (pos < offset or pos - offset in ahead):
+        return "router: emitted on page 1 but not recorded in the cursor"
+    if page2.index(rid) in ahead:
+        return "router: re-emitted a position the cursor marked as returned"
+    return "upstream"  # the cursor was right; the upstream served the record again
+
+
+def test_repeat_cause_tells_a_router_fault_from_an_upstream_move() -> None:
+    # The upstream moved "a" (returned at position 0) to position 2, past the offset.
+    assert _repeat_cause("a", ["a", "b", "c"], ["a", "c", "d"], 2, []) == "upstream"
+    # Page 1 emitted "c" (position 2) but the cursor stopped at 1 and marked nothing ahead.
+    assert _repeat_cause("c", ["a", "b", "c"], ["b", "c"], 1, []).startswith("router: emitted")
+    # "c" was returned ahead (position 2 = offset 1 + 1) and page 2 emitted it again from
+    # that same position: the router ignored its own ahead list, the upstream did not move.
+    assert _repeat_cause("c", ["a", "b", "c", "d"], ["b", "c", "d"], 1, [1]).startswith(
+        "router: re-emitted"
+    )
+    # Same ahead entry, but the upstream moved "c" to position 3: not the router's fault.
+    assert _repeat_cause("c", ["a", "b", "c", "d"], ["b", "x", "c"], 1, [1]) == "upstream"
 
 
 @_live_only
