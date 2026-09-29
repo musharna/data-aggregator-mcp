@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `datacite` search results are now ranked by relevance. The adapter sent no sort,
+  and DataCite's default order is most recently updated first, so a search returned
+  the matching records edited in the last few minutes and page 2 shifted whenever
+  one was touched between requests. Records with tied scores can still swap order
+  between requests, so a tied record can occasionally appear on two pages.
+
 ## [0.53.0] - 2026-09-28
 
 ### Fixed
