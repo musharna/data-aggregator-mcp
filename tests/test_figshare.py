@@ -142,6 +142,11 @@ async def test_versioned_doi_lists_that_versions_files_not_the_latest(httpx_mock
 @live_only
 async def test_live_versioned_doi_gets_that_versions_files() -> None:
     async with httpx.AsyncClient(timeout=60) as client:
-        v1 = await figshare.files(client, "10.6084/m9.figshare.32732757.v1")
-    assert [f.name for f in v1] == ["Data_Icarus.xlsx"]
-    assert v1[0].checksum == "md5:c9ebf56c529764aba41f2648d83db3e8"
+        # 32732757 (used until 2026-09-28) was withdrawn upstream: the public API now
+        # answers 404 for every version. 28283042's v1 file differs from its latest.
+        v1 = await figshare.files(client, "10.6084/m9.figshare.28283042.v1")
+        # positive control: the unversioned DOI is the latest version, a different file
+        latest = await figshare.files(client, "10.6084/m9.figshare.28283042")
+    assert [f.name for f in v1] == ["Barahona-Segovia et al 2025 supplementary.xlsx"]
+    assert v1[0].checksum == "md5:c1ca06e9d3e7539bc3b506a6ea735bf9"
+    assert [f.name for f in latest] != [f.name for f in v1]

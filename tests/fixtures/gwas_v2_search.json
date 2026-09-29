@@ -1,0 +1,117 @@
+{
+ "_embedded": {
+  "studies": [
+   {
+    "initial_sample_size": "12,093 African American or Afro-Caribbean cases, 105,134 African American or Afro-Caribbean controls, 5,688 Hispanic or Latin American cases, 52,071 Hispanic or Latin American controls, 609 East Asian ancestry cases, 6,004 East Asian ancestry controls, 36,823 European ancestry cases, 398,278 European ancestry controls",
+    "replication_sample_size": "NA",
+    "gxe": false,
+    "gxg": false,
+    "snp_count": 44300000,
+    "imputed": true,
+    "pooled": false,
+    "accession_id": "GCST90480249",
+    "full_summary_stats_available": true,
+    "user_requested": false,
+    "pubmed_id": 39024449,
+    "platforms": "NR [44300000] (imputed)",
+    "disease_trait": "Asthma",
+    "genotyping_technologies": [
+     "Genome-wide genotyping array"
+    ],
+    "efo_traits": [
+     {
+      "efo_id": "MONDO_0004979",
+      "efo_trait": "asthma"
+     }
+    ],
+    "discovery_ancestry": [
+     "435101 European (U.S.)",
+     "57759 Hispanic or Latin American (U.S.)",
+     "117227 African American or Afro-Caribbean (U.S.)",
+     "6613 East Asian (U.S.)"
+    ],
+    "replication_ancestry": [],
+    "full_summary_stats": "http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90480001-GCST90481000/GCST90480249",
+    "terms_of_license": "https://www.ebi.ac.uk/about/terms-of-use/",
+    "bg_efo_traits": [],
+    "cohort": [
+     "MVP"
+    ],
+    "array_manufacturer": [],
+    "_links": {
+     "self": {
+      "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/studies/GCST90480249"
+     },
+     "ancestries": {
+      "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/studies/GCST90480249/ancestries{?sort,direction}",
+      "templated": true
+     }
+    }
+   },
+   {
+    "initial_sample_size": "5,678 African American or Afro-Caribbean cases, 49,827 African American or Afro-Caribbean controls",
+    "replication_sample_size": "NA",
+    "gxe": false,
+    "gxg": false,
+    "snp_count": 44300000,
+    "imputed": true,
+    "pooled": false,
+    "accession_id": "GCST90476698",
+    "full_summary_stats_available": true,
+    "user_requested": false,
+    "pubmed_id": 39024449,
+    "platforms": "NR [44300000] (imputed)",
+    "disease_trait": "Asthma",
+    "genotyping_technologies": [
+     "Genome-wide genotyping array"
+    ],
+    "efo_traits": [
+     {
+      "efo_id": "MONDO_0004979",
+      "efo_trait": "asthma"
+     }
+    ],
+    "discovery_ancestry": [
+     "55505 African American or Afro-Caribbean (U.S.)"
+    ],
+    "replication_ancestry": [],
+    "full_summary_stats": "http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST90476001-GCST90477000/GCST90476698",
+    "terms_of_license": "https://www.ebi.ac.uk/about/terms-of-use/",
+    "bg_efo_traits": [],
+    "cohort": [
+     "MVP"
+    ],
+    "array_manufacturer": [],
+    "_links": {
+     "self": {
+      "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/studies/GCST90476698"
+     },
+     "ancestries": {
+      "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/studies/GCST90476698/ancestries{?sort,direction}",
+      "templated": true
+     }
+    }
+   }
+  ]
+ },
+ "_links": {
+  "first": {
+   "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/studies?disease_trait=asthma&page=0&size=2"
+  },
+  "self": {
+   "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/studies?disease_trait=asthma&page=0&size=2"
+  },
+  "next": {
+   "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/studies?disease_trait=asthma&page=1&size=2"
+  },
+  "last": {
+   "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/studies?disease_trait=asthma&page=43&size=2"
+  }
+ },
+ "page": {
+  "size": 2,
+  "totalElements": 87,
+  "totalPages": 44,
+  "number": 0
+ }
+}

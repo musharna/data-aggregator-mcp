@@ -1,0 +1,46 @@
+{
+ "initial_sample_size": "1,464 European ancestry cases, 1,467 European ancestry controls",
+ "replication_sample_size": "5,065 European ancestry cases, 5,785 European ancestry controls, at least 18,129 cases and controls. ",
+ "gxe": false,
+ "gxg": false,
+ "snp_count": 386731,
+ "imputed": false,
+ "pooled": false,
+ "accession_id": "GCST000028",
+ "full_summary_stats_available": true,
+ "user_requested": false,
+ "pubmed_id": 17463246,
+ "platforms": "Affymetrix [386731]",
+ "disease_trait": "Type 2 diabetes",
+ "genotyping_technologies": [
+  "Genome-wide genotyping array"
+ ],
+ "efo_traits": [
+  {
+   "efo_id": "MONDO_0005148",
+   "efo_trait": "type 2 diabetes mellitus"
+  }
+ ],
+ "discovery_ancestry": [
+  "2931 European (Finland, Sweden)"
+ ],
+ "replication_ancestry": [
+  "18219 NR (NR)",
+  "10850 European (Poland, Sweden, U.S.)"
+ ],
+ "full_summary_stats": "http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST000001-GCST001000/GCST000028",
+ "terms_of_license": "https://www.ebi.ac.uk/about/terms-of-use/",
+ "bg_efo_traits": [],
+ "array_manufacturer": [
+  "Affymetrix"
+ ],
+ "_links": {
+  "self": {
+   "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/studies/GCST000028"
+  },
+  "ancestries": {
+   "href": "https://www.ebi.ac.uk/gwas/rest/api/v2/studies/GCST000028/ancestries{?sort,direction}",
+   "templated": true
+  }
+ }
+}
