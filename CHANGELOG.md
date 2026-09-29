@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `gwas` searches and resolves no longer fail as "unreachable" while the GWAS Catalog
+  answers. Its v2 API takes 21-33 s per request, and the 30 s timeout abandoned
+  replies that arrived at 31-33 s, on every retry alike. The timeout is now 60 s.
+  GWAS calls stay slow (a search can take about a minute), and the Catalog's own
+  HTTP 500s at ~30 s are still retried and then reported.
+
 ## [0.52.0] - 2026-09-28
 
 ### Fixed
