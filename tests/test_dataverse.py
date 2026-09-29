@@ -61,6 +61,23 @@ async def test_base_url_env_override(httpx_mock, monkeypatch) -> None:
     assert files == []
 
 
+def test_malformed_landing_url_is_treated_as_absent(monkeypatch, caplog) -> None:
+    """Issue #85 class sweep: the landing URL comes from the DataCite record, and urlsplit
+    raises a bare ValueError on an unclosed IPv6 bracket, which broke the file listing. A
+    landing URL that does not parse gives no base URL: fall through to the DOI-prefix
+    default, and say so in the log."""
+    monkeypatch.delenv("DATAVERSE_BASE_URL", raising=False)
+    assert dataverse._base_url("10.7910/DVN/X", "https://[::1/dataset.xhtml") == (
+        dataverse.DEFAULT_BASE_URL
+    )
+    assert any("malformed landing URL" in m for m in caplog.messages)
+    # positive control: a landing URL that parses supplies the installation's base URL
+    assert (
+        dataverse._base_url("10.7910/DVN/X", "https://dataverse.no/dataset.xhtml?x=1")
+        == "https://dataverse.no"
+    )
+
+
 async def test_dataverse_malformed_body_raises_upstream(httpx_mock, monkeypatch) -> None:
     from data_aggregator_mcp.errors import UpstreamUnavailableError
 

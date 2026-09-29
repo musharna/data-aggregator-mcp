@@ -180,9 +180,7 @@ async def _download_one(
     if not f.url:
         return _Outcome(f.name, state="skipped")
     # Fix 3: reject non-http/https schemes before any I/O (poisoned metadata guard).
-    from urllib.parse import urlparse as _urlparse
-
-    _scheme = _urlparse(f.url).scheme.lower()
+    _scheme = egress.split_url(f.url, what=f"fetch {f.name}").scheme.lower()
     if _scheme not in ("http", "https"):
         raise UpstreamUnavailableError(
             f"fetch {f.name}: URL scheme {_scheme!r} is not allowed "

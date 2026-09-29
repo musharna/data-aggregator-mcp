@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A record whose file URL does not parse (an unclosed IPv6 bracket, an out-of-range
+  or non-numeric port) is refused by `fetch` and `operate` with an error naming the
+  file and the URL. It was a bare "Invalid IPv6 URL" or "Port out of range" naming
+  neither (#85). A malformed Dataverse landing URL no longer breaks the file listing.
+- A non-numeric TaxId from NCBI is reported as an upstream error naming the value, not
+  "invalid literal for int()".
+
 ## [0.51.0] - 2026-09-28
 
 ### Fixed

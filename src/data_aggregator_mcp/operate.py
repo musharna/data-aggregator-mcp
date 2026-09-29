@@ -139,9 +139,8 @@ async def run(
     # only when DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS=1 (test suite sets this via
     # monkeypatch for its local fixture URLs). Any other scheme is rejected.
     import os
-    from urllib.parse import urlparse as _urlparse
 
-    _scheme = _urlparse(url).scheme.lower()
+    _scheme = egress.split_url(url, what=f"operate {target.name!r}").scheme.lower()
     _allow_file = os.environ.get("DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS") == "1"
     if _scheme not in ("http", "https") and not (_scheme == "file" and _allow_file):
         # Deliberately does NOT name the file:// opt-in env var: a user-facing error
