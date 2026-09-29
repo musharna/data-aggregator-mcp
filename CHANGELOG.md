@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-09-28
+
 ### Fixed
 
 - `gwas` searches and resolves no longer fail as "unreachable" while the GWAS Catalog
