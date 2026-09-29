@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-09-28
+
 ### Fixed
 
 - The `gwas` source works again. The GWAS Catalog retired its v1 REST API (kept
