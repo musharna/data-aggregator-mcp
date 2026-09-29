@@ -31,9 +31,11 @@ _LANDING = "https://www.ebi.ac.uk/gwas/studies/{acc}"
 PREFIXES = {"gwas"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
-DEFAULT_TIMEOUT = 30.0
-# v2 is often slow: 9 of 20 study GETs answered within 30 s, the rest stalled, and
-# some answered HTTP 500 (probe 2026-09-28 ~20:15 EDT). A retry usually lands.
+# v2 is slow on every endpoint: 21-33 s per request, successful replies as late as
+# 32.7 s, and about 1 in 4 an HTTP 500 at ~30.5 s (probes 2026-09-28 20:15 and
+# 21:50 EDT). A 30 s timeout cut the late replies on every retry alike, so the timeout
+# sits above the slowest reply seen; retries are for the 500s.
+DEFAULT_TIMEOUT = 60.0
 MAX_RETRIES = 3
 
 

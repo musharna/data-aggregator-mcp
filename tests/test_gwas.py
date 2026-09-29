@@ -287,3 +287,30 @@ async def test_search_404_is_an_outage_not_zero_hits(monkeypatch):
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json=empty))
     ) as c:
         assert await gwas.search(c, "height") == (0, [])
+
+
+@pytest.mark.asyncio
+async def test_every_request_waits_past_the_slowest_reply_the_catalog_gives():
+    """v2 answers in 21-33 s; successful replies arrived at 31.6 and 32.7 s (probe
+    2026-09-28 21:50 EDT). The 30 s timeout abandoned them, and each retry was cut at
+    the same 30 s, so a trait search failed "unreachable after 3 tries" (nightly-live
+    run 36508819844). Every request (search, study, publication) must wait longer
+    than the slowest reply seen."""
+    slowest_reply_seen = 32.7
+    read_timeouts: dict[str, float] = {}
+    study = _study_handler()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        read_timeouts[request.url.path.rsplit("/", 2)[-2]] = request.extensions["timeout"]["read"]
+        if request.url.path.endswith("/api/v2/studies"):
+            return httpx.Response(200, json=_SEARCH)
+        return study(request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        total, recs = await gwas.search(c, "asthma", size=2)
+        r = await gwas.resolve(c, "gwas:GCST000028")
+    # positive control: the same requests still parse into records
+    assert total == 87 and len(recs) == 2
+    assert r.year == 2007 and r.errors == {}
+    assert set(read_timeouts) == {"v2", "studies", "publications"}
+    assert all(t > slowest_reply_seen for t in read_timeouts.values()), read_timeouts
