@@ -225,3 +225,19 @@ async def test_ncbi_error_envelope_is_not_negative_cached(
         info = await taxonomy.resolve_taxon(client, "Arabidopsis thaliana")
     assert info is not None and info.taxid == 3702 and info.is_plant
     taxonomy._CACHE.clear()
+
+
+def test_parse_taxon_non_numeric_taxid_is_an_upstream_error() -> None:
+    """Issue #85 (fuzzing): int("abc") raised a bare ValueError, which the callers record
+    as "ValueError: invalid literal for int() with base 10". A non-numeric TaxId is an
+    off-contract NCBI answer; say so, and name the value."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    bad = _TAXON_XML.replace("<TaxId>99112</TaxId>", "<TaxId>abc</TaxId>")
+    assert bad != _TAXON_XML
+    with pytest.raises(UpstreamUnavailableError) as exc:
+        taxonomy._parse_taxon(bad)
+    assert "'abc'" in str(exc.value) and "TaxId" in str(exc.value)
+    # positive control: the numeric TaxId in the same document parses
+    info = taxonomy._parse_taxon(_TAXON_XML)
+    assert info is not None and info.taxid == 99112

@@ -31,7 +31,7 @@ import ipaddress
 import os
 import socket
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import SplitResult, urlsplit
 
 from data_aggregator_mcp.errors import ValidationError
 
@@ -81,12 +81,29 @@ def _is_public(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     )
 
 
+def split_url(url: str, *, what: str) -> SplitResult:
+    """``urlsplit`` for a URL taken from a record, refusing one that does not parse.
+
+    The stdlib raises a bare ``ValueError`` for an unclosed IPv6 bracket (``urlsplit``) and
+    for an out-of-range port (``.port``, lazily). Record URLs are uploader-controlled, so
+    both reach here; they are refused with this module's ``ValidationError``, naming the
+    file and the URL like every other refusal, instead of "Invalid IPv6 URL" with neither.
+    Callers that gate on the scheme parse through this too, since they run first.
+    """
+    try:
+        parts = urlsplit(url)
+        _ = parts.port  # validated here, not left to raise later at a random call site
+    except ValueError as exc:
+        raise ValidationError(f"{what}: malformed URL ({exc}); refusing to fetch {url}") from None
+    return parts
+
+
 def _target(url: str, what: str) -> tuple[str, int] | None:
     """Host and port to check, or None when there is nothing to check."""
     if os.environ.get(ALLOW_PRIVATE_ENV) == "1":
         return None
 
-    parts = urlsplit(url)
+    parts = split_url(url, what=what)
     if parts.scheme not in ("http", "https"):
         # Scheme policy belongs to the callers, which gate before calling this; a file://
         # URL has no host to resolve and must not be reported as an egress problem.

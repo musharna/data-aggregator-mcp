@@ -242,3 +242,68 @@ async def test_a_redirect_into_private_space_is_blocked(guard_on, tmp_path, monk
         target_srv.shutdown()
 
     assert hits == [], "the redirect target was contacted despite the guard"
+
+
+# --- malformed URLs (issue #85: found by Hypothesis fuzzing, 2026-09-14) --------------
+
+_MALFORMED = [
+    ("http://[::1/a.csv", "unclosed IPv6 bracket: urlsplit raises"),
+    ("http://[::ffff:127.0.0.1]:99999999999999999999/", "port out of range: .port raises"),
+    ("http://example.org:99999/a.csv", "port out of range on a named host"),
+    ("http://example.org:A/a.csv", "non-numeric port (found re-fuzzing the old code)"),
+]
+
+
+@pytest.mark.parametrize(("url", "why"), _MALFORMED)
+async def test_a_malformed_url_is_refused_with_the_guards_own_error(guard_on, url, why) -> None:
+    """urlsplit and .port raise a bare stdlib ValueError on these, which reached the model
+    as "Invalid IPv6 URL" naming neither the file nor the URL. The guard's contract is a
+    ValidationError that says what was refused and why."""
+    with pytest.raises(ValidationError) as exc:
+        await egress.assert_public_url(url, what="probe")
+    msg = str(exc.value)
+    assert "probe" in msg and url in msg and "malformed URL" in msg, why
+    # positive control: a well-formed public URL through the same call still passes
+    await egress.assert_public_url("http://8.8.8.8/a.csv", what="probe")
+
+
+async def test_operate_refuses_a_malformed_source_url_by_name(guard_on, monkeypatch) -> None:
+    """operate reads the URL's scheme BEFORE the egress guard, so the bare ValueError
+    came from there first; the fix has to cover that parse too."""
+
+    class _ReachedTheNextStep(RuntimeError):
+        pass
+
+    url = {"value": "http://[::1/data.csv"}
+
+    async def fake_resolve(client, resource_id):
+        return _poisoned(url["value"])
+
+    def boom(u: str):
+        raise _ReachedTheNextStep(u)
+
+    monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    monkeypatch.setattr("data_aggregator_mcp.operate._source_size", boom)
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(ValidationError) as exc:
+            await operate.run(client, "zenodo:999999", op="head", n=5)
+        assert "data.csv" in str(exc.value) and "malformed URL" in str(exc.value)
+        # positive control: a well-formed public URL gets past both parses and the guard
+        url["value"] = "http://8.8.8.8/data.csv"
+        with pytest.raises(_ReachedTheNextStep):
+            await operate.run(client, "zenodo:999999", op="head", n=5)
+
+
+async def test_fetch_refuses_a_malformed_url_by_name(guard_on, tmp_path) -> None:
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(ValidationError) as exc:
+            await fetch_mod.fetch_files(
+                client, _poisoned("http://h:99999/data.csv"), dest=str(tmp_path)
+            )
+        assert "fetch data.csv" in str(exc.value) and "malformed URL" in str(exc.value)
+        # control: a well-formed private URL still reaches the guard's address check
+        with pytest.raises(ValidationError) as exc2:
+            await fetch_mod.fetch_files(
+                client, _poisoned("http://127.0.0.1:9/data.csv"), dest=str(tmp_path)
+            )
+    assert "non-public" in str(exc2.value)

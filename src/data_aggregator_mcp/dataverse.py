@@ -33,9 +33,13 @@ logger = logging.getLogger(__name__)
 
 def _base_url(doi: str, landing_url: str | None) -> str | None:
     if landing_url:
-        parts = urlsplit(landing_url)
-        if parts.scheme in ("http", "https") and parts.netloc:
-            return f"{parts.scheme}://{parts.netloc}"
+        try:
+            parts = urlsplit(landing_url)
+        except ValueError as exc:  # e.g. an unclosed IPv6 bracket in the record's URL
+            logger.warning("ignoring malformed landing URL %r for %s: %s", landing_url, doi, exc)
+        else:
+            if parts.scheme in ("http", "https") and parts.netloc:
+                return f"{parts.scheme}://{parts.netloc}"
     env = os.environ.get("DATAVERSE_BASE_URL")
     if env:
         return env.rstrip("/")

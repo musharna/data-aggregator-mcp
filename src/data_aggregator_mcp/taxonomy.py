@@ -16,6 +16,7 @@ from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
 
 from data_aggregator_mcp import _eutils
 from data_aggregator_mcp._cache import MISS, TTLCache
+from data_aggregator_mcp.errors import UpstreamUnavailableError
 
 
 @dataclass(frozen=True)
@@ -37,10 +38,19 @@ def _parse_taxon(xml_text: str) -> TaxonInfo | None:
     if not taxid_text or not canonical:
         return None
     synonyms = tuple(s.text for s in taxon.findall("OtherNames/Synonym") if s.text)
+    try:
+        taxid = int(taxid_text)
+    except ValueError:
+        # Off-contract NCBI answer. Raised as an upstream failure (like the HTTP failures
+        # resolve_taxon already propagates, and uncached), not int()'s bare ValueError.
+        # (Not str.isdigit(): it accepts "²", which int() rejects.)
+        raise UpstreamUnavailableError(
+            f"NCBI taxonomy answered a non-numeric TaxId {taxid_text!r} for {canonical!r}"
+        ) from None
     lineage = taxon.findtext("Lineage") or ""
     is_plant = "Viridiplantae" in {part.strip() for part in lineage.split(";")}
     return TaxonInfo(
-        taxid=int(taxid_text),
+        taxid=taxid,
         canonical_name=canonical,
         synonyms=synonyms,
         is_plant=is_plant,
