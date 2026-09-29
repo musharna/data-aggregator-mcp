@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-09-28
+
 ### Fixed
 
 - A record whose file URL does not parse (an unclosed IPv6 bracket, an out-of-range
