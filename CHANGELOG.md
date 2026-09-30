@@ -16,6 +16,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dandiset endpoint carrying `null` or `[]` was read as a missing dandiset (and a
   non-empty list crashed with `AttributeError`); it is now retried and then reported as
   an upstream failure. A 404 is still reported as not found.
+- Every source now reports a 200 whose JSON is the wrong type (`null`, `[]`, a bare
+  string, or an object where a list was promised) as an upstream failure, retried and
+  named, instead of an empty result, "not found", or an untyped `AttributeError`. On a
+  body like that, 22 search/resolve entry points across biostudies, datacite, datagov,
+  dataone, gbif, gwas, huggingface, literature, nasacmr, omicsdi, openml, pdb, uniprot
+  and zenodo raised `AttributeError`; `cellxgene` resolve said the collection did not exist;
+  the UBERON, EDAM and ChEBI lookups cached it as "no such term". Internally,
+  `_http.request_json` now requires `expect=`, so each call site states the body it accepts.
 
 ## [0.54.1] - 2026-09-30
 
