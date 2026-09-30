@@ -191,14 +191,20 @@ async def test_an_outage_is_tried_twice_and_named(fail: str, service: str, no_sl
         # record with no metadata title, DOI, licence or authors, and no error.
         ("info", "DANDI version info", b"[]"),
         ("info", "DANDI version info", b"null"),
+        # The dandiset detail read any JSON: `null` and `[]` were reported as "DANDI has
+        # no dandiset" (an outage read as not-found), a non-empty list as AttributeError.
+        ("detail", "DANDI resolve", b"null"),
+        ("detail", "DANDI resolve", b"[]"),
+        ("detail", "DANDI resolve", b'["000004"]'),
     ],
 )
 async def test_a_body_that_is_not_an_object_is_an_outage(
     fail: str, service: str, body: bytes, no_sleep: None
 ) -> None:
-    """Search, the asset listing and version info each promise a JSON object; a 200
-    carrying anything else is a malformed body (retried, then raised), not an empty
-    result. (A 404 on version info is still the documented fallback.)"""
+    """Search, the dandiset detail, the asset listing and version info each promise a
+    JSON object; a 200 carrying anything else is a malformed body (retried, then
+    raised), not an empty or missing result. (A 404 on the detail is still "no such
+    dandiset", and a 404 on version info still the documented fallback.)"""
     async with httpx.AsyncClient(
         transport=_server([], **{fail: httpx.Response(200, content=body)})
     ) as c:

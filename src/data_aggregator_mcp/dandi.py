@@ -151,7 +151,13 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     if not ident:
         raise NotFoundError(f"malformed DANDI id {resource_id!r}")
     detail = await _get_json(
-        client, f"{API}/dandisets/{ident}/", service="DANDI resolve", not_found_returns=None
+        client,
+        f"{API}/dandisets/{ident}/",
+        service="DANDI resolve",
+        # A 404 is "no such dandiset". A 200 that is not an object is a broken answer:
+        # `null` or `[]` must not read as that 404.
+        not_found_returns=None,
+        expect=dict,
     )
     if not detail or not detail.get("identifier"):
         raise NotFoundError(f"DANDI has no dandiset {ident}")
