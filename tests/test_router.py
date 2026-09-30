@@ -1485,24 +1485,43 @@ def test_repeat_cause_tells_a_router_fault_from_an_upstream_move() -> None:
 
 @_live_only
 async def test_live_relate_emits_real_hint() -> None:
-    """Real-execution boundary probe: discover live omics ids, resolve them via the
-    live resolve path, and relate them. A multi-sample omics search reliably surfaces
-    SRA runs that share a BioProject/SRP accession, so >=1 shared_accession hint fires.
-    ids are discovered at runtime (never fabricated) — same discipline as the recall
-    anchors. Verified 2026-06-11: SRX33847073 + SRX33847072 share SRP708637/PRJNA1477220.
+    """Real-execution boundary probe: two live SRA runs from one study must get a
+    shared_accession hint on that study, and a run from another study must stay out of it.
+    The runs are found at runtime (never fabricated): resolve a run from a live omics
+    search, take its SRA study accession, and search that accession for a sibling run.
+    Relating the top search results instead passed only when two of them happened to come
+    from one study; on 2026-09-29 the top 8 came from 8 studies and no hint fired.
     """
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        res = await router.search_page(client, query="RNA-seq", size=10, sources=["omics"])
-        ids = [r.id for r in res.results][:8]
-        assert len(ids) >= 2, "live search did not return >=2 omics ids"
-        out = await router.relate(client, ids)
-    assert len(out.resolved) >= 2  # fail-soft per-id failures did not sink the call
+        res = await router.search_page(client, query="RNA-seq", size=20, sources=["omics"])
+        runs = [r.id for r in res.results if r.id.startswith("sra:")]
+        study_of: dict[str, str] = {}
+        pair: list[str] = []
+        for rid in runs:
+            r = await router.resolve(client, rid)
+            studies = [a for a in r.accessions if a.startswith(("SRP", "ERP", "DRP"))]
+            if studies:
+                study_of[rid] = studies[0]
+            if studies and not pair:
+                sib = await router.search_page(client, query=studies[0], size=10, sources=["omics"])
+                sibs = [x.id for x in sib.results if x.id.startswith("sra:") and x.id != rid]
+                if sibs:
+                    pair = [rid, sibs[0]]
+            if pair and any(s != study_of[pair[0]] for s in study_of.values()):
+                break
+        assert pair, f"no live SRA run in {runs} has a sibling run in its study"
+        study = study_of[pair[0]]
+        other = next((rid for rid, s in study_of.items() if s != study), None)
+        assert other, f"every live SRA run in {runs} is from {study}; no run for the control"
+        out = await router.relate(client, [*pair, other])
+    assert out.errors == {} and len(out.resolved) == 3, out
     # every hint is well-formed: >=2 distinct resources and a non-empty evidence key
     for h in out.hints:
         assert len(set(h.resources)) >= 2
         assert h.key
-    assert any(h.kind == "shared_accession" for h in out.hints), (
-        f"expected a shared_accession hint from live omics ids; got {out.hints!r}"
+    on_study = [h for h in out.hints if h.kind == "shared_accession" and h.key == study]
+    assert [set(h.resources) for h in on_study] == [set(pair)], (
+        f"expected one {study} hint joining {pair} and not {other}; got {out.hints!r}"
     )
 
 
