@@ -35,8 +35,9 @@ async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=dict,
     )
-    entries = body.get("parquet_files", []) if isinstance(body, dict) else []
+    entries = body.get("parquet_files", [])
     files = [
         FileEntry(
             name=f"{p['config']}/{p['split']}/{p['url'].rsplit('/', 1)[-1]}",

@@ -156,6 +156,7 @@ async def search(
         params={"q": query, "limit": str(min(size, MAX_SIZE)), "offset": str(offset)},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=dict,
     )
     total = int(body.get("count") or 0)
     return total, [compact(_normalize(d)) for d in (body.get("results") or [])]
@@ -171,6 +172,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         not_found_returns=None,
+        expect=dict,
     )
     if doc is None:
         raise NotFoundError(f"GBIF has no dataset {key!r}")

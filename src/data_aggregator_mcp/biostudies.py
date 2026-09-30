@@ -256,7 +256,14 @@ def _normalize_study(body: dict[str, Any], listed: list[Any] | None = None) -> D
     )
 
 
-async def _get_json(client: httpx.AsyncClient, url: str, *, service: str, **kwargs: Any) -> Any:
+async def _get_json(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    service: str,
+    expect: type | tuple[type, ...],
+    **kwargs: Any,
+) -> Any:
     """GET ``url`` as JSON with this source's retry budget and ``_http``'s timeout."""
     # httpx upper-cases the method, so "get" would send the same request.
     method = "GET"  # pragma: no mutate
@@ -265,6 +272,7 @@ async def _get_json(client: httpx.AsyncClient, url: str, *, service: str, **kwar
         method,
         url,
         service=service,
+        expect=expect,
         headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         **kwargs,
@@ -292,6 +300,7 @@ async def search(
         url,
         service="BioStudies search",
         params={"query": query, "pageSize": capped, "page": page},
+        expect=dict,
     )
     hits = (body or {}).get("hits") or []
     # Page-boundary slice (see pagination spec): drop the first `offset % capped` rows
@@ -307,7 +316,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     if not _ACC_RE.match(acc):
         raise NotFoundError(f"malformed BioStudies id {resource_id!r}")
     try:
-        body = await _get_json(client, STUDY.format(acc=acc), service="BioStudies resolve")
+        body = await _get_json(
+            client, STUDY.format(acc=acc), service="BioStudies resolve", expect=dict
+        )
     except NotFoundError:
         raise NotFoundError(f"BioStudies has no study {acc}") from None
     return _normalize_study(body, await _read_file_lists(client, acc, body))

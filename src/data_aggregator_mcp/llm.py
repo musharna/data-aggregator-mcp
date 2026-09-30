@@ -67,6 +67,7 @@ async def complete_json(
             service="llm",
             content=payload,
             headers=headers,
+            expect=dict,
         )
         content = body["choices"][0]["message"]["content"]
         parsed = json.loads(content)

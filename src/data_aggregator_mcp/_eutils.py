@@ -81,6 +81,7 @@ async def esearch(
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         check=_check_esearch,
+        expect=dict,
     )
     result = data.get("esearchresult", {}) or {}
     ids = result.get("idlist", []) or []
@@ -106,6 +107,7 @@ async def esummary(
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         check=_check_esummary,
+        expect=dict,
     )
     result = data.get("result", {}) or {}
     uids = result.get("uids", []) or []
@@ -149,6 +151,7 @@ async def elink(
         params=params,
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=dict,
     )
     out: dict[str, None] = {}
     for linkset in data.get("linksets", []) or []:

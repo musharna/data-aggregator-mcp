@@ -116,6 +116,7 @@ async def search(
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=dict,
     )
     datasets = (body or {}).get("datasets") or []
     kept = [d for d in datasets if d.get("source") in _MODALITY_REPOS]
@@ -136,6 +137,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         not_found_returns=None,
+        expect=dict,
     )
     if body is None:
         raise NotFoundError(f"OmicsDI has no {source}/{acc}")

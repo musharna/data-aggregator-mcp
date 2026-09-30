@@ -235,10 +235,6 @@ async def request_xml(
     )
 
 
-def _parse_json(resp: httpx.Response) -> Any:
-    return resp.json()
-
-
 class UnexpectedShapeError(ValueError):
     """A 2xx JSON body whose top-level type is not what the endpoint promises.
     A ``ValueError`` so ``_retrying`` treats it like any other malformed body."""
@@ -249,20 +245,13 @@ class UpstreamEnvelopeError(ValueError):
 
 
 def _json_parser(
-    expect: type | tuple[type, ...] | None, check: Callable[[Any], None] | None
+    expect: type | tuple[type, ...], check: Callable[[Any], None] | None
 ) -> Callable[[httpx.Response], Any]:
-    if expect is None and check is None:
-        return _parse_json
-    if expect is None:
-        names = ""
-    elif isinstance(expect, type):
-        names = expect.__name__
-    else:
-        names = " or ".join(t.__name__ for t in expect)
+    names = expect.__name__ if isinstance(expect, type) else " or ".join(t.__name__ for t in expect)
 
     def parse(resp: httpx.Response) -> Any:
         body = resp.json()
-        if expect is not None and not isinstance(body, expect):
+        if not isinstance(body, expect):
             raise UnexpectedShapeError(
                 f"expected {names} JSON, got {type(body).__name__}: {resp.text[:200]}"
             )
@@ -279,6 +268,7 @@ async def request_json(
     url: str,
     *,
     service: str,
+    expect: type | tuple[type, ...],
     params: Mapping[str, Any] | None = None,
     data: Any = None,
     content: Any = None,
@@ -288,16 +278,18 @@ async def request_json(
     not_found_returns: Any = _RAISE,
     no_content_returns: Any = _RAISE,
     empty_answer: Callable[[httpx.Response], bool] | None = None,
-    expect: type | tuple[type, ...] | None = None,
     check: Callable[[Any], None] | None = None,
 ) -> Any:
     """Return the parsed JSON body. A malformed 200 body (NCBI throttle envelope)
     is retried, then raises ``UpstreamUnavailableError``.
 
-    ``expect`` is the JSON top-level type the endpoint promises (``list``/``dict``).
-    A 200 carrying anything else — typically an error envelope such as
-    ``{"detail": "Internal error"}`` where a list was promised — is a malformed body
-    (retried, then ``UpstreamUnavailableError``), never coerced into "no results".
+    ``expect`` is REQUIRED: the JSON top-level type the endpoint promises (``dict``,
+    ``list``, a tuple of types, or ``object`` for an endpoint that may answer any JSON).
+    A 200 carrying anything else — typically ``null``, ``[]`` or an error envelope such
+    as ``{"detail": "Internal error"}`` where a list was promised — is a malformed body
+    (retried, then ``UpstreamUnavailableError``), never coerced into "no results" or
+    "not found". It was optional until 2026-09-30, and 37 of 50 call sites left it out;
+    a caller's ``(body or {})`` then read those bodies as an empty answer.
 
     ``check(body)`` inspects the parsed body for an error the upstream smuggles inside
     a 200 (NCBI's ``esearchresult.ERROR``). It raises ``UpstreamEnvelopeError`` (a

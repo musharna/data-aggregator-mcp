@@ -138,8 +138,9 @@ async def resolve_chebi(client: httpx.AsyncClient, name: str) -> ChebiInfo | Non
         },
         timeout=30.0,
         max_retries=2,
+        expect=dict,
     )
-    response = (body or {}).get("response") if isinstance(body, dict) else None
+    response = body.get("response")
     docs = response.get("docs") if isinstance(response, dict) else None
     info = _pick_chebi(docs if isinstance(docs, list) else [], key)
     _CACHE.set(key, info if info is not None else _NEG)

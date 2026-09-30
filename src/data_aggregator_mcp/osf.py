@@ -52,7 +52,7 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
                     "requests; refusing to return a partial manifest"
                 )
             requested.add(url)
-            body = await _http.request_json(client, "GET", url, service="OSF files")
+            body = await _http.request_json(client, "GET", url, service="OSF files", expect=dict)
             for item in body.get("data") or []:
                 attrs = item.get("attributes") or {}
                 kind = attrs.get("kind")

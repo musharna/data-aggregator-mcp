@@ -189,6 +189,7 @@ async def search(
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=dict,
     )
     hits = data.get("hits", {}) or {}
     records = hits.get("hits", []) or []
@@ -257,6 +258,7 @@ async def resolve(client: httpx.AsyncClient, record_id: str) -> DataResource:
             headers={"Accept": "application/json"},
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
+            expect=dict,
         )
     except NotFoundError:
         raise NotFoundError(f"Zenodo has no record id={rid!r}") from None

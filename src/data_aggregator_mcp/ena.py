@@ -58,6 +58,7 @@ async def filereport(client: httpx.AsyncClient, accession: str) -> list[FileEntr
             params=params,
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
+            expect=list,
         )
         or []
     )
