@@ -237,12 +237,11 @@ async def _download_one(
     # so the only way out of the try once the file is complete is the return.
     try:
         try:
-            # httpx upper-cases the method, so "get" would send the same request.
-            async with client.stream(
-                "GET",  # pragma: no mutate
-                f.url,
-                timeout=_STREAM_TIMEOUT_S,
-            ) as resp:
+            # httpx upper-cases the method, so "get" would send the same request. The
+            # timeout is pinned by test_a_download_gets_its_own_timeout_not_the_clients.
+            # pragma: no mutate start
+            async with client.stream("GET", f.url, timeout=_STREAM_TIMEOUT_S) as resp:
+                # pragma: no mutate end
                 resp.raise_for_status()
                 with out.open("wb") as fh:
                     async for chunk in resp.aiter_bytes():

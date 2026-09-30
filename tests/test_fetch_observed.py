@@ -65,6 +65,18 @@ def test_a_file_where_a_directory_is_planned_is_renamed() -> None:
     assert [p.as_posix() for p in planned] == ["data/x.csv", "DATA~82476a16"]
 
 
+def test_a_clash_below_the_top_directory_renames_that_directory_by_its_full_path() -> None:
+    planned = fetch_mod._plan_paths(
+        [
+            _entry("a/Sub", "https://h/1"),
+            _entry("a/sub/x.csv", "https://h/2"),
+            _entry("a/other.csv", "https://h/3"),  # positive control: `a` itself is free
+        ]
+    )
+    # The tag hashes "a/sub|1": the directory's whole path, not just its own name.
+    assert [p.as_posix() for p in planned] == ["a/Sub", "a/sub~28ebbfa3/x.csv", "a/other.csv"]
+
+
 def test_a_rename_that_is_itself_taken_tries_the_next_tag() -> None:
     """Tags are sha1(url|n)[:8] for n = 1, 2, ...: stable across runs, so resume still
     finds a renamed file, and distinct for each attempt."""
