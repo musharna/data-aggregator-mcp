@@ -1238,14 +1238,24 @@ async def test_live_cellxgene_really_states_no_licence() -> None:
 # --------------------------------------------------------------------------
 
 
-def test_pre_4_0_profiles_are_rebuilt_exactly_as_the_matrix_holds_them() -> None:
-    """``_pre_4_0_cc_profiles`` runs once, at import, to fill LICENSE_MATRIX, so a test that
-    only reads the matrix cannot see a change to the function. Call it and compare."""
+def test_pre_4_0_profiles_match_their_hand_written_4_0_counterparts() -> None:
+    """``_pre_4_0_cc_profiles`` runs once, at import, to fill LICENSE_MATRIX, so it is called
+    here directly. Its output is compared with the hand-written 4.0 entries, not with the
+    matrix it filled itself: that comparison held for any edit to the builder, because both
+    sides came from the same code (review finding on #137). Each pre-4.0 family grants and
+    requires what its 4.0 counterpart does; only the limitations differ, since the older
+    licences do not assert patent or trademark exclusions."""
+    families = ["CC-BY", "CC-BY-SA", "CC-BY-NC", "CC-BY-ND", "CC-BY-NC-SA", "CC-BY-NC-ND"]
+    versions = ["1.0", "2.0", "2.5", "3.0"]
     built = lc._pre_4_0_cc_profiles()
-    assert len(built) == 6 * 4  # six CC families x versions 1.0, 2.0, 2.5, 3.0
-    for key, profile in built.items():
-        assert profile == lc.LICENSE_MATRIX[key], key
-        assert profile.limitations == frozenset({"liability", "warranty"}), key
+    assert set(built) == {f"{f}-{v}" for f in families for v in versions}
+    for family in families:
+        four = lc.LICENSE_MATRIX[f"{family}-4.0"]
+        for version in versions:
+            profile = built[f"{family}-{version}"]
+            assert profile.permissions == four.permissions, (family, version)
+            assert profile.conditions == four.conditions, (family, version)
+            assert profile.limitations == frozenset({"liability", "warranty"}), (family, version)
 
 
 @pytest.mark.parametrize(
