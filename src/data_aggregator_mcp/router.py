@@ -23,7 +23,7 @@ import functools
 import logging
 import os
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -86,7 +86,7 @@ def _dedup_ci(queries: list[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for q in queries:
-        key = q.strip().lower()
+        key = q.strip().casefold()
         if not key or key in seen:
             continue
         seen.add(key)
@@ -167,7 +167,6 @@ async def _enrich_resource(client: httpx.AsyncClient, r: DataResource) -> DataRe
     links = list(r.links)
     seen_taxids = {t.taxid for t in taxa}
     seen_links = {lnk.target_id for lnk in links}
-    changed = False
     for name in dict.fromkeys(r.organism):  # distinct, order-preserving
         info = await taxonomy.resolve_taxon(client, name)
         if info is None:
@@ -175,14 +174,14 @@ async def _enrich_resource(client: httpx.AsyncClient, r: DataResource) -> DataRe
         if info.taxid not in seen_taxids:
             taxa.append(Taxon(taxid=info.taxid, name=info.canonical_name))
             seen_taxids.add(info.taxid)
-            changed = True
         if info.is_plant:
             target = f"plant-genomics:taxid:{info.taxid}"
             if target not in seen_links:
                 links.append(Link(rel="described_in", target_id=target))
                 seen_links.add(target)
-                changed = True
-    return r.model_copy(update={"taxa": taxa, "links": links}) if changed else r
+    if len(taxa) == len(r.taxa) and len(links) == len(r.links):
+        return r
+    return r.model_copy(update={"taxa": taxa, "links": links})
 
 
 async def _enrich(
@@ -203,7 +202,8 @@ async def _enrich(
         return_exceptions=True,
     )
     out: list[DataResource] = []
-    for original, res in zip(resources, results, strict=True):
+    # gather() returns one outcome per awaitable, so strict= cannot change behaviour.
+    for original, res in zip(resources, results, strict=True):  # pragma: no mutate
         if isinstance(res, BaseException):
             errors.setdefault("taxonomy", f"{type(res).__name__}: {res}")
             out.append(original)
@@ -238,8 +238,10 @@ def _passes_filters(r: DataResource, f: dict[str, Any]) -> bool:
 
 
 def _with_version_status(r: DataResource) -> DataResource:
+    """Mark ``r`` superseded when its links name a newer version. Links cannot prove a
+    record is the latest, so otherwise ``r`` keeps whatever currency its adapter set."""
     is_latest, superseded_by = derive_version_status(r.links)
-    if is_latest is None and superseded_by is None:
+    if superseded_by is None:
         return r
     return r.model_copy(update={"is_latest": is_latest, "superseded_by": superseded_by})
 
@@ -288,7 +290,7 @@ def _source_streams(
     expanded: str,
     plain: str,
     filters: dict[str, Any],
-    pushdown: bool = True,
+    pushdown: bool,
     vi: int | None = None,
 ) -> list[_Stream]:
     """One stream per adapter, or per sub-source for composite adapters (``SUBSOURCES``
@@ -312,16 +314,13 @@ def _source_streams(
                 (f"{name}/{sub}", functools.partial(adapter.search_subsource, client, sub, q))  # type: ignore[attr-defined]
                 for sub in subs
             ]
-        elif pushdown and wanted and isinstance(adapter, _pushdown.FilterPushdown):
-            pushed = adapter.pushable(wanted)
-            call = (
-                functools.partial(adapter.search, client, q, filters=pushed)
-                if pushed
-                else functools.partial(adapter.search, client, q)
-            )
-            parts = [(name, call)]
         else:
-            parts = [(name, functools.partial(adapter.search, client, q))]
+            call = functools.partial(adapter.search, client, q)
+            if pushdown and wanted and isinstance(adapter, _pushdown.FilterPushdown):
+                pushed = adapter.pushable(wanted)
+                if pushed:  # with nothing pushed the call is exactly the unfiltered one
+                    call = functools.partial(call, filters=pushed)
+            parts = [(name, call)]
         residual = any(k not in pushed for k in wanted)
         for skey, fn in parts:
             key, label = (skey, skey) if vi is None else (_comp_key(vi, skey), f"{skey}#v{vi}")
@@ -334,7 +333,8 @@ def _stored_offset(offsets: dict[str, int], key: str) -> int:
     sub-streams stored one ``omics`` offset — fall back to it for ``omics/geo``."""
     if key in offsets:
         return offsets[key]
-    return offsets.get(key.rsplit("/", 1)[0], 0) if "/" in key else 0
+    # A key holds at most one "/" (source/sub-source), so rpartition would read the same.
+    return offsets.get(key.partition("/")[0], 0)  # pragma: no mutate
 
 
 @dataclass
@@ -367,7 +367,8 @@ async def _fetch_page(
     fetched: dict[str, list[DataResource]] = {}
     totals: dict[str, int] = {}
     total = 0
-    for s, outcome in zip(streams, outcomes, strict=True):
+    # gather() returns one outcome per awaitable, so strict= cannot change behaviour.
+    for s, outcome in zip(streams, outcomes, strict=True):  # pragma: no mutate
         if isinstance(outcome, BaseException):
             # Surface the failure (incl. CancelledError) by stream — never "0 results".
             errors[s.label] = f"{type(outcome).__name__}: {outcome}"
@@ -395,15 +396,17 @@ async def _fetch_page(
         (dropped if c[2].id in seen_ids else unique).append(c)
         seen_ids.add(c[2].id)
     winners = {id(r) for r in _dedup([c[2] for c in unique])}
-    kept = [c for c in unique if id(c[2]) in winners]
-    dropped += [c for c in unique if id(c[2]) not in winners]
+    kept: list[tuple[str, int, DataResource]] = []
+    for c in unique:
+        (kept if id(c[2]) in winners else dropped).append(c)
 
     if rank_query is not None:
         reordered, reason = await embeddings.rerank(client, rank_query, [c[2] for c in kept])
         if reason:
             errors["semantic"] = reason
+        # rerank returns a permutation of its input, so every kept record has a position.
         pos = {id(r): i for i, r in enumerate(reordered)}
-        kept.sort(key=lambda c: pos.get(id(c[2]), len(pos)))
+        kept.sort(key=lambda c: pos[id(c[2])])
 
     handled: dict[str, set[int]] = {s.key: set() for s in streams}
     handled_ids: set[str] = set()
@@ -427,22 +430,23 @@ async def _fetch_page(
 
     new_offsets: dict[str, int] = {}
     new_ahead: dict[str, list[int]] = {}
-    remaining = False
+    remaining: list[bool] = []
     for s in streams:
         n = len(fetched[s.key])
         done = handled[s.key] | prior[s.key]
         p = 0
-        while p < n and p in done:
+        while p in done:
             p += 1
         new_offsets[s.key] = base[s.key] + p
-        rest = sorted(i - p for i in done if i >= p)
+        # p is not in done, so `> p` and `>= p` select the same positions.
+        rest = sorted(i - p for i in done if i > p)  # pragma: no mutate
         if rest:
             new_ahead[s.key] = rest
-        if any(i not in done for i in range(p, n)) or new_offsets[s.key] < totals[s.key]:
-            remaining = True
+        # p is the first position not handled, so a fetched record is left iff p < n.
+        remaining.append(p < n or new_offsets[s.key] < totals[s.key])
     # No record fetched from any stream => nothing can advance; a cursor would replay the
     # identical window forever (e.g. an adapter reporting total>0 but returning []).
-    more = remaining and any(fetched.values())
+    more = any(remaining) and any(fetched.values())
     if note := _filters_note(streams, removed, filters, more=more):
         errors["filters"] = note
     return _Page(emitted, total, new_offsets, new_ahead, more)
@@ -503,7 +507,7 @@ async def _build_search_result(
     tissue_expansion: TissueExpansion | None = None,
     chemical_expansion: ChemicalExpansion | None = None,
     assay_expansion: AssayExpansion | None = None,
-    unresolved: list[UnresolvedEntity] | None = None,
+    unresolved: Sequence[UnresolvedEntity] = (),
     query_understanding: QueryUnderstanding | None = None,
     query_expansion: QueryExpansion | None = None,
 ) -> SearchResult:
@@ -529,7 +533,7 @@ async def _build_search_result(
         tissue_expansion=tissue_expansion,
         chemical_expansion=chemical_expansion,
         assay_expansion=assay_expansion,
-        unresolved=list(unresolved or []),
+        unresolved=list(unresolved),
         query_understanding=query_understanding,
         query_expansion=query_expansion,
     )
@@ -549,13 +553,13 @@ async def _multi_query_page(
     collapse_mirrors: bool,
     errors: dict[str, str],
     query_expansion: QueryExpansion | None,
-    pushdown: bool = True,
+    pushdown: bool,
     taxon_expansion: TaxonExpansion | None = None,
     mesh_expansion: MeshExpansion | None = None,
     tissue_expansion: TissueExpansion | None = None,
     chemical_expansion: ChemicalExpansion | None = None,
     assay_expansion: AssayExpansion | None = None,
-    unresolved: list[UnresolvedEntity] | None = None,
+    unresolved: Sequence[UnresolvedEntity] = (),
     query_understanding: QueryUnderstanding | None = None,
 ) -> SearchResult:
     """A2.P2 parallel multi-query fan-out keyed by a composite ``(variant_index, source)``
@@ -872,6 +876,7 @@ async def search_page(
                     collapse_mirrors=collapse_mirrors,
                     errors=errors,
                     query_expansion=QueryExpansion(input=original_query, variants=raw_variants),
+                    pushdown=True,
                     taxon_expansion=expansion,
                     mesh_expansion=disease_expansion,
                     tissue_expansion=tissue_expansion,
@@ -934,20 +939,14 @@ async def search_page(
         else None
     )
 
-    enriched = await _enrich(client, emitted, errors)
-    enriched = [_with_version_status(r) for r in enriched]
-    # Presentation-layer fold ONLY: collapse runs after offset/cursor accounting
-    # (computed from `consumed`/`new_offsets` above) so it can never corrupt
-    # pagination — a folded mirror just makes this page return fewer than `size`.
-    if collapse_mirrors:
-        enriched = _collapse_mirrors(enriched)
-    return SearchResult(
+    return await _build_search_result(
+        client,
         query=query,
         total=total,
-        count=len(enriched),
-        results=enriched,
+        emitted=emitted,
         errors=errors,
         next_cursor=next_cursor,
+        collapse_mirrors=collapse_mirrors,
         taxon_expansion=expansion,
         mesh_expansion=disease_expansion,
         tissue_expansion=tissue_expansion,
@@ -981,7 +980,7 @@ _DOI_SCHEME_RE = re.compile(r"^(?:doi:|info:doi/|https?://(?:dx\.)?doi\.org/)(?=
 
 
 def _strip_doi_scheme(rid: str) -> str:
-    return _DOI_SCHEME_RE.sub("", rid, count=1)
+    return _DOI_SCHEME_RE.sub("", rid)  # anchored at ^: at most one match
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
@@ -1003,7 +1002,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     cached = _RESOLVE_CACHE.get(rid)
     if cached is not MISS:
         return cached
-    prefix = rid.split(":", 1)[0]
+    prefix = rid.partition(":")[0]
     module = sources.resolver_for(prefix)
     if module is not None:
         resource = await module.resolve(client, rid)
@@ -1029,11 +1028,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             resource = resource.model_copy(
                 update={"errors": {**resource.errors, "taxonomy": f"{type(exc).__name__}: {exc}"}}
             )
-    is_latest, superseded_by = derive_version_status(resource.links)
-    if is_latest is not None or superseded_by is not None:
-        resource = resource.model_copy(
-            update={"is_latest": is_latest, "superseded_by": superseded_by}
-        )
+    resource = _with_version_status(resource)
     resource = resource.model_copy(
         update={
             "access_modes": derive_access_modes(
@@ -1065,7 +1060,8 @@ async def relate(client: httpx.AsyncClient, ids: list[str]) -> RelateResult:
     resolved: list[DataResource] = []
     resolved_ids: list[str] = []
     errors: dict[str, str] = {}
-    for given, res in zip(ids, settled, strict=True):
+    # gather() returns one outcome per awaitable, so strict= cannot change behaviour.
+    for given, res in zip(ids, settled, strict=True):  # pragma: no mutate
         if isinstance(res, BaseException):
             errors[given] = f"{type(res).__name__}: {res}"
         else:
