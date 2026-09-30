@@ -481,6 +481,10 @@ def _canonical_spdx_for_cc(elements: list[str], version: str) -> str | None:
     return "CC-" + "-".join(p.upper() for p in present) + f"-{version}"
 
 
+# Trimmed from both ends of lowercased licence prose, so "MIT License." reads as "mit license".
+_PROSE_EDGE = " ."
+
+
 def _cc_elements_from_prose(collapsed: str) -> list[str]:
     """Pull CC element tokens (by, nc, nd, sa) out of already-collapsed lowercase prose.
 
@@ -494,7 +498,7 @@ def _cc_elements_from_prose(collapsed: str) -> list[str]:
         elements.append("by")
     if "noncommercial" in collapsed or "non-commercial" in collapsed or "nc" in tokens:
         elements.append("nc")
-    if "noderivatives" in collapsed or "noderiv" in collapsed or "nd" in tokens:
+    if "noderiv" in collapsed or "nd" in tokens:  # NoDerivatives (4.0) and NoDerivs (earlier)
         elements.append("nd")
     if "sharealike" in collapsed or "share-alike" in collapsed or "sa" in tokens:
         elements.append("sa")
@@ -590,7 +594,10 @@ def url_hosts(text: str) -> list[str]:
         try:
             host = urlsplit(candidate).hostname
         except ValueError:  # malformed IPv6 literal, bad port, etc.
-            continue
+            # pragma: no mutate below: no _URLISH_RE token makes urlsplit raise today (a directed
+            # check of every host character, 2026-09-29), so continue/break cannot be told apart;
+            # the handler stays so a future regex change degrades to "no host", not a crash.
+            continue  # pragma: no mutate
         if host:
             hosts.append(host.lower())
     return hosts
@@ -667,7 +674,7 @@ def normalize_spdx(license_str: str | None) -> str | None:
         return f"OGL-UK-{m.group(1)}.0" if m else None
 
     # 4. Prose / spaced forms via the alias table (normalize internal whitespace).
-    collapsed = re.sub(r"\s+", " ", low).strip(" .")
+    collapsed = re.sub(r"\s+", " ", low).strip(_PROSE_EDGE)
     if collapsed in _PROSE_ALIASES:
         return _PROSE_ALIASES[collapsed]
 
@@ -712,7 +719,7 @@ def identify_cc_family(license_str: str | None) -> str | None:
     if _CC_VERSION_RE.search(low):
         return None
 
-    elements: list[str] = []
+    elements: list[str]
     if host_matches(low, "creativecommons.org"):
         # A versionless CC URL, e.g. creativecommons.org/licenses/by-nc/ — the licences
         # path segment carries the elements even when the version segment is absent.
@@ -721,7 +728,9 @@ def identify_cc_family(license_str: str | None) -> str | None:
             return None
         elements = [e for e in m.group(1).split("-") if e]
     elif _looks_like_cc_prose(low):
-        elements = _cc_elements_from_prose(re.sub(r"\s+", " ", low).strip(" ."))
+        # No whitespace collapse: the element checks are single words and a split on
+        # whitespace runs, so a run of spaces reads the same as one.
+        elements = _cc_elements_from_prose(low.strip(_PROSE_EDGE))
     else:
         return None
 
@@ -869,7 +878,7 @@ def check(
     missing = [p for p in required if p not in profile.permissions]
 
     if missing:
-        clauses = ", ".join(f"{p} not granted ({_PERMISSION_LABELS.get(p, p)})" for p in missing)
+        clauses = ", ".join(f"{p} not granted ({_PERMISSION_LABELS[p]})" for p in missing)
         return LicenseVerdict(
             use=use,
             verdict="DENY",
