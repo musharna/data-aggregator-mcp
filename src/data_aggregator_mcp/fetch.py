@@ -23,7 +23,8 @@ from data_aggregator_mcp.models import DataResource, FetchResult, FileEntry
 
 DEFAULT_MAX_BYTES = 2_000_000_000  # ~2 GB
 DEFAULT_CACHE_DIR = Path.home() / ".cache" / "data-aggregator-mcp"
-_CHUNK = 1 << 16  # 64 KiB
+_SNIFF = 512  # leading bytes kept to tell an HTML page from the declared file
+_STREAM_TIMEOUT_S = 300.0  # per-file: a large download must not inherit a short default
 _MAX_CONCURRENCY = 4  # bounded parallel downloads per resource
 
 _log = logging.getLogger(__name__)
@@ -34,7 +35,8 @@ _BINARY_MIMES = ("application/pdf", "application/xml", "text/xml")
 
 
 def _looks_like_html(head: bytes) -> bool:
-    sniff = head[:512].lstrip().lower()
+    """``head`` is the body's first ``_SNIFF`` bytes (fewer if the body is shorter)."""
+    sniff = head.lstrip().lower()
     return sniff.startswith((b"<!doctype html", b"<html"))
 
 
@@ -56,38 +58,52 @@ def _relative_path(name: str) -> PurePosixPath | None:
     return PurePosixPath(*parts) if parts else None
 
 
+def _renamed(name: str, basis: str | None, n: int) -> str:
+    """``name`` with ``~<hash8>`` before its suffix. The hash of ``basis|n`` keeps the
+    choice stable across runs, so a resumed fetch finds the file it wrote before."""
+    data = f"{basis}|{n}".encode()
+    # usedforsecurity only declares intent (it matters on FIPS builds), not the digest.
+    digest = hashlib.sha1(data, usedforsecurity=False)  # pragma: no mutate
+    p = PurePosixPath(name)
+    return f"{p.stem}~{digest.hexdigest()[:8]}{p.suffix}"
+
+
 def _plan_paths(selected: list[FileEntry]) -> list[PurePosixPath | None]:
     """One distinct on-disk relative path per selected file, in manifest order.
 
     Two entries can still map to the same path — cellxgene names files by dataset
     title, so two datasets titled "Lung" are both ``Lung.h5ad``. The first keeps its
     name; a later collision gets ``<stem>~<hash8><suffix>``, the hash taken from its
-    url so the choice is stable across runs (resume keeps working). Compared
-    case-insensitively: the cache may live on a case-insensitive filesystem."""
+    url so the choice is stable across runs (resume keeps working). A directory that
+    would sit where a file is already planned is renamed the same way, the hash taken
+    from the directory's path so its files stay together. Compared case-insensitively:
+    the cache may live on a case-insensitive filesystem."""
     files_taken: set[str] = set()
     dirs_taken: set[str] = set()
     planned: list[PurePosixPath | None] = []
-
-    def clashes(p: PurePosixPath) -> bool:
-        # Same file, a file where a dir must go, or a dir where a file must go.
-        key = p.as_posix().lower()
-        ancestors = {a.as_posix().lower() for a in p.parents if a != PurePosixPath(".")}
-        return key in files_taken or key in dirs_taken or bool(ancestors & files_taken)
-
     for f in selected:
         rel = _relative_path(f.name)
         if rel is None:
             planned.append(None)
             continue
-        candidate, n = rel, 0
-        while clashes(candidate):
-            n += 1
-            tag = hashlib.sha1(f"{f.url}|{n}".encode(), usedforsecurity=False).hexdigest()[:8]
-            candidate = rel.with_name(f"{rel.stem}~{tag}{rel.suffix}")
+        # Place one component at a time, root first: a directory component must not be a
+        # planned file, and the file must be neither a planned file nor a planned
+        # directory. A clash is cleared by renaming the component that clashes; renaming
+        # only the file never clears a clash on a directory above it (that looped forever).
+        parts: list[str] = []
+        leaf = len(rel.parts) - 1
+        for i, part in enumerate(rel.parts):
+            basis = f.url if i == leaf else "/".join(rel.parts[: i + 1])
+            name, n = part, 0
+            while (key := "/".join([*parts, name]).lower()) in files_taken or (
+                i == leaf and key in dirs_taken
+            ):
+                n += 1
+                name = _renamed(part, basis, n)
+            parts.append(name)
+        candidate = PurePosixPath(*parts)
         files_taken.add(candidate.as_posix().lower())
-        dirs_taken.update(
-            a.as_posix().lower() for a in candidate.parents if a != PurePosixPath(".")
-        )
+        dirs_taken.update(a.as_posix().lower() for a in candidate.parents)
         planned.append(candidate)
     return planned
 
@@ -96,7 +112,8 @@ def _split_checksum(checksum: str) -> tuple[str, str]:
     """``"MD5:ABC…"`` → ``("md5", "abc…")``. Upstreams disagree on case for both the
     algorithm label and the hex digest (DataONE publishes ``MD5`` and upper-case hex);
     a hex digest is case-insensitive, so the comparison must be too."""
-    algo, _, digest = checksum.partition(":")
+    # "<algo>:<hex>" holds one ":", so rpartition would split it the same way.
+    algo, _, digest = checksum.partition(":")  # pragma: no mutate
     return algo.strip().lower(), digest.strip().lower()
 
 
@@ -121,9 +138,8 @@ def _already_complete(out: Path, f: FileEntry) -> bool:
         if h is None:
             return False
         with out.open("rb") as fh:
-            for block in iter(lambda: fh.read(_CHUNK), b""):
-                h.update(block)
-        return h.hexdigest() == _split_checksum(f.checksum)[1]
+            digest = hashlib.file_digest(fh, lambda: h).hexdigest()
+        return digest == _split_checksum(f.checksum)[1]
     if f.size is not None:
         return out.stat().st_size == f.size
     return False
@@ -213,25 +229,25 @@ async def _download_one(
             f.checksum,
         )
     written = 0
-    first_head = b""
-    first_chunk_seen = False
+    head = b""
     # Concurrency: a sibling task's failure cancels this one mid-stream
     # (CancelledError). ANY escape before the file is verified-complete must
-    # remove our partial — but a completed file must survive. ``complete`` flips
-    # only on the success path; the broad ``except BaseException`` cleans up
-    # otherwise (covers cancellation, which the typed handlers below do not).
-    complete = False
+    # remove our partial; the broad ``except BaseException`` covers cancellation,
+    # which the typed handlers below do not. Nothing after verification can raise,
+    # so the only way out of the try once the file is complete is the return.
     try:
         try:
-            async with client.stream("GET", f.url, timeout=300.0) as resp:
+            # httpx upper-cases the method, so "get" would send the same request. The
+            # timeout is pinned by test_a_download_gets_its_own_timeout_not_the_clients.
+            # pragma: no mutate start
+            async with client.stream("GET", f.url, timeout=_STREAM_TIMEOUT_S) as resp:
+                # pragma: no mutate end
                 resp.raise_for_status()
                 with out.open("wb") as fh:
-                    async for chunk in resp.aiter_bytes(_CHUNK):
+                    async for chunk in resp.aiter_bytes():
                         await budget.debit(len(chunk), f.name)
                         written += len(chunk)
-                        if not first_chunk_seen:
-                            first_head = chunk[:512]
-                            first_chunk_seen = True
+                        head = (head + chunk[:_SNIFF])[:_SNIFF]
                         if h is not None:
                             h.update(chunk)
                         fh.write(chunk)
@@ -246,7 +262,7 @@ async def _download_one(
             expected = _split_checksum(f.checksum)[1]
             if h.hexdigest() != expected:
                 raise UpstreamUnavailableError(f"checksum mismatch for {f.name}")
-        if h is None and f.mime in _BINARY_MIMES and _looks_like_html(first_head):
+        if h is None and f.mime in _BINARY_MIMES and _looks_like_html(head):
             raise UpstreamUnavailableError(
                 f"fetch {f.name}: body is HTML, not the declared {f.mime} "
                 "(the URL likely served a login/paywall/error page)"
@@ -254,30 +270,29 @@ async def _download_one(
         extracted: list[str] = []
         if extract and archive.is_archive(safe_name):
             # Fix 2: pass the REMAINING budget headroom as the extraction ceiling so
-            # that download + extraction together cannot exceed max_bytes. When force
-            # is set we keep the original cap (unlimited extraction, matching prior
-            # behaviour). Debit the actual extracted bytes from the budget afterward
-            # so subsequent archives in the same fetch share the same ceiling.
+            # that download + extraction together cannot exceed max_bytes. With force
+            # the ceiling is max_bytes itself: force lifts the download limit, not the
+            # per-archive zip-bomb guard. Debit the actual extracted bytes from the
+            # budget afterward so later archives in the same fetch share the ceiling.
             if force:
                 extract_max = budget.cap
             else:
                 extract_max = await budget.headroom()
             members = archive.extract_archive(out, target, max_bytes=extract_max)
             extracted_bytes = sum(p.stat().st_size for p in members)
-            await budget.debit(extracted_bytes, safe_name)
+            # Extraction is capped at the headroom read just above (or force skips the
+            # check), so this debit cannot overrun; the name only labels that error.
+            await budget.debit(extracted_bytes, safe_name)  # pragma: no mutate
             extracted = [str(m) for m in members]
-        complete = True
         return _Outcome(
             f.name,
             path=str(out),
             extracted=extracted,
             bytes=written,
-            state="downloaded",
             checksum_unverifiable=checksum_unverifiable,
         )
     except BaseException:
-        if not complete:
-            out.unlink(missing_ok=True)
+        out.unlink(missing_ok=True)
         raise
 
 
@@ -364,9 +379,9 @@ async def fetch_files(
                 await on_progress(done, total, outcome.name)
         return outcome
 
-    tasks = [
-        asyncio.create_task(_guarded(f, rel)) for f, rel in zip(selected, planned, strict=True)
-    ]
+    # _plan_paths returns one entry per selected file, so strict= cannot change behaviour.
+    pairs = zip(selected, planned, strict=True)  # pragma: no mutate
+    tasks = [asyncio.create_task(_guarded(f, rel)) for f, rel in pairs]
     try:
         outcomes: list[_Outcome] = list(await asyncio.gather(*tasks))
     except BaseException:
