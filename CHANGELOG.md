@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.1] - 2026-09-30
+
 ### Security
 
 - A licence URL with a password in its userinfo no longer passes as a real licence.
