@@ -161,9 +161,12 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         client,
         f"{API}/dandisets/{ident}/versions/{version}/info/",
         service="DANDI version info",
+        # A 404 means this version has no info page: fall back to the detail's fields.
+        # Anything but an object on a 200 is a broken answer, not missing metadata.
         not_found_returns={},
+        expect=dict,
     )
-    meta = (info or {}).get("metadata") or {}
+    meta = info.get("metadata") or {}
     return DataResource(
         id=f"dandi:{ident}",
         source="dandi",

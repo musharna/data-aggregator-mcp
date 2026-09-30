@@ -183,15 +183,24 @@ async def test_an_outage_is_tried_twice_and_named(fail: str, service: str, no_sl
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("fail", "service"), [("search", "DANDI search"), ("assets", "DANDI assets")]
+    ("fail", "service", "body"),
+    [
+        ("search", "DANDI search", b"[]"),
+        ("assets", "DANDI assets", b"[]"),
+        # Version info used to fall back to `info or {}`, so these two resolved to a
+        # record with no metadata title, DOI, licence or authors, and no error.
+        ("info", "DANDI version info", b"[]"),
+        ("info", "DANDI version info", b"null"),
+    ],
 )
-async def test_a_listing_that_is_not_an_object_is_an_outage(
-    fail: str, service: str, no_sleep: None
+async def test_a_body_that_is_not_an_object_is_an_outage(
+    fail: str, service: str, body: bytes, no_sleep: None
 ) -> None:
-    """Search and the asset listing promise a JSON object; a 200 carrying a list is a
-    malformed body (retried, then raised), not an empty result."""
+    """Search, the asset listing and version info each promise a JSON object; a 200
+    carrying anything else is a malformed body (retried, then raised), not an empty
+    result. (A 404 on version info is still the documented fallback.)"""
     async with httpx.AsyncClient(
-        transport=_server([], **{fail: httpx.Response(200, json=[])})
+        transport=_server([], **{fail: httpx.Response(200, content=body)})
     ) as c:
         with pytest.raises(UpstreamUnavailableError) as err:
             if fail == "search":
