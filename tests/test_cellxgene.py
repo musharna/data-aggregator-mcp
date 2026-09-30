@@ -192,13 +192,22 @@ async def test_resolve_malformed_id_raises():
 
 
 @pytest.mark.asyncio
-async def test_resolve_non_dict_body_raises_not_found():
-    # a structurally valid but wrong-shaped 200 (a JSON array) must fail loud as
-    # NotFoundError, not leak an AttributeError from list.get(...).
+async def test_resolve_non_dict_body_raises_upstream(monkeypatch):
+    # a structurally valid but wrong-shaped 200 (a JSON array) must fail loud, not leak
+    # an AttributeError from list.get(...). It is an upstream fault, retried and then
+    # UpstreamUnavailableError; it used to be reported as NotFoundError, i.e. "no such
+    # collection", which reads an outage as an absence.
+    from data_aggregator_mcp import _http
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json=[{"x": 1}]))
     ) as c:
-        with pytest.raises(NotFoundError):
+        with pytest.raises(UpstreamUnavailableError, match="expected dict JSON, got list"):
             await cellxgene.resolve(c, "cellxgene:col-x")
 
 

@@ -101,6 +101,7 @@ async def _solr(
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=dict,
     )
     resp = body.get("response", {}) or {}
     return int(resp.get("numFound", 0)), (resp.get("docs") or [])

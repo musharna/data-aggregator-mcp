@@ -304,6 +304,7 @@ async def search(
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=dict,
     )
     items = (body.get("data", []) or [])[offset % capped :]
     total = int((body.get("meta") or {}).get("total", len(items)))
@@ -328,6 +329,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             headers={"Accept": "application/json"},
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
+            expect=dict,
         )
     except NotFoundError:
         raise NotFoundError(f"DataCite has no DOI {doi!r}") from None

@@ -185,6 +185,7 @@ async def search(
             headers=headers,
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
+            expect=dict,
         )
         page = body.get("results") or []
         hits.extend(page)
@@ -209,6 +210,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         not_found_returns=None,
+        expect=dict,
     )
     results = (body or {}).get("results") or []
     if not results:

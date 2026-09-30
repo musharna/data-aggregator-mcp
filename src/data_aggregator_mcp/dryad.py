@@ -28,7 +28,7 @@ _MAX_PAGES = 1000
 async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
     enc = quote(f"doi:{doi}", safe="")
     ds = await _http.request_json(
-        client, "GET", f"{BASE_URL}/datasets/{enc}", service="Dryad dataset"
+        client, "GET", f"{BASE_URL}/datasets/{enc}", service="Dryad dataset", expect=dict
     )
     ver_href = (((ds.get("_links") or {}).get("stash:version") or {}).get("href")) or ""
     if not ver_href:
@@ -48,7 +48,9 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
                 "refusing to return a partial manifest"
             )
         requested.add(href)
-        fr = await _http.request_json(client, "GET", f"{_HOST}{href}", service="Dryad files")
+        fr = await _http.request_json(
+            client, "GET", f"{_HOST}{href}", service="Dryad files", expect=dict
+        )
         embedded.extend((fr.get("_embedded") or {}).get("stash:files") or [])
         total = fr.get("total")
         href = (((fr.get("_links") or {}).get("next") or {}).get("href")) or None

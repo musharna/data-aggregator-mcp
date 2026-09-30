@@ -98,6 +98,7 @@ async def search(
         BASE_URL,
         service="OpenAIRE",
         params=params,
+        expect=dict,
     )
     total = int(data.get("header", {}).get("numFound", 0) or 0)
     results = (data.get("results", []) or [])[offset % capped :]
@@ -114,6 +115,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         "GET",
         f"{BASE_URL}/{urllib.parse.quote(oid, safe='')}",
         service="OpenAIRE",
+        expect=dict,
     )
     record["id"] = record.get("id") or oid  # single-entity payload may omit/null its own id
     resource = _normalize_openaire(record)

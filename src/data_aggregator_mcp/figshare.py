@@ -49,7 +49,7 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
     # Versioned → that version's endpoint and an exact DOI match; unversioned → current.
     version = _version(doi)
     url = f"{BASE_URL}/articles/{aid}" + (f"/versions/{version}" if version else "")
-    data = await _http.request_json(client, "GET", url, service="Figshare article")
+    data = await _http.request_json(client, "GET", url, service="Figshare article", expect=dict)
     got = data.get("doi")
     same = (lambda d: d.strip().lower()) if version else _unversioned
     if isinstance(got, str) and got and same(got) != same(doi):

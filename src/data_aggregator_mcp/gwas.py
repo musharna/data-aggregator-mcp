@@ -108,6 +108,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         not_found_returns=None,
+        expect=dict,
     )
     if not body or not body.get("accession_id"):
         raise NotFoundError(f"GWAS Catalog has no study {acc}")

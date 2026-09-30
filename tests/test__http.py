@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 from pytest_httpx import HTTPXMock
@@ -89,7 +91,7 @@ async def test_request_json_retries_malformed_then_succeeds(
     httpx_mock.add_response(url="https://x.test/j", text="{bad json")  # 200, unparseable
     httpx_mock.add_response(url="https://x.test/j", json={"ok": 1})
     async with httpx.AsyncClient() as client:
-        data = await _http.request_json(client, "GET", "https://x.test/j", service="t")
+        data = await _http.request_json(client, "GET", "https://x.test/j", service="t", expect=dict)
     assert data == {"ok": 1}
 
 
@@ -106,7 +108,7 @@ async def test_request_json_terminal_malformed_raises_upstream(
         httpx_mock.add_response(url="https://x.test/jj", text="<html>throttled</html>")
     async with httpx.AsyncClient() as client:
         with pytest.raises(UpstreamUnavailableError):
-            await _http.request_json(client, "GET", "https://x.test/jj", service="t")
+            await _http.request_json(client, "GET", "https://x.test/jj", service="t", expect=dict)
 
 
 async def test_request_xml_retries_malformed_then_succeeds(
@@ -136,12 +138,22 @@ async def test_204_no_content_is_success_not_outage(httpx_mock: HTTPXMock) -> No
     httpx_mock.add_response(url="https://x.test/down", status_code=500, is_reusable=True)
     async with httpx.AsyncClient() as client:
         out = await _http.request_json(
-            client, "GET", "https://x.test/empty", service="t", no_content_returns={"hits": []}
+            client,
+            "GET",
+            "https://x.test/empty",
+            service="t",
+            no_content_returns={"hits": []},
+            expect=dict,
         )
         assert out == {"hits": []}
         # positive control: a 200 body still parses through the same call shape
         full = await _http.request_json(
-            client, "GET", "https://x.test/full", service="t", no_content_returns={"hits": []}
+            client,
+            "GET",
+            "https://x.test/full",
+            service="t",
+            no_content_returns={"hits": []},
+            expect=dict,
         )
         assert full == {"hits": [1]}
         # and a real outage is still an outage (no_content_returns does not mask 5xx)
@@ -153,6 +165,7 @@ async def test_204_no_content_is_success_not_outage(httpx_mock: HTTPXMock) -> No
                 service="t",
                 max_retries=1,
                 no_content_returns={"hits": []},
+                expect=dict,
             )
 
 
@@ -163,7 +176,9 @@ async def test_204_without_sentinel_raises_upstream(httpx_mock: HTTPXMock) -> No
     httpx_mock.add_response(url="https://x.test/e", status_code=204, is_reusable=True)
     async with httpx.AsyncClient() as client:
         with pytest.raises(UpstreamUnavailableError, match="no content"):
-            await _http.request_json(client, "GET", "https://x.test/e", service="t", max_retries=1)
+            await _http.request_json(
+                client, "GET", "https://x.test/e", service="t", max_retries=1, expect=dict
+            )
 
 
 async def test_request_json_expect_rejects_wrong_shape(httpx_mock: HTTPXMock) -> None:
@@ -182,3 +197,29 @@ async def test_request_json_expect_rejects_wrong_shape(httpx_mock: HTTPXMock) ->
             )
         ok = await _http.request_json(client, "GET", "https://x.test/ok", service="t", expect=list)
     assert ok == [{"a": 1}]
+
+
+async def test_request_json_requires_expect(httpx_mock: HTTPXMock) -> None:
+    """`expect` has no default: a call site that does not say what body it accepts does
+    not run (37 of 50 sites once omitted it, and read `null` or `[]` as an empty answer).
+    Positive control: the same request with `expect` declared returns the body."""
+    httpx_mock.add_response(url="https://x.test/r", json={"a": 1})
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(TypeError, match="expect"):
+            await _http.request_json(client, "GET", "https://x.test/r", service="t")  # type: ignore[call-arg]
+        assert await _http.request_json(
+            client, "GET", "https://x.test/r", service="t", expect=dict
+        ) == {"a": 1}
+
+
+@pytest.mark.parametrize("body", [{"a": 1}, [1], "s", 3, None])
+async def test_request_json_expect_object_accepts_any_json(
+    httpx_mock: HTTPXMock, body: object
+) -> None:
+    """`expect=object` is the explicit way to accept any JSON value, `null` included."""
+    httpx_mock.add_response(url="https://x.test/any", content=json.dumps(body).encode())
+    async with httpx.AsyncClient() as client:
+        got = await _http.request_json(
+            client, "GET", "https://x.test/any", service="t", expect=object
+        )
+    assert got == body

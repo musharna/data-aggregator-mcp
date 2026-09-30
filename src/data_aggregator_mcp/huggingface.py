@@ -100,6 +100,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             headers={"Accept": "application/json"},
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
+            expect=dict,
         )
     except NotFoundError:
         raise NotFoundError(f"HuggingFace has no dataset {ds_id!r}") from None

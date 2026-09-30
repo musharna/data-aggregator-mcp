@@ -65,6 +65,7 @@ async def files(
         f"{base}/api/datasets/:persistentId/",
         service="Dataverse dataset",
         params={"persistentId": f"doi:{doi}"},
+        expect=dict,
     )
     version = (data.get("data") or {}).get("latestVersion") or {}
     out: list[FileEntry] = []

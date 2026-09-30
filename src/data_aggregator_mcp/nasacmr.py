@@ -152,6 +152,7 @@ async def search(
         params={"keyword": query, "page_size": str(min(size, MAX_SIZE)), "offset": str(offset)},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=dict,
     )
     total = int(body.get("hits") or 0)
     return total, [compact(_normalize(i)) for i in (body.get("items") or [])]
@@ -167,6 +168,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         params={"concept_id": cid},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=dict,
     )
     items = body.get("items") or []
     if not items:

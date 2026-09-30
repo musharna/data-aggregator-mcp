@@ -57,6 +57,7 @@ async def embed(client: httpx.AsyncClient, texts: list[str]) -> list[list[float]
             service="embeddings",
             content=payload,
             headers=headers,
+            expect=dict,
         )
         return [row["embedding"] for row in body["data"]]
     except Exception:  # unavailable / malformed — caller degrades to keyword order

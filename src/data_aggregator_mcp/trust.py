@@ -109,11 +109,10 @@ async def _check(client: httpx.AsyncClient, doi: str) -> _Lookup:
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
             not_found_returns=None,  # 404 → not a Crossref work → unknown
+            expect=dict,
         )
         if body is None:
             return "absent"
-        if not isinstance(body, dict):
-            return "failed"
         updated_by = (body.get("message") or {}).get("updated-by") or []
         notice = next(
             (u for u in updated_by if isinstance(u, dict) and u.get("type") == _RETRACTION),

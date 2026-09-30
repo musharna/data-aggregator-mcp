@@ -196,8 +196,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         not_found_returns=None,
+        expect=dict,
     )
-    if not isinstance(collection, dict) or not collection.get("collection_id"):
+    if not collection or not collection.get("collection_id"):
         raise NotFoundError(f"CELLxGENE has no collection {cid}")
     record = _normalize(collection)
     record.files = _file_manifest(collection)

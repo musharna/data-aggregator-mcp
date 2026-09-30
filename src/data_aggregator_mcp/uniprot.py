@@ -132,6 +132,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             headers={"Accept": "application/json"},
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
+            expect=dict,
         )
     except NotFoundError:
         raise NotFoundError(f"UniProtKB has no entry {acc}") from None

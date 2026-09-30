@@ -80,6 +80,7 @@ async def _hydrate(client: httpx.AsyncClient, ids: list[str]) -> dict[str, dict]
         headers={"Content-Type": "application/json", "Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
+        expect=dict,
     )
     entries = ((body or {}).get("data") or {}).get("entries") or []
     return {e["rcsb_id"]: e for e in entries if e and e.get("rcsb_id")}
