@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `dandi` resolve no longer returns a stripped-down record when DANDI's version-info
+  endpoint answers 200 with `[]` or `null`. The record came back with no metadata
+  title, DOI, licence or authors, and no error. Such a body is now retried and then
+  reported as an upstream failure; a 404 still falls back to the dandiset's own fields.
+- `dandi` resolve no longer reports a DANDI outage as "no such dandiset". A 200 from the
+  dandiset endpoint carrying `null` or `[]` was read as a missing dandiset (and a
+  non-empty list crashed with `AttributeError`); it is now retried and then reported as
+  an upstream failure. A 404 is still reported as not found.
+
 ## [0.54.1] - 2026-09-30
 
 ### Security
