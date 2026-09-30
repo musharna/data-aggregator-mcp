@@ -51,8 +51,8 @@ PREFIXES = {"biostudies"}
 _ACC_RE = re.compile(r"^[A-Za-z0-9-]{1,40}$")
 DEFAULT_SIZE = 10
 MAX_SIZE = 100
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+_ACCEPT_JSON = {"Accept": "application/json"}
 #: Runaway guard on external file lists read per study (one request each). Real studies
 #: name a handful; past this, resolve raises rather than return a partial manifest.
 _MAX_FILE_LISTS = 1000
@@ -99,11 +99,10 @@ def _file_lists(section: dict[str, Any]) -> list[str]:
     out: list[str] = []
     for node in _iter_subsections(section):
         for a in node.get("attributes") or []:
-            if not isinstance(a, dict):
+            if not isinstance(a, dict) or str(a.get("name")).strip().lower() != "file list":
                 continue
-            name = str(a.get("name") or "").strip().lower()
             value = str(a.get("value") or "").strip()
-            if name == "file list" and value and value not in out:
+            if value and value not in out:
                 out.append(value)
     return out
 
@@ -140,9 +139,8 @@ def _collect_files(
                     name=str(path),
                     size=int(size) if isinstance(size, int) else None,
                     url=_FILES.format(acc=acc, path=str(path)),
-                    # No checksum in the payload — see module docstring. Leaving
-                    # this None is what keeps fetch honest about the guarantee.
-                    checksum=None,
+                    # No checksum: the payload has none (see module docstring). Leaving
+                    # it unset is what keeps fetch honest about the guarantee.
                     source="biostudies",
                 )
             )
@@ -153,7 +151,7 @@ def _publication(section: dict[str, Any]) -> tuple[str | None, str | None]:
     """Return (doi, pmid) from the Publication subsection, if present."""
     doi = pmid = None
     for node in _iter_subsections(section):
-        if str(node.get("type") or "").lower() != "publication":
+        if str(node.get("type")).lower() != "publication":
             continue
         attrs = _attrs(node)
         for key, val in attrs.items():
@@ -183,7 +181,7 @@ def _xrefs(section: dict[str, Any]) -> list[tuple[str, str]]:
         url = cur.get("url")
         if not url:
             continue
-        ltype = _attrs(cur).get("Type", "").strip().lower()
+        ltype = str(_attrs(cur).get("Type")).strip().lower()
         if ltype in _XREF_TYPES:
             out.append((ltype, str(url)))
     return out
@@ -203,7 +201,6 @@ def _normalize_hit(hit: dict[str, Any]) -> DataResource:
         year=year,
         accessions=[acc] if acc else [],
         last_updated=release or None,
-        files=[],
         links=[Link(rel="landing_page", target_id=_LANDING.format(acc=acc))],
         metrics=Metrics(views=int(views)) if isinstance(views, int) else None,
     )
@@ -259,6 +256,21 @@ def _normalize_study(body: dict[str, Any], listed: list[Any] | None = None) -> D
     )
 
 
+async def _get_json(client: httpx.AsyncClient, url: str, *, service: str, **kwargs: Any) -> Any:
+    """GET ``url`` as JSON with this source's retry budget and ``_http``'s timeout."""
+    # httpx upper-cases the method, so "get" would send the same request.
+    method = "GET"  # pragma: no mutate
+    return await _http.request_json(
+        client,
+        method,
+        url,
+        service=service,
+        headers=_ACCEPT_JSON,
+        max_retries=MAX_RETRIES,
+        **kwargs,
+    )
+
+
 async def search(
     client: httpx.AsyncClient,
     query: str,
@@ -275,15 +287,11 @@ async def search(
         if collection and _ACC_RE.match(collection)
         else SEARCH
     )
-    body = await _http.request_json(
+    body = await _get_json(
         client,
-        "GET",
         url,
         service="BioStudies search",
         params={"query": query, "pageSize": capped, "page": page},
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
     )
     hits = (body or {}).get("hits") or []
     # Page-boundary slice (see pagination spec): drop the first `offset % capped` rows
@@ -299,15 +307,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     if not _ACC_RE.match(acc):
         raise NotFoundError(f"malformed BioStudies id {resource_id!r}")
     try:
-        body = await _http.request_json(
-            client,
-            "GET",
-            STUDY.format(acc=acc),
-            service="BioStudies resolve",
-            headers={"Accept": "application/json"},
-            timeout=DEFAULT_TIMEOUT,
-            max_retries=MAX_RETRIES,
-        )
+        body = await _get_json(client, STUDY.format(acc=acc), service="BioStudies resolve")
     except NotFoundError:
         raise NotFoundError(f"BioStudies has no study {acc}") from None
     return _normalize_study(body, await _read_file_lists(client, acc, body))
@@ -325,14 +325,10 @@ async def _read_file_lists(client: httpx.AsyncClient, acc: str, body: Any) -> li
     for name in names:
         try:
             rows.extend(
-                await _http.request_json(
+                await _get_json(
                     client,
-                    "GET",
-                    _FILES.format(acc=acc, path=quote(name, safe="/")),
+                    _FILES.format(acc=acc, path=quote(name)),
                     service="BioStudies file list",
-                    headers={"Accept": "application/json"},
-                    timeout=DEFAULT_TIMEOUT,
-                    max_retries=MAX_RETRIES,
                     expect=list,
                 )
             )
