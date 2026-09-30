@@ -37,7 +37,14 @@ MAX_RETRIES = 2
 _ACCEPT_JSON = {"Accept": "application/json"}
 
 
-async def _get_json(client: httpx.AsyncClient, url: str, *, service: str, **kwargs: Any) -> Any:
+async def _get_json(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    service: str,
+    expect: type | tuple[type, ...],
+    **kwargs: Any,
+) -> Any:
     """GET ``url`` as JSON with this source's retry budget and ``_http``'s timeout."""
     # httpx upper-cases the method, so "get" would send the same request.
     method = "GET"  # pragma: no mutate
@@ -46,6 +53,7 @@ async def _get_json(client: httpx.AsyncClient, url: str, *, service: str, **kwar
         method,
         url,
         service=service,
+        expect=expect,
         headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         **kwargs,

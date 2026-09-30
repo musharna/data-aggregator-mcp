@@ -11,9 +11,13 @@ string, and requires the named, retried ``UpstreamUnavailableError``.
 
 from __future__ import annotations
 
+import ast
+import pathlib
+
 import httpx
 import pytest
 
+import data_aggregator_mcp
 from data_aggregator_mcp import _http, router
 from data_aggregator_mcp.errors import UpstreamUnavailableError
 
@@ -71,3 +75,26 @@ async def test_a_wrong_type_200_is_an_upstream_failure(name: str, fn: str) -> No
         await _call(name, fn, "junk")
     assert "unparseable 200 body" in str(err.value)
     assert "got str" in str(err.value)
+
+
+def test_every_request_json_call_names_expect_itself() -> None:
+    """mypy enforces `expect` only where it can see it. A wrapper that forwards
+    `**kwargs: Any` to request_json hides a missing `expect` from its own callers (the
+    #145 review found dandi's and biostudies' `_get_json`), so every call must name
+    `expect=` explicitly, and a wrapper takes it as its own required parameter.
+    Positive control: the scan finds the calls it checks."""
+    src = pathlib.Path(data_aggregator_mcp.__file__).parent
+    calls, hidden = 0, []
+    for path in sorted(src.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
+            if name != "request_json":
+                continue
+            calls += 1
+            if "expect" not in {k.arg for k in node.keywords}:
+                hidden.append(f"{path.name}:{node.lineno}")
+    assert calls >= 40
+    assert hidden == []
