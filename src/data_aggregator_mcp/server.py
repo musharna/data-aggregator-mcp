@@ -153,12 +153,10 @@ async def _get_prompt(
 ) -> types.GetPromptResult:
     name = params.name
     args = params.arguments or {}
-    text = _prompt_text(name, args)
+    text = _prompt_text(name, args)  # raises on an unknown name, so the lookup below finds it
     return types.GetPromptResult(
-        description=next((p.description for p in _PROMPTS if p.name == name), None),
-        messages=[
-            types.PromptMessage(role="user", content=types.TextContent(type="text", text=text)),
-        ],
+        description=next(p.description for p in _PROMPTS if p.name == name),
+        messages=[types.PromptMessage(role="user", content=types.TextContent(text=text))],
     )
 
 
@@ -351,7 +349,7 @@ async def _dispatch(
 
 
 def _error_result(text: str) -> types.CallToolResult:
-    return types.CallToolResult(content=[types.TextContent(type="text", text=text)], is_error=True)
+    return types.CallToolResult(content=[types.TextContent(text=text)], is_error=True)
 
 
 async def _call_tool(
@@ -374,23 +372,23 @@ async def _call_tool(
     arguments = params.arguments or {}
     tool = _TOOLS_BY_NAME.get(name)
     try:
-        if tool is not None:
-            try:
-                jsonschema.validate(instance=arguments, schema=tool.input_schema)
-            except jsonschema.ValidationError as e:
-                return _error_result(f"Input validation error: {e.message}")
+        if tool is None:
+            raise ValueError(f"unknown tool: {name}")
+        try:
+            jsonschema.validate(instance=arguments, schema=tool.input_schema)
+        except jsonschema.ValidationError as e:
+            return _error_result(f"Input validation error: {e.message}")
         result = await _dispatch(name, arguments, ctx)
         if not isinstance(result, dict):
             return _error_result(f"Unexpected return type from tool: {type(result).__name__}")
-        if tool is not None and tool.output_schema is not None:
+        if tool.output_schema is not None:
             try:
                 jsonschema.validate(instance=result, schema=tool.output_schema)
             except jsonschema.ValidationError as e:
                 return _error_result(f"Output validation error: {e.message}")
         return types.CallToolResult(
-            content=[types.TextContent(type="text", text=json.dumps(result, indent=2))],
+            content=[types.TextContent(text=json.dumps(result, indent=2))],
             structured_content=result,
-            is_error=False,
         )
     except Exception as exc:  # noqa: BLE001 - the wire contract: every failure reaches the model as text
         logger.warning("tool %s failed: %s: %s", name, type(exc).__name__, exc)
@@ -423,7 +421,7 @@ def _run_search_cli(argv: list[str]) -> None:
     parser.add_argument("query")
     parser.add_argument("--json", action="store_true", help="emit JSON (the only format)")
     parser.add_argument("--size", type=int, default=zenodo.DEFAULT_SIZE)
-    parser.add_argument("--sources", default=None, help="comma-separated sources; default: all")
+    parser.add_argument("--sources", help="comma-separated sources; default: all")
     ns = parser.parse_args(argv)
     sources = [s.strip() for s in ns.sources.split(",") if s.strip()] if ns.sources else None
     try:
@@ -433,8 +431,8 @@ def _run_search_cli(argv: list[str]) -> None:
     except Exception as exc:  # fail loud on stderr, non-zero exit
         print(f"data-aggregator-mcp search: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
-    results = page.get("results", [])
-    errors = page.get("errors", {}) or {}
+    results = page["results"]
+    errors = page["errors"]
     # The router tolerates a failing source so the OTHER sources can still
     # answer, and reports it in ``errors``. Dropping that dict here turned an
     # upstream outage into ``[]`` with exit 0 - indistinguishable from "no
@@ -471,14 +469,12 @@ def _run_serve_cli(argv: list[str]) -> None:
     parser.add_argument(
         "--allow-host",
         action="append",
-        default=None,
         metavar="HOST:PORT",
         help="http only; permitted Host header, repeatable. Required off loopback.",
     )
     parser.add_argument(
         "--allow-origin",
         action="append",
-        default=None,
         metavar="ORIGIN",
         help="http only; permitted browser Origin header, repeatable.",
     )
