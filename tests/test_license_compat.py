@@ -588,6 +588,43 @@ def test_licence_domain_cannot_be_spoofed_by_url_structure(spoofed: str) -> None
     assert lc.check(spoofed, "commercial").verdict != "ALLOW"
 
 
+@pytest.mark.parametrize(
+    "spoofed",
+    [
+        # userinfo is user[:password]; the password is anything, not only digits.
+        "http://creativecommons.org:x9@evil.example.com/licenses/by/4.0/",
+        "http://creativecommons.org:pass@evil.example.com/licenses/by/4.0/",
+        "http://creativecommons.org:@evil.example.com/licenses/by/4.0/",
+        "http://creativecommons.org:a,b;c@evil.example.com/licenses/by/4.0/",
+        # A password longer than the scan cap must not carry the token past the check.
+        "http://creativecommons.org:" + "p" * 9000 + "@evil.example.com/licenses/by/4.0/",
+    ],
+)
+def test_licence_domain_cannot_be_spoofed_by_a_userinfo_password(spoofed: str) -> None:
+    """The userinfo check above knew two shapes, ``host@`` and ``host:<digits>@``, which are
+    the ones it was written against. RFC 3986 userinfo is ``user[:password]``, ending at the
+    ``@`` before the host, so ``creativecommons.org:x9@evil.example.com`` is a username and
+    password on evil.example.com, and it came back ``ALLOW CC-BY-4.0``. Found by a surviving
+    mutant (#88) that moved the digit scan by one character without any test noticing.
+    """
+    assert lc.normalize_spdx(spoofed) is None
+    assert lc.check(spoofed, "commercial").verdict != "ALLOW"
+
+
+@pytest.mark.parametrize(
+    "licence",
+    [
+        "https://creativecommons.org:443/licenses/by/4.0/",
+        "https://creativecommons.org:443",
+        "creativecommons.org/licenses/by/4.0/ (contact: me@example.org)",
+    ],
+)
+def test_a_port_or_a_later_email_is_not_userinfo(licence: str) -> None:
+    """Positive control for the password test: a port with no ``@`` after it, and an ``@``
+    that sits past the end of the URL, leave the host a host."""
+    assert lc.url_hosts(licence)[0] == "creativecommons.org"
+
+
 def test_real_licence_urls_still_resolve() -> None:
     """Positive control for both spoofing tests.
 

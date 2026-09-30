@@ -534,6 +534,11 @@ _NOT_A_HOST_BEFORE = frozenset("@#?&=")
 # limit at all. Belt and braces with the bounded regex above.
 _MAX_SCAN_CHARS = 8192
 
+# What ends a URL's authority after the scanner's token: the path, query or fragment, the end
+# of the URL, or the "@" that closes userinfo. RFC 3986 userinfo (user[:password]) may hold
+# ":" and sub-delims like "," and ";", so those do not end it.
+_AUTHORITY_END_RE = re.compile(r"[\s/?#@]")
+
 
 def _token_is_a_real_host(text: str, start: int, end: int) -> bool:
     """Reject a token that URL syntax says is not a host.
@@ -551,18 +556,18 @@ def _token_is_a_real_host(text: str, start: int, end: int) -> bool:
     A token followed by ``@`` is userinfo; a token preceded by ``@#?&=`` sits inside
     another URL's userinfo, fragment or query. Neither is ever a host.
 
-    The ``@`` may be separated from the token by a port, because the scanner stops before
-    ``:`` — ``creativecommons.org:8080@evil.com`` is still userinfo, and checking only the
-    single next character missed it.
+    The ``@`` may be separated from the token by a password, because the scanner stops
+    before ``:``: ``creativecommons.org:x9@evil.com`` is still userinfo. An earlier version
+    allowed only digits there (a port), so any other password passed as a host.
+
+    The rest of the authority is read only up to the scan cap. When it runs past the cap
+    without ending, an ``@`` could still follow, so the token is not trusted as a host.
     """
-    cursor = end
-    if cursor < len(text) and text[cursor] == ":":
-        digits = cursor + 1
-        while digits < len(text) and text[digits].isdigit():
-            digits += 1
-        if digits > cursor + 1:  # an actual :port, not a bare colon
-            cursor = digits
-    if cursor < len(text) and text[cursor] == "@":
+    stop = _AUTHORITY_END_RE.search(text, end, _MAX_SCAN_CHARS)
+    if stop is None:
+        if len(text) > _MAX_SCAN_CHARS:
+            return False
+    elif stop.group() == "@":
         return False
     return not (start > 0 and text[start - 1] in _NOT_A_HOST_BEFORE)
 
