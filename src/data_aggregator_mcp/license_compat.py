@@ -481,6 +481,10 @@ def _canonical_spdx_for_cc(elements: list[str], version: str) -> str | None:
     return "CC-" + "-".join(p.upper() for p in present) + f"-{version}"
 
 
+# Trimmed from both ends of lowercased licence prose, so "MIT License." reads as "mit license".
+_PROSE_EDGE = " ."
+
+
 def _cc_elements_from_prose(collapsed: str) -> list[str]:
     """Pull CC element tokens (by, nc, nd, sa) out of already-collapsed lowercase prose.
 
@@ -494,7 +498,7 @@ def _cc_elements_from_prose(collapsed: str) -> list[str]:
         elements.append("by")
     if "noncommercial" in collapsed or "non-commercial" in collapsed or "nc" in tokens:
         elements.append("nc")
-    if "noderivatives" in collapsed or "noderiv" in collapsed or "nd" in tokens:
+    if "noderiv" in collapsed or "nd" in tokens:  # NoDerivatives (4.0) and NoDerivs (earlier)
         elements.append("nd")
     if "sharealike" in collapsed or "share-alike" in collapsed or "sa" in tokens:
         elements.append("sa")
@@ -534,6 +538,11 @@ _NOT_A_HOST_BEFORE = frozenset("@#?&=")
 # limit at all. Belt and braces with the bounded regex above.
 _MAX_SCAN_CHARS = 8192
 
+# What ends a URL's authority after the scanner's token: the path, query or fragment, the end
+# of the URL, or the "@" that closes userinfo. RFC 3986 userinfo (user[:password]) may hold
+# ":" and sub-delims like "," and ";", so those do not end it.
+_AUTHORITY_END_RE = re.compile(r"[\s/?#@]")
+
 
 def _token_is_a_real_host(text: str, start: int, end: int) -> bool:
     """Reject a token that URL syntax says is not a host.
@@ -551,18 +560,18 @@ def _token_is_a_real_host(text: str, start: int, end: int) -> bool:
     A token followed by ``@`` is userinfo; a token preceded by ``@#?&=`` sits inside
     another URL's userinfo, fragment or query. Neither is ever a host.
 
-    The ``@`` may be separated from the token by a port, because the scanner stops before
-    ``:`` — ``creativecommons.org:8080@evil.com`` is still userinfo, and checking only the
-    single next character missed it.
+    The ``@`` may be separated from the token by a password, because the scanner stops
+    before ``:``: ``creativecommons.org:x9@evil.com`` is still userinfo. An earlier version
+    allowed only digits there (a port), so any other password passed as a host.
+
+    The rest of the authority is read only up to the scan cap. When it runs past the cap
+    without ending, an ``@`` could still follow, so the token is not trusted as a host.
     """
-    cursor = end
-    if cursor < len(text) and text[cursor] == ":":
-        digits = cursor + 1
-        while digits < len(text) and text[digits].isdigit():
-            digits += 1
-        if digits > cursor + 1:  # an actual :port, not a bare colon
-            cursor = digits
-    if cursor < len(text) and text[cursor] == "@":
+    stop = _AUTHORITY_END_RE.search(text, end, _MAX_SCAN_CHARS)
+    if stop is None:
+        if len(text) > _MAX_SCAN_CHARS:
+            return False
+    elif stop.group() == "@":
         return False
     return not (start > 0 and text[start - 1] in _NOT_A_HOST_BEFORE)
 
@@ -585,7 +594,10 @@ def url_hosts(text: str) -> list[str]:
         try:
             host = urlsplit(candidate).hostname
         except ValueError:  # malformed IPv6 literal, bad port, etc.
-            continue
+            # pragma: no mutate below: no _URLISH_RE token makes urlsplit raise today (a directed
+            # check of every host character, 2026-09-29), so continue/break cannot be told apart;
+            # the handler stays so a future regex change degrades to "no host", not a crash.
+            continue  # pragma: no mutate
         if host:
             hosts.append(host.lower())
     return hosts
@@ -662,7 +674,7 @@ def normalize_spdx(license_str: str | None) -> str | None:
         return f"OGL-UK-{m.group(1)}.0" if m else None
 
     # 4. Prose / spaced forms via the alias table (normalize internal whitespace).
-    collapsed = re.sub(r"\s+", " ", low).strip(" .")
+    collapsed = re.sub(r"\s+", " ", low).strip(_PROSE_EDGE)
     if collapsed in _PROSE_ALIASES:
         return _PROSE_ALIASES[collapsed]
 
@@ -707,7 +719,7 @@ def identify_cc_family(license_str: str | None) -> str | None:
     if _CC_VERSION_RE.search(low):
         return None
 
-    elements: list[str] = []
+    elements: list[str]
     if host_matches(low, "creativecommons.org"):
         # A versionless CC URL, e.g. creativecommons.org/licenses/by-nc/ — the licences
         # path segment carries the elements even when the version segment is absent.
@@ -716,7 +728,9 @@ def identify_cc_family(license_str: str | None) -> str | None:
             return None
         elements = [e for e in m.group(1).split("-") if e]
     elif _looks_like_cc_prose(low):
-        elements = _cc_elements_from_prose(re.sub(r"\s+", " ", low).strip(" ."))
+        # No whitespace collapse: the element checks are single words and a split on
+        # whitespace runs, so a run of spaces reads the same as one.
+        elements = _cc_elements_from_prose(low.strip(_PROSE_EDGE))
     else:
         return None
 
@@ -864,7 +878,7 @@ def check(
     missing = [p for p in required if p not in profile.permissions]
 
     if missing:
-        clauses = ", ".join(f"{p} not granted ({_PERMISSION_LABELS.get(p, p)})" for p in missing)
+        clauses = ", ".join(f"{p} not granted ({_PERMISSION_LABELS[p]})" for p in missing)
         return LicenseVerdict(
             use=use,
             verdict="DENY",
