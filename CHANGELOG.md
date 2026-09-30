@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- `fetch` no longer hangs the server on a record whose file list puts a path under a
+  name that is also a file (`Data`, then `data/x.csv`). Planning the on-disk paths
+  renamed only the file, never the directory that clashed, so it looped forever on
+  the event loop and every other request stalled with it. File names come from the
+  uploader. The clashing directory is now renamed `data~<hash8>/`, and every path
+  that planned before plans the same, so resumed fetches still find their files.
+
 ## [0.54.0] - 2026-09-29
 
 ### Fixed
