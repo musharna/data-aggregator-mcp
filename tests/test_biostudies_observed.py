@@ -107,7 +107,10 @@ async def test_an_outage_is_tried_twice_and_named(
                 await biostudies.search(c, "drought", size=2)
             else:
                 await biostudies.resolve(c, "biostudies:S-BIAD8")
-    assert str(err.value) == f"[UpstreamUnavailableError] {service} exhausted 2 retries (last HTTP 503)"
+    assert (
+        str(err.value)
+        == f"[UpstreamUnavailableError] {service} exhausted 2 retries (last HTTP 503)"
+    )
     assert sum(r.url.path.endswith(endpoint) for r in seen) == 2
     assert not any(r.url.path.endswith("non-smlm_data.json") for r in seen)
 
