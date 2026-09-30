@@ -58,35 +58,50 @@ def _relative_path(name: str) -> PurePosixPath | None:
     return PurePosixPath(*parts) if parts else None
 
 
+def _renamed(name: str, basis: str | None, n: int) -> str:
+    """``name`` with ``~<hash8>`` before its suffix. The hash of ``basis|n`` keeps the
+    choice stable across runs, so a resumed fetch finds the file it wrote before."""
+    data = f"{basis}|{n}".encode()
+    # usedforsecurity only declares intent (it matters on FIPS builds), not the digest.
+    digest = hashlib.sha1(data, usedforsecurity=False)  # pragma: no mutate
+    p = PurePosixPath(name)
+    return f"{p.stem}~{digest.hexdigest()[:8]}{p.suffix}"
+
+
 def _plan_paths(selected: list[FileEntry]) -> list[PurePosixPath | None]:
     """One distinct on-disk relative path per selected file, in manifest order.
 
     Two entries can still map to the same path — cellxgene names files by dataset
     title, so two datasets titled "Lung" are both ``Lung.h5ad``. The first keeps its
     name; a later collision gets ``<stem>~<hash8><suffix>``, the hash taken from its
-    url so the choice is stable across runs (resume keeps working). Compared
-    case-insensitively: the cache may live on a case-insensitive filesystem."""
+    url so the choice is stable across runs (resume keeps working). A directory that
+    would sit where a file is already planned is renamed the same way, the hash taken
+    from the directory's path so its files stay together. Compared case-insensitively:
+    the cache may live on a case-insensitive filesystem."""
     files_taken: set[str] = set()
     dirs_taken: set[str] = set()
     planned: list[PurePosixPath | None] = []
-
-    def clashes(p: PurePosixPath) -> bool:
-        # Same file, a file where a dir must go, or a dir where a file must go.
-        key = p.as_posix().lower()
-        # A relative path's parents end in "."; no planned file is ".", so it never clashes.
-        ancestors = {a.as_posix().lower() for a in p.parents}
-        return key in files_taken or key in dirs_taken or bool(ancestors & files_taken)
-
     for f in selected:
         rel = _relative_path(f.name)
         if rel is None:
             planned.append(None)
             continue
-        candidate, n = rel, 0
-        while clashes(candidate):
-            n += 1
-            tag = hashlib.sha1(f"{f.url}|{n}".encode(), usedforsecurity=False).hexdigest()[:8]
-            candidate = rel.with_name(f"{rel.stem}~{tag}{rel.suffix}")
+        # Place one component at a time, root first: a directory component must not be a
+        # planned file, and the file must be neither a planned file nor a planned
+        # directory. A clash is cleared by renaming the component that clashes; renaming
+        # only the file never clears a clash on a directory above it (that looped forever).
+        parts: list[str] = []
+        leaf = len(rel.parts) - 1
+        for i, part in enumerate(rel.parts):
+            basis = f.url if i == leaf else "/".join(rel.parts[: i + 1])
+            name, n = part, 0
+            while (key := "/".join([*parts, name]).lower()) in files_taken or (
+                i == leaf and key in dirs_taken
+            ):
+                n += 1
+                name = _renamed(part, basis, n)
+            parts.append(name)
+        candidate = PurePosixPath(*parts)
         files_taken.add(candidate.as_posix().lower())
         dirs_taken.update(a.as_posix().lower() for a in candidate.parents)
         planned.append(candidate)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import signal
 from pathlib import Path
 
 import httpx
@@ -827,3 +828,38 @@ async def test_checksum_comparison_ignores_hex_and_algorithm_case(
             await fetch_mod.fetch_files(
                 client, _one("MD5:" + "A" * 32, body), dest=str(tmp_path), force=True
             )
+
+
+def _within(seconds: int, fn, *args):
+    """Run a synchronous call, failing (not hanging) if it does not return in time."""
+
+    def expire(*_):
+        raise TimeoutError(f"{fn.__name__} did not return within {seconds} s")
+
+    previous = signal.signal(signal.SIGALRM, expire)
+    signal.alarm(seconds)
+    try:
+        return fn(*args)
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def test_a_path_through_a_planned_file_gets_its_own_directory_instead_of_hanging() -> None:
+    """A file ``Data`` then ``data/x.csv``: renaming the leaf never clears a clash on its
+    directory, so planning looped forever, synchronously, on the server's event loop.
+    Names are uploader-controlled, and a case-insensitive pair is a legal git tree."""
+    entries = [
+        FileEntry(name="Data", url="https://h/1"),
+        FileEntry(name="data/x.csv", url="https://h/2"),
+        FileEntry(name="data/y.csv", url="https://h/3"),
+        FileEntry(name="other/z.csv", url="https://h/4"),  # positive control: no clash, untouched
+    ]
+    planned = _within(5, fetch_mod._plan_paths, entries)
+    # The directory's tag is taken from its own path, so its files stay together.
+    assert [p.as_posix() for p in planned] == [
+        "Data",
+        "data~fa80af8f/x.csv",
+        "data~fa80af8f/y.csv",
+        "other/z.csv",
+    ]
