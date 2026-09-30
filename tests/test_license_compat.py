@@ -588,6 +588,43 @@ def test_licence_domain_cannot_be_spoofed_by_url_structure(spoofed: str) -> None
     assert lc.check(spoofed, "commercial").verdict != "ALLOW"
 
 
+@pytest.mark.parametrize(
+    "spoofed",
+    [
+        # userinfo is user[:password]; the password is anything, not only digits.
+        "http://creativecommons.org:x9@evil.example.com/licenses/by/4.0/",
+        "http://creativecommons.org:pass@evil.example.com/licenses/by/4.0/",
+        "http://creativecommons.org:@evil.example.com/licenses/by/4.0/",
+        "http://creativecommons.org:a,b;c@evil.example.com/licenses/by/4.0/",
+        # A password longer than the scan cap must not carry the token past the check.
+        "http://creativecommons.org:" + "p" * 9000 + "@evil.example.com/licenses/by/4.0/",
+    ],
+)
+def test_licence_domain_cannot_be_spoofed_by_a_userinfo_password(spoofed: str) -> None:
+    """The userinfo check above knew two shapes, ``host@`` and ``host:<digits>@``, which are
+    the ones it was written against. RFC 3986 userinfo is ``user[:password]``, ending at the
+    ``@`` before the host, so ``creativecommons.org:x9@evil.example.com`` is a username and
+    password on evil.example.com, and it came back ``ALLOW CC-BY-4.0``. Found by a surviving
+    mutant (#88) that moved the digit scan by one character without any test noticing.
+    """
+    assert lc.normalize_spdx(spoofed) is None
+    assert lc.check(spoofed, "commercial").verdict != "ALLOW"
+
+
+@pytest.mark.parametrize(
+    "licence",
+    [
+        "https://creativecommons.org:443/licenses/by/4.0/",
+        "https://creativecommons.org:443",
+        "creativecommons.org/licenses/by/4.0/ (contact: me@example.org)",
+    ],
+)
+def test_a_port_or_a_later_email_is_not_userinfo(licence: str) -> None:
+    """Positive control for the password test: a port with no ``@`` after it, and an ``@``
+    that sits past the end of the URL, leave the host a host."""
+    assert lc.url_hosts(licence)[0] == "creativecommons.org"
+
+
 def test_real_licence_urls_still_resolve() -> None:
     """Positive control for both spoofing tests.
 
@@ -1194,3 +1231,218 @@ async def test_live_cellxgene_really_states_no_licence() -> None:
         f"blanket CC-BY-4.0 default is still the right answer, and whether the adapter should "
         f"read the field instead."
     )
+
+
+# --------------------------------------------------------------------------
+# Behaviour the nightly mutation run showed no test observed (#88)
+# --------------------------------------------------------------------------
+
+
+def test_pre_4_0_profiles_match_their_hand_written_4_0_counterparts() -> None:
+    """``_pre_4_0_cc_profiles`` runs once, at import, to fill LICENSE_MATRIX, so it is called
+    here directly. Its output is compared with the hand-written 4.0 entries, not with the
+    matrix it filled itself: that comparison held for any edit to the builder, because both
+    sides came from the same code (review finding on #137). Each pre-4.0 family grants and
+    requires what its 4.0 counterpart does; only the limitations differ, since the older
+    licences do not assert patent or trademark exclusions."""
+    families = ["CC-BY", "CC-BY-SA", "CC-BY-NC", "CC-BY-ND", "CC-BY-NC-SA", "CC-BY-NC-ND"]
+    versions = ["1.0", "2.0", "2.5", "3.0"]
+    built = lc._pre_4_0_cc_profiles()
+    assert set(built) == {f"{f}-{v}" for f in families for v in versions}
+    for family in families:
+        four = lc.LICENSE_MATRIX[f"{family}-4.0"]
+        for version in versions:
+            profile = built[f"{family}-{version}"]
+            assert profile.permissions == four.permissions, (family, version)
+            assert profile.conditions == four.conditions, (family, version)
+            assert profile.limitations == frozenset({"liability", "warranty"}), (family, version)
+
+
+@pytest.mark.parametrize(
+    ("licence", "expected"),
+    [
+        # Each element has a spelled-out form that carries no bare "nc"/"nd"/"sa" token.
+        ("Creative Commons Attribution-NonCommercial 4.0", "CC-BY-NC-4.0"),
+        ("Creative Commons Attribution Non-Commercial 4.0", "CC-BY-NC-4.0"),
+        ("Creative Commons Attribution-NoDerivatives 4.0", "CC-BY-ND-4.0"),
+        # "NoDerivs" is how CC named the element before 4.0.
+        ("Creative Commons Attribution-NoDerivs 3.0", "CC-BY-ND-3.0"),
+        ("Creative Commons Attribution Share-Alike 4.0", "CC-BY-SA-4.0"),
+    ],
+)
+def test_spelled_out_cc_elements_are_read(licence: str, expected: str) -> None:
+    assert lc.normalize_spdx(licence) == expected
+
+
+def test_a_host_at_either_end_of_the_string_is_judged_by_its_own_neighbours() -> None:
+    """A token at position 0 has no character before it; the check must not wrap around to
+    the string's last character. A token one character in is judged by that character."""
+    assert lc.normalize_spdx("https://creativecommons.org/licenses/by/4.0/#") == "CC-BY-4.0"
+    assert lc.normalize_spdx("#creativecommons.org/licenses/by/4.0/") is None
+    assert lc.normalize_spdx("creativecommons.org/licenses/by/4.0/") == "CC-BY-4.0"
+
+
+def test_a_rejected_token_does_not_stop_the_scan() -> None:
+    """An email address before the licence URL is a rejected token (its host follows an
+    ``@``); the URL after it must still be found."""
+    text = "contact admin@example.org; licence https://creativecommons.org/licenses/by/4.0/"
+    assert lc.url_hosts(text) == ["creativecommons.org"]
+    assert lc.normalize_spdx(text) == "CC-BY-4.0"
+
+
+@pytest.mark.parametrize(
+    ("licence", "expected"),
+    [
+        # A public-domain mark is not a licence we model, even beside a CC licence URL.
+        (
+            "https://creativecommons.org/publicdomain/mark/1.0/ and "
+            "https://creativecommons.org/licenses/by/4.0/",
+            None,
+        ),
+        ("https://opendatacommons.org/licenses/by", "ODC-By-1.0"),
+        # The OGL path only counts on the National Archives' host.
+        ("https://evil.example.com/open-government-licence/version/3/", None),
+        (
+            "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+            "OGL-UK-3.0",
+        ),
+        ("MIT License.", "MIT"),
+        ("Apache  License\n2.0", "Apache-2.0"),
+    ],
+)
+def test_normalize_spdx_edge_forms(licence: str, expected: str | None) -> None:
+    assert lc.normalize_spdx(licence) == expected
+
+
+@pytest.mark.parametrize(
+    ("licence", "family"),
+    [
+        ("https://creativecommons.org/licenses/by-nc/", "CC-BY-NC"),
+        ("https://creativecommons.org/licenses/by-nc-sa", "CC-BY-NC-SA"),
+        ("https://creativecommons.org/about", None),
+        ("spdx:CC BY-NC", "CC-BY-NC"),
+        ("SPDX:cc by-sa", "CC-BY-SA"),
+        ("CC BY-NC.", "CC-BY-NC"),
+    ],
+)
+def test_versionless_cc_urls_and_prefixed_forms_name_the_family(
+    licence: str, family: str | None
+) -> None:
+    assert lc.identify_cc_family(licence) == family
+
+
+def test_the_unrecognized_licence_excerpt_is_exact() -> None:
+    """Whitespace collapses to single spaces; 60 characters fit, 61 are cut to 59 plus an
+    ellipsis, and a cut that lands after a space does not leave the space before the
+    ellipsis."""
+    assert lc._stated_licence_excerpt("Some  custom\nterms") == "'Some custom terms'"
+    assert lc._stated_licence_excerpt("a" * 60) == "'" + "a" * 60 + "'"
+    assert lc._stated_licence_excerpt("a" * 61) == "'" + "a" * 59 + "…'"
+    assert lc._stated_licence_excerpt("a" * 58 + " " + "b" * 10) == "'" + "a" * 58 + "…'"
+
+
+def test_unknown_use_names_the_supported_intents() -> None:
+    expected = (
+        "unknown use intent 'teleport'; supported: commercial, ml-training, modify, redistribute"
+    )
+    with pytest.raises(ValueError, match=re.escape(expected)):
+        lc.check("MIT", "teleport")
+
+
+@pytest.mark.parametrize(
+    ("licence", "use", "reason"),
+    [
+        (
+            None,
+            "commercial",
+            "licence not stated; defaults to all-rights-reserved — manual review required "
+            "before this use",
+        ),
+        (
+            "Some  custom\nterms",
+            "commercial",
+            "licence stated as 'Some custom terms' but not recognized; defaults to "
+            "all-rights-reserved — manual review required before this use",
+        ),
+        (
+            "CC-BY-NC-ND-4.0",
+            "ml-training",
+            "CC-BY-NC-ND-4.0 does not grant the permission(s) required for ml-training: "
+            "commercial-use not granted (NonCommercial), modifications not granted "
+            "(NoDerivatives)",
+        ),
+        (
+            "CC-BY-NC-4.0",
+            "redistribute",
+            "CC-BY-NC-4.0 grants the permission(s) required for redistribute: distribution"
+            " — note: NonCommercial licence, the use must itself remain non-commercial",
+        ),
+        (
+            "MIT",
+            "ml-training",
+            "MIT grants the permission(s) required for ml-training: commercial-use, modifications",
+        ),
+        (
+            "GPL-3.0",
+            "redistribute",
+            "GPL-3.0 grants redistribute but carries copyleft obligation(s) (same-license, "
+            "disclose-source) you must honour — review before relying on it",
+        ),
+    ],
+)
+def test_verdict_reasons_are_exact(licence: str | None, use: str, reason: str) -> None:
+    """The reason is what a caller reads; substring checks let a wrong join, a lost label or
+    a stray suffix through."""
+    assert lc.check(licence, use).reason == reason
+
+
+def test_a_source_default_without_a_policy_says_so() -> None:
+    reason = lc.check(None, "commercial", source_default="CC0-1.0").reason
+    assert reason.endswith("assessed from the source's published blanket policy (unspecified)")
+
+
+@pytest.mark.parametrize(
+    ("licence", "use", "verdict"),
+    [
+        ("Public", "commercial", "REVIEW"),  # stated, not recognized
+        ("   ", "commercial", "REVIEW"),  # stated nothing, but not None either
+        ("cc by-nc", "commercial", "REVIEW"),  # family without a version
+        ("CC-BY-NC-4.0", "commercial", "DENY"),
+        ("GPL-3.0", "redistribute", "REVIEW"),  # copyleft
+        ("MIT", "commercial", "ALLOW"),
+    ],
+)
+def test_every_verdict_branch_returns_the_licence_as_given(
+    licence: str, use: str, verdict: str
+) -> None:
+    v = lc.check(licence, use)
+    assert (v.verdict, v.license_raw) == (verdict, licence)
+
+
+def test_the_unassessed_branch_returns_the_licence_as_given(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delitem(lc.LICENSE_MATRIX, "CC-BY-4.0")
+    v = lc.check("CC BY 4.0", "commercial")
+    assert (v.verdict, v.spdx_id, v.license_raw) == ("REVIEW", "CC-BY-4.0", "CC BY 4.0")
+
+
+def test_every_permission_an_intent_needs_has_a_label() -> None:
+    """A DENY names the withheld permission by its label; ``check`` looks the label up
+    directly, so an intent added without one fails here rather than at a caller."""
+    needed = {p for required in lc.INTENTS.values() for p in required}
+    assert needed <= set(lc._PERMISSION_LABELS)
+
+
+def test_the_userinfo_check_reads_to_the_scan_cap_and_no_further() -> None:
+    """The rest of a token's authority is read only up to the scan cap. A text exactly as
+    long as the cap has been read whole, so its host counts; one character longer and the
+    authority may continue past what was read, so the host is not trusted. An authority
+    that runs past the cap is refused even with no ``@`` in it: the check never reads past
+    the cap, which is what keeps it bounded on attacker-sized fields."""
+    tok = "creativecommons.org:443"
+    at_cap = "x" * (lc._MAX_SCAN_CHARS - 1 - len(tok)) + " " + tok
+    assert len(at_cap) == lc._MAX_SCAN_CHARS
+    assert lc.url_hosts(at_cap) == ["creativecommons.org"]
+    assert lc.url_hosts(at_cap + "3") == []
+    assert lc.normalize_spdx("creativecommons.org:" + "p" * 9000 + "/licenses/by/4.0/") is None
