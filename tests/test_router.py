@@ -1505,11 +1505,15 @@ async def test_live_relate_emits_real_hint() -> None:
             if studies and not pair:
                 sib = await router.search_page(client, query=studies[0], size=10, sources=["omics"])
                 sibs = [x.id for x in sib.results if x.id.startswith("sra:") and x.id != rid]
-                if sibs:
-                    pair = [rid, sibs[0]]
+                # A text search can return a run from another study; pair only a sibling
+                # whose own record carries the study, so a missing hint can only be relate's.
+                for sid in sibs:
+                    if studies[0] in (await router.resolve(client, sid)).accessions:
+                        pair = [rid, sid]
+                        break
             if pair and any(s != study_of[pair[0]] for s in study_of.values()):
                 break
-        assert pair, f"no live SRA run in {runs} has a sibling run in its study"
+        assert pair, f"no live SRA run in {runs} has a resolved sibling run in its study"
         study = study_of[pair[0]]
         other = next((rid for rid, s in study_of.items() if s != study), None)
         assert other, f"every live SRA run in {runs} is from {study}; no run for the control"
