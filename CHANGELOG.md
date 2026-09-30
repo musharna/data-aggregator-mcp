@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-09-29
+
 ### Fixed
 
 - `datacite` search results are now ranked by relevance. The adapter sent no sort,
