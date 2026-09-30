@@ -73,7 +73,7 @@ def test_source_for_client_maps_gdcc_to_dataverse() -> None:
 
 async def test_search_returns_total_and_compact_resources(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=arabidopsis&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=arabidopsis&sort=relevance&page%5Bsize%5D=10",
         json={"data": [_item()], "meta": {"total": 1}},
     )
     async with httpx.AsyncClient() as client:
@@ -256,6 +256,33 @@ async def test_search_offset_requests_page_number_and_slices():
     assert len(recs) == 10  # 20%10 == 0, no slice
 
 
+@pytest.mark.asyncio
+async def test_every_search_request_asks_for_relevance_order():
+    # DataCite's default order (no sort, or any unknown value) is most-recently-updated
+    # first, which the router would interleave as if it were relevance.
+    sent: list[dict[str, str]] = []
+
+    async def handler(request):
+        sent.append(dict(request.url.params))
+        return httpx.Response(
+            200,
+            json={
+                "data": [{"id": "10.x/1", "attributes": {"doi": "10.x/1", "types": {}}}],
+                "meta": {"total": 30},
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        first = await datacite.search(client, "q", size=10)
+        later = await datacite.search(
+            client, "q", size=10, offset=20, filters={"published_before": 2020}
+        )
+    assert first == (30, [first[1][0]]) and first[1][0].id == "datacite:10.x/1"
+    assert later[0] == 30
+    assert "publicationYear" in sent[1]["query"] and sent[1]["page[number]"] == "3"
+    assert [p.get("sort") for p in sent] == ["relevance", "relevance"], sent
+
+
 def test_normalize_extracts_creator_orcid() -> None:
     item = {
         "attributes": {
@@ -357,6 +384,27 @@ async def test_live_search_spans_multiple_repos() -> None:
     assert total >= 1
     assert results and all(r.id.startswith("datacite:") for r in results)
     assert all(r.doi for r in results)
+
+
+@live_only
+async def test_live_search_returns_datacite_relevance_order_not_recent_edits() -> None:
+    async def raw(client, **extra):
+        params = {"query": "climate", "page[size]": "10", **extra}
+        r = await client.get(f"{datacite.BASE_URL}/dois", params=params, timeout=30)
+        return [(f"datacite:{x['id']}", x["attributes"]["updated"]) for x in r.json()["data"]]
+
+    async with httpx.AsyncClient() as client:
+        _, ours = await datacite.search(client, "climate", size=10)
+        recent = await raw(client)
+        relevant = await raw(client, sort="relevance")
+    # Control: unsorted, DataCite really does list the most recently updated first.
+    assert [u for _, u in recent] == sorted((u for _, u in recent), reverse=True)
+    ids = [r.id for r in ours]
+    assert len(ids) == 10
+    # Many records tie on score and swap between requests (and the order past the ties
+    # changes with page size), so compare same-size pages by overlap, not order.
+    assert len(set(ids) & {i for i, _ in relevant}) >= 5, (ids, relevant)
+    assert len(set(ids) & {i for i, _ in recent}) < 5, (ids, recent)
 
 
 @live_only
