@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- A licence URL with a password in its userinfo no longer passes as a real licence.
+  `http://creativecommons.org:x9@evil.example.com/licenses/by/4.0/` points at
+  evil.example.com, but it was identified as `CC-BY-4.0` and `check` answered ALLOW. The
+  guard rejected only `host@` and `host:<port>@`; any other password (or an empty one)
+  got through. Now everything before an `@` in a URL's authority is treated as userinfo.
+
 ## [0.54.0] - 2026-09-29
 
 ### Fixed
