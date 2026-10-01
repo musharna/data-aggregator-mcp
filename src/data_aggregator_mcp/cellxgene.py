@@ -15,6 +15,7 @@ unverified fetch, like DANDI/PDB). kind="dataset".
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 import httpx
@@ -185,8 +186,12 @@ def _file_manifest(collection: dict) -> list[FileEntry]:
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     cid = local_id(resource_id, "cellxgene", strip=True)
-    if not cid:
-        raise NotFoundError(f"malformed CELLxGENE id {resource_id!r}")
+    # Every collection id is a UUID. The id goes into the URL path, so anything else
+    # (`../collections`, `x?visibility=...`, `a/b`) would reach another endpoint.
+    try:
+        cid = str(uuid.UUID(cid))
+    except ValueError:
+        raise NotFoundError(f"malformed CELLxGENE id {resource_id!r}") from None
     collection = await _http.request_json(
         client,
         "GET",

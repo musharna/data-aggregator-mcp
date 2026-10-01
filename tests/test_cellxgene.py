@@ -109,9 +109,11 @@ async def test_search_all_terms_must_match_and_paginates():
         assert total2 == 2 and recs2[0].id == "cellxgene:col-brain-2"  # 2nd of 2 "normal" matches
 
 
+# Collection ids are UUIDs (resolve rejects anything else before the network).
+_LUNG = "af893e86-8e9f-41f1-a474-ef05359b1fb7"
 _DETAIL = {
-    "collection_id": "col-lung-1",
-    "collection_url": "https://cellxgene.cziscience.com/collections/col-lung-1",
+    "collection_id": _LUNG,
+    "collection_url": f"https://cellxgene.cziscience.com/collections/{_LUNG}",
     "name": "Human lung cell atlas",
     "description": "An integrated atlas.",
     "doi": "10.1038/s41586-020-1111-1",
@@ -161,12 +163,12 @@ _DETAIL = {
 @pytest.mark.asyncio
 async def test_resolve_flattens_assets_into_files():
     async def handler(request):
-        assert request.url.path.endswith("/curation/v1/collections/col-lung-1")
+        assert request.url.path == f"/curation/v1/collections/{_LUNG}"
         return httpx.Response(200, json=_DETAIL)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
-        r = await cellxgene.resolve(c, "cellxgene:col-lung-1")
-    assert r.id == "cellxgene:col-lung-1" and r.doi == "10.1038/s41586-020-1111-1"
+        r = await cellxgene.resolve(c, f"cellxgene:{_LUNG}")
+    assert r.id == f"cellxgene:{_LUNG}" and r.doi == "10.1038/s41586-020-1111-1"
     assert [f.name for f in r.files] == ["Lung 10x.h5ad", "Lung 10x.rds", "Lung Smart-seq.h5ad"]
     assert r.files[0].url == "https://datasets.cellxgene.cziscience.com/ds-1.h5ad"
     assert r.files[0].size == 421889692 and r.files[0].source == "cellxgene"
@@ -179,7 +181,7 @@ async def test_resolve_unknown_raises():
         transport=httpx.MockTransport(lambda r: httpx.Response(404, json={}))
     ) as c:
         with pytest.raises(NotFoundError):
-            await cellxgene.resolve(c, "cellxgene:does-not-exist")
+            await cellxgene.resolve(c, "cellxgene:00000000-0000-4000-8000-000000000000")
 
 
 @pytest.mark.asyncio
@@ -208,7 +210,7 @@ async def test_resolve_non_dict_body_raises_upstream(monkeypatch):
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json=[{"x": 1}]))
     ) as c:
         with pytest.raises(UpstreamUnavailableError, match="expected dict JSON, got list"):
-            await cellxgene.resolve(c, "cellxgene:col-x")
+            await cellxgene.resolve(c, f"cellxgene:{_LUNG}")
 
 
 @pytest.mark.asyncio
@@ -290,3 +292,27 @@ async def test_search_upstream_failure_raises_not_empty(monkeypatch):
     ) as c:
         total, recs = await cellxgene.search(c, "lung")  # positive control
     assert total == 1 and recs[0].id == "cellxgene:c1"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "rid", ["cellxgene:../collections", "cellxgene:x?visibility=PRIVATE", "cellxgene:a/b"]
+)
+async def test_resolve_rejects_a_non_uuid_id_before_the_network(rid):
+    """Every CELLxGENE collection id is a UUID (396/396 live, 2026-09-30). The id went
+    into the URL path unchecked, so ``../collections`` fetched the ~3 MB collections list
+    (twice) and was reported as an outage, and ``?``/``/`` reached other endpoints."""
+    uid = "3a5dbf8a-9b3e-4309-b4c5-d8a024f83734"
+    seen: list[str] = []
+
+    def handler(request):
+        seen.append(request.url.path)
+        return httpx.Response(200, json={**_DETAIL, "collection_id": uid})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        with pytest.raises(NotFoundError, match="malformed CELLxGENE id"):
+            await cellxgene.resolve(c, rid)
+        assert seen == []
+        # positive control: a UUID, upper-case or padded, is canonicalised and sent
+        r = await cellxgene.resolve(c, f"cellxgene: {uid.upper()} ")
+    assert seen == [f"/curation/v1/collections/{uid}"] and r.id == f"cellxgene:{uid}"
