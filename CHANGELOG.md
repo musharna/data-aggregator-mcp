@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.9] - 2026-10-01
+
 ### Fixed
 
 - OpenNeuro file manifests and PDB records report a broken GraphQL answer as a failure
