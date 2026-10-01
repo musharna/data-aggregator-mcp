@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `pdb` no longer reports an RCSB failure as "no such entry" or as an empty search.
+  RCSB answers a GraphQL query it rejects (for example, after renaming a field the
+  adapter asks for) with HTTP 200, an `errors` list and no data. Resolve then raised
+  "RCSB PDB has no entry", and search returned the hit count with no records. Both now
+  raise an upstream failure that quotes RCSB's error message.
+
 ## [0.54.2] - 2026-09-30
 
 ### Fixed
