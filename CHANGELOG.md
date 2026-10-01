@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.2] - 2026-09-30
+
 ### Fixed
 
 - `dandi` resolve no longer returns a stripped-down record when DANDI's version-info
