@@ -15,7 +15,7 @@ import re
 import httpx
 
 from data_aggregator_mcp import _http
-from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
+from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import (
     Creator,
     DataResource,
@@ -39,7 +39,6 @@ DEFAULT_SIZE = 10
 MAX_SIZE = 50
 MAX_RETRIES = 2
 _ACCEPT_JSON = {"Accept": "application/json"}
-_GRAPHQL_HEADERS = {"Content-Type": "application/json", **_ACCEPT_JSON}
 # RCSB answers a zero-hit search with 204 No Content.
 _NO_HITS = {"total_count": 0, "result_set": []}
 
@@ -70,33 +69,38 @@ def _search_body(query: str, start: int, rows: int) -> str:
     )
 
 
+def _check_entries(data: dict) -> None:
+    """``entries`` is null or a list of entry objects, each one null when RCSB has no
+    such entry."""
+    entries = data.get("entries")
+    if not (
+        "entries" in data
+        and (
+            entries is None
+            or (
+                isinstance(entries, list) and all(e is None or isinstance(e, dict) for e in entries)
+            )
+        )
+    ):
+        raise _http.UpstreamEnvelopeError(f"no entries list in {data!r:.200}")
+
+
 async def _hydrate(client: httpx.AsyncClient, ids: list[str]) -> dict[str, dict]:
     if not ids:
         return {}
     gql = _GQL.format(ids=",".join(f'"{i}"' for i in ids))
-    # httpx upper-cases the method, so "post" would send the same request.
-    method = "POST"  # pragma: no mutate
-    body = await _http.request_json(
+    # A query RCSB rejects (a field renamed upstream) comes back as GraphQL errors and
+    # raises; read as zero entries it made every resolve "no entry" and every search a
+    # hit count with no records.
+    data = await _http.graphql(
         client,
-        method,
         GRAPHQL,
+        gql,
         service="RCSB PDB graphql",
-        content=json.dumps({"query": gql}),
-        headers=_GRAPHQL_HEADERS,
         max_retries=MAX_RETRIES,
-        expect=dict,
+        check=_check_entries,
     )
-    # GraphQL reports failure INSIDE a 200: ``errors[]`` and no ``data`` (RCSB's answer
-    # to a query it rejects, e.g. a field renamed upstream). Read as zero entries it made
-    # every resolve "no entry" and every search a hit count with no records.
-    gql_errors = body.get("errors")
-    if gql_errors:
-        messages = "; ".join(
-            str(e.get("message") if isinstance(e, dict) else e) for e in gql_errors
-        )
-        raise UpstreamUnavailableError(f"RCSB PDB GraphQL error: {messages}")
-    entries = (body.get("data") or {}).get("entries") or []
-    return {e["rcsb_id"]: e for e in entries if e and e.get("rcsb_id")}
+    return {e["rcsb_id"]: e for e in data["entries"] or [] if e and e.get("rcsb_id")}
 
 
 def _creators(entry: dict) -> list[Creator]:

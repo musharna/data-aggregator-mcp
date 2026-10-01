@@ -227,3 +227,28 @@ async def test_files_graphql_errors_raise_not_empty(monkeypatch):
     ) as c:
         files = await openneuro.files(c, "10.18112/openneuro.ds000001.v1.0.0")  # control
     assert [f.name for f in files] == ["a.tsv"]
+
+
+@pytest.mark.asyncio
+async def test_files_names_the_outermost_unexpanded_directory():
+    """A directory entry does not stand in for the files under its parent: with
+    ``sub-01`` and ``sub-01/anat`` both unexpanded, ``sub-01`` has no file under it
+    and is the one named. Positive control: a file under ``sub-01/anat`` expands both."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    dirs = [_entry("sub-01", directory=True), _entry("sub-01/anat", directory=True)]
+    ok = {"data": {"snapshot": {"files": [*dirs, _entry("sub-01/anat/a.nii.gz", 5)]}}}
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=ok))
+    ) as c:
+        assert [f.name for f in await openneuro.files(c, _DOI)] == ["sub-01/anat/a.nii.gz"]
+    bad = {"data": {"snapshot": {"files": dirs}}}
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=bad))
+    ) as c:
+        with pytest.raises(UpstreamUnavailableError) as err:
+            await openneuro.files(c, _DOI)
+    assert str(err.value) == (
+        "[UpstreamUnavailableError] OpenNeuro snapshot ds000001@1.0.0: directory 'sub-01' "
+        "came back without its files; refusing to return a partial manifest"
+    )
