@@ -138,7 +138,9 @@ def _collect_files(
                 FileEntry(
                     name=str(path),
                     size=int(size) if isinstance(size, int) else None,
-                    url=_FILES.format(acc=acc, path=str(path)),
+                    # Escaped as the file-list fetch is: a space made the URL invalid,
+                    # and '#', '?' or '%' in a name requested a different path.
+                    url=_FILES.format(acc=acc, path=quote(str(path))),
                     # No checksum: the payload has none (see module docstring). Leaving
                     # it unset is what keeps fetch honest about the guarantee.
                     source="biostudies",

@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -206,7 +207,8 @@ async def test_resolve_expands_external_file_lists() -> None:
     first = FILE_LISTS["smlm_data.json"][0]
     f = next(x for x in r.files if x.name == first["path"])
     assert f.size == first["size"]
-    assert f.url == f"https://www.ebi.ac.uk/biostudies/files/S-BIAD8/{first['path']}"
+    # S-BIAD144's real names carry spaces; the URL escapes them, keeping directories.
+    assert f.url == f"https://www.ebi.ac.uk/biostudies/files/S-BIAD8/{quote(first['path'])}"
     assert f.checksum is None
 
 
