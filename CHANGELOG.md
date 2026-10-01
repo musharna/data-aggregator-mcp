@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A `Retry-After` header is read as RFC 9110 defines it: a whole number of seconds or
+  an HTTP-date. A date was ignored, so a server asking for a later retry got the 1 s
+  backoff, and `Retry-After: nan` made the retry raise an untyped `ValueError`. Any
+  other value now falls back to the backoff; the 60 s cap is unchanged.
+
 ## [0.54.5] - 2026-09-30
 
 ### Fixed
