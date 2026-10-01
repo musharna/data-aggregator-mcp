@@ -319,3 +319,33 @@ async def request_json(
         no_content_returns=no_content_returns,
         empty_answer=empty_answer,
     )
+
+
+async def request_json_with_headers(
+    client: httpx.AsyncClient,
+    method: str,
+    url: str,
+    *,
+    service: str,
+    expect: type | tuple[type, ...],
+    params: Mapping[str, Any] | None = None,
+    headers: Mapping[str, str] | None = None,
+    timeout: float = 30.0,
+    max_retries: int = 3,
+) -> tuple[Any, httpx.Headers]:
+    """``request_json`` for an endpoint whose answer is split between the body and a
+    header (UniProt's hit count is ``x-total-results``): the body, checked against
+    ``expect`` and retried exactly as ``request_json`` does, and the response headers.
+    Reading ``resp.json()`` off ``request_with_retry`` instead skips both."""
+    parse = _json_parser(expect, None)
+    return await _retrying(
+        client,
+        method,
+        url,
+        service=service,
+        params=params,
+        headers=headers,
+        timeout=timeout,
+        max_retries=max_retries,
+        parse=lambda resp: (parse(resp), resp.headers),
+    )

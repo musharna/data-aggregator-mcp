@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `uniprot` search reports a broken answer as an error instead of zero hits. Its body
+  skipped the type check every other source has had since 0.54.2, so a 200 carrying
+  `null` read as no results and a list or a string raised `AttributeError`; and a 404
+  read as no results, while UniProt answers a search with no hits with a 200 and an
+  empty list. A malformed body is now retried, then an `UpstreamUnavailableError`; a
+  404 is a `NotFoundError`.
+
 ## [0.54.6] - 2026-10-01
 
 ### Fixed

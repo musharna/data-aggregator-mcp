@@ -23,7 +23,7 @@ from data_aggregator_mcp.errors import UpstreamUnavailableError
 from tests._well_formed_ids import WELL_FORMED
 
 # Parse JSON outside request_json; the same class of miss, not covered by `expect`.
-_OUTSIDE = {("uniprot", "search"): "reads resp.json() after request_with_retry (needs a header)"}
+_OUTSIDE: dict[tuple[str, str], str] = {}
 
 _CASES = [
     (name, fn)
@@ -90,7 +90,7 @@ def test_every_request_json_call_names_expect_itself() -> None:
                 continue
             func = node.func
             name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", None)
-            if name != "request_json":
+            if name not in ("request_json", "request_json_with_headers"):
                 continue
             calls += 1
             if "expect" not in {k.arg for k in node.keywords}:
