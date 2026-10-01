@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.parse import quote
 
@@ -27,10 +30,12 @@ def doi_path(doi: str) -> str:
     raw into a URL, ``#`` ends the path as a fragment and ``?`` starts a query, so the
     upstream is asked about a DIFFERENT DOI. Every DOI-in-path request goes through here.
     """
-    return quote(doi, safe="/")
+    return quote(doi)  # quote() keeps "/" and nothing else reserved by default
 
 
 _RETRY_AFTER_CAP = 60.0
+# httpx headers are case-insensitive, so any spelling of the name reads the same header.
+_RETRY_AFTER = "Retry-After"
 _RETRYABLE_STATUSES = (429, 500, 502, 503, 504)
 # 2xx statuses that carry no body by definition.
 _NO_CONTENT_STATUSES = (204, 205)
@@ -41,6 +46,27 @@ _REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 _TRANSPORT_ERRORS = (httpx.TimeoutException, httpx.TransportError)
 # Malformed 2xx body: json.JSONDecodeError ⊂ ValueError; ET.ParseError ⊄ ValueError.
 _PARSE_ERRORS = (ValueError, ET.ParseError)
+_DELAY_SECONDS_RE = re.compile(r"[0-9]+")
+
+
+def _retry_after(value: str | None, now: datetime) -> float | None:
+    """Seconds a ``Retry-After`` header asks the client to wait (RFC 9110 §10.2.3): a
+    non-negative integer, or an HTTP-date (the seconds from ``now`` until it; 0 once it
+    has passed). None when the header is absent or is neither, so the caller uses its
+    own backoff. ``float()`` parsed it before 2026-09-30: it read an HTTP-date as
+    invalid, and it accepted ``nan``, which made ``asyncio.sleep`` raise ``ValueError``."""
+    if value is None:
+        return None
+    value = value.strip()
+    if _DELAY_SECONDS_RE.fullmatch(value):
+        return float(value)
+    try:
+        when = parsedate_to_datetime(value)
+    except ValueError:
+        return None
+    if when.tzinfo is None:  # the asctime form carries no zone; every HTTP-date is GMT
+        when = when.replace(tzinfo=UTC)
+    return max(0.0, (when - now).total_seconds())
 
 
 async def _retrying(
@@ -53,8 +79,8 @@ async def _retrying(
     data: Any = None,
     content: Any = None,
     headers: Mapping[str, str] | None = None,
-    timeout: float = 30.0,
-    max_retries: int = 3,
+    timeout: float,
+    max_retries: int,
     not_found_returns: Any = _RAISE,
     parse: Callable[[httpx.Response], Any] | None = None,
     follow_redirects: bool = True,
@@ -78,10 +104,13 @@ async def _retrying(
     say so precisely (OpenML: ``412`` with error code ``372``); a matching response
     returns ``no_content_returns``, every other error status is classified as usual.
     """
+    if max_retries < 1:
+        raise ValueError(f"max_retries must be at least 1, got {max_retries}")
     delay = 1.0
-    last_status: int | None = None
-    last_exc: Exception | None = None
-    for attempt in range(max_retries):
+    attempt = 0
+    while True:
+        attempt += 1
+        retry = attempt < max_retries
         try:
             await _ratelimit.acquire(service, url)
             resp = await client.request(
@@ -95,16 +124,13 @@ async def _retrying(
                 follow_redirects=follow_redirects,
             )
         except _TRANSPORT_ERRORS as exc:
-            last_exc = exc
-            if attempt < max_retries - 1:
+            if retry:
                 await asyncio.sleep(delay)
                 delay *= 2
                 continue
             raise UpstreamUnavailableError(
                 f"{service} unreachable after {max_retries} tries: {exc!r}"
             ) from exc
-
-        last_status = resp.status_code
 
         if resp.status_code in _NO_CONTENT_STATUSES and parse is not None:
             if no_content_returns is not _RAISE:
@@ -120,50 +146,32 @@ async def _retrying(
             try:
                 return parse(resp)
             except _PARSE_ERRORS as exc:
-                last_exc = exc
-                if attempt < max_retries - 1:
+                if retry:
                     await asyncio.sleep(delay)
                     delay *= 2
                     continue
                 raise UpstreamUnavailableError(
                     f"{service} returned an unparseable 200 body after {max_retries} tries: {exc!r}"
                 ) from exc
-        if (
-            empty_answer is not None
-            and no_content_returns is not _RAISE
-            and not 200 <= resp.status_code < 300
-            and empty_answer(resp)
-        ):
+        # Every 2xx has returned, retried or raised above: what follows is an error status.
+        if empty_answer is not None and no_content_returns is not _RAISE and empty_answer(resp):
             return no_content_returns
-        if resp.status_code == 404 and not_found_returns is not _RAISE:
-            return not_found_returns
+        if resp.status_code == 404:
+            if not_found_returns is not _RAISE:
+                return not_found_returns
+            raise NotFoundError(f"{service} → HTTP 404: {resp.text[:200]}")
         if resp.status_code in _RETRYABLE_STATUSES:
-            if attempt < max_retries - 1:
-                hdr = resp.headers.get("Retry-After")
-                try:
-                    retry_after = float(hdr) if hdr else delay
-                except ValueError:
-                    retry_after = delay
-                retry_after = min(retry_after, _RETRY_AFTER_CAP)
-                await asyncio.sleep(retry_after)
+            if retry:
+                asked = _retry_after(resp.headers.get(_RETRY_AFTER), datetime.now(UTC))
+                await asyncio.sleep(min(delay if asked is None else asked, _RETRY_AFTER_CAP))
                 delay *= 2
                 continue
-            break
-        if resp.status_code == 404:
-            raise NotFoundError(f"{service} → HTTP 404: {resp.text[:200]}")
-        if resp.status_code == 429:
-            raise RateLimitError(f"{service} rate-limited (HTTP 429): {resp.text[:200]}")
+            if resp.status_code == 429:
+                raise RateLimitError(f"{service} exhausted {max_retries} retries (HTTP 429)")
+            raise UpstreamUnavailableError(
+                f"{service} exhausted {max_retries} retries (last HTTP {resp.status_code})"
+            )
         raise UpstreamUnavailableError(f"{service} → HTTP {resp.status_code}: {resp.text[:200]}")
-
-    if last_status == 429:
-        raise RateLimitError(f"{service} exhausted {max_retries} retries (HTTP 429)")
-    if last_status is None:
-        raise UpstreamUnavailableError(
-            f"{service} unreachable after {max_retries} retries: {last_exc!r}"
-        )
-    raise UpstreamUnavailableError(
-        f"{service} exhausted {max_retries} retries (last HTTP {last_status})"
-    )
 
 
 async def request_with_retry(
@@ -195,7 +203,6 @@ async def request_with_retry(
         timeout=timeout,
         max_retries=max_retries,
         not_found_returns=not_found_returns,
-        parse=None,
         follow_redirects=follow_redirects,
     )
 
