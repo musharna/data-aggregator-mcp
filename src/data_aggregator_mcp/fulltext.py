@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 EPMC_BASE = "https://www.ebi.ac.uk/europepmc/webservices/rest"
 UNPAYWALL_BASE = "https://api.unpaywall.org/v2"
+_GET = "GET"
 
 # A PMCID is exactly "PMC" + digits. Whitelisting the whole value lets it be
 # interpolated unquoted (which is the only form EuropePMC's PMCID field matches)
@@ -74,17 +75,14 @@ async def _europepmc(client: httpx.AsyncClient, pmcid: str | None, doi: str | No
         query = f"PMCID:{pmcid.strip()}"
     elif doi:
         query = f'DOI:"{doi.replace(chr(34), "")}"'
-    elif pmcid:
-        logger.warning("ignoring malformed pmcid %r (expected PMC<digits>)", pmcid)
-        query = None
     else:
-        query = None
-    if not query:
+        if pmcid:
+            logger.warning("ignoring malformed pmcid %r (expected PMC<digits>)", pmcid)
         return FullText()
     try:
         body = await _http.request_json(
             client,
-            "GET",
+            _GET,
             f"{EPMC_BASE}/search",
             service="EuropePMC search",
             params={"query": query, "format": "json", "resultType": "core", "pageSize": 1},
@@ -96,13 +94,13 @@ async def _europepmc(client: httpx.AsyncClient, pmcid: str | None, doi: str | No
         return FullText(error=f"EuropePMC lookup failed: {type(exc).__name__}: {exc}")
     results = body["resultList"]["result"]
     res = results[0] if results else {}
-    access = "open" if str(res.get("isOpenAccess", "")).upper() == "Y" else None
+    access = "open" if str(res.get("isOpenAccess")).upper() == "Y" else None
     license_ = res.get("license") or None
     if res.get("inEPMC") != "Y":
-        return FullText(file=None, access=access, license=license_)
+        return FullText(access=access, license=license_)
     epmc_pmcid = res.get("pmcid") or pmcid
     if not epmc_pmcid:
-        return FullText(file=None, access=access, license=license_)
+        return FullText(access=access, license=license_)
     url = f"{EPMC_BASE}/{epmc_pmcid}/fullTextXML"
     fe = FileEntry(name=f"{epmc_pmcid}.xml", mime="application/xml", url=url, source="europepmc")
     return FullText(file=fe, access=access, license=license_)
@@ -118,7 +116,7 @@ async def _unpaywall(client: httpx.AsyncClient, doi: str | None) -> FullText:
     try:
         data = await _http.request_json(
             client,
-            "GET",
+            _GET,
             f"{UNPAYWALL_BASE}/{_http.doi_path(doi)}",
             service="Unpaywall",
             params={"email": email},
@@ -136,7 +134,7 @@ async def _unpaywall(client: httpx.AsyncClient, doi: str | None) -> FullText:
     license_ = loc.get("license") or None
     pdf = loc.get("url_for_pdf")
     if not pdf:
-        return FullText(file=None, access=access, license=license_)
+        return FullText(access=access, license=license_)
     fe = FileEntry(name="fulltext.pdf", mime="application/pdf", url=pdf, source="unpaywall")
     return FullText(file=fe, access=access, license=license_)
 
@@ -156,7 +154,6 @@ async def find(
     if upw.file is not None:
         return dataclasses.replace(upw, error=error)
     return FullText(
-        file=None,
         access=epmc.access or upw.access,
         license=epmc.license or upw.license,
         error=error,

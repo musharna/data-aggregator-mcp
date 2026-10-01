@@ -41,16 +41,19 @@ _REL_MAP = {
 _DATA_TYPES = frozenset({"dataset", "software"})
 # doi.org's registration-agency API; takes a comma-separated batch in one GET.
 _RA_URL = "https://doi.org/ra/"
+# Left unescaped in that batch: the path separator inside a DOI, and the batch commas.
+_RA_SAFE = "/,"
+_GET = "GET"
 
 
 def _map_rel(relationship: dict) -> str:
-    name = (relationship.get("Name") or "").replace(" ", "").lower()
+    name = str(relationship.get("Name")).replace(" ", "").lower()
     return _REL_MAP.get(name, "is_related_to")
 
 
-def _doi_of(identifiers: list[dict]) -> str | None:
+def _doi_of(identifiers: list[dict] | None) -> str | None:
     for ident in identifiers or []:
-        if (ident.get("IDScheme") or "").lower() == "doi" and ident.get("ID"):
+        if str(ident.get("IDScheme")).lower() == "doi" and ident.get("ID"):
             return ident["ID"]
     return None
 
@@ -83,8 +86,8 @@ async def _datacite_registered(
     try:
         rows = await _http.request_json(
             client,
-            "GET",
-            _RA_URL + quote(",".join(batch), safe="/,"),
+            _GET,
+            _RA_URL + quote(",".join(batch), safe=_RA_SAFE),
             service="DOI registration-agency lookup",
             expect=list,
         )
@@ -124,7 +127,7 @@ async def links_for(client: httpx.AsyncClient, doi: str | None) -> tuple[list[Li
     try:
         payload = await _http.request_json(
             client,
-            "GET",
+            _GET,
             BASE_URL,
             service="ScholeXplorer",
             params={"sourcePid": doi},
@@ -137,12 +140,12 @@ async def links_for(client: httpx.AsyncClient, doi: str | None) -> tuple[list[Li
     edges: list[tuple[str, str]] = []
     for rec in payload["result"]:
         target = rec["target"]
-        if (target.get("Type") or "").lower() not in _DATA_TYPES:
+        if str(target.get("Type")).lower() not in _DATA_TYPES:
             continue
-        target_doi = _doi_of(target.get("Identifier", []))
+        target_doi = _doi_of(target.get("Identifier"))
         if not target_doi:
             continue
-        edges.append((_map_rel(rec.get("RelationshipType", {})), target_doi))
+        edges.append((_map_rel(rec.get("RelationshipType") or {}), target_doi))
     datacite, error = await _datacite_registered(client, [d for _, d in edges])
     return [
         Link(rel=rel, target_id=f"datacite:{d}" if d.lower() in datacite else d) for rel, d in edges

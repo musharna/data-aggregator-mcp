@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
 TOOL = "data-aggregator-mcp"
+_GET = "GET"
 
 
 def _check_records(body: dict) -> None:
@@ -45,7 +46,7 @@ async def identifiers_for(
     try:
         body = await _http.request_json(
             client,
-            "GET",
+            _GET,
             BASE_URL,
             service="NCBI idconv",
             params=params,
