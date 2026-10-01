@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.3] - 2026-09-30
+
 ### Fixed
 
 - `pdb` no longer reports an RCSB failure as "no such entry" or as an empty search.
