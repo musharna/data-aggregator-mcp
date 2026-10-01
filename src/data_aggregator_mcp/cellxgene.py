@@ -15,8 +15,10 @@ unverified fetch, like DANDI/PDB). kind="dataset".
 
 from __future__ import annotations
 
+import posixpath
 import uuid
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -29,7 +31,7 @@ from data_aggregator_mcp.models import (
     Link,
     compact,
     local_id,
-    normalize_access,
+    year_from,
 )
 
 API = "https://api.cellxgene.cziscience.com/curation/v1"
@@ -95,8 +97,7 @@ def _year(collection: dict, pm: dict) -> int | None:
     y = pm.get("published_year")
     if isinstance(y, int):
         return y
-    s = collection.get("published_at") or ""
-    return int(s[:4]) if s[:4].isdigit() else None
+    return year_from(collection.get("published_at"))
 
 
 def _links(collection: dict, cid: str) -> list[Link]:
@@ -109,7 +110,8 @@ def _links(collection: dict, cid: str) -> list[Link]:
     for link in collection.get("links") or []:
         url = link.get("link_url")
         if url:
-            out.append(Link(rel=(link.get("link_type") or "related").lower(), target_id=url))
+            rel = str(link.get("link_type") or "").lower() or "related"
+            out.append(Link(rel=rel, target_id=url))
     return out
 
 
@@ -133,7 +135,7 @@ def _normalize(collection: dict) -> DataResource:
         doi=collection.get("doi") or None,
         organism=_labels(collection, "organism"),
         subjects=_subjects(collection),
-        access=normalize_access("open"),
+        access="open",
         last_updated=collection.get("revised_at") or collection.get("published_at") or None,
         links=_links(collection, cid),
     )
@@ -191,7 +193,7 @@ def _file_manifest(collection: dict) -> list[FileEntry]:
             if not url:
                 continue
             ext = (a.get("filetype") or "").lower()
-            name = f"{title}.{ext}" if title and ext else url.rsplit("/", 1)[-1]
+            name = f"{title}.{ext}" if title and ext else posixpath.basename(urlsplit(url).path)
             out.append(FileEntry(name=name, size=a.get("filesize"), url=url, source="cellxgene"))
             if len(out) >= MANIFEST_CAP:
                 return out
