@@ -12,7 +12,9 @@ String!``, ``urls: [String]``; RCSB ``entries: [CoreEntry]``, ``rcsb_id: String!
 
 from __future__ import annotations
 
+import ast
 import json
+from pathlib import Path
 
 import httpx
 import pytest
@@ -234,3 +236,34 @@ async def test_a_pdb_answer_without_data_is_a_failure_not_zero_entries(body):
     async with _Server(body).client() as c:
         with pytest.raises(UpstreamUnavailableError, match="no data object"):
             await pdb.search(c, "kinesin")
+
+
+# --- the guard --------------------------------------------------------------------
+
+_SRC = Path(__file__).resolve().parents[1] / "src" / "data_aggregator_mcp"
+
+
+def _graphql_requests_outside_the_helper(src: Path) -> list[str]:
+    """Every call outside ``_http.graphql`` that passes a ``*GRAPHQL`` URL constant."""
+    found = []
+    for path in sorted(src.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+            urls = [a for a in node.args if isinstance(a, ast.Name) and a.id.endswith("GRAPHQL")]
+            if urls and name != "graphql":
+                found.append(f"{path.name}:{node.lineno} {name}")
+    return found
+
+
+def test_every_graphql_request_goes_through_the_helper(tmp_path):
+    """openneuro copied pdb's GraphQL handling, and the gap in it (no check that ``data``
+    is there) went with the copy. Positive control: a module calling request_json with a
+    GRAPHQL constant is found."""
+    assert _graphql_requests_outside_the_helper(_SRC) == []
+    (tmp_path / "rogue.py").write_text(
+        "async def f(c):\n    return await _http.request_json(c, 'POST', GRAPHQL, service='x')\n"
+    )
+    assert _graphql_requests_outside_the_helper(tmp_path) == ["rogue.py:2 request_json"]
