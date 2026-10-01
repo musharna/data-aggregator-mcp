@@ -15,7 +15,7 @@ import re
 import httpx
 
 from data_aggregator_mcp import _http
-from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import (
     Creator,
     DataResource,
@@ -37,8 +37,11 @@ PREFIXES = {"pdb"}
 _PDB_ID_RE = re.compile(r"^[A-Za-z0-9_]{4,12}$")
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+_ACCEPT_JSON = {"Accept": "application/json"}
+_GRAPHQL_HEADERS = {"Content-Type": "application/json", **_ACCEPT_JSON}
+# RCSB answers a zero-hit search with 204 No Content.
+_NO_HITS = {"total_count": 0, "result_set": []}
 
 _GQL = (
     "{{entries(entry_ids:[{ids}]){{rcsb_id struct{{title}} "
@@ -71,18 +74,28 @@ async def _hydrate(client: httpx.AsyncClient, ids: list[str]) -> dict[str, dict]
     if not ids:
         return {}
     gql = _GQL.format(ids=",".join(f'"{i}"' for i in ids))
+    # httpx upper-cases the method, so "post" would send the same request.
+    method = "POST"  # pragma: no mutate
     body = await _http.request_json(
         client,
-        "POST",
+        method,
         GRAPHQL,
         service="RCSB PDB graphql",
         content=json.dumps({"query": gql}),
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
+        headers=_GRAPHQL_HEADERS,
         max_retries=MAX_RETRIES,
         expect=dict,
     )
-    entries = ((body or {}).get("data") or {}).get("entries") or []
+    # GraphQL reports failure INSIDE a 200: ``errors[]`` and no ``data`` (RCSB's answer
+    # to a query it rejects, e.g. a field renamed upstream). Read as zero entries it made
+    # every resolve "no entry" and every search a hit count with no records.
+    gql_errors = body.get("errors")
+    if gql_errors:
+        messages = "; ".join(
+            str(e.get("message") if isinstance(e, dict) else e) for e in gql_errors
+        )
+        raise UpstreamUnavailableError(f"RCSB PDB GraphQL error: {messages}")
+    entries = (body.get("data") or {}).get("entries") or []
     return {e["rcsb_id"]: e for e in entries if e and e.get("rcsb_id")}
 
 
@@ -154,34 +167,44 @@ def _normalize(entry: dict) -> DataResource:
         taxa=_taxa(entry),
         subjects=[method] if method else [],
         last_updated=(entry.get("rcsb_accession_info") or {}).get("initial_release_date"),
-        files=[],
         links=links,
     )
+
+
+def _check_search(body: dict) -> None:
+    """A search 200 carries the hit count and the hit list. One without them is a
+    malformed answer (retried, then an outage), never zero hits: those come as 204."""
+    # type() rather than isinstance(): bool is an int subclass, and `true` is no count.
+    if type(body.get("total_count")) is not int or not isinstance(body.get("result_set"), list):
+        raise _http.UpstreamEnvelopeError(
+            f"RCSB PDB search 200 without total_count and result_set: keys {sorted(body)}"
+        )
 
 
 async def search(
     client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
 ) -> tuple[int, list[DataResource]]:
     rows = min(size, MAX_SIZE)
+    # httpx upper-cases the method, so "get" would send the same request.
+    method = "GET"  # pragma: no mutate
     body = await _http.request_json(
         client,
-        "GET",
+        method,
         SEARCH,
         service="RCSB PDB search",
         params={"json": _search_body(query, offset, rows)},
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
+        headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
-        # RCSB answers a zero-hit search with 204 No Content. A 404 is NOT "no hits":
-        # it means the search endpoint itself is gone, so it raises like any outage.
-        no_content_returns={"total_count": 0, "result_set": []},
+        # A 404 is NOT "no hits": it means the search endpoint itself is gone, so it
+        # raises like any outage.
+        no_content_returns=_NO_HITS,
+        check=_check_search,
         expect=dict,
     )
-    total = (body or {}).get("total_count", 0)
-    ids = [hit["identifier"] for hit in (body or {}).get("result_set") or []]
+    ids = [hit["identifier"] for hit in body["result_set"]]
     meta = await _hydrate(client, ids)
     recs = [compact(_normalize(meta[i])) for i in ids if i in meta]
-    return total, recs
+    return body["total_count"], recs
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
