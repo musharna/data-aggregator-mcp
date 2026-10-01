@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.6] - 2026-10-01
+
 ### Fixed
 
 - A `Retry-After` header is read as RFC 9110 defines it: a whole number of seconds or
