@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.5] - 2026-09-30
+
 ### Fixed
 
 - `zenodo`, `dandi`, `gwas`, `openml` and `huggingface` resolve reject a malformed id
