@@ -30,7 +30,7 @@ def doi_path(doi: str) -> str:
     raw into a URL, ``#`` ends the path as a fragment and ``?`` starts a query, so the
     upstream is asked about a DIFFERENT DOI. Every DOI-in-path request goes through here.
     """
-    return quote(doi, safe="/")
+    return quote(doi)  # quote() keeps "/" and nothing else reserved by default
 
 
 _RETRY_AFTER_CAP = 60.0
@@ -77,8 +77,8 @@ async def _retrying(
     data: Any = None,
     content: Any = None,
     headers: Mapping[str, str] | None = None,
-    timeout: float = 30.0,
-    max_retries: int = 3,
+    timeout: float,
+    max_retries: int,
     not_found_returns: Any = _RAISE,
     parse: Callable[[httpx.Response], Any] | None = None,
     follow_redirects: bool = True,
@@ -102,10 +102,13 @@ async def _retrying(
     say so precisely (OpenML: ``412`` with error code ``372``); a matching response
     returns ``no_content_returns``, every other error status is classified as usual.
     """
+    if max_retries < 1:
+        raise ValueError(f"max_retries must be at least 1, got {max_retries}")
     delay = 1.0
-    last_status: int | None = None
-    last_exc: Exception | None = None
-    for attempt in range(max_retries):
+    attempt = 0
+    while True:
+        attempt += 1
+        retry = attempt < max_retries
         try:
             await _ratelimit.acquire(service, url)
             resp = await client.request(
@@ -119,16 +122,13 @@ async def _retrying(
                 follow_redirects=follow_redirects,
             )
         except _TRANSPORT_ERRORS as exc:
-            last_exc = exc
-            if attempt < max_retries - 1:
+            if retry:
                 await asyncio.sleep(delay)
                 delay *= 2
                 continue
             raise UpstreamUnavailableError(
                 f"{service} unreachable after {max_retries} tries: {exc!r}"
             ) from exc
-
-        last_status = resp.status_code
 
         if resp.status_code in _NO_CONTENT_STATUSES and parse is not None:
             if no_content_returns is not _RAISE:
@@ -144,45 +144,32 @@ async def _retrying(
             try:
                 return parse(resp)
             except _PARSE_ERRORS as exc:
-                last_exc = exc
-                if attempt < max_retries - 1:
+                if retry:
                     await asyncio.sleep(delay)
                     delay *= 2
                     continue
                 raise UpstreamUnavailableError(
                     f"{service} returned an unparseable 200 body after {max_retries} tries: {exc!r}"
                 ) from exc
-        if (
-            empty_answer is not None
-            and no_content_returns is not _RAISE
-            and not 200 <= resp.status_code < 300
-            and empty_answer(resp)
-        ):
+        # Every 2xx has returned, retried or raised above: what follows is an error status.
+        if empty_answer is not None and no_content_returns is not _RAISE and empty_answer(resp):
             return no_content_returns
-        if resp.status_code == 404 and not_found_returns is not _RAISE:
-            return not_found_returns
+        if resp.status_code == 404:
+            if not_found_returns is not _RAISE:
+                return not_found_returns
+            raise NotFoundError(f"{service} → HTTP 404: {resp.text[:200]}")
         if resp.status_code in _RETRYABLE_STATUSES:
-            if attempt < max_retries - 1:
+            if retry:
                 asked = _retry_after(resp.headers.get("Retry-After"), datetime.now(UTC))
                 await asyncio.sleep(min(delay if asked is None else asked, _RETRY_AFTER_CAP))
                 delay *= 2
                 continue
-            break
-        if resp.status_code == 404:
-            raise NotFoundError(f"{service} → HTTP 404: {resp.text[:200]}")
-        if resp.status_code == 429:
-            raise RateLimitError(f"{service} rate-limited (HTTP 429): {resp.text[:200]}")
+            if resp.status_code == 429:
+                raise RateLimitError(f"{service} exhausted {max_retries} retries (HTTP 429)")
+            raise UpstreamUnavailableError(
+                f"{service} exhausted {max_retries} retries (last HTTP {resp.status_code})"
+            )
         raise UpstreamUnavailableError(f"{service} → HTTP {resp.status_code}: {resp.text[:200]}")
-
-    if last_status == 429:
-        raise RateLimitError(f"{service} exhausted {max_retries} retries (HTTP 429)")
-    if last_status is None:
-        raise UpstreamUnavailableError(
-            f"{service} unreachable after {max_retries} retries: {last_exc!r}"
-        )
-    raise UpstreamUnavailableError(
-        f"{service} exhausted {max_retries} retries (last HTTP {last_status})"
-    )
 
 
 async def request_with_retry(
@@ -214,7 +201,6 @@ async def request_with_retry(
         timeout=timeout,
         max_retries=max_retries,
         not_found_returns=not_found_returns,
-        parse=None,
         follow_redirects=follow_redirects,
     )
 
