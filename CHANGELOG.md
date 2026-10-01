@@ -11,6 +11,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - BioStudies file download URLs escape the file's path. A name with a space gave an
   invalid URL (BioImage Archive's S-BIAD2787 has 92 such files), and a `#`, `?` or `%`
   in a name requested a different file: `well #3.tif` asked for `well `.
+- Hugging Face file download URLs escape the file name the same way (`omar87/pdf-laws`
+  has 20 files with spaces in their names).
 
 ## [0.54.9] - 2026-10-01
 

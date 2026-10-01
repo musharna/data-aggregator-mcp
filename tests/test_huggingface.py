@@ -239,3 +239,29 @@ async def test_search_wrong_shape_body_is_an_outage_not_zero_hits(monkeypatch):
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json=[]))
     ) as c:
         assert await huggingface.search(c, "dna") == (0, [])
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "Approved IP Law.pdf",  # live, omar87/pdf-laws (2026-10-01): an invalid URL raw
+        "blur&shadow.jpg",  # live, ashutoshroy02/tie-v1-scanned-images
+        "shards/part #3.parquet",  # unescaped, '#' cut the name: "part " was requested
+        "a?b.csv",  # unescaped, the rest of the name became a query string
+        "50%20done.csv",  # unescaped, the Hub decoded a literal %20 to a space
+    ],
+)
+def test_a_file_url_requests_exactly_the_listed_file(name):
+    """Read each URL back rather than rebuild it: no raw space, no query or fragment,
+    and a path that decodes to exactly the listed file. Positive control: a plain
+    name's URL is unchanged."""
+    plain = "data/train.parquet"
+    rec = huggingface._normalize(
+        {"id": "owner/name", "siblings": [{"rfilename": plain}, {"rfilename": name}]}
+    )
+    urls = {f.name: f.url for f in rec.files}
+    assert urls[plain] == "https://huggingface.co/datasets/owner/name/resolve/main/" + plain
+    assert urls[name] and " " not in urls[name]
+    url = httpx.URL(urls[name])
+    assert (url.host, url.query, url.fragment) == ("huggingface.co", b"", "")
+    assert url.path == "/datasets/owner/name/resolve/main/" + name

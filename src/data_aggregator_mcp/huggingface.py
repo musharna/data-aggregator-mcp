@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -48,8 +49,12 @@ def _normalize(d: dict[str, Any]) -> DataResource:
     created = d.get("createdAt") or ""
     year = int(created[:4]) if created[:4].isdigit() else None
     author = d.get("author")
+    # The file path is escaped as huggingface_hub's own hf_hub_url escapes it: a space
+    # made the URL invalid, and '#', '?' or '%' in a name requested a different file.
     files = [
-        FileEntry(name=s["rfilename"], url=f"{FILE_BASE}/{ds_id}/resolve/main/{s['rfilename']}")
+        FileEntry(
+            name=s["rfilename"], url=f"{FILE_BASE}/{ds_id}/resolve/main/{quote(s['rfilename'])}"
+        )
         for s in (d.get("siblings") or [])
         if s.get("rfilename") and s["rfilename"] != ".gitattributes"
     ]
