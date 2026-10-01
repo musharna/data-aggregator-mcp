@@ -21,17 +21,34 @@ from dataclasses import dataclass
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp.errors import DataAggregatorError
 from data_aggregator_mcp.models import FileEntry
 
 logger = logging.getLogger(__name__)
 
 EPMC_BASE = "https://www.ebi.ac.uk/europepmc/webservices/rest"
 UNPAYWALL_BASE = "https://api.unpaywall.org/v2"
+_GET = "GET"
 
 # A PMCID is exactly "PMC" + digits. Whitelisting the whole value lets it be
 # interpolated unquoted (which is the only form EuropePMC's PMCID field matches)
 # without opening a query-injection hole.
 _PMCID_RE = re.compile(r"PMC\d+")
+
+
+def _check_result_list(body: dict) -> None:
+    """A search answers ``resultList.result``, empty when nothing matched. EuropePMC
+    reports a bad request as a 200 ``{"errCode": ..., "errMsg": ...}`` without it."""
+    result_list = body.get("resultList")
+    results = result_list.get("result") if isinstance(result_list, dict) else None
+    if not (isinstance(results, list) and all(isinstance(r, dict) for r in results)):
+        raise _http.UpstreamEnvelopeError(f"no resultList.result list of objects in {body!r:.200}")
+
+
+def _check_best_oa_location(body: dict) -> None:
+    loc = body.get("best_oa_location")
+    if loc is not None and not isinstance(loc, dict):
+        raise _http.UpstreamEnvelopeError(f"best_oa_location is not an object: {loc!r:.200}")
 
 
 @dataclass(frozen=True)
@@ -58,40 +75,35 @@ async def _europepmc(client: httpx.AsyncClient, pmcid: str | None, doi: str | No
         query = f"PMCID:{pmcid.strip()}"
     elif doi:
         query = f'DOI:"{doi.replace(chr(34), "")}"'
-    elif pmcid:
-        logger.warning("ignoring malformed pmcid %r (expected PMC<digits>)", pmcid)
-        query = None
     else:
-        query = None
-    if not query:
+        if pmcid:
+            logger.warning("ignoring malformed pmcid %r (expected PMC<digits>)", pmcid)
         return FullText()
     try:
-        resp = await _http.request_with_retry(
+        body = await _http.request_json(
             client,
-            "GET",
+            _GET,
             f"{EPMC_BASE}/search",
             service="EuropePMC search",
             params={"query": query, "format": "json", "resultType": "core", "pageSize": 1},
+            expect=dict,
+            check=_check_result_list,
         )
-        res = (resp.json().get("resultList", {}).get("result") or [{}])[0]
-        if not isinstance(res, dict):
-            logger.warning("EuropePMC answered an off-contract result for %r: %r", query, res)
-            return FullText(error=f"EuropePMC answered result[0] = {res!r}, not an object")
-        access = "open" if str(res.get("isOpenAccess", "")).upper() == "Y" else None
-        license_ = res.get("license") or None
-        if res.get("inEPMC") != "Y":
-            return FullText(file=None, access=access, license=license_)
-        epmc_pmcid = res.get("pmcid") or pmcid
-        if not epmc_pmcid:
-            return FullText(file=None, access=access, license=license_)
-        url = f"{EPMC_BASE}/{epmc_pmcid}/fullTextXML"
-        fe = FileEntry(
-            name=f"{epmc_pmcid}.xml", mime="application/xml", url=url, source="europepmc"
-        )
-        return FullText(file=fe, access=access, license=license_)
-    except Exception as exc:  # noqa: BLE001 — enrichment: never raise (spec §8)
+    except DataAggregatorError as exc:  # enrichment: degrade with the reason (spec §8)
         logger.warning("EuropePMC lookup failed for %r: %r", pmcid or doi, exc)
         return FullText(error=f"EuropePMC lookup failed: {type(exc).__name__}: {exc}")
+    results = body["resultList"]["result"]
+    res = results[0] if results else {}
+    access = "open" if str(res.get("isOpenAccess")).upper() == "Y" else None
+    license_ = res.get("license") or None
+    if res.get("inEPMC") != "Y":
+        return FullText(access=access, license=license_)
+    epmc_pmcid = res.get("pmcid") or pmcid
+    if not epmc_pmcid:
+        return FullText(access=access, license=license_)
+    url = f"{EPMC_BASE}/{epmc_pmcid}/fullTextXML"
+    fe = FileEntry(name=f"{epmc_pmcid}.xml", mime="application/xml", url=url, source="europepmc")
+    return FullText(file=fe, access=access, license=license_)
 
 
 async def _unpaywall(client: httpx.AsyncClient, doi: str | None) -> FullText:
@@ -102,33 +114,29 @@ async def _unpaywall(client: httpx.AsyncClient, doi: str | None) -> FullText:
         logger.warning("full text: UNPAYWALL_EMAIL unset; skipping Unpaywall leg for %r", doi)
         return FullText()
     try:
-        resp = await _http.request_with_retry(
+        data = await _http.request_json(
             client,
-            "GET",
+            _GET,
             f"{UNPAYWALL_BASE}/{_http.doi_path(doi)}",
             service="Unpaywall",
             params={"email": email},
-            not_found_returns=None,
+            expect=dict,
+            check=_check_best_oa_location,
+            not_found_returns=None,  # a DOI Unpaywall does not know
         )
-        if resp is None:
-            return FullText()
-        data = resp.json()
-        if not isinstance(data, dict):
-            logger.warning("Unpaywall answered an off-contract body for %r: %r", doi, data)
-            return FullText(error=f"Unpaywall answered {type(data).__name__}, not an object")
-        if not data.get("is_oa"):
-            return FullText()
-        access = "open"
-        loc = data.get("best_oa_location") or {}
-        license_ = (loc.get("license") if isinstance(loc, dict) else None) or None
-        pdf = loc.get("url_for_pdf") if isinstance(loc, dict) else None
-        if not pdf:
-            return FullText(file=None, access=access, license=license_)
-        fe = FileEntry(name="fulltext.pdf", mime="application/pdf", url=pdf, source="unpaywall")
-        return FullText(file=fe, access=access, license=license_)
-    except Exception as exc:  # noqa: BLE001 — enrichment: never raise (spec §8)
+    except DataAggregatorError as exc:  # enrichment: degrade with the reason (spec §8)
         logger.warning("Unpaywall lookup failed for %r: %r", doi, exc)
         return FullText(error=f"Unpaywall lookup failed: {type(exc).__name__}: {exc}")
+    if data is None or not data.get("is_oa"):
+        return FullText()
+    access = "open"
+    loc = data.get("best_oa_location") or {}
+    license_ = loc.get("license") or None
+    pdf = loc.get("url_for_pdf")
+    if not pdf:
+        return FullText(access=access, license=license_)
+    fe = FileEntry(name="fulltext.pdf", mime="application/pdf", url=pdf, source="unpaywall")
+    return FullText(file=fe, access=access, license=license_)
 
 
 async def find(
@@ -146,7 +154,6 @@ async def find(
     if upw.file is not None:
         return dataclasses.replace(upw, error=error)
     return FullText(
-        file=None,
         access=epmc.access or upw.access,
         license=epmc.license or upw.license,
         error=error,

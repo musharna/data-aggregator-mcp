@@ -14,11 +14,21 @@ import os
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp.errors import DataAggregatorError
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
 TOOL = "data-aggregator-mcp"
+_GET = "GET"
+
+
+def _check_records(body: dict) -> None:
+    """idconv answers every id with a record, a DOI it cannot convert included
+    (``status: "error"``), so a body without one is not an answer."""
+    records = body.get("records")
+    if not (isinstance(records, list) and records and isinstance(records[0], dict)):
+        raise _http.UpstreamEnvelopeError(f"no records list of objects in {body!r:.200}")
 
 
 async def identifiers_for(
@@ -34,16 +44,19 @@ async def identifiers_for(
     if email:
         params["email"] = email
     try:
-        resp = await _http.request_with_retry(
-            client, "GET", BASE_URL, service="NCBI idconv", params=params
+        body = await _http.request_json(
+            client,
+            _GET,
+            BASE_URL,
+            service="NCBI idconv",
+            params=params,
+            expect=dict,
+            check=_check_records,
         )
-        rec = (resp.json().get("records") or [{}])[0]
-    except Exception as exc:  # noqa: BLE001 — enrichment: never raise (spec §8)
+    except DataAggregatorError as exc:  # enrichment: degrade with the reason (spec §8)
         logger.warning("idconv failed for %r: %r", doi, exc)
         return {}, f"NCBI idconv lookup failed: {type(exc).__name__}: {exc}"
-    if not isinstance(rec, dict):
-        logger.warning("idconv answered an off-contract record for %r: %r", doi, rec)
-        return {}, f"NCBI idconv answered records[0] = {rec!r}, not an object"
+    rec = body["records"][0]
     if rec.get("status") == "error":  # idconv's answer for a DOI that is not in PMC
         return {}, None
     out: dict[str, str] = {}

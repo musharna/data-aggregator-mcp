@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Full-text, PMC-id and Scholix data-link lookups report a broken answer as a failure
+  instead of an empty one. EuropePMC answers a bad request with a 200 carrying
+  `errCode`, which read as "no open-access copy"; an NCBI idconv answer without
+  `records` read as "not in PMC"; a ScholeXplorer answer without `result` read as "no
+  data links". A Scholix outage, or a 200 carrying a JSON list, raised out of `resolve`
+  for an OpenAIRE record; the links are enrichment, so the record now resolves with
+  the failure in `errors["links"]`, as the other lookups already did. A Scholix 404 is
+  a named failure too: ScholeXplorer answers a DOI with no links with a 200 and an
+  empty list.
+
 ## [0.54.7] - 2026-10-01
 
 ### Fixed

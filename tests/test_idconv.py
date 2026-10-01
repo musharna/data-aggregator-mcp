@@ -5,12 +5,22 @@ import os
 import httpx
 import pytest
 
-from data_aggregator_mcp import idconv
+from data_aggregator_mcp import _http, idconv
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
 _URL = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
+
+
+@pytest.fixture(autouse=True)
+def no_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Retried failures here would otherwise sleep through the real backoff."""
+
+    async def _no_sleep(*_a: object) -> None:
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
 
 
 async def test_identifiers_for_maps_doi(httpx_mock, monkeypatch) -> None:
@@ -65,6 +75,7 @@ async def test_identifiers_for_off_contract_body_fails_soft(httpx_mock, monkeypa
     httpx_mock.add_response(
         url=f"{_URL}?ids=10.2/x&format=json&tool=data-aggregator-mcp",
         json={"records": ["not-a-dict"]},
+        is_reusable=True,  # an off-contract body is retried like any malformed one
     )
     async with httpx.AsyncClient() as client:
         ids, err = await idconv.identifiers_for(client, "10.2/x")

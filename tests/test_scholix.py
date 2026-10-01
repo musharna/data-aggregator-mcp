@@ -6,9 +6,19 @@ import httpx
 import pytest
 from pytest_httpx import HTTPXMock
 
-from data_aggregator_mcp import scholix
+from data_aggregator_mcp import _http, scholix
 
 _URL = "https://api.scholexplorer.openaire.eu/v3/Links?sourcePid=10.5061/dryad.x"
+
+
+@pytest.fixture(autouse=True)
+def no_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Retried failures here would otherwise sleep through the real backoff."""
+
+    async def _no_sleep(*_a: object) -> None:
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
 
 
 def _rec(target_type: str, doi: str | None, rel: str = "IsSupplementedBy") -> dict:
@@ -74,10 +84,16 @@ async def test_links_for_empty_doi_returns_empty() -> None:
         assert await scholix.links_for(client, "") == ([], None)
 
 
-async def test_links_for_404_returns_empty(httpx_mock: HTTPXMock) -> None:
+async def test_links_for_404_is_a_named_failure_not_no_links(httpx_mock: HTTPXMock) -> None:
+    """ScholeXplorer answers a PID with no links with 200 and an empty ``result`` (and a
+    wrong path with 500), so a 404 is not "no links"; it used to read as exactly that."""
     httpx_mock.add_response(url=_URL, status_code=404)
     async with httpx.AsyncClient() as client:
-        assert await scholix.links_for(client, "10.5061/dryad.x") == ([], None)
+        assert await scholix.links_for(client, "10.5061/dryad.x") == (
+            [],
+            "ScholeXplorer lookup failed (NotFoundError: [NotFoundError] ScholeXplorer → "
+            "HTTP 404: ); data links unknown",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -92,11 +108,12 @@ async def test_links_for_html_body_returns_empty(httpx_mock: HTTPXMock) -> None:
         url=_URL,
         text="<html><body>Service Unavailable</body></html>",
         headers={"Content-Type": "text/html"},
+        is_reusable=True,  # the shared HTTP layer retries an unparseable 200
     )
     async with httpx.AsyncClient() as client:
         links, error = await scholix.links_for(client, "10.5061/dryad.x")
     assert links == []
-    assert error is not None and "non-JSON" in error and "text/html" in error
+    assert error is not None and "unparseable 200 body" in error and "JSONDecodeError" in error
 
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"

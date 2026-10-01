@@ -97,3 +97,47 @@ def test_every_request_json_call_names_expect_itself() -> None:
                 hidden.append(f"{path.name}:{node.lineno}")
     assert calls >= 40
     assert hidden == []
+
+
+# A body read outside `_http` on purpose. OpenML's 412 is an error status, not an
+# answer: the body only says whether it means "no results" (code 372).
+_PARSES_JSON_ITSELF = {"openml.py:_is_no_results"}
+
+
+def _functions_calling_json(tree: ast.AST, path: str) -> list[str]:
+    """``<file>:<innermost function>`` for each ``.json()`` call with no arguments."""
+    found: list[str] = []
+
+    def visit(node: ast.AST, owner: str) -> None:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            owner = node.name
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "json"
+            and not node.args
+            and not node.keywords
+        ):
+            found.append(f"{path}:{owner}")
+        for child in ast.iter_child_nodes(node):
+            visit(child, owner)
+
+    visit(tree, "<module>")
+    return found
+
+
+def test_only_the_http_layer_parses_a_json_body() -> None:
+    """`expect` checks a body only if `request_json` parses it. fulltext, idconv and
+    scholix took the response from `request_with_retry` and called `.json()` themselves,
+    so EuropePMC's 200 error envelope read as "no open-access copy", an idconv body
+    without records as "not in PMC", and a Scholix outage sank the resolve it enriches;
+    the `expect` scan above never saw them, since it looks only at `request_json` calls.
+    Positive control: the scan finds `_http`'s own parser."""
+    src = pathlib.Path(data_aggregator_mcp.__file__).parent
+    found = [
+        hit
+        for path in sorted(src.glob("*.py"))
+        for hit in _functions_calling_json(ast.parse(path.read_text()), path.name)
+    ]
+    assert "_http.py:parse" in found
+    assert sorted(set(found) - {"_http.py:parse"} - _PARSES_JSON_ITSELF) == []
