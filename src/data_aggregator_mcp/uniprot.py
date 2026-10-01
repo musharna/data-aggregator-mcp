@@ -30,6 +30,11 @@ DEFAULT_SIZE = 10
 MAX_SIZE = 25
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+# httpx upper-cases the method and reads header names case-insensitively, so neither
+# spelling is behaviour.
+_GET = "GET"
+_ACCEPT_JSON = {"Accept": "application/json"}
+_TOTAL_RESULTS = "x-total-results"  # the corpus hit count; the body carries only the page
 
 
 def _protein_name(entry: dict) -> str:
@@ -45,7 +50,9 @@ def _protein_name(entry: dict) -> str:
     return entry.get("uniProtkbId") or entry.get("primaryAccession") or ""
 
 
-def _curation(entry_type: str) -> str | None:
+def _curation(entry_type: str | None) -> str | None:
+    if not entry_type:
+        return None
     if "Swiss-Prot" in entry_type:
         return "Swiss-Prot"
     if "TrEMBL" in entry_type:
@@ -59,7 +66,7 @@ def _normalize(entry: dict) -> DataResource:
     taxid = (entry.get("organism") or {}).get("taxonId")
     genes = entry.get("genes") or []
     gene = ((genes[0] or {}).get("geneName") or {}).get("value") if genes else None
-    curation = _curation(entry.get("entryType") or "")
+    curation = _curation(entry.get("entryType"))
     identifiers: dict[str, str] = {}
     if taxid:
         identifiers["taxid"] = str(taxid)
@@ -71,11 +78,9 @@ def _normalize(entry: dict) -> DataResource:
         source="uniprot",
         kind="dataset",
         title=_protein_name(entry),
-        doi=None,
         identifiers=identifiers,
         subjects=subjects,
         last_updated=(entry.get("entryAudit") or {}).get("lastAnnotationUpdateDate"),
-        files=[],
         links=[Link(rel="landing_page", target_id=_LANDING.format(acc=acc))],
     )
 
@@ -98,11 +103,11 @@ async def search(
         return 0, []
     body, resp_headers = await _http.request_json_with_headers(
         client,
-        "GET",
+        _GET,
         SEARCH,
         service="UniProt search",
         params={"query": query, "format": "json", "size": min(size, MAX_SIZE)},
-        headers={"Accept": "application/json"},
+        headers=_ACCEPT_JSON,
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         # No not_found_returns: no hits is a 200 with `results: []` (live, 2026-10-01),
@@ -111,8 +116,8 @@ async def search(
     )
     results = body.get("results") or []
     recs = [compact(_normalize(r)) for r in results]
-    # x-total-results is the true corpus hit count; fall back to page size if absent.
-    total_hdr = resp_headers.get("x-total-results")
+    # Fall back to the page length if the hit count is absent.
+    total_hdr = resp_headers.get(_TOTAL_RESULTS)
     total = int(total_hdr) if total_hdr and total_hdr.isdigit() else len(recs)
     return total, recs
 
@@ -124,11 +129,11 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     try:
         body = await _http.request_json(
             client,
-            "GET",
+            _GET,
             ENTRY.format(acc=acc),
             service="UniProt resolve",
             params={"format": "json"},
-            headers={"Accept": "application/json"},
+            headers=_ACCEPT_JSON,
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
             expect=dict,
