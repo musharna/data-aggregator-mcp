@@ -13,6 +13,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   adapter asks for) with HTTP 200, an `errors` list and no data. Resolve then raised
   "RCSB PDB has no entry", and search returned the hit count with no records. Both now
   raise an upstream failure that quotes RCSB's error message.
+- `pdb` search no longer reads a 200 that lacks the hit count or the hit list as zero
+  results. RCSB sends zero hits as 204 No Content, so such a 200 is malformed: it is now
+  retried and then reported as an upstream failure.
 
 ## [0.54.2] - 2026-09-30
 
