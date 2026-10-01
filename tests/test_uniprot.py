@@ -1,10 +1,11 @@
+import json
 import os
 
 import httpx
 import pytest
 
-from data_aggregator_mcp import uniprot
-from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp import _http, uniprot
+from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 
 _ENTRY_INS = {
     "primaryAccession": "P01308",
@@ -61,6 +62,45 @@ async def test_search_empty_returns_zero():
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
         assert await uniprot.search(c, "zzzznohit", size=10) == (0, [])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("status", "body", "kind", "says"),
+    [
+        (200, None, UpstreamUnavailableError, "got NoneType"),  # read as "no hits"
+        (200, [_ENTRY_INS], UpstreamUnavailableError, "got list"),  # AttributeError
+        (200, "<html>busy</html>", UpstreamUnavailableError, "got str"),
+        (404, {"messages": ["gone"]}, NotFoundError, "UniProt search → HTTP 404"),  # "no hits"
+    ],
+)
+async def test_search_a_broken_answer_is_an_error_not_no_hits(
+    monkeypatch, status, body, kind, says
+):
+    """A search with no hits is a 200 with ``results: []`` and ``x-total-results: 0``
+    (live, 2026-10-01; an invalid query and a wrong path are 400s). Search read the body
+    with a raw ``resp.json()`` and took a 404 as zero hits, so a ``null`` or 404 answer
+    became an empty result and a list raised ``AttributeError``. Positive control:
+    ``test_search_empty_returns_zero`` above, through the same call."""
+
+    async def _no_sleep(*_a):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        # content=, not json=: httpx sends json=None as an empty body, not `null`
+        content = json.dumps(body).encode()
+        return httpx.Response(status, content=content, headers={"x-total-results": "5"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        with pytest.raises(kind) as err:
+            await uniprot.search(c, "insulin", size=10)
+    assert says in str(err.value)
+    # a malformed 200 is retried like a 5xx (MAX_RETRIES tries); a 404 is not
+    assert len(seen) == (1 if status == 404 else uniprot.MAX_RETRIES)
 
 
 @pytest.mark.asyncio

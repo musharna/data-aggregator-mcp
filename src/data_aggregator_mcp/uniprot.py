@@ -96,7 +96,7 @@ async def search(
 ) -> tuple[int, list[DataResource]]:
     if offset:
         return 0, []
-    resp = await _http.request_with_retry(
+    body, resp_headers = await _http.request_json_with_headers(
         client,
         "GET",
         SEARCH,
@@ -105,15 +105,14 @@ async def search(
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
-        not_found_returns=None,
+        # No not_found_returns: no hits is a 200 with `results: []` (live, 2026-10-01),
+        # so a 404 is not an empty search.
+        expect=dict,
     )
-    if resp is None:
-        return 0, []
-    body = resp.json()
-    results = (body or {}).get("results") or []
+    results = body.get("results") or []
     recs = [compact(_normalize(r)) for r in results]
     # x-total-results is the true corpus hit count; fall back to page size if absent.
-    total_hdr = resp.headers.get("x-total-results")
+    total_hdr = resp_headers.get("x-total-results")
     total = int(total_hdr) if total_hdr and total_hdr.isdigit() else len(recs)
     return total, recs
 
