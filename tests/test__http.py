@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 
 import httpx
 import pytest
@@ -223,3 +224,58 @@ async def test_request_json_expect_object_accepts_any_json(
             client, "GET", "https://x.test/any", service="t", expect=object
         )
     assert got == body
+
+
+# --- Retry-After per RFC 9110 (found by the #88 burn-down of `_http`, 2026-09-30) ---
+
+
+@pytest.mark.parametrize(
+    ("header", "slept"),
+    [
+        ("7", 7.0),  # delay-seconds
+        ("Sun, 06 Nov 1994 08:49:37 GMT", 0.0),  # an HTTP-date already passed
+        ("Wed, 21 Oct 2037 07:28:00 GMT", 60.0),  # an HTTP-date beyond the 60 s cap
+        ("nan", 1.0),  # not RFC 9110: our own 1 s backoff (asyncio.sleep(nan) raises)
+        ("-5", 1.0),
+        ("inf", 1.0),
+        ("soon", 1.0),
+    ],
+)
+async def test_retry_after_is_read_as_rfc_9110_says(
+    httpx_mock: HTTPXMock, monkeypatch: pytest.MonkeyPatch, header: str, slept: float
+) -> None:
+    """``Retry-After`` is a non-negative integer or an HTTP-date. ``float()`` read an
+    HTTP-date as garbage (waiting 1 s where the server asked for longer) and took
+    ``nan``, ``-5`` and ``inf``; a real ``asyncio.sleep(nan)`` raises ``ValueError``,
+    so one header turned a retry into an untyped crash. Positive controls: ``7`` and an
+    invalid header are read the same before and after."""
+    waits: list[float] = []
+
+    async def _record(d: float, *_a: object) -> None:
+        waits.append(d)
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _record)
+    httpx_mock.add_response(
+        url="https://x.test/r", status_code=503, headers={"Retry-After": header}
+    )
+    httpx_mock.add_response(url="https://x.test/r", json={"ok": True})
+    async with httpx.AsyncClient() as client:
+        got = await _http.request_json(client, "GET", "https://x.test/r", service="t", expect=dict)
+    assert got == {"ok": True}
+    assert waits == [slept]
+
+
+@pytest.mark.parametrize(
+    "date",
+    [
+        "Wed, 30 Sep 2026 12:00:30 GMT",  # IMF-fixdate
+        "Wednesday, 30-Sep-26 12:00:30 GMT",  # obsolete RFC 850 form
+        "Wed Sep 30 12:00:30 2026",  # obsolete asctime form: no zone, read as GMT
+    ],
+)
+def test_retry_after_reads_every_http_date_form(date: str) -> None:
+    """A recipient must accept all three HTTP-date forms (RFC 9110 §5.6.7)."""
+    now = datetime(2026, 9, 30, 12, 0, 0, tzinfo=UTC)
+    assert _http._retry_after(date, now) == 30.0
+    assert _http._retry_after(" 30 ", now) == 30.0
+    assert _http._retry_after(None, now) is None

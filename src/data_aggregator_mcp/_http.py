@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.parse import quote
 
@@ -41,6 +44,27 @@ _REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 _TRANSPORT_ERRORS = (httpx.TimeoutException, httpx.TransportError)
 # Malformed 2xx body: json.JSONDecodeError ⊂ ValueError; ET.ParseError ⊄ ValueError.
 _PARSE_ERRORS = (ValueError, ET.ParseError)
+_DELAY_SECONDS_RE = re.compile(r"[0-9]+")
+
+
+def _retry_after(value: str | None, now: datetime) -> float | None:
+    """Seconds a ``Retry-After`` header asks the client to wait (RFC 9110 §10.2.3): a
+    non-negative integer, or an HTTP-date (the seconds from ``now`` until it; 0 once it
+    has passed). None when the header is absent or is neither, so the caller uses its
+    own backoff. ``float()`` parsed it before 2026-09-30: it read an HTTP-date as
+    invalid, and it accepted ``nan``, which made ``asyncio.sleep`` raise ``ValueError``."""
+    if value is None:
+        return None
+    value = value.strip()
+    if _DELAY_SECONDS_RE.fullmatch(value):
+        return float(value)
+    try:
+        when = parsedate_to_datetime(value)
+    except ValueError:
+        return None
+    if when.tzinfo is None:  # the asctime form carries no zone; every HTTP-date is GMT
+        when = when.replace(tzinfo=UTC)
+    return max(0.0, (when - now).total_seconds())
 
 
 async def _retrying(
@@ -139,13 +163,8 @@ async def _retrying(
             return not_found_returns
         if resp.status_code in _RETRYABLE_STATUSES:
             if attempt < max_retries - 1:
-                hdr = resp.headers.get("Retry-After")
-                try:
-                    retry_after = float(hdr) if hdr else delay
-                except ValueError:
-                    retry_after = delay
-                retry_after = min(retry_after, _RETRY_AFTER_CAP)
-                await asyncio.sleep(retry_after)
+                asked = _retry_after(resp.headers.get("Retry-After"), datetime.now(UTC))
+                await asyncio.sleep(min(delay if asked is None else asked, _RETRY_AFTER_CAP))
                 delay *= 2
                 continue
             break
