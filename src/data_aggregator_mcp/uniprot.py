@@ -28,7 +28,6 @@ PREFIXES = {"uniprot"}
 _ACC_RE = re.compile(r"^[A-Za-z0-9_]{1,15}$")
 DEFAULT_SIZE = 10
 MAX_SIZE = 25
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
 # httpx upper-cases the method and reads header names case-insensitively, so neither
 # spelling is behaviour.
@@ -108,7 +107,6 @@ async def search(
         service="UniProt search",
         params={"query": query, "format": "json", "size": min(size, MAX_SIZE)},
         headers=_ACCEPT_JSON,
-        timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         # No not_found_returns: no hits is a 200 with `results: []` (live, 2026-10-01),
         # so a 404 is not an empty search.
@@ -134,7 +132,6 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             service="UniProt resolve",
             params={"format": "json"},
             headers=_ACCEPT_JSON,
-            timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
             expect=dict,
         )
