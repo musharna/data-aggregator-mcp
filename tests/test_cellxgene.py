@@ -316,3 +316,26 @@ async def test_resolve_rejects_a_non_uuid_id_before_the_network(rid):
         # positive control: a UUID, upper-case or padded, is canonicalised and sent
         r = await cellxgene.resolve(c, f"cellxgene: {uid.upper()} ")
     assert seen == [f"/curation/v1/collections/{uid}"] and r.id == f"cellxgene:{uid}"
+
+
+@pytest.mark.asyncio
+async def test_resolve_200_without_a_collection_is_an_outage_not_a_missing_one(monkeypatch):
+    """CELLxGENE answers an unknown collection with HTTP 404 (live, 2026-09-30). A 200
+    that names no collection (an error envelope) was reported as "no collection", an
+    outage read as an absence; it is malformed, retried, then an upstream failure."""
+    from data_aggregator_mcp import _http
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    async def _ns(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _ns)
+    answer = {"r": httpx.Response(200, json={"detail": "Internal error", "status": 500})}
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r: answer["r"])) as c:
+        with pytest.raises(UpstreamUnavailableError, match="without collection_id"):
+            await cellxgene.resolve(c, f"cellxgene:{_LUNG}")
+        answer["r"] = httpx.Response(404, json={"detail": "Resource not found."})
+        with pytest.raises(NotFoundError, match=f"CELLxGENE has no collection {_LUNG}"):
+            await cellxgene.resolve(c, f"cellxgene:{_LUNG}")
+        answer["r"] = httpx.Response(200, json=_DETAIL)  # positive control
+        assert (await cellxgene.resolve(c, f"cellxgene:{_LUNG}")).id == f"cellxgene:{_LUNG}"

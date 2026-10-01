@@ -184,6 +184,15 @@ def _file_manifest(collection: dict) -> list[FileEntry]:
     return out
 
 
+def _check_collection(body: dict) -> None:
+    """A missing collection is a 404. A 200 that names no collection (an error envelope
+    such as ``{"detail": ...}``) is malformed: retried, then an outage, not "no such"."""
+    if not body.get("collection_id"):
+        raise _http.UpstreamEnvelopeError(
+            f"CELLxGENE collection 200 without collection_id: keys {sorted(body)}"
+        )
+
+
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     cid = local_id(resource_id, "cellxgene", strip=True)
     # Every collection id is a UUID. The id goes into the URL path, so anything else
@@ -201,9 +210,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         not_found_returns=None,
+        check=_check_collection,
         expect=dict,
     )
-    if not collection or not collection.get("collection_id"):
+    if collection is None:
         raise NotFoundError(f"CELLxGENE has no collection {cid}")
     record = _normalize(collection)
     record.files = _file_manifest(collection)
