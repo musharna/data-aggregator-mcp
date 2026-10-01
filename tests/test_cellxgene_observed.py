@@ -110,13 +110,13 @@ async def test_search_drops_collections_without_an_id_and_windows_by_size():
 def test_normalize_record_whole():
     col = {
         "collection_id": _A,
-        "collection_url": f"https://cellxgene.cziscience.com/collections/{_A}",
+        "collection_url": "https://cellxgene.cziscience.com/collections/canonical-url",
         "name": "Lung atlas",
         "description": "An atlas.",
         "doi": "10.1/x",
         "published_at": "2021-05-06T16:41:21+00:00",
         "revised_at": "2025-10-24T21:07:43+00:00",
-        "publisher_metadata": {"published_year": 2021},
+        "publisher_metadata": {"published_year": 2020},  # wins over published_at
         "links": [
             {"link_type": "RAW_DATA", "link_url": "https://geo/1"},
             {"link_type": None, "link_url": "https://other/2"},
@@ -128,12 +128,15 @@ def test_normalize_record_whole():
         ],
     }
     r = cellxgene._normalize(col)
-    assert r.description == "An atlas." and r.access == "open"
+    assert r.description == "An atlas." and r.access == "open" and r.year == 2020
     assert r.last_updated == "2025-10-24T21:07:43+00:00"
     assert r.organism == ["Homo sapiens", "Mus musculus"]
     assert r.subjects == ["lung"]
     assert r.links == [
-        Link(rel="landing_page", target_id=f"https://cellxgene.cziscience.com/collections/{_A}"),
+        Link(
+            rel="landing_page",
+            target_id="https://cellxgene.cziscience.com/collections/canonical-url",
+        ),
         Link(rel="raw_data", target_id="https://geo/1"),
         Link(rel="related", target_id="https://other/2"),
     ]
@@ -173,17 +176,21 @@ def test_file_manifest_names_skips_and_cap():
                 "dataset_id": "ds-1",
                 "assets": [
                     {"filetype": "H5AD", "url": None},
-                    {"filetype": "H5AD", "filesize": 5, "url": "https://d/a/ds-1.h5ad"},
-                    {"filesize": 6, "url": "https://d/a/b/raw.bin"},
+                    {"filetype": "H5AD", "filesize": 5, "url": "https://d/a/0f3c.h5ad"},
+                    {"filesize": 6, "url": "https://d/a/b/raw.bin?sig=1"},
                 ],
             },
             {"title": "Named", "assets": [{"filetype": "RDS", "url": "https://d/n.rds"}]},
+            {"assets": [{"filetype": "H5AD", "url": "https://d/x/anon.h5ad"}]},
         ]
     }
     assert cellxgene._file_manifest(col) == [
-        FileEntry(name="ds-1.h5ad", size=5, url="https://d/a/ds-1.h5ad", source="cellxgene"),
-        FileEntry(name="raw.bin", size=6, url="https://d/a/b/raw.bin", source="cellxgene"),
+        FileEntry(name="ds-1.h5ad", size=5, url="https://d/a/0f3c.h5ad", source="cellxgene"),
+        # no file type: the URL path's last segment, without the query string
+        FileEntry(name="raw.bin", size=6, url="https://d/a/b/raw.bin?sig=1", source="cellxgene"),
         FileEntry(name="Named.rds", url="https://d/n.rds", source="cellxgene"),
+        # no title and no dataset id: the URL path's last segment
+        FileEntry(name="anon.h5ad", url="https://d/x/anon.h5ad", source="cellxgene"),
     ]
     many = {"datasets": [{"title": "t", "assets": [{"url": f"https://d/{i}"} for i in range(201)]}]}
     files = cellxgene._file_manifest(many)
