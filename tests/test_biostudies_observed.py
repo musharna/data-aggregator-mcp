@@ -404,3 +404,26 @@ def test_publication_doi_and_pmid(section: dict, want: tuple[str | None, str | N
     """First DOI and first PMID win; the node's accno is the PMID only when no attribute
     gave one and it is all digits; only a Publication node counts."""
     assert biostudies._publication(section) == want
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        # Live: S-BIAD2787 lists 92 files named like this (2026-10-01); curl rejects the
+        # unescaped URL as malformed.
+        "Microscopy Images/Figure 8 microscopy/BAs-Leu-A5 merge.tif",
+        "well #3.tif",  # unescaped, '#' cut the name: the request was for "well "
+        "a?b.csv",  # unescaped, the rest of the name became a query string
+        "50%20done.csv",  # unescaped, the server decoded a literal %20 to a space
+    ],
+)
+def test_a_file_url_requests_exactly_the_listed_file(name: str) -> None:
+    plain = "plain/dir/x.csv"
+    files = biostudies._collect_files({"files": [{"path": plain}, {"path": name}]}, "S-BIAD1")
+    urls = {f.name: f.url for f in files}
+    base = "https://www.ebi.ac.uk/biostudies/files/S-BIAD1/"
+    assert urls[plain] == base + plain  # positive control: nothing to escape
+    url = httpx.URL(urls[name])
+    assert (url.query, url.fragment) == (b"", "")
+    assert url.path == "/biostudies/files/S-BIAD1/" + name
+    assert " " not in urls[name]
