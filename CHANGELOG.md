@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.7] - 2026-10-01
+
 ### Fixed
 
 - `uniprot` search reports a broken answer as an error instead of zero hits. Its body
