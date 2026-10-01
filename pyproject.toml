@@ -114,4 +114,5 @@ also_copy = [".editorconfig", ".github", ".gitignore", ".mcp.json", ".pre-commit
 # test_entrypoint_smoke drives the stdio server as a subprocess, which the in-process mutmut output capture closes
 # test_search_cli_real_subprocess is a live Zenodo call with a 90 s timeout that flaked two nights in the baseline
 # test_every_request_json_call_names_expect_itself scans src/, which under mutmut is the rewritten copy whose mutants drop expect=
-pytest_add_cli_args = ["--ignore=tests/test_entrypoint_smoke.py", "--deselect", "tests/test_search_cli.py::test_search_cli_real_subprocess", "--deselect", "tests/test_expect_required.py::test_every_request_json_call_names_expect_itself"]
+# test_only_the_http_layer_parses_a_json_body scans src/ by function name, which mutmut's copy renames (x_<name>__mutmut_<n>)
+pytest_add_cli_args = ["--ignore=tests/test_entrypoint_smoke.py", "--deselect", "tests/test_search_cli.py::test_search_cli_real_subprocess", "--deselect", "tests/test_expect_required.py::test_every_request_json_call_names_expect_itself", "--deselect", "tests/test_expect_required.py::test_only_the_http_layer_parses_a_json_body"]
