@@ -117,7 +117,14 @@ async def test_search_zero_hits_204_skips_hydration():
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "body",
-    [{"result_set": []}, {"total_count": 3}, {"total_count": "3", "result_set": []}, {}],
+    [
+        {"result_set": []},
+        {"total_count": 3},
+        {"total_count": "3", "result_set": []},
+        {"total_count": True, "result_set": []},  # bool is an int subclass
+        {"total_count": 3, "result_set": {}},
+        {},
+    ],
 )
 async def test_search_200_without_count_and_hits_is_an_outage(body):
     """Zero hits come as 204; a 200 lacking either field was read as (0, [])."""

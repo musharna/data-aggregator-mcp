@@ -174,7 +174,8 @@ def _normalize(entry: dict) -> DataResource:
 def _check_search(body: dict) -> None:
     """A search 200 carries the hit count and the hit list. One without them is a
     malformed answer (retried, then an outage), never zero hits: those come as 204."""
-    if not isinstance(body.get("total_count"), int) or not isinstance(body.get("result_set"), list):
+    # type() rather than isinstance(): bool is an int subclass, and `true` is no count.
+    if type(body.get("total_count")) is not int or not isinstance(body.get("result_set"), list):
         raise _http.UpstreamEnvelopeError(
             f"RCSB PDB search 200 without total_count and result_set: keys {sorted(body)}"
         )
