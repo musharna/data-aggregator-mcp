@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.4] - 2026-09-30
+
 ### Fixed
 
 - `cellxgene` resolve accepts only a collection UUID. The id went into the request path
