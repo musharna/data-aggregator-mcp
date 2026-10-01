@@ -5,12 +5,22 @@ import os
 import httpx
 import pytest
 
-from data_aggregator_mcp import fulltext
+from data_aggregator_mcp import _http, fulltext
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
 _SEARCH = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+
+
+@pytest.fixture(autouse=True)
+def no_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Retried failures here would otherwise sleep through the real backoff."""
+
+    async def _no_sleep(*_a: object) -> None:
+        return None
+
+    monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
 
 
 async def test_find_europepmc_xml_when_in_epmc(httpx_mock) -> None:
@@ -110,6 +120,7 @@ async def test_find_europepmc_off_contract_body_fails_soft(httpx_mock) -> None:
     httpx_mock.add_response(
         url=f"{_SEARCH}?query=PMCID:PMC1&format=json&resultType=core&pageSize=1",
         json={"resultList": {"result": ["not-a-dict"]}},
+        is_reusable=True,  # an off-contract body is retried like any malformed one
     )
     async with httpx.AsyncClient() as client:
         ft = await fulltext.find(client, pmcid="PMC1", doi=None)
@@ -127,6 +138,7 @@ async def test_find_unpaywall_off_contract_body_fails_soft(httpx_mock, monkeypat
     httpx_mock.add_response(
         url="https://api.unpaywall.org/v2/10.3/x?email=x@y.z",
         json=["not", "a", "dict"],
+        is_reusable=True,
     )
     async with httpx.AsyncClient() as client:
         ft = await fulltext.find(client, pmcid=None, doi="10.3/x")
@@ -144,6 +156,7 @@ async def test_find_names_a_failed_europepmc_leg_even_when_unpaywall_finds_a_pdf
         url=f'{_SEARCH}?query=DOI:"10.4/x"&format=json&resultType=core&pageSize=1',
         text="<html><body>502 Bad Gateway</body></html>",
         headers={"Content-Type": "text/html"},
+        is_reusable=True,
     )
     httpx_mock.add_response(
         url="https://api.unpaywall.org/v2/10.4/x?email=x@y.z",

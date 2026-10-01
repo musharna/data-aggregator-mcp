@@ -55,6 +55,17 @@ def _doi_of(identifiers: list[dict]) -> str | None:
     return None
 
 
+def _check_result(body: dict) -> None:
+    """A Links search answers ``result``, empty when nothing links to the PID; each
+    entry is a link object carrying its ``target``."""
+    result = body.get("result")
+    if not (
+        isinstance(result, list)
+        and all(isinstance(r, dict) and isinstance(r.get("target"), dict) for r in result)
+    ):
+        raise _http.UpstreamEnvelopeError(f"no result list of link objects in {body!r:.200}")
+
+
 async def _datacite_registered(
     client: httpx.AsyncClient, dois: list[str]
 ) -> tuple[set[str], str | None]:
@@ -96,11 +107,13 @@ async def links_for(client: httpx.AsyncClient, doi: str | None) -> tuple[list[Li
     """Return data ``Link``s for the publication/dataset with ``doi``, and why they are
     incomplete (None when nothing failed).
 
-    No DOI → ``[]`` (cannot query without a source PID). 404 → ``[]``. Each
-    dataset/software target with a DOI becomes a Link: ``datacite:<doi>`` when DataCite
-    registered it, else the bare DOI. A non-JSON Scholix answer or a failed agency
-    lookup degrades (no links / bare DOIs) and is named in the reason, so an outage is
-    never indistinguishable from "this record has no data links".
+    No DOI → ``[]`` (cannot query without a source PID). Each dataset/software target
+    with a DOI becomes a Link: ``datacite:<doi>`` when DataCite registered it, else the
+    bare DOI. A failed or off-contract Scholix answer, or a failed agency lookup,
+    degrades (no links / bare DOIs) and is named in the reason: links are enrichment, so
+    an outage must not sink the resolve, and must never read as "this record has no
+    data links". ScholeXplorer answers a PID it has no links for with 200 and an empty
+    ``result``, so a 404 is a failure like any other.
 
     Reads only the first Scholix page: callers query publication source DOIs,
     where data targets are sparse (most edges are citations, which we drop), so
@@ -108,28 +121,22 @@ async def links_for(client: httpx.AsyncClient, doi: str | None) -> tuple[list[Li
     """
     if not doi:
         return [], None
-    resp = await _http.request_with_retry(
-        client,
-        "GET",
-        BASE_URL,
-        service="ScholeXplorer",
-        params={"sourcePid": doi},
-        not_found_returns=None,
-    )
-    if resp is None:  # 404 — no entry for this PID
-        return [], None
     try:
-        payload = resp.json()
-    except ValueError:
-        # Non-JSON body (e.g. HTML error page from a WAF/proxy) — Scholix links
-        # are enrichment only: no links, and the reason, rather than a parse error.
-        return [], (
-            f"ScholeXplorer answered HTTP {resp.status_code} with a non-JSON body "
-            f"({resp.headers.get('content-type')!r}); data links unknown"
+        payload = await _http.request_json(
+            client,
+            "GET",
+            BASE_URL,
+            service="ScholeXplorer",
+            params={"sourcePid": doi},
+            expect=dict,
+            check=_check_result,
         )
+    except DataAggregatorError as exc:
+        logger.warning("ScholeXplorer lookup failed for %r: %s", doi, exc)
+        return [], f"ScholeXplorer lookup failed ({type(exc).__name__}: {exc}); data links unknown"
     edges: list[tuple[str, str]] = []
-    for rec in payload.get("result", []) or []:
-        target = rec.get("target", {}) or {}
+    for rec in payload["result"]:
+        target = rec["target"]
         if (target.get("Type") or "").lower() not in _DATA_TYPES:
             continue
         target_doi = _doi_of(target.get("Identifier", []))
