@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `zenodo`, `dandi`, `gwas`, `openml` and `huggingface` resolve reject a malformed id
+  before sending a request. Each put the id into the request path unchecked, so an id
+  such as `zenodo:../../x?y=1` reached another endpoint or added query parameters, as
+  `cellxgene` did before 0.54.4. A Zenodo, OpenML or DANDI id must be digits, a GWAS id
+  `GCST` and digits (any case), and a HuggingFace id `name` or `owner/name`.
+
 ## [0.54.4] - 2026-09-30
 
 ### Fixed

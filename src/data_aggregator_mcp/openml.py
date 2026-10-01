@@ -9,6 +9,7 @@ auto-converted Parquet (operable: schema/preview/head/sql via the [operate] extr
 
 from __future__ import annotations
 
+import re
 from urllib.parse import quote
 
 import httpx
@@ -29,6 +30,8 @@ LIST = "https://www.openml.org/api/v1/json/data/list/data_name/{q}/limit/{n}"
 RECORD = "https://www.openml.org/api/v1/json/data/{did}"
 _LANDING = "https://www.openml.org/d/{did}"
 PREFIXES = {"openml"}
+# A dataset id is digits; it goes into the URL path.
+_DID_RE = re.compile(r"[0-9]+")
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 DEFAULT_TIMEOUT = 30.0
@@ -98,7 +101,7 @@ def _parquet_name(url: str, did: str) -> str:
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     did = local_id(resource_id, "openml", strip=True)
-    if not did:
+    if not _DID_RE.fullmatch(did):
         raise NotFoundError(f"malformed OpenML id {resource_id!r}")
     body = await _http.request_json(
         client,
