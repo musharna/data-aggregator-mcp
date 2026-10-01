@@ -165,12 +165,14 @@ async def test_each_wrapper_sends_what_it_is_given(wrapper: str) -> None:
     }
 
 
-@pytest.mark.parametrize("wrapper", ["request_with_retry", "request_xml", "request_json"])
+@pytest.mark.parametrize(
+    "wrapper", ["request_with_retry", "request_xml", "request_json", "request_json_with_headers"]
+)
 async def test_each_wrapper_defaults_to_30_seconds_and_3_tries(
     wrapper: str, waits: list[float]
 ) -> None:
     server = _Server(httpx.Response(503))
-    kwargs = {"expect": object} if wrapper == "request_json" else {}
+    kwargs = {"expect": object} if wrapper.startswith("request_json") else {}
     async with server.client() as c:
         with pytest.raises(
             UpstreamUnavailableError, match=r"^\[UpstreamUnavailableError\] svc exhausted 3 retries"
@@ -180,14 +182,16 @@ async def test_each_wrapper_defaults_to_30_seconds_and_3_tries(
     assert {r.extensions["timeout"]["read"] for r in server.requests} == {30.0}
 
 
-@pytest.mark.parametrize("wrapper", ["request_with_retry", "request_xml", "request_json"])
+@pytest.mark.parametrize(
+    "wrapper", ["request_with_retry", "request_xml", "request_json", "request_json_with_headers"]
+)
 async def test_each_wrapper_follows_a_redirect_by_default(wrapper: str) -> None:
     """httpx's AsyncClient does NOT follow redirects unless told to; `_http` does."""
     server = _Server(
         httpx.Response(302, headers={"Location": "https://x.test/there"}),
         httpx.Response(200, json={"ok": 1}),
     )
-    kwargs = {"expect": dict} if wrapper == "request_json" else {}
+    kwargs = {"expect": dict} if wrapper.startswith("request_json") else {}
     if wrapper == "request_xml":
         server.replies[1] = httpx.Response(200, text="<ok/>")
     async with server.client() as c:
@@ -228,3 +232,19 @@ def test_doi_path_keeps_slashes_and_encodes_every_other_reserved_character() -> 
     assert _http.doi_path("10.1002/(SICI)1097-4636#?;<>") == (
         "10.1002/%28SICI%291097-4636%23%3F%3B%3C%3E"
     )
+
+
+async def test_request_json_with_headers_returns_the_checked_body_and_the_headers(
+    waits: list[float],
+) -> None:
+    """The body goes through the same `expect` check and retry as request_json."""
+    ok = _Server(httpx.Response(200, json={"n": 1}, headers={"X-Total": "9"}))
+    async with ok.client() as c:
+        body, headers = await _http.request_json_with_headers(
+            c, "GET", _URL, service="t", expect=dict
+        )
+    assert body == {"n": 1}
+    assert headers["x-total"] == "9"
+    async with _Server(httpx.Response(200, json=[1])).client() as c:
+        with pytest.raises(UpstreamUnavailableError, match="expected dict JSON, got list"):
+            await _http.request_json_with_headers(c, "GET", _URL, service="t", expect=dict)
