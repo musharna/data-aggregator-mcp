@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
@@ -349,3 +350,63 @@ async def request_json_with_headers(
         max_retries=max_retries,
         parse=lambda resp: (parse(resp), resp.headers),
     )
+
+
+_GRAPHQL_HEADERS = {"Content-Type": "application/json", "Accept": "application/json"}
+
+
+def _graphql_check(check: Callable[[dict], None] | None) -> Callable[[dict], None]:
+    def check_body(body: dict) -> None:
+        if body.get("errors"):
+            return  # raised by ``graphql`` once the request is done, not retried
+        data = body.get("data")
+        if not isinstance(data, dict):
+            raise UpstreamEnvelopeError(f"no data object in {body!r:.200}")
+        if check is not None:
+            check(data)
+
+    return check_body
+
+
+async def graphql(
+    client: httpx.AsyncClient,
+    url: str,
+    query: str,
+    *,
+    service: str,
+    variables: Mapping[str, Any] | None = None,
+    max_retries: int = 3,
+    check: Callable[[dict], None] | None = None,
+) -> dict:
+    """POST ``query`` to a GraphQL endpoint and return the answer's ``data`` object.
+
+    GraphQL answers 200 whatever happened. ``errors`` (beside a null or partial
+    ``data``: a rejected query, a record the server does not have) raise
+    ``UpstreamUnavailableError`` quoting every message, without a retry: the same
+    query gets the same errors. A 200 with neither ``errors`` nor a ``data`` object is
+    a malformed body, retried and then raised, never an empty answer. ``check(data)``
+    checks the fields the caller reads, as ``request_json``'s ``check`` does.
+    """
+    payload: dict[str, Any] = {"query": query}
+    if variables is not None:
+        payload["variables"] = variables
+    # httpx upper-cases the method, so "post" would send the same request.
+    method = "POST"  # pragma: no mutate
+    body = await request_json(
+        client,
+        method,
+        url,
+        service=service,
+        content=json.dumps(payload),
+        headers=_GRAPHQL_HEADERS,
+        max_retries=max_retries,
+        expect=dict,
+        check=_graphql_check(check),
+    )
+    errors = body.get("errors")
+    if errors:
+        quoted = errors if isinstance(errors, list) else [errors]
+        messages = "; ".join(str(e.get("message") if isinstance(e, dict) else e) for e in quoted)
+        raise UpstreamUnavailableError(f"{service} answered GraphQL errors: {messages}")
+    data: dict = body["data"]
+    return data

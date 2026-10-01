@@ -14,7 +14,6 @@ replaced dropped every subject (ds000001: 6 of 136 files). Files are unverified
 
 from __future__ import annotations
 
-import json
 import re
 
 import httpx
@@ -35,8 +34,31 @@ _QUERY = (
     "query($ds:ID!,$tag:String!){snapshot(datasetId:$ds,tag:$tag)"
     "{files(recursive:true){filename size directory urls}}}"
 )
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+
+
+def _is_file(f: object) -> bool:
+    """A listed file typed as the schema types it: ``filename`` a string, ``urls`` null
+    or a list of strings."""
+    if not (isinstance(f, dict) and isinstance(f.get("filename"), str)):
+        return False
+    urls = f.get("urls")
+    return urls is None or (isinstance(urls, list) and all(isinstance(u, str) for u in urls))
+
+
+def _check_snapshot(data: dict) -> None:
+    """``snapshot`` is null, or an object whose ``files`` is null or a list of files
+    (``_is_file``). A null file would shorten the manifest, so it is off contract too."""
+    snapshot = data.get("snapshot")
+    listing = snapshot.get("files") if isinstance(snapshot, dict) else None
+    if not (
+        ("snapshot" in data and snapshot is None)
+        or (
+            isinstance(snapshot, dict)
+            and (listing is None or (isinstance(listing, list) and all(map(_is_file, listing))))
+        )
+    ):
+        raise _http.UpstreamEnvelopeError(f"no snapshot file list in {data!r:.200}")
 
 
 def _parse(doi: str) -> tuple[str, str] | None:
@@ -49,59 +71,45 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
     if parsed is None:
         return []
     ds, tag = parsed
-    body = await _http.request_json(
+    # A snapshot OpenNeuro does not have comes back as GraphQL errors ("Not Found",
+    # "Dataset ds999999 does not exist.") beside a null snapshot, so it raises naming
+    # the snapshot. A real HTTP 404 means the endpoint itself moved: no
+    # not_found_returns, it fails loud.
+    data = await _http.graphql(
         client,
-        "POST",
         GRAPHQL,
-        service="OpenNeuro snapshot files",
-        content=json.dumps({"query": _QUERY, "variables": {"ds": ds, "tag": tag}}),
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
+        _QUERY,
+        service=f"OpenNeuro snapshot {ds}@{tag}",
+        variables={"ds": ds, "tag": tag},
         max_retries=MAX_RETRIES,
-        # No not_found_returns: this GraphQL endpoint answers 200 with
-        # data.snapshot=null for a missing snapshot (handled below); a real
-        # HTTP 404 means the endpoint itself moved and should fail loud.
-        expect=dict,
+        check=_check_snapshot,
     )
-    # GraphQL reports failure INSIDE a 200: ``errors[]`` (usually with data=null). Read
-    # as an empty manifest it made the resolve look fine and a fetch "succeed" with
-    # zero files; it is an upstream failure and says so.
-    gql_errors = body.get("errors")
-    if gql_errors:
-        messages = "; ".join(
-            str(e.get("message") if isinstance(e, dict) else e) for e in gql_errors
-        )
-        raise UpstreamUnavailableError(f"OpenNeuro GraphQL error for {ds}@{tag}: {messages}")
-    snapshot = (body.get("data") or {}).get("snapshot") or {}
-    listing = snapshot.get("files") or []
+    listing = (data["snapshot"] or {}).get("files") or []
     # Every directory that holds a listed file, at any depth.
     parents: set[str] = set()
     for f in listing:
         if not f.get("directory"):
-            name = str(f.get("filename") or "")
+            name = f["filename"]
             parents.update(name[:i] for i, ch in enumerate(name) if ch == "/")
     # A directory entry is only redundant if its files are listed too. One with nothing
     # under it means the tree came back unexpanded, and dropping it would silently
     # truncate the manifest (git/datalad snapshots cannot hold empty directories).
+    # OpenNeuro spells a directory without a trailing slash ("sub-01").
     for f in listing:
-        if f.get("directory") and str(f.get("filename") or "").rstrip("/") not in parents:
+        if f.get("directory") and f["filename"] not in parents:
             raise UpstreamUnavailableError(
-                f"OpenNeuro snapshot {ds}@{tag}: directory {f.get('filename')!r} came back "
+                f"OpenNeuro snapshot {ds}@{tag}: directory {f['filename']!r} came back "
                 "without its files; refusing to return a partial manifest"
             )
-    out: list[FileEntry] = []
-    for f in listing:
-        if f.get("directory"):
-            continue
-        urls = f.get("urls") or []
-        if not urls:
-            continue
-        out.append(
-            FileEntry(
-                name=f.get("filename") or "",
-                size=f.get("size"),
-                url=urls[0],
-                source="openneuro",
-            )
+    # A file listed without a download URL stays in the manifest (url None; fetch
+    # reports it skipped) rather than vanishing from it.
+    return [
+        FileEntry(
+            name=f["filename"],
+            size=f.get("size"),
+            url=(f.get("urls") or [None])[0],
+            source="openneuro",
         )
-    return out
+        for f in listing
+        if not f.get("directory")
+    ]

@@ -168,7 +168,9 @@ async def test_graphql_errors_are_all_quoted():
     async with _Server(gql=gql).client() as c:
         with pytest.raises(UpstreamUnavailableError) as err:
             await pdb.resolve(c, "pdb:1BG2")
-    assert str(err.value) == "[UpstreamUnavailableError] RCSB PDB GraphQL error: first; second"
+    assert str(err.value) == (
+        "[UpstreamUnavailableError] RCSB PDB graphql answered GraphQL errors: first; second"
+    )
 
 
 @pytest.mark.asyncio
