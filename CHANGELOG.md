@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.8] - 2026-10-01
+
 ### Fixed
 
 - Full-text, PMC-id and Scholix data-link lookups report a broken answer as a failure
