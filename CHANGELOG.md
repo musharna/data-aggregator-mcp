@@ -6,6 +6,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `cellxgene` resolve accepts only a collection UUID. The id went into the request path
+  unchecked, so `cellxgene:../collections` downloaded the ~3 MB collection list twice and
+  was reported as a CELLxGENE outage, and an id with `?` or `/` reached other endpoints
+  and query parameters. Any other id is now "malformed", before a request is sent; an
+  upper-case or padded UUID is canonicalised.
+- `cellxgene` resolve no longer reports a CELLxGENE error as "no such collection". A
+  missing collection is a 404; a 200 that names no collection (an error envelope) is now
+  retried and then reported as an upstream failure.
+- `cellxgene` search no longer lists a collection that has no id as an unresolvable
+  `cellxgene:` record, and a file with no title or type is named from its URL's path
+  without the query string.
+
 ## [0.54.3] - 2026-09-30
 
 ### Fixed

@@ -15,7 +15,10 @@ unverified fetch, like DANDI/PDB). kind="dataset".
 
 from __future__ import annotations
 
+import posixpath
+import uuid
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -28,7 +31,7 @@ from data_aggregator_mcp.models import (
     Link,
     compact,
     local_id,
-    normalize_access,
+    year_from,
 )
 
 API = "https://api.cellxgene.cziscience.com/curation/v1"
@@ -43,8 +46,12 @@ _DESC_CAP = 500  # description truncation
 DEFAULT_TIMEOUT = 60.0  # the collections list is ~3 MB
 MAX_RETRIES = 2
 
+_ACCEPT_JSON = {"Accept": "application/json"}
+
 # nested-dataset label fields rolled into the searchable blob + subjects[].
 _LABEL_FIELDS = ("tissue", "disease", "assay")
+# a collection's own text fields in the searchable blob.
+_TEXT_FIELDS = ("name", "description", "doi")
 
 
 def _labels(collection: dict, field: str) -> list[str]:
@@ -68,11 +75,7 @@ def _subjects(collection: dict) -> list[str]:
 
 
 def _searchable(collection: dict) -> str:
-    parts: list[str] = [
-        collection.get("name") or "",
-        collection.get("description") or "",
-        collection.get("doi") or "",
-    ]
+    parts = [v for f in _TEXT_FIELDS if isinstance(v := collection.get(f), str)]
     parts += collection.get("consortia") or []
     parts += _labels(collection, "organism")
     parts += _subjects(collection)
@@ -94,12 +97,10 @@ def _year(collection: dict, pm: dict) -> int | None:
     y = pm.get("published_year")
     if isinstance(y, int):
         return y
-    s = collection.get("published_at") or ""
-    return int(s[:4]) if s[:4].isdigit() else None
+    return year_from(collection.get("published_at"))
 
 
-def _links(collection: dict) -> list[Link]:
-    cid = collection.get("collection_id") or ""
+def _links(collection: dict, cid: str) -> list[Link]:
     out = [
         Link(
             rel="landing_page",
@@ -109,7 +110,8 @@ def _links(collection: dict) -> list[Link]:
     for link in collection.get("links") or []:
         url = link.get("link_url")
         if url:
-            out.append(Link(rel=(link.get("link_type") or "related").lower(), target_id=url))
+            rel = str(link.get("link_type") or "").lower() or "related"
+            out.append(Link(rel=rel, target_id=url))
     return out
 
 
@@ -120,7 +122,7 @@ def _truncate(text: str | None) -> str | None:
 
 
 def _normalize(collection: dict) -> DataResource:
-    cid = collection.get("collection_id") or ""
+    cid = collection["collection_id"]
     pm = collection.get("publisher_metadata") or {}
     return DataResource(
         id=f"cellxgene:{cid}",
@@ -133,27 +135,43 @@ def _normalize(collection: dict) -> DataResource:
         doi=collection.get("doi") or None,
         organism=_labels(collection, "organism"),
         subjects=_subjects(collection),
-        access=normalize_access("open"),
+        access="open",
         last_updated=collection.get("revised_at") or collection.get("published_at") or None,
-        files=[],
-        links=_links(collection),
+        links=_links(collection, cid),
+    )
+
+
+async def _get_json(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    service: str,
+    expect: type | tuple[type, ...],
+    **kwargs: Any,
+) -> Any:
+    """GET ``url`` as JSON with this source's timeout and retry budget."""
+    # httpx upper-cases the method, so "get" would send the same request.
+    method = "GET"  # pragma: no mutate
+    return await _http.request_json(
+        client,
+        method,
+        url,
+        service=service,
+        expect=expect,
+        headers=_ACCEPT_JSON,
+        timeout=DEFAULT_TIMEOUT,
+        max_retries=MAX_RETRIES,
+        **kwargs,
     )
 
 
 async def _collections(client: httpx.AsyncClient) -> list[dict]:
-    body: Any = await _http.request_json(
-        client,
-        "GET",
-        f"{API}/collections",
-        service="CELLxGENE search",
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
-        # The API promises a bare JSON array. A 404 (endpoint moved) or a 200 error
-        # envelope is an outage and must raise — coercing it to [] read as "no data".
-        expect=list,
-    )
-    return list(body)
+    # The API promises a bare JSON array. A 404 (endpoint moved) or a 200 error
+    # envelope is an outage and must raise — coercing it to [] read as "no data".
+    body = await _get_json(client, f"{API}/collections", service="CELLxGENE search", expect=list)
+    # A collection with no id could be neither cited nor resolved; none exist live
+    # (0/396, 2026-09-30), so one is dropped rather than shown as "cellxgene:".
+    return [c for c in body if isinstance(c, dict) and c.get("collection_id")]
 
 
 async def search(
@@ -163,8 +181,7 @@ async def search(
     terms = [t for t in query.lower().split() if t]
     matched = [c for c in collections if all(t in _searchable(c) for t in terms)]
     capped = min(size, MAX_SIZE)
-    window = matched[offset : offset + capped] if capped else matched
-    return len(matched), [compact(_normalize(c)) for c in window]
+    return len(matched), [compact(_normalize(c)) for c in matched[offset : offset + capped]]
 
 
 def _file_manifest(collection: dict) -> list[FileEntry]:
@@ -176,29 +193,39 @@ def _file_manifest(collection: dict) -> list[FileEntry]:
             if not url:
                 continue
             ext = (a.get("filetype") or "").lower()
-            name = f"{title}.{ext}" if title and ext else url.rsplit("/", 1)[-1]
+            name = f"{title}.{ext}" if title and ext else posixpath.basename(urlsplit(url).path)
             out.append(FileEntry(name=name, size=a.get("filesize"), url=url, source="cellxgene"))
             if len(out) >= MANIFEST_CAP:
                 return out
     return out
 
 
+def _check_collection(body: dict) -> None:
+    """A missing collection is a 404. A 200 that names no collection (an error envelope
+    such as ``{"detail": ...}``) is malformed: retried, then an outage, not "no such"."""
+    if not body.get("collection_id"):
+        raise _http.UpstreamEnvelopeError(
+            f"CELLxGENE collection 200 without collection_id: keys {sorted(body)}"
+        )
+
+
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     cid = local_id(resource_id, "cellxgene", strip=True)
-    if not cid:
-        raise NotFoundError(f"malformed CELLxGENE id {resource_id!r}")
-    collection = await _http.request_json(
+    # Every collection id is a UUID. The id goes into the URL path, so anything else
+    # (`../collections`, `x?visibility=...`, `a/b`) would reach another endpoint.
+    try:
+        cid = str(uuid.UUID(cid))
+    except ValueError:
+        raise NotFoundError(f"malformed CELLxGENE id {resource_id!r}") from None
+    collection = await _get_json(
         client,
-        "GET",
         f"{API}/collections/{cid}",
         service="CELLxGENE resolve",
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         not_found_returns=None,
+        check=_check_collection,
         expect=dict,
     )
-    if not collection or not collection.get("collection_id"):
+    if collection is None:
         raise NotFoundError(f"CELLxGENE has no collection {cid}")
     record = _normalize(collection)
     record.files = _file_manifest(collection)
