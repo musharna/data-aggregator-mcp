@@ -58,14 +58,25 @@ def _doi_of(identifiers: list[dict] | None) -> str | None:
     return None
 
 
+def _is_link(rec: object) -> bool:
+    """A link object whose fields ``links_for`` reads have the shape it reads them as:
+    a ``target`` object, and, when present, a ``RelationshipType`` object and a list of
+    identifier objects."""
+    if not (isinstance(rec, dict) and isinstance(rec.get("target"), dict)):
+        return False
+    relationship = rec.get("RelationshipType")
+    identifiers = rec["target"].get("Identifier")
+    return (relationship is None or isinstance(relationship, dict)) and (
+        identifiers is None
+        or (isinstance(identifiers, list) and all(isinstance(i, dict) for i in identifiers))
+    )
+
+
 def _check_result(body: dict) -> None:
     """A Links search answers ``result``, empty when nothing links to the PID; each
-    entry is a link object carrying its ``target``."""
+    entry is a link object (``_is_link``)."""
     result = body.get("result")
-    if not (
-        isinstance(result, list)
-        and all(isinstance(r, dict) and isinstance(r.get("target"), dict) for r in result)
-    ):
+    if not (isinstance(result, list) and all(_is_link(r) for r in result)):
         raise _http.UpstreamEnvelopeError(f"no result list of link objects in {body!r:.200}")
 
 

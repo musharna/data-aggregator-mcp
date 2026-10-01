@@ -62,6 +62,22 @@ async def test_an_idconv_answer_without_a_record_is_a_failure_not_absent_from_pm
     assert "no records list of objects" in reason
 
 
+_BAD_LINK = "no result list of link objects"
+
+
+def _data_link(**fields: object) -> dict:
+    """A dataset link, with ``fields`` replacing what ScholeXplorer sends."""
+    link: dict = {
+        "RelationshipType": {"Name": "IsSupplementedBy"},
+        "target": {"Type": "dataset", "Identifier": [{"ID": "10.5/a", "IDScheme": "doi"}]},
+    }
+    if "RelationshipType" in fields:
+        link["RelationshipType"] = fields["RelationshipType"]
+    if "Identifier" in fields:
+        link["target"]["Identifier"] = fields["Identifier"]
+    return link
+
+
 @pytest.mark.parametrize(
     ("status", "body", "cause"),
     [
@@ -69,10 +85,17 @@ async def test_an_idconv_answer_without_a_record_is_a_failure_not_absent_from_pm
         (200, [], "expected dict JSON, got list"),
         (200, {"error": "x"}, "no result list of link objects"),
         (200, {"result": [{"target": None}]}, "no result list of link objects"),
+        # Review of #159: each field links_for reads, off contract, inside a data target.
+        (200, {"result": [_data_link(RelationshipType="IsSupplementedBy")]}, _BAD_LINK),
+        (200, {"result": [_data_link(Identifier="10.5/a")]}, _BAD_LINK),
+        (200, {"result": [_data_link(Identifier=["10.5/a"])]}, _BAD_LINK),
     ],
 )
 async def test_a_failed_scholix_answer_degrades_to_a_reason(status, body, cause):
     async with _client(200, {"result": []}) as c:  # the real answer for a PID with no links
+        assert await scholix.links_for(c, "10.9/x") == ([], None)
+    # A data target without a relation or identifiers is on contract: skipped, no failure.
+    async with _client(200, {"result": [{"target": {"Type": "dataset"}}]}) as c:
         assert await scholix.links_for(c, "10.9/x") == ([], None)
     async with _client(status, body) as c:
         links, reason = await scholix.links_for(c, "10.9/x")
