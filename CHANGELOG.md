@@ -6,6 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- BioStudies file download URLs escape the file's path. A name with a space gave an
+  invalid URL (BioImage Archive's S-BIAD2787 has 92 such files), and a `#`, `?` or `%`
+  in a name requested a different file: `well #3.tif` asked for `well `.
+
 ## [0.54.9] - 2026-10-01
 
 ### Fixed
