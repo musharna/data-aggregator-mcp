@@ -17,6 +17,8 @@ it, so a search row is titled by its trait.
 
 from __future__ import annotations
 
+import re
+
 import httpx
 
 from data_aggregator_mcp import _http
@@ -29,6 +31,8 @@ RECORD = f"{_API}/studies/{{acc}}"
 PUBLICATION = f"{_API}/publications/{{pmid}}"
 _LANDING = "https://www.ebi.ac.uk/gwas/studies/{acc}"
 PREFIXES = {"gwas"}
+# A study accession is GCST + digits; it goes into the URL path.
+_ACC_RE = re.compile(r"GCST[0-9]+", re.IGNORECASE)
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 # v2 is slow on every endpoint: 21-33 s per request, successful replies as late as
@@ -96,8 +100,8 @@ async def search(
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    acc = local_id(resource_id, "gwas", strip=True)
-    if not acc:
+    acc = local_id(resource_id, "gwas", strip=True, upper=True)
+    if not _ACC_RE.fullmatch(acc):
         raise NotFoundError(f"malformed GWAS id {resource_id!r}")
     body = await _http.request_json(
         client,

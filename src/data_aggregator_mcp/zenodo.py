@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://zenodo.org"
 # Location of the /versions/latest redirect: the latest record's API url.
 _RECORD_URL_RE = re.compile(r"^https://zenodo\.org/api/records/(\d+)$")
+_RECORD_ID_RE = re.compile(r"[0-9]+")
 PREFIXES = frozenset({"zenodo"})  # bare-numeric ids also route here (see router.resolve)
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 3
@@ -246,6 +247,10 @@ async def _with_superseded_by(client: httpx.AsyncClient, rid: str, r: DataResour
 async def resolve(client: httpx.AsyncClient, record_id: str) -> DataResource:
     """Resolve a Zenodo record by id (``zenodo:123`` or bare ``123``)."""
     rid = local_id(record_id, "zenodo")
+    # A record id is digits, and it goes into the URL path: anything else
+    # (`../../x?y=1`) would reach another endpoint.
+    if not _RECORD_ID_RE.fullmatch(rid):
+        raise NotFoundError(f"malformed Zenodo id {record_id!r}")
     cached = _SEARCH_CACHE.get(f"zenodo:{rid}")
     if cached is not MISS:  # seeded by a recent search — full record already in hand
         return await _with_superseded_by(client, rid, _normalize(cached))

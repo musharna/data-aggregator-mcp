@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -14,6 +15,9 @@ from data_aggregator_mcp.models import Creator, DataResource, FileEntry, Metrics
 API = "https://huggingface.co/api/datasets"
 FILE_BASE = "https://huggingface.co/datasets"
 PREFIXES = {"hf"}
+# A dataset id is [owner/]name of ASCII letters, digits, "_", "." and "-", each part
+# starting alphanumeric; the Hub forbids "..". It goes into the URL path.
+_DATASET_ID_RE = re.compile(r"[A-Za-z0-9][\w.-]*(?:/[A-Za-z0-9][\w.-]*)?", re.ASCII)
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 DEFAULT_TIMEOUT = 30.0
@@ -90,6 +94,8 @@ async def search(
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     ds_id = local_id(resource_id, "hf")
+    if not _DATASET_ID_RE.fullmatch(ds_id) or ".." in ds_id:
+        raise NotFoundError(f"malformed HuggingFace id {resource_id!r}")
     try:
         body = await _http.request_json(
             client,

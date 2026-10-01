@@ -10,6 +10,7 @@ documented — this is a manifest, not a guarantee of a bulk pull. kind="dataset
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import httpx
@@ -30,6 +31,8 @@ API = "https://api.dandiarchive.org/api"
 _LANDING = "https://dandiarchive.org/dandiset/{id}"
 _DOWNLOAD = "https://api.dandiarchive.org/api/assets/{asset_id}/download/"
 PREFIXES = {"dandi"}
+# A dandiset id is digits (000004); it goes into the URL path.
+_IDENT_RE = re.compile(r"[0-9]+")
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 ASSET_PAGE = 100  # manifest cap; large dandisets are truncated (documented)
@@ -156,7 +159,7 @@ async def _asset_manifest(client: httpx.AsyncClient, ident: str, version: str) -
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     ident = local_id(resource_id, "dandi", strip=True)
-    if not ident:
+    if not _IDENT_RE.fullmatch(ident):
         raise NotFoundError(f"malformed DANDI id {resource_id!r}")
     detail = await _get_json(
         client,
