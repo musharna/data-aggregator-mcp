@@ -34,6 +34,8 @@ def doi_path(doi: str) -> str:
 
 
 _RETRY_AFTER_CAP = 60.0
+# httpx headers are case-insensitive, so any spelling of the name reads the same header.
+_RETRY_AFTER = "Retry-After"
 _RETRYABLE_STATUSES = (429, 500, 502, 503, 504)
 # 2xx statuses that carry no body by definition.
 _NO_CONTENT_STATUSES = (204, 205)
@@ -160,7 +162,7 @@ async def _retrying(
             raise NotFoundError(f"{service} → HTTP 404: {resp.text[:200]}")
         if resp.status_code in _RETRYABLE_STATUSES:
             if retry:
-                asked = _retry_after(resp.headers.get("Retry-After"), datetime.now(UTC))
+                asked = _retry_after(resp.headers.get(_RETRY_AFTER), datetime.now(UTC))
                 await asyncio.sleep(min(delay if asked is None else asked, _RETRY_AFTER_CAP))
                 delay *= 2
                 continue
