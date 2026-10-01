@@ -15,7 +15,7 @@ import re
 import httpx
 
 from data_aggregator_mcp import _http
-from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import (
     Creator,
     DataResource,
@@ -82,6 +82,15 @@ async def _hydrate(client: httpx.AsyncClient, ids: list[str]) -> dict[str, dict]
         max_retries=MAX_RETRIES,
         expect=dict,
     )
+    # GraphQL reports failure INSIDE a 200: ``errors[]`` and no ``data`` (RCSB's answer
+    # to a query it rejects, e.g. a field renamed upstream). Read as zero entries it made
+    # every resolve "no entry" and every search a hit count with no records.
+    gql_errors = body.get("errors")
+    if gql_errors:
+        messages = "; ".join(
+            str(e.get("message") if isinstance(e, dict) else e) for e in gql_errors
+        )
+        raise UpstreamUnavailableError(f"RCSB PDB GraphQL error: {messages}")
     entries = ((body or {}).get("data") or {}).get("entries") or []
     return {e["rcsb_id"]: e for e in entries if e and e.get("rcsb_id")}
 

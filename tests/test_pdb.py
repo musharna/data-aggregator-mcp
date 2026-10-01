@@ -326,3 +326,41 @@ async def test_live_every_listed_structure_file_exists():
         small = await pdb.resolve(c, "pdb:1BG2")
         statuses = {f.name: (await c.head(f.url)).status_code for f in large.files + small.files}
     assert statuses == {"4V6X.cif": 200, "1BG2.cif": 200, "1BG2.pdb": 200}
+
+
+# RCSB's live answer to a query it rejects (2026-09-30): HTTP 200, no ``data`` key.
+_GQL_ERROR = {
+    "errors": [
+        {
+            "message": "Validation error (FieldUndefined@[entries/nosuchfield]) : Field "
+            "'nosuchfield' in type 'CoreEntry' is undefined",
+            "extensions": {"classification": "ValidationError"},
+        }
+    ]
+}
+
+
+@pytest.mark.asyncio
+async def test_graphql_error_is_an_outage_not_a_missing_entry():
+    """GraphQL reports failure inside a 200. Read as zero entries, a query RCSB
+    rejects (a field renamed upstream) made every resolve say "no entry" and every
+    search return its hit count with no records."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    broken = {"on": True}
+
+    def handler(request):
+        if request.url.host == "search.rcsb.org":
+            return httpx.Response(200, json=_SEARCH)
+        return httpx.Response(200, json=_GQL_ERROR if broken["on"] else _GRAPHQL)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        with pytest.raises(UpstreamUnavailableError, match="FieldUndefined") as err:
+            await pdb.resolve(c, "pdb:1BG2")
+        assert not isinstance(err.value, NotFoundError)
+        with pytest.raises(UpstreamUnavailableError, match="FieldUndefined"):
+            await pdb.search(c, "kinesin", size=2)
+        broken["on"] = False  # positive control: the same calls succeed on a good body
+        assert (await pdb.resolve(c, "pdb:1BG2")).id == "pdb:1BG2"
+        total, recs = await pdb.search(c, "kinesin", size=2)
+    assert total == 1997 and [r.id for r in recs] == ["pdb:1GOJ", "pdb:1BG2"]
