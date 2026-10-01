@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- OpenNeuro file manifests and PDB records report a broken GraphQL answer as a failure
+  instead of an empty one. A 200 without a `data` object read as an empty OpenNeuro
+  manifest or "no PDB entry"; a string where a list belongs raised a bare error out of
+  `resolve`; an OpenNeuro `urls` string became the download URL `"h"`. An OpenNeuro
+  file listed without a download URL now stays in the manifest (fetch reports it
+  skipped) instead of being dropped from it.
+
 ## [0.54.8] - 2026-10-01
 
 ### Fixed
