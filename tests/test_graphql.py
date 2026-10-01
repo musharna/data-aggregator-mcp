@@ -103,6 +103,14 @@ async def test_graphql_without_a_data_object_is_malformed(body):
     assert len(srv.requests) == 2
 
 
+async def test_graphql_tries_a_malformed_answer_three_times_by_default():
+    srv = _Server({})
+    async with srv.client() as c:
+        with pytest.raises(UpstreamUnavailableError, match="after 3 tries"):
+            await _http.graphql(c, _URL, "{a}", service="S")
+    assert len(srv.requests) == 3
+
+
 async def test_graphql_check_sees_data_and_its_failure_is_retried():
     seen: list[object] = []
 
