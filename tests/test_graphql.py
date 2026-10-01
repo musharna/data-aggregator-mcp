@@ -209,6 +209,28 @@ async def test_an_openneuro_file_without_urls_stays_in_the_manifest():
     ]
 
 
+async def test_an_openneuro_url_list_with_nulls_is_read_for_its_first_url():
+    """``urls: [String]`` allows null entries (review of #161): the file's URL is the
+    first one present, and a list of nulls leaves it url-less, never a failed snapshot.
+    Positive control: a non-string entry is still off contract."""
+    listing = [
+        {**_FILE, "filename": "a.tsv", "urls": [None, "https://x/a"]},
+        {**_FILE, "filename": "b.tsv", "urls": [None]},
+        _FILE,
+    ]
+    async with _Server({"data": {"snapshot": {"files": listing}}}).client() as c:
+        files = await openneuro.files(c, _DOI)
+    assert [(f.name, f.url) for f in files] == [
+        ("a.tsv", "https://x/a"),
+        ("b.tsv", None),
+        ("README", "https://x/README"),
+    ]
+    bad = {"data": {"snapshot": {"files": [{**_FILE, "urls": [None, 5]}]}}}
+    async with _Server(bad).client() as c:
+        with pytest.raises(UpstreamUnavailableError, match="no snapshot file list"):
+            await openneuro.files(c, _DOI)
+
+
 # --- RCSB PDB ---------------------------------------------------------------------
 
 

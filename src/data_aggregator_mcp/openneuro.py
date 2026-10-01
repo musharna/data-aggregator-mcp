@@ -39,11 +39,13 @@ MAX_RETRIES = 2
 
 def _is_file(f: object) -> bool:
     """A listed file typed as the schema types it: ``filename`` a string, ``urls`` null
-    or a list of strings."""
+    or a list of strings and nulls (``[String]``)."""
     if not (isinstance(f, dict) and isinstance(f.get("filename"), str)):
         return False
     urls = f.get("urls")
-    return urls is None or (isinstance(urls, list) and all(isinstance(u, str) for u in urls))
+    return urls is None or (
+        isinstance(urls, list) and all(u is None or isinstance(u, str) for u in urls)
+    )
 
 
 def _check_snapshot(data: dict) -> None:
@@ -101,13 +103,13 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
                 f"OpenNeuro snapshot {ds}@{tag}: directory {f['filename']!r} came back "
                 "without its files; refusing to return a partial manifest"
             )
-    # A file listed without a download URL stays in the manifest (url None; fetch
-    # reports it skipped) rather than vanishing from it.
+    # A file's URL is the first one present. A file listed without one stays in the
+    # manifest (url None; fetch reports it skipped) rather than vanishing from it.
     return [
         FileEntry(
             name=f["filename"],
             size=f.get("size"),
-            url=(f.get("urls") or [None])[0],
+            url=next((u for u in f.get("urls") or [] if u is not None), None),
             source="openneuro",
         )
         for f in listing
