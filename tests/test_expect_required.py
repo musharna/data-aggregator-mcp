@@ -22,7 +22,11 @@ from data_aggregator_mcp import _http, router
 from data_aggregator_mcp.errors import UpstreamUnavailableError
 
 # An id each source's resolve accepts as well-formed, so the request is actually sent.
-_IDS = {"omicsdi": "omicsdi:pride:PXD000001", "pdb": "pdb:1ABC"}
+_IDS = {
+    "cellxgene": "cellxgene:af893e86-8e9f-41f1-a474-ef05359b1fb7",
+    "omicsdi": "omicsdi:pride:PXD000001",
+    "pdb": "pdb:1ABC",
+}
 
 # Parse JSON outside request_json; the same class of miss, not covered by `expect`.
 _OUTSIDE = {("uniprot", "search"): "reads resp.json() after request_with_retry (needs a header)"}
