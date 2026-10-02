@@ -8,6 +8,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- An OpenAIRE search answer missing its result list or hit count is reported as a
+  malformed answer instead of zero hits, a record answer that is not a record (an
+  empty object or an error message) is no longer returned as an untitled record, and
+  a wrong-typed field no longer escapes as a bare error.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
