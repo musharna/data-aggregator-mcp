@@ -12,6 +12,7 @@ live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 
 
 _ARTICLE = {
     "id": 31375579,
+    "doi": "10.6084/m9.figshare.31375579.v2",
     "files": [
         {
             "name": "small.csv",
