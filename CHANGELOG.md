@@ -6,6 +6,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- OpenML `resolve` reports a dataset OpenML does not have as not found instead of as
+  an outage. OpenML answers an unknown id with HTTP 412 (error code 111), which was
+  read as the service failing. `openml:0` is refused as malformed without a request.
+- A zero-padded OpenML id (`openml:0061`) resolves as its dataset (`openml:61`). It
+  was sent as typed, came back as a second id for the same dataset, and carried a
+  Parquet URL that does not exist.
+- An OpenML record or search answer missing the object the adapter reads is reported
+  as a malformed answer instead of "no dataset" or zero hits, and a wrong-typed field
+  or an unexpected 412 body no longer escapes as a bare `AttributeError` or
+  `TypeError`.
+
 ## [0.54.10] - 2026-10-01
 
 ### Fixed

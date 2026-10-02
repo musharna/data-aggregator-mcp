@@ -106,8 +106,10 @@ async def test_resolve_attaches_arff_and_parquet():
 
 @pytest.mark.asyncio
 async def test_resolve_missing_raises():
+    # Live 2026-10-01: /data/99999999 → 412 {"error":{"code":"111","message":"Unknown dataset"}}
+    unknown = {"error": {"code": "111", "message": "Unknown dataset"}}
     async with httpx.AsyncClient(
-        transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))
+        transport=httpx.MockTransport(lambda r: httpx.Response(412, json=unknown))
     ) as c:
         with pytest.raises(NotFoundError):
             await openml.resolve(c, "openml:999999")

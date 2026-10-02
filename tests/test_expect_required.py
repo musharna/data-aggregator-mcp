@@ -100,8 +100,8 @@ def test_every_request_json_call_names_expect_itself() -> None:
 
 
 # A body read outside `_http` on purpose. OpenML's 412 is an error status, not an
-# answer: the body only says whether it means "no results" (code 372).
-_PARSES_JSON_ITSELF = {"openml.py:_is_no_results"}
+# answer: the body only says what it means ("no results" code 372, "unknown dataset" 111).
+_PARSES_JSON_ITSELF = {"openml.py:_error_code"}
 
 
 def _functions_calling_json(tree: ast.AST, path: str) -> list[str]:
