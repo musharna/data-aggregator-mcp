@@ -151,3 +151,75 @@ async def test_live_ro_crate_of_a_record_with_and_without_orcids_is_flattened() 
     assert all(graph[a]["@type"] == "Person" and graph[a]["name"] for a in authors)
     assert len(graph["./"]["hasPart"]) == len(out["files"]) > 0
 
+
+# --- exact output -----------------------------------------------------------
+# test_ro_crate.py checks a handful of fields by lookup, so a renamed or emptied key
+# (description, identifier, license, datePublished, author, a file's name or
+# contentSize, the descriptor's @type or about) passed: 41 mutants survived (#88).
+
+
+def test_full_record_renders_exactly() -> None:
+    r = DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="Rice genomes",
+        description="d",
+        doi="10.5281/zenodo.1",
+        creators=[Creator(name="A. Author", orcid="0000-0002-1825-0097")],
+        year=2024,
+        license="cc-by-4.0",
+        files=[
+            FileEntry(name="a.csv", url="https://x/a.csv", mime="text/csv", size=10),
+            FileEntry(name="empty.txt", url="https://x/empty.txt", size=0),
+            FileEntry(name="b.bin"),
+        ],
+    )
+    assert ro_crate.render(r) == {
+        "@context": "https://w3id.org/ro/crate/1.1/context",
+        "@graph": [
+            _DESCRIPTOR,
+            {
+                "@id": "./",
+                "@type": "Dataset",
+                "name": "Rice genomes",
+                "description": "d",
+                "identifier": "https://doi.org/10.5281/zenodo.1",
+                "license": "cc-by-4.0",
+                "datePublished": "2024",
+                "author": [{"@id": "https://orcid.org/0000-0002-1825-0097"}],
+                "hasPart": [
+                    {"@id": "https://x/a.csv"},
+                    {"@id": "https://x/empty.txt"},
+                    {"@id": "b.bin"},
+                ],
+            },
+            {
+                "@id": "https://orcid.org/0000-0002-1825-0097",
+                "@type": "Person",
+                "name": "A. Author",
+            },
+            {
+                "@id": "https://x/a.csv",
+                "@type": "File",
+                "name": "a.csv",
+                "encodingFormat": "text/csv",
+                "contentSize": 10,
+            },
+            # A size of 0 is a size; no mime type means no encodingFormat.
+            {"@id": "https://x/empty.txt", "@type": "File", "name": "empty.txt", "contentSize": 0},
+            # No URL: the file is identified by its name, and no size means no contentSize.
+            {"@id": "b.bin", "@type": "File", "name": "b.bin"},
+        ],
+    }
+
+
+def test_bare_record_renders_only_what_it_has() -> None:
+    """Absent optional fields are omitted, not written as null or empty."""
+    r = DataResource(
+        id="x:1", source="x", kind="dataset", title="t", description="", license="", year=None
+    )
+    assert ro_crate.render(r) == {
+        "@context": "https://w3id.org/ro/crate/1.1/context",
+        "@graph": [_DESCRIPTOR, {"@id": "./", "@type": "Dataset", "name": "t", "hasPart": []}],
+    }
