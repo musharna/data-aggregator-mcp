@@ -88,7 +88,9 @@ _NOT_THE_INDEX = [
 async def test_a_page_that_is_not_the_study_index_is_upstream_trouble(page):
     with pytest.raises(
         UpstreamUnavailableError,
-        match=r"^\[UpstreamUnavailableError\] MetaboLights files: no directory index of MTBLS1 in ",
+        # The answer is quoted to its first 200 characters (the another-study page is 2 KB).
+        match=r"^\[UpstreamUnavailableError\] MetaboLights files: no directory index of MTBLS1 "
+        rf"in the answer: {_quoted(page[:200])}$",
     ):
         await _files(page)
     # Positive control: the verbatim index is read.
@@ -108,6 +110,8 @@ _NOT_A_NAME = [
     "x.txt?C=N",
     "x.txt#top",
     ".",
+    "a%2Fb.txt",
+    "a%2fb.txt",
 ]
 
 

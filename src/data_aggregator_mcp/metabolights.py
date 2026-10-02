@@ -43,7 +43,8 @@ _HREF = re.compile(r'href="([^"?/][^"]*)"')
 # mod_autoindex writes each entry's href as html_escape(os_escape_path(name)), with a
 # `./` before a name whose first segment holds a `:`. Once the HTML escaping is undone,
 # an entry is one percent-escaped path segment: no raw `/` but a directory's trailing
-# one, no raw `?` or `#`, never `.` or `..`.
+# one, no raw `?` or `#`, never `.` or `..`, and no escaped `/` (`%2F`), which no
+# file name holds.
 _ENTRY = re.compile(r"(?:\./)?([^/?#]+)(/?)")
 
 
@@ -60,7 +61,7 @@ def _listing_files(page: str, acc: str) -> list[str]:
     out: list[str] = []
     for href in _HREF.findall(page):
         entry = _ENTRY.fullmatch(html.unescape(href))
-        if entry is None or unquote(entry[1]) in (".", ".."):
+        if entry is None or unquote(entry[1]) in (".", "..") or "%2F" in entry[1].upper():
             raise UpstreamUnavailableError(
                 f"MetaboLights files: {href!r} in the index of {acc} is not a name in it"
             )
@@ -101,7 +102,7 @@ async def files(client: httpx.AsyncClient, accession: str) -> list[FileEntry]:
     return [
         FileEntry(
             name=name,
-            url=base + quote(name, safe=""),
+            url=base + quote(name),  # a name holds no `/` (_ENTRY), so it is one segment
             checksum=f"sha256:{sha256[name]}" if name in sha256 else None,
             source="metabolights",
         )
