@@ -41,9 +41,20 @@ from data_aggregator_mcp.errors import ValidationError
 _PARQUET_EXTS = (".parquet", ".pq")
 DEFAULT_ROW_CAP = 1000
 
+# The SQL the engine runs itself. Module constants, so the case-only rewrites a mutation
+# run makes of an inline literal (SQL keywords and names are case-insensitive) cannot
+# arise; the tests that drive each statement are named beside it.
+_PARQUET_READER = "read_parquet"  # test_peek_format_parity_parquet_vs_csv
+_CSV_READER = "read_csv_auto"  # test_peek_format_parity_parquet_vs_csv
+_LOAD_HTTPFS = "INSTALL httpfs; LOAD httpfs;"  # test_user_sql_cannot_reach_the_network
+# test_local_file_read_rejected, test_user_sql_cannot_reach_the_network_via_any_remote_filesystem
+_LOCKDOWN = ("SET enable_external_access=false;", "SET lock_configuration=true;")
+_SUMMARIZE = "SUMMARIZE data"  # test_peek_parquet_profile_shape_and_null_rate
+_ROW_COUNT = "SELECT COUNT(*) FROM data"  # test_peek_profiles_a_file_with_a_header_and_no_rows
+
 
 def _reader(url: str, file: str) -> str:
-    fn = "read_parquet" if file.lower().endswith(_PARQUET_EXTS) else "read_csv_auto"
+    fn = _PARQUET_READER if file.lower().endswith(_PARQUET_EXTS) else _CSV_READER
     safe = url.replace("'", "''")
     return f"{fn}('{safe}')"
 
@@ -70,7 +81,7 @@ def _connect(url: str, file: str):
     import duckdb
 
     con = duckdb.connect(database=":memory:")
-    con.execute("INSTALL httpfs; LOAD httpfs;")
+    con.execute(_LOAD_HTTPFS)
     # Eager read FIRST (both filesystems still enabled), then lock them down. See the
     # module docstring: a CREATE VIEW would be evaluated lazily after the lock and
     # would block the legit source read too, so we materialize a TABLE here.
@@ -80,8 +91,8 @@ def _connect(url: str, file: str):
     # that httpfs outgrows — it also registers S3 (s3/s3a/s3n/r2/gcs) and HuggingFace
     # (hf://) filesystems, and with only Local+HTTP disabled a user SELECT read public
     # buckets and, via a per-URL s3_endpoint, connected to any host.
-    con.execute("SET enable_external_access=false;")
-    con.execute("SET lock_configuration=true;")
+    for statement in _LOCKDOWN:
+        con.execute(statement)
     return con
 
 
@@ -98,12 +109,18 @@ def _run(url: str, file: str, sql: str, row_cap: int) -> dict:
         con.close()
     truncated = len(rows) > row_cap
     rows = rows[:row_cap]
-    names = [c["name"] for c in cols]
     return {
         "columns": cols,
-        "rows": [dict(zip(names, r, strict=False)) for r in rows],
+        "rows": _records([c["name"] for c in cols], rows),
         "truncated": truncated,
     }
+
+
+def _records(names: list[str], rows: list[tuple]) -> list[dict]:
+    # Each row is zipped with the column names of its own result, so the lengths always
+    # match and strict=True/False/None behave alike; test_sql_rows_and_columns_are_mapped_exactly
+    # and test_peek_profile_is_mapped_field_by_field pin the mapping.
+    return [dict(zip(names, r, strict=True)) for r in rows]  # pragma: no mutate
 
 
 async def run_sql(url: str, file: str, query: str, *, row_cap: int = DEFAULT_ROW_CAP) -> dict:
@@ -157,10 +174,9 @@ def _normalize_summary_row(d: dict) -> dict:
 def _peek(url: str, file: str) -> dict:
     con = _connect(url, file)  # REUSE the hardened lockdown engine (no FS re-enable)
     try:
-        rel = con.execute("SUMMARIZE data")
-        names = [d[0] for d in rel.description]
-        raw = [dict(zip(names, r, strict=False)) for r in rel.fetchall()]
-        row_count = con.execute("SELECT COUNT(*) FROM data").fetchone()[0]
+        rel = con.execute(_SUMMARIZE)
+        raw = _records([d[0] for d in rel.description], rel.fetchall())
+        row_count = con.execute(_ROW_COUNT).fetchone()[0]
     finally:
         con.close()
     profile = [_normalize_summary_row(d) for d in raw]
