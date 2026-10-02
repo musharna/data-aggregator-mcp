@@ -58,8 +58,7 @@ def _pick_chebi(docs: list[dict[str, Any]], key: str) -> ChebiInfo | None:
     (canonical always kept). Returns None when no candidate matches (conservative —
     no expansion is preferred over a wrong term).
     """
-    candidates: list[ChebiInfo] = []
-    defining: list[bool] = []
+    candidates: list[tuple[bool, ChebiInfo]] = []
     for doc in docs:
         if not isinstance(doc, dict):
             continue
@@ -95,16 +94,11 @@ def _pick_chebi(docs: list[dict[str, Any]], key: str) -> ChebiInfo | None:
                 continue
             seen.add(low)
             distinct.append(s)
-        candidates.append(
-            ChebiInfo(chebi_id=obo_id, canonical=label, synonyms=tuple(distinct[:_MAX_SYNONYMS]))
-        )
-        defining.append(doc.get("is_defining_ontology") is True)
+        info = ChebiInfo(chebi_id=obo_id, canonical=label, synonyms=tuple(distinct[:_MAX_SYNONYMS]))
+        candidates.append((doc.get("is_defining_ontology") is True, info))
     if not candidates:
         return None
-    for info, is_defining in zip(candidates, defining, strict=False):
-        if is_defining:
-            return info
-    return candidates[0]
+    return next((info for is_defining, info in candidates if is_defining), candidates[0][1])
 
 
 async def resolve_chebi(client: httpx.AsyncClient, name: str) -> ChebiInfo | None:

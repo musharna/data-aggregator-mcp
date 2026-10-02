@@ -50,8 +50,7 @@ def _pick_uberon(docs: list[dict[str, Any]], key: str) -> UberonInfo | None:
     first candidate). Returns None when no candidate matches (conservative — no
     expansion is preferred over a wrong term).
     """
-    candidates: list[UberonInfo] = []
-    defining: list[bool] = []
+    candidates: list[tuple[bool, UberonInfo]] = []
     for doc in docs:
         if not isinstance(doc, dict):
             continue
@@ -75,14 +74,11 @@ def _pick_uberon(docs: list[dict[str, Any]], key: str) -> UberonInfo | None:
         synset = {s.lower() for s in synonyms}
         if label.lower() != key and key not in synset:
             continue
-        candidates.append(UberonInfo(uberon_id=obo_id, canonical=label, synonyms=synonyms))
-        defining.append(doc.get("is_defining_ontology") is True)
+        info = UberonInfo(uberon_id=obo_id, canonical=label, synonyms=synonyms)
+        candidates.append((doc.get("is_defining_ontology") is True, info))
     if not candidates:
         return None
-    for info, is_defining in zip(candidates, defining, strict=False):
-        if is_defining:
-            return info
-    return candidates[0]
+    return next((info for is_defining, info in candidates if is_defining), candidates[0][1])
 
 
 async def resolve_uberon(client: httpx.AsyncClient, name: str) -> UberonInfo | None:
