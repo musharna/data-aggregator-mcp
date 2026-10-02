@@ -42,9 +42,6 @@ _GET = "GET"
 _ACCEPT_JSON = {"Accept": "application/json"}
 # A PID is one path segment: quote() escapes "/" too.
 _SEGMENT_SAFE = ""
-# The CN answers 303 to the Member Node; following it would fetch the object bytes
-# instead of the locator (pinned by test_object_url_303_returns_location_without_following).
-_UNFOLLOWED = False
 
 # Lucene special characters that must be backslash-escaped when user-supplied
 # strings are interpolated into a Solr query (boolean operators && and || are
@@ -182,14 +179,22 @@ async def _object_url(client: httpx.AsyncClient, pid: str) -> str | None:
     to parse them as XML. A 404 means the object is not locatable → skip it;
     transport/5xx errors surface via the taxonomy (with retries), never a
     silently-truncated manifest."""
+    url = RESOLVE.format(pid=quote(pid, safe=_SEGMENT_SAFE))
+    # follow_redirects=None reads as "don't follow" in _http and httpx alike, and a
+    # pragma inside a call is not honoured, so the call is exempt whole. Its arguments
+    # are pinned by tests: False by test_object_url_303_returns_location_without_following,
+    # the 404 answer by test_object_url_404_returns_none, the service name by
+    # test_errors_name_the_dataone_service_and_object.
+    # pragma: no mutate start
     resp = await _http.request_with_retry(
         client,
         _GET,
-        RESOLVE.format(pid=quote(pid, safe=_SEGMENT_SAFE)),
+        url,
         service="DataONE resolve",
         not_found_returns=None,
-        follow_redirects=_UNFOLLOWED,
+        follow_redirects=False,
     )
+    # pragma: no mutate end
     if resp is None:  # 404 → object not locatable
         return None
     # Header names are case-insensitive, so a spelling mutant reads the same header.
