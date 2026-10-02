@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import httpx
 import pytest
 
@@ -45,3 +47,14 @@ async def test_a_failing_search_names_the_edam_lookup_after_two_tries():
         ):
             await assay.resolve_edam(c, "ChIP-seq")
     assert len(sent) == 2
+
+
+def test_only_the_ols_helper_sends_an_ols_search():
+    # The OLS request was copied into anatomy, chemistry and assay, and #207's fix
+    # reached two of the three. A module that builds its own OLS request is a copy
+    # the next fix can miss; it must go through _ols.exact_search.
+    package = Path(assay.__file__).parent
+    senders = sorted(
+        p.name for p in package.glob("*.py") if "ebi.ac.uk/ols4" in p.read_text(encoding="utf-8")
+    )
+    assert senders == ["_ols.py"]  # and the scan does see the one that does
