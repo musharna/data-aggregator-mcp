@@ -265,3 +265,190 @@ async def test_live_relate_links_records_cited_by_landing_url() -> None:
                     suggestion=f"{src} {rels[0]} {target} (declared in source metadata)",
                 )
             ], out.hints
+
+
+# --- each detector, pinned whole ------------------------------------------------------
+
+
+def _link_hint(src: str, target: str, rel: str, raw: str) -> JoinHint:
+    return JoinHint(
+        kind="explicit_link",
+        resources=[src, target],
+        key=rel,
+        evidence=f"{src} links to {target} via {rel!r} (target_id={raw!r})",
+        suggestion=f"{src} {rel} {target} (declared in source metadata)",
+    )
+
+
+def _lineage_hint(newer: str, older: str, raw: str) -> JoinHint:
+    return JoinHint(
+        kind="version_lineage",
+        resources=[newer, older],
+        key=raw,
+        evidence=f"{older}.superseded_by -> {newer}",
+        suggestion=f"{newer} is a newer version of {older} - dedupe, don't join, these",
+    )
+
+
+def test_a_blank_value_does_not_end_the_walk_over_a_records_ids() -> None:
+    # A blank DOI or accession is skipped; the record's next value is still compared.
+    rs = [
+        _res("pubmed:5", doi="  ", identifiers={"pmid": "5"}, accessions=["  ", "PRJNA1"]),
+        _res("gwas:G1", doi="doi:", identifiers={"pmid": "5"}, accessions=["prjna1"]),
+    ]
+    assert relate_mod.detect(rs) == [
+        JoinHint(
+            kind="shared_accession",
+            resources=["pubmed:5", "gwas:G1"],
+            key="PRJNA1",
+            evidence="accession 'PRJNA1' present on 2 resources",
+            suggestion="joinable on accession PRJNA1",
+        ),
+        JoinHint(
+            kind="shared_identifier",
+            resources=["pubmed:5", "gwas:G1"],
+            key="5",
+            evidence="pmid '5' shared by 2 resources",
+            suggestion="same work or paper-data link via pmid 5",
+        ),
+    ]
+
+
+def test_explicit_link_reaches_a_record_by_accession_but_lineage_does_not() -> None:
+    from data_aggregator_mcp.models import Link
+
+    # A link may name its target by accession; a superseded_by naming an accession is
+    # not read as a version edge (accessions are shared across records, ids are not).
+    rs = [
+        _res("zenodo:9", links=[Link(rel="references", target_id="GSE5")]),
+        _res("geo:GSE5", accessions=["GSE5"]),
+        _res("sra:SRX1", accessions=["SRX1", "SRP1"]),
+        _res("sra:SRX0", superseded_by="SRP1"),
+    ]
+    assert relate_mod.detect(rs) == [_link_hint("zenodo:9", "geo:GSE5", "references", "GSE5")]
+
+
+def test_explicit_link_skips_blank_and_self_targets_and_reports_each_link_once() -> None:
+    from data_aggregator_mcp.models import Link
+
+    rs = [
+        _res(
+            "pubmed:1",
+            links=[
+                Link(rel="described_in", target_id="doi:"),  # blank after folding
+                Link(rel="landing_page", target_id="https://pubmed.ncbi.nlm.nih.gov/1/"),
+                Link(rel="has_data", target_id="geo:GSE1"),
+                Link(rel="has_data", target_id="https://doi.org/10.1/G"),  # geo:GSE1 again
+                Link(rel="references", target_id="zenodo:2"),
+                Link(rel="has_data", target_id="zenodo:2"),
+            ],
+        ),
+        _res("geo:GSE1", doi="10.1/g"),
+        _res("zenodo:2", links=[Link(rel="references", target_id="pubmed:1")]),
+    ]
+    assert relate_mod.detect(rs) == [
+        _link_hint("pubmed:1", "geo:GSE1", "has_data", "geo:GSE1"),
+        _link_hint("pubmed:1", "zenodo:2", "references", "zenodo:2"),
+        _link_hint("pubmed:1", "zenodo:2", "has_data", "zenodo:2"),
+        _link_hint("zenodo:2", "pubmed:1", "references", "pubmed:1"),
+    ]
+
+
+def test_explicit_link_evidence_is_exact() -> None:
+    from data_aggregator_mcp.models import Link
+
+    rs = [
+        _res("pubmed:1", links=[Link(rel="has_data", target_id="https://zenodo.org/records/2")]),
+        _res("zenodo:2"),
+    ]
+    assert relate_mod.detect(rs) == [
+        JoinHint(
+            kind="explicit_link",
+            resources=["pubmed:1", "zenodo:2"],
+            key="has_data",
+            evidence="pubmed:1 links to zenodo:2 via 'has_data' "
+            "(target_id='https://zenodo.org/records/2')",
+            suggestion="pubmed:1 has_data zenodo:2 (declared in source metadata)",
+        )
+    ]
+
+
+def test_version_lineage_skips_records_without_a_usable_successor() -> None:
+    # No superseded_by, a blank one, one outside the set, and one naming the record
+    # itself (by its own DOI) come before the real edge; none ends the walk or is a hint.
+    rs = [
+        _res("zenodo:1"),
+        _res("zenodo:3", superseded_by="doi:"),
+        _res("zenodo:4", superseded_by="zenodo:999"),
+        _res("zenodo:5", doi="10.5281/zenodo.5", superseded_by="https://doi.org/10.5281/zenodo.5"),
+        _res("zenodo:6", superseded_by="https://zenodo.org/records/1"),
+    ]
+    assert relate_mod.detect(rs) == [
+        JoinHint(
+            kind="version_lineage",
+            resources=["zenodo:1", "zenodo:6"],
+            key="https://zenodo.org/records/1",
+            evidence="zenodo:6.superseded_by -> zenodo:1",
+            suggestion="zenodo:1 is a newer version of zenodo:6 - dedupe, don't join, these",
+        )
+    ]
+
+
+def test_version_lineage_cycle_hint_is_exact() -> None:
+    rs = [
+        _res("zenodo:2", superseded_by="zenodo:1"),
+        _res("zenodo:1", superseded_by="zenodo:2"),
+    ]
+    assert relate_mod.detect(rs) == [
+        JoinHint(
+            kind="version_lineage",
+            resources=["zenodo:1", "zenodo:2"],  # sorted, whichever edge came first
+            key="zenodo:1",
+            evidence="zenodo:2 and zenodo:1 sit on a superseded_by cycle "
+            "(each is transitively claimed newer than the other)",
+            suggestion="contradictory version metadata linking zenodo:1 and zenodo:2 - "
+            "resolve upstream; a newer/older direction cannot be inferred",
+        )
+    ]
+
+
+def test_version_lineage_reports_a_cycle_once_and_goes_on_to_the_next_edge() -> None:
+    rs = [
+        _res("zenodo:1", superseded_by="zenodo:2"),
+        _res("zenodo:2", superseded_by="zenodo:1"),  # the same pair, seen from its other end
+        _res("zenodo:3", superseded_by="zenodo:4"),
+        _res("zenodo:4"),
+    ]
+    hints = relate_mod.detect(rs)
+    assert [(h.resources, h.key) for h in hints] == [
+        (["zenodo:1", "zenodo:2"], "zenodo:2"),
+        (["zenodo:4", "zenodo:3"], "zenodo:4"),
+    ]
+    assert hints[1] == _lineage_hint("zenodo:4", "zenodo:3", "zenodo:4")
+
+
+def test_version_lineage_chain_into_a_cycle() -> None:
+    # 1 -> 2 -> 3 -> 2: the 2/3 edge is on a cycle, the 1 -> 2 edge leads into it and
+    # keeps its direction (following 2's successors loops without returning to 1).
+    rs = [
+        _res("zenodo:1", superseded_by="zenodo:2"),
+        _res("zenodo:2", superseded_by="zenodo:3"),
+        _res("zenodo:3", superseded_by="zenodo:2"),
+    ]
+    hints = relate_mod.detect(rs)
+    assert hints[0] == _lineage_hint("zenodo:2", "zenodo:1", "zenodo:2")
+    assert [(h.resources, "cycle" in h.evidence) for h in hints] == [
+        (["zenodo:2", "zenodo:1"], False),
+        (["zenodo:2", "zenodo:3"], True),
+    ]
+
+
+def test_version_lineage_long_chain_has_a_direction_and_a_long_cycle_does_not() -> None:
+    # A five-version chain: every edge directed. Close it into a 5-cycle: none is.
+    chain = [_res(f"zenodo:{i}", superseded_by=f"zenodo:{i + 1}") for i in range(1, 5)]
+    chain.append(_res("zenodo:5"))
+    assert relate_mod.detect(chain) == [
+        _lineage_hint(f"zenodo:{i + 1}", f"zenodo:{i}", f"zenodo:{i + 1}") for i in range(1, 5)
+    ]
+    ring = [*chain[:4], _res("zenodo:5", superseded_by="zenodo:1")]
+    assert [("cycle" in h.evidence) for h in relate_mod.detect(ring)] == [True] * 5
