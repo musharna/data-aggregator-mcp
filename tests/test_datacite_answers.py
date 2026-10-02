@@ -227,7 +227,10 @@ def test_no_wrong_typed_field_escapes_as_a_bare_error():
     wrong-typed one still escaped as a bare AttributeError / pydantic error. This walks
     every field of a full record and every wrong type: each must be refused by the check
     or normalize cleanly, so a field the reader adds without the check fails here."""
-    full = datacite._normalize(_FULL)  # positive control: the full record reads whole
+    # Positive control: the full record passes the check (every field at its live type)
+    # and reads whole. Without the check here, a check refusing every count went unseen.
+    datacite._check_record({"data": _FULL})
+    full = datacite._normalize(_FULL)
     assert full.creators == [Creator(name="Doe, J.", orcid="0000-0002-1825-0097")]
     assert full.source == "tdl.tdl" and full.metrics is not None and full.metrics.downloads == 3
     escaped = []
