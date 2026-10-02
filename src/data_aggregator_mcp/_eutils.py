@@ -17,8 +17,6 @@ from data_aggregator_mcp import _http
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-DEFAULT_TIMEOUT = 30.0
-MAX_RETRIES = 3
 
 
 def _api_key_params() -> dict[str, str]:
@@ -110,8 +108,6 @@ async def esearch(
         f"{BASE_URL}/esearch.fcgi",
         service=f"NCBI esearch ({db})",
         params=params,
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         check=_check_esearch,
         expect=dict,
     )
@@ -134,8 +130,6 @@ async def esummary(
         f"{BASE_URL}/esummary.fcgi",
         service=f"NCBI esummary ({db})",
         params=params,
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         check=_check_esummary,
         expect=dict,
     )
@@ -176,8 +170,6 @@ async def elink(
         f"{BASE_URL}/elink.fcgi",
         service=f"NCBI elink ({dbfrom}->{db})",
         params=params,
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         check=_check_elink,
         expect=dict,
     )
@@ -210,7 +202,5 @@ async def efetch(
         f"{BASE_URL}/efetch.fcgi",
         service=f"NCBI efetch ({db})",
         params=params,
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
     )
     return resp.text
