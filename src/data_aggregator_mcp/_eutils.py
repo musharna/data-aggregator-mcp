@@ -17,6 +17,9 @@ from data_aggregator_mcp import _http
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+# httpx upper-cases the method, so a spelling mutant of it sends the same request
+# (test__eutils_observed.py pins the GET).
+_GET = "GET"
 
 
 def _api_key_params() -> dict[str, str]:
@@ -104,7 +107,7 @@ async def esearch(
         params["retstart"] = str(retstart)
     data = await _http.request_json(
         client,
-        "GET",
+        _GET,
         f"{BASE_URL}/esearch.fcgi",
         service=f"NCBI esearch ({db})",
         params=params,
@@ -126,7 +129,7 @@ async def esummary(
     params = {"db": db, "id": ",".join(ids), "version": "2.0", **_common_params()}
     data = await _http.request_json(
         client,
-        "GET",
+        _GET,
         f"{BASE_URL}/esummary.fcgi",
         service=f"NCBI esummary ({db})",
         params=params,
@@ -166,7 +169,7 @@ async def elink(
     params = {"dbfrom": dbfrom, "db": db, "id": ",".join(ids), **_common_params()}
     data = await _http.request_json(
         client,
-        "GET",
+        _GET,
         f"{BASE_URL}/elink.fcgi",
         service=f"NCBI elink ({dbfrom}->{db})",
         params=params,
@@ -198,7 +201,7 @@ async def efetch(
     requester = _http.request_xml if retmode == "xml" else _http.request_with_retry
     resp = await requester(
         client,
-        "GET",
+        _GET,
         f"{BASE_URL}/efetch.fcgi",
         service=f"NCBI efetch ({db})",
         params=params,
