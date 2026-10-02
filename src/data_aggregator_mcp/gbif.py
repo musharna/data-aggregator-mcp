@@ -43,8 +43,8 @@ DATASET = "https://api.gbif.org/v1/dataset/{key}"
 PREFIXES = {"gbif"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
-DEFAULT_TIMEOUT = 30.0
-MAX_RETRIES = 3
+# httpx upper-cases the method, so a lower-cased literal would be an equivalent mutant.
+_GET = "GET"
 
 # contact.type values that denote authorship, as opposed to administrative /
 # technical points of contact (which are noise in a creators[] list).
@@ -124,14 +124,9 @@ def _access_from_spdx(spdx: str | None) -> str | None:
     return "open" if spdx and spdx.startswith("CC") else None
 
 
-def _dedup_names(names: list[str]) -> list[Creator]:
-    seen: set[str] = set()
-    out: list[Creator] = []
-    for n in names:
-        if n and n not in seen:
-            seen.add(n)
-            out.append(Creator(name=n))
-    return out
+def _dedup(values: list[str]) -> list[str]:
+    """Non-empty values in first-seen order, each once."""
+    return list(dict.fromkeys(v for v in values if v))
 
 
 def _creators(doc: dict) -> list[Creator]:
@@ -141,39 +136,29 @@ def _creators(doc: dict) -> list[Creator]:
     The search index carries no contacts, so search results get the publisher."""
     names: list[str] = []
     for c in doc.get("contacts") or []:
-        if (c.get("type") or "").upper() not in _AUTHOR_CONTACT_TYPES:
+        if str(c.get("type")).upper() not in _AUTHOR_CONTACT_TYPES:
             continue
         person = " ".join(
             p for p in ((c.get("firstName") or "").strip(), (c.get("lastName") or "").strip()) if p
         )
         names.append(person or (c.get("organization") or "").strip())
-    creators = _dedup_names(names)
-    if creators:
-        return creators
     org = (doc.get("publishingOrganizationTitle") or "").strip()
-    return [Creator(name=org)] if org else []
+    return [Creator(name=n) for n in _dedup(names) or _dedup([org])]
 
 
 def _subjects(doc: dict) -> list[str]:
     """Keywords: a flat ``keywords`` list on the search index, or the structured
     ``keywordCollections`` on the resolve record. Order-preserving dedup."""
-    flat: list[str] = [k for k in (doc.get("keywords") or []) if k]
+    flat: list[str] = list(doc.get("keywords") or [])
     for coll in doc.get("keywordCollections") or []:
-        flat.extend(k for k in (coll.get("keywords") or []) if k)
-    seen: set[str] = set()
-    out: list[str] = []
-    for k in flat:
-        if k not in seen:
-            seen.add(k)
-            out.append(k)
-    return out
+        flat.extend(coll.get("keywords") or [])
+    return _dedup(flat)
 
 
 def _normalize(doc: dict) -> DataResource:
-    key = doc["key"]
     spdx = normalize_spdx(doc.get("license"))
     return DataResource(
-        id=f"gbif:{key}",
+        id=f"gbif:{doc['key']}",
         source="gbif",
         kind="dataset",
         title=doc.get("title") or "",
@@ -186,7 +171,6 @@ def _normalize(doc: dict) -> DataResource:
         license=spdx,
         access=_access_from_spdx(spdx),
         last_updated=doc.get("modified"),
-        files=[],
     )
 
 
@@ -194,18 +178,13 @@ def _archive_files(doc: dict) -> list[FileEntry]:
     """The Darwin Core Archive endpoint(s) — a direct-download zip with no upstream
     checksum, so ``checksum`` is left None and fetch runs unverified. Non-archive
     endpoints (EML metadata, feeds) are not fetch targets and are skipped."""
-    key = doc["key"]
-    out: list[FileEntry] = []
-    for ep in doc.get("endpoints") or []:
-        if (ep.get("type") or "").upper() != "DWC_ARCHIVE":
-            continue
-        url = ep.get("url")
-        if not url:
-            continue
-        out.append(
-            FileEntry(name=f"{key}.dwca.zip", url=url, mime="application/zip", source="gbif")
+    return [
+        FileEntry(
+            name=f"{doc['key']}.dwca.zip", url=ep["url"], mime="application/zip", source="gbif"
         )
-    return out
+        for ep in doc.get("endpoints") or []
+        if str(ep.get("type")).upper() == "DWC_ARCHIVE" and ep.get("url")
+    ]
 
 
 async def search(
@@ -213,12 +192,10 @@ async def search(
 ) -> tuple[int, list[DataResource]]:
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         SEARCH,
         service="GBIF dataset search",
         params={"q": query, "limit": str(min(size, MAX_SIZE)), "offset": str(offset)},
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         expect=dict,
         check=_check_hits,
     )
@@ -234,11 +211,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise NotFoundError(f"malformed GBIF dataset key {resource_id!r} (not a UUID)") from None
     doc = await _http.request_json(
         client,
-        "GET",
+        _GET,
         DATASET.format(key=key),
         service="GBIF dataset",
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         not_found_returns=None,
         expect=dict,
         check=_check_dataset,
@@ -249,6 +224,4 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         # The registry keeps a deleted dataset's record (HTTP 200) with the deletion
         # time; its archive URL no longer serves the data.
         raise NotFoundError(f"GBIF dataset {key!r} was deleted on {doc['deleted']}")
-    resource = _normalize(doc)
-    files = _archive_files(doc)
-    return resource.model_copy(update={"files": files}) if files else resource
+    return _normalize(doc).model_copy(update={"files": _archive_files(doc)})
