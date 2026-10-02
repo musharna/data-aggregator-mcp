@@ -30,24 +30,62 @@ LIST = "https://www.openml.org/api/v1/json/data/list/data_name/{q}/limit/{n}"
 RECORD = "https://www.openml.org/api/v1/json/data/{did}"
 _LANDING = "https://www.openml.org/d/{did}"
 PREFIXES = {"openml"}
-# A dataset id is digits; it goes into the URL path.
-_DID_RE = re.compile(r"[0-9]+")
+# A dataset id is a positive integer (OpenML answers id 0 with 412 code 110, "Please
+# provide data_id"); it goes into the URL path.
+_DID_RE = re.compile(r"0*[1-9][0-9]*")
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+_NO_RESULTS = "372"  # a list query that matched nothing
+_UNKNOWN_DATASET = "111"  # a record id OpenML has no dataset for
+# The record fields resolve reads, by the JSON types OpenML sends for them.
+_TEXT_FIELDS = ("url", "parquet_url", "md5_checksum", "upload_date", "description", "licence")
+_TEXT_OR_LIST_FIELDS = ("creator", "tag")
+
+
+def _error_code(resp: httpx.Response) -> str | None:
+    """OpenML answers a query it cannot satisfy with ``412`` and
+    ``{"error": {"code": ..., "message": ...}}``. Any other status or body has no code."""
+    if resp.status_code != 412:
+        return None
+    try:
+        body = resp.json()
+    except ValueError:
+        return None
+    err = body.get("error") if isinstance(body, dict) else None
+    return str(err.get("code")) if isinstance(err, dict) else None
 
 
 def _is_no_results(resp: httpx.Response) -> bool:
-    """OpenML answers a list query that matches nothing with ``412`` and error code
-    ``372`` ("No results"). Any other 412 code (bad filter, ...) is a real error."""
-    if resp.status_code != 412:
-        return False
-    try:
-        err = (resp.json() or {}).get("error") or {}
-    except ValueError:
-        return False
-    return str(err.get("code")) == "372"
+    """A list query that matches nothing is ``412`` code ``372`` ("No results"). Any
+    other 412 code (bad filter, ...) is a real error."""
+    return _error_code(resp) == _NO_RESULTS
+
+
+def _is_unknown_dataset(resp: httpx.Response) -> bool:
+    """A record id that names no dataset is ``412`` code ``111`` ("Unknown dataset")."""
+    return _error_code(resp) == _UNKNOWN_DATASET
+
+
+def _check_list(body: dict) -> None:
+    data = body.get("data")
+    datasets = data.get("dataset") if isinstance(data, dict) else None
+    if not isinstance(datasets, list) or not all(
+        isinstance(d, dict) and type(d.get("did")) is int for d in datasets
+    ):
+        raise _http.UpstreamEnvelopeError(f"no dataset list in {body!r:.200}")
+
+
+def _check_record(body: dict) -> None:
+    desc = body.get("data_set_description")
+    if not (
+        isinstance(desc, dict)
+        and isinstance(desc.get("name"), str)
+        and all(isinstance(desc.get(k), str | None) for k in _TEXT_FIELDS)
+        and all(isinstance(desc.get(k), str | list | None) for k in _TEXT_OR_LIST_FIELDS)
+    ):
+        raise _http.UpstreamEnvelopeError(f"no dataset description in {body!r:.200}")
 
 
 def _tags(raw: object) -> list[str]:
@@ -89,8 +127,9 @@ async def search(
         no_content_returns={"data": {"dataset": []}},
         empty_answer=_is_no_results,
         expect=dict,
+        check=_check_list,
     )
-    datasets = ((body or {}).get("data") or {}).get("dataset") or []
+    datasets = body["data"]["dataset"]
     return len(datasets), [compact(_normalize_list_entry(d)) for d in datasets]
 
 
@@ -103,6 +142,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     did = local_id(resource_id, "openml", strip=True)
     if not _DID_RE.fullmatch(did):
         raise NotFoundError(f"malformed OpenML id {resource_id!r}")
+    # A zero-padded id names the same dataset, but OpenML builds `parquet_url` from the
+    # id as sent: /data/0061 answers with a dataset_0061.pq that is a 404.
+    did = str(int(did))
     body = await _http.request_json(
         client,
         "GET",
@@ -111,12 +153,16 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         headers={"Accept": "application/json"},
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
-        not_found_returns=None,
+        # OpenML's "no such dataset" is HTTP 412 code 111; the helper hands that answer
+        # back as `no_content_returns`.
+        no_content_returns=None,
+        empty_answer=_is_unknown_dataset,
         expect=dict,
+        check=_check_record,
     )
-    desc = (body or {}).get("data_set_description")
-    if not desc:
+    if body is None:
         raise NotFoundError(f"OpenML has no dataset {did}")
+    desc = body["data_set_description"]
 
     files: list[FileEntry] = []
     arff_url = desc.get("url")
