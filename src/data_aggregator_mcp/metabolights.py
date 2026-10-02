@@ -26,8 +26,10 @@ from data_aggregator_mcp.models import FileEntry
 
 FTP_PATH = "/pub/databases/metabolights/studies/public/{acc}"
 FTP_DIR = "https://ftp.ebi.ac.uk" + FTP_PATH + "/"
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+# A module constant: mutmut does not mutate those, and a lower-cased method is the same
+# request (httpx upper-cases it); test_metabolights_observed pins the method sent.
+_GET = "GET"
 
 # Every public study directory (3,497 of 3,497 on the mirror, 2026-10-02) and every
 # OmicsDI MetaboLights accession sampled is `MTBLS<digits>`. The accession goes into
@@ -73,15 +75,14 @@ async def _published_sha256(client: httpx.AsyncClient, base: str) -> dict[str, s
     the hashes sit on the same mirror as the files, so hiding it would only defer it."""
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         base + "HASHES/metadata_sha256.json",
         service="MetaboLights hashes",
-        timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         not_found_returns={},
         expect=dict,
     )
-    return {str(k): str(v) for k, v in body.items() if isinstance(v, str) and v}
+    return {k: v for k, v in body.items() if isinstance(v, str) and v}
 
 
 async def files(client: httpx.AsyncClient, accession: str) -> list[FileEntry]:
@@ -90,10 +91,9 @@ async def files(client: httpx.AsyncClient, accession: str) -> list[FileEntry]:
     base = FTP_DIR.format(acc=accession)
     resp = await _http.request_with_retry(
         client,
-        "GET",
+        _GET,
         base,
         service="MetaboLights files",
-        timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
     )
     names = _listing_files(resp.text, accession)
@@ -102,7 +102,6 @@ async def files(client: httpx.AsyncClient, accession: str) -> list[FileEntry]:
         FileEntry(
             name=name,
             url=base + quote(name, safe=""),
-            size=None,
             checksum=f"sha256:{sha256[name]}" if name in sha256 else None,
             source="metabolights",
         )
