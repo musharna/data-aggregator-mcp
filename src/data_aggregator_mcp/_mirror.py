@@ -78,26 +78,32 @@ def normalize_title(title: str) -> str:
     return _WS_RE.sub(" ", lowered).strip()
 
 
-def first_author_surname(r: DataResource) -> str | None:
-    """Lowercased last whitespace token of the first creator's name, or None if
-    the record has no creators (then the title+author+year path cannot fire)."""
+def first_author_name_key(r: DataResource) -> str | None:
+    """The first creator's whole name as its sorted lowercase words, or None if the
+    record has no creators or the name has no words (then the title+author+year path
+    cannot fire).
+
+    Sorting makes the two written orders agree: DataCite and Zenodo write
+    "Family, Given" ("Singh, Apoorv"), other repositories "Given Family" ("Apoorv
+    Singh"). The whole name, not one token of it, is compared: a last-token key read
+    the GIVEN name of every "Family, Given" creator (81% of 3,999 DataCite first
+    creators sampled), so distinct datasets that share a generic title and year
+    folded on a shared given name ("Zhang, rui" / "Zhe, Rui"), and a family-name key
+    folds them on a shared surname ("Liu, Ziwei" / "LIU, Shuai")."""
     if not r.creators:
         return None
-    name = r.creators[0].name.strip()
-    if not name:
-        return None
-    return name.split()[-1].lower()
+    return " ".join(sorted(normalize_title(r.creators[0].name).split())) or None
 
 
 def fingerprint_key(r: DataResource) -> tuple[str, str, int] | None:
-    """``(normalized_title, first_author_surname, year)`` ONLY when all three are
+    """``(normalized_title, first_author_name_key, year)`` ONLY when all three are
     present/non-empty; else None (so a missing field can never satisfy the title
     path). Conservative content-identity key."""
     title = normalize_title(r.title) if r.title else ""
-    surname = first_author_surname(r)
-    if not title or not surname or r.year is None:
+    author = first_author_name_key(r)
+    if not title or not author or r.year is None:
         return None
-    return (title, surname, r.year)
+    return (title, author, r.year)
 
 
 def checksums(r: DataResource) -> set[str]:
@@ -124,7 +130,7 @@ def collapse_mirrors(records: list[DataResource]) -> list[DataResource]:
 
     A record joins a group iff it shares ANY full ``algo:hex`` file checksum with a
     member (byte-identical → definitional identity, source-agnostic) OR has the same
-    ``fingerprint_key`` (normalized-title + first-author-surname + year, all present)
+    ``fingerprint_key`` (normalized-title + first-author name + year, all present)
     as a member AND comes from a DIFFERENT source than every member already in that
     group. Title-only or partial matches never merge.
 
