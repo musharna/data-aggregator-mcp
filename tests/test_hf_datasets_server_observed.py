@@ -28,8 +28,11 @@ def _client(handler) -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
 
+_BRANCH = "https://huggingface.co/datasets/o/n/resolve/refs%2Fconvert%2Fparquet"
+
+
 def _entry(i: int, **over) -> dict:
-    return {"config": "c", "split": "s", "url": f"https://h/c/s/{i:04d}.parquet", "size": i} | over
+    return {"config": "c", "split": "s", "url": f"{_BRANCH}/c/s/{i:04d}.parquet", "size": i} | over
 
 
 @pytest.mark.asyncio
@@ -113,10 +116,15 @@ async def test_any_other_error_status_is_an_outage(status):
         {"parquet_files": [_entry(0), "x"]},
         {"parquet_files": [_entry(0), _entry(1, url=None)]},
         {"parquet_files": [_entry(0), _entry(1, url="")]},
-        {"parquet_files": [_entry(0), _entry(1, config=None)]},
-        {"parquet_files": [_entry(0), _entry(1, config="")]},
-        {"parquet_files": [_entry(0), _entry(1, split=None)]},
-        {"parquet_files": [_entry(0), _entry(1, split="")]},
+        {"parquet_files": [_entry(0), _entry(1, url=7)]},
+        {"parquet_files": [_entry(0), _entry(1, url="0001.parquet")]},  # no path to name it by
+        # not on the conversion branch
+        {"parquet_files": [_entry(0), _entry(1, url="https://h/c/s/0001.parquet")]},
+        {"parquet_files": [_entry(0), _entry(1, url=f"{_BRANCH}/s/0001.parquet")]},
+        {"parquet_files": [_entry(0), _entry(1, url=f"{_BRANCH}/c/s/x/0001.parquet")]},
+        {"parquet_files": [_entry(0), _entry(1, url=f"{_BRANCH}/c//0001.parquet")]},
+        {"parquet_files": [_entry(0), _entry(1, url=f"{_BRANCH}/c/s/")]},
+        {"parquet_files": [_entry(0), _entry(1, url=f"{_BRANCH}//s/0001.parquet")]},
         {"parquet_files": [_entry(0), _entry(1, size="12")]},
         {"parquet_files": [_entry(0), _entry(1, size=True)]},
         {"parquet_files": [_entry(0), _entry(1, size=1.5)]},
@@ -156,7 +164,7 @@ async def test_a_file_maps_to_its_entry_and_size_may_be_null(size):
         "name": "c/s/0003.parquet",
         "size": size,
         "mime": None,
-        "url": "https://h/c/s/0003.parquet",
+        "url": f"{_BRANCH}/c/s/0003.parquet",
         "checksum": None,
         "source": "hf-datasets-server",
     }
