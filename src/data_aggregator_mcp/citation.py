@@ -45,8 +45,28 @@ def _doi_url(doi: str) -> str:
     return f"{DOI_BASE}/{_http.doi_path(doi)}"
 
 
+# A CSL style is asked for as a text bibliography. KISTI answers it as text/plain
+# (probed 2026-10-02), which is the same plain-text reference.
+_STYLE_MEDIA = "text/x-bibliography"
+_STYLE_ANSWERS = frozenset({_STYLE_MEDIA, "text/plain"})
+
+
 def _accept_for(fmt: str) -> str:
-    return _FORMAT_ACCEPT.get(fmt) or f"text/x-bibliography; style={fmt}"
+    return _FORMAT_ACCEPT.get(fmt) or f"{_STYLE_MEDIA}; style={fmt}"
+
+
+def _answers_for(fmt: str) -> frozenset[str]:
+    """The media types that carry ``fmt``. A registration agency without content
+    negotiation for ``fmt`` answers 200 in some other type: Airiti sends CSL-JSON for every
+    format, and ISTIC redirects to its HTML landing page (both probed 2026-10-02)."""
+    media = _FORMAT_ACCEPT.get(fmt)
+    return frozenset({media}) if media else _STYLE_ANSWERS
+
+
+def _media_type(resp: httpx.Response) -> str:
+    """The response's media type, without parameters, lower-cased (RFC 9110 §8.3.1:
+    type and subtype are case-insensitive; KISTI sends ``application/x-Research-Info-Systems``)."""
+    return resp.headers.get("content-type", "").partition(";")[0].strip().lower()
 
 
 def _csl_json_from_metadata(r: DataResource) -> str:
@@ -85,6 +105,16 @@ async def render(client: httpx.AsyncClient, resource: DataResource, fmt: str) ->
             service="DOI content negotiation",
             headers={"Accept": _accept_for(fmt)},
         )
+        media = _media_type(resp)
+        if media not in _answers_for(fmt):
+            logger.warning(
+                "citation: doi.org has no %r citation of %s (%s); it answered %r",
+                fmt,
+                resource.doi,
+                resource.id,
+                media,
+            )
+            return None
         return resp.text.strip() or None
     except Exception as exc:  # noqa: BLE001 — enrichment contract: never raise (spec §8)
         logger.warning("citation render failed for %s (%s): %r", resource.id, fmt, exc)
