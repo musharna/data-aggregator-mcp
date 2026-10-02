@@ -270,6 +270,18 @@ async def test_live_search():
 
 @_live_only
 @pytest.mark.asyncio
+async def test_live_search_at_the_largest_tool_size_passes_the_answer_check():
+    """The check refuses a whole page for one unreadable hit, so it is driven at the
+    tool's largest size and past it (offset 50: a second, cursor-walked request)."""
+    async with httpx.AsyncClient(timeout=60) as c:
+        total, recs = await datagov.search(c, "water", size=datagov.MAX_SIZE)
+        _t, later = await datagov.search(c, "water", size=datagov.MAX_SIZE, offset=50)
+    assert total > len(recs) == len(later) == 50
+    assert not {r.id for r in recs} & {r.id for r in later}
+
+
+@_live_only
+@pytest.mark.asyncio
 async def test_live_resolve():
     async with httpx.AsyncClient(timeout=60) as c:
         _total, recs = await datagov.search(c, "climate", size=5)

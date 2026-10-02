@@ -36,7 +36,8 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from urllib.parse import quote
+from pathlib import PurePosixPath
+from urllib.parse import quote, urlsplit
 
 import httpx
 
@@ -59,8 +60,13 @@ PREFIXES = {"datagov"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 _PAGE_MAX = 1000  # upstream per_page ceiling (OpenAPI: 1 <= per_page <= 1000)
-DEFAULT_TIMEOUT = 30.0
-MAX_RETRIES = 3
+# httpx upper-cases the method and reads header names case-insensitively, so a
+# spelling mutant of either sends the same request.
+_GET = "GET"
+_ACCEPT_JSON = {"Accept": "application/json"}
+_KEY_HEADER = "X-Api-Key"
+# A slug or UUID is one path segment: quote() escapes "/" too.
+_SEGMENT_SAFE = ""
 
 # Licence URLs of the form http://www.opendefinition.org/licenses/<id> end in a CKAN
 # license_id that normalize_spdx does not recognize; these map unambiguously to a
@@ -126,26 +132,23 @@ def _check_results(body: dict) -> None:
         raise _http.UpstreamEnvelopeError(f"no data.gov search cursor in {body!r:.200}")
 
 
-def _route(kind: str, ident: str = "") -> tuple[str, dict[str, str]]:
-    """URL + headers for ``kind`` ("search" | "dataset"): the keyed api.data.gov gateway
-    when ``DATA_GOV_API_KEY`` is set, else the keyless catalog API."""
+def _api() -> tuple[str, str, dict[str, str]]:
+    """Base URL, dataset path and headers: the keyed api.data.gov gateway when
+    ``DATA_GOV_API_KEY`` is set, else the keyless catalog API."""
     key = os.environ.get("DATA_GOV_API_KEY")
-    headers = {"Accept": "application/json"}
     if key:
-        headers["X-Api-Key"] = key
-        base, dataset_path = GATEWAY, "/dataset/"
-    else:
-        base, dataset_path = CATALOG, "/api/dataset/"
-    if kind == "search":
-        return f"{base}/search", headers
-    return f"{base}{dataset_path}{quote(ident, safe='')}", headers
+        return GATEWAY, "/dataset/", {**_ACCEPT_JSON, _KEY_HEADER: key}
+    return CATALOG, "/api/dataset/", dict(_ACCEPT_JSON)
 
 
 def _license(dcat: dict) -> str | None:
     """SPDX id for the DCAT ``license`` URL, or None when it names no recognizable one."""
-    url = (dcat.get("license") or "").strip()
+    url = dcat.get("license")
+    if not url:
+        return None
+    url = url.strip()
     if _OPENDEFINITION in url.lower():
-        lid = url.lower().rstrip("/").rsplit("/", 1)[-1]
+        lid = PurePosixPath(urlsplit(url).path).name.lower()
         return _LICENSE_ID_SPDX.get(lid) or normalize_spdx(lid)
     return normalize_spdx(url)
 
@@ -162,7 +165,7 @@ def _files(dcat: dict) -> list[FileEntry]:
             FileEntry(
                 name=dist.get("title")
                 or dist.get("format")
-                or url.rsplit("/", 1)[-1]
+                or url.rpartition("/")[2]
                 or "distribution",
                 url=url,
                 mime=dist.get("mediaType") or None,
@@ -197,12 +200,16 @@ def _subjects(dcat: dict) -> list[str]:
     return out
 
 
+def _access(dcat: dict) -> str | None:
+    level = dcat.get("accessLevel")
+    return _ACCESS_LEVEL.get(level.strip().lower()) if level else None
+
+
 def _normalize(hit: dict) -> DataResource:
     dcat = hit.get("dcat") or {}
     modified = dcat.get("modified")
-    access_level = (dcat.get("accessLevel") or "").strip().lower()
     return DataResource(
-        id=f"datagov:{hit.get('slug') or ''}",
+        id=f"datagov:{hit['slug']}",
         source="datagov",
         kind="dataset",
         title=dcat.get("title") or hit.get("title") or "",
@@ -211,10 +218,9 @@ def _normalize(hit: dict) -> DataResource:
         description=strip_html(dcat.get("description") or hit.get("description")),
         subjects=_subjects(dcat),
         license=_license(dcat),
-        access=_ACCESS_LEVEL.get(access_level),
+        access=_access(dcat),
         # DCAT-US `modified` may be a repeating interval ("R/P1D"), not a date.
         last_updated=modified if year_from(modified) is not None else None,
-        links=[],
         files=_files(dcat),
     )
 
@@ -225,31 +231,30 @@ async def search(
     """Records ``offset .. offset+size`` of the relevance-ranked hits, found by walking
     the ``after`` cursor from the start. Total is a lower bound (see module doc)."""
     want = offset + min(size, MAX_SIZE)
-    url, headers = _route("search")
+    base, _dataset_path, headers = _api()
     hits: list[dict] = []
-    after: str | None = None
+    cursor: dict[str, str] = {}
+    more = False
     while len(hits) < want:
-        params = {"q": query, "per_page": str(min(want - len(hits), _PAGE_MAX))}
-        if after:
-            params["after"] = after
+        params = {"q": query, "per_page": str(min(want - len(hits), _PAGE_MAX)), **cursor}
         body = await _http.request_json(
             client,
-            "GET",
-            url,
+            _GET,
+            f"{base}/search",
             service="data.gov search",
             params=params,
             headers=headers,
-            timeout=DEFAULT_TIMEOUT,
-            max_retries=MAX_RETRIES,
             expect=dict,
             check=_check_results,
         )
         page = body["results"]
         hits.extend(page)
-        after = body.get("after") if page else None
-        if not after:
+        # An empty page ends the walk even if it carries a cursor.
+        more = bool(page) and bool(body.get("after"))
+        if not more:
             break
-    total = len(hits) + (1 if after else 0)
+        cursor = {"after": body["after"]}
+    total = len(hits) + int(more)
     return total, [compact(_normalize(h)) for h in hits[offset:want]]
 
 
@@ -257,15 +262,13 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     """One dataset by catalog slug (the ``datagov:`` id; CKAN-era names still resolve)
     or by catalog dataset UUID. The lookup is an exact term match upstream."""
     ident = local_id(resource_id, "datagov")
-    url, headers = _route("dataset", ident)
+    base, dataset_path, headers = _api()
     body = await _http.request_json(
         client,
-        "GET",
-        url,
+        _GET,
+        f"{base}{dataset_path}{quote(ident, safe=_SEGMENT_SAFE)}",
         service="data.gov resolve",
         headers=headers,
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         not_found_returns=None,
         expect=dict,
         check=_check_results,

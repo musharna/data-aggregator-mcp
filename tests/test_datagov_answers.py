@@ -143,8 +143,18 @@ def _paths(node, path=()):
         yield from _paths(node[0], (*path, 0))
 
 
-def _with(path, value):
-    rec = copy.deepcopy(_FULL)
+# A hit whose DCAT block lacks what ``_FULL`` has, so the reader falls back to the
+# catalog's title and description and to the publisher as the author.
+_FALLBACK = {
+    "slug": "s",
+    "title": "Hit title",
+    "description": "Hit description",
+    "dcat": {"publisher": {"name": "Somewhere Water Board"}},
+}
+
+
+def _with(base, path, value):
+    rec = copy.deepcopy(base)
     *parents, last = path
     node = rec
     for p in parents:
@@ -154,10 +164,17 @@ def _with(path, value):
 
 
 def test_no_wrong_typed_field_escapes_as_a_bare_error():
-    """Every field of a full hit, set to every JSON type: the check refuses it, or the
-    hit reads cleanly. A field the reader starts using without the check fails here."""
-    # Positive control: the full hit passes and reads whole.
-    datagov._check_results({"results": [_FULL]})
+    """Every field of a full hit, and of a hit read through its fallbacks, set to every
+    JSON type: the check refuses it, or the hit reads cleanly. A field the reader starts
+    using without the check fails here."""
+    # Positive controls: both hits pass and read whole.
+    datagov._check_results({"results": [_FULL, _FALLBACK]})
+    fallback = datagov._normalize(_FALLBACK)
+    assert (fallback.title, fallback.description, fallback.creators) == (
+        "Hit title",
+        "Hit description",
+        [Creator(name="Somewhere Water Board")],
+    )
     full = datagov._normalize(_FULL)
     assert (full.id, full.title, full.description) == (
         "datagov:water-quality",
@@ -168,11 +185,11 @@ def test_no_wrong_typed_field_escapes_as_a_bare_error():
         ("Samples (CSV)", "https://example.gov/a.csv", "text/csv")
     ]
     escaped = []
-    for path in _paths(_FULL):
+    for base, path in [(b, p) for b in (_FULL, _FALLBACK) for p in _paths(b)]:
         if not path:
             continue
         for value in _WRONG:
-            rec = _with(path, value)
+            rec = _with(base, path, value)
             try:
                 datagov._check_results({"results": [rec]})
             except _http.UpstreamEnvelopeError:
