@@ -24,14 +24,60 @@ MAX_SIZE = 50
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
 
+# Every field ``_normalize`` reads, at the type it reads it as; absent or null is fine.
+_FIELDS: dict[str, type] = {
+    "author": str,
+    "createdAt": str,
+    "lastModified": str,
+    "cardData": dict,
+    "downloads": int,
+    "likes": int,
+    "tags": list,
+    "siblings": list,
+}
+
 logger = logging.getLogger(__name__)
+
+
+def _is_dataset_id(ds_id: str) -> bool:
+    return bool(_DATASET_ID_RE.fullmatch(ds_id)) and ".." not in ds_id
+
+
+def _is_dataset(d: object) -> bool:
+    """A well-formed dataset id, and every field ``_normalize`` reads at its type."""
+    if not (isinstance(d, dict) and isinstance(d.get("id"), str) and _is_dataset_id(d["id"])):
+        return False
+    return (
+        all(d.get(k) is None or isinstance(d[k], kind) for k, kind in _FIELDS.items())
+        and all(isinstance(t, str) for t in d.get("tags") or [])
+        and all(
+            isinstance(s, dict) and isinstance(s.get("rfilename"), str)
+            for s in d.get("siblings") or []
+        )
+    )
+
+
+def _check_dataset(body: dict) -> None:
+    if not _is_dataset(body):
+        raise _http.UpstreamEnvelopeError(f"no HuggingFace dataset in {body!r:.200}")
+
+
+def _check_datasets(body: list) -> None:
+    if not all(_is_dataset(d) for d in body):
+        raise _http.UpstreamEnvelopeError(f"no HuggingFace dataset list in {body!r:.200}")
 
 
 def _license(tags: list[str], card: dict | None) -> str | None:
     for t in tags:
         if t.startswith("license:"):
             return t.split(":", 1)[1] or None
-    return (card or {}).get("license")
+    # The card is the uploader's YAML: a licence id or a list of them (live,
+    # priyank-m/SROIE_2019_text_recognition: `license: []`). The Hub tags each listed
+    # licence, so the loop above answers for any list that is not empty.
+    lic = (card or {}).get("license")
+    if isinstance(lic, list):
+        lic = lic[0] if lic else None
+    return lic if isinstance(lic, str) and lic else None
 
 
 def _metrics(d: dict[str, Any]) -> Metrics | None:
@@ -44,10 +90,10 @@ def _metrics(d: dict[str, Any]) -> Metrics | None:
 
 
 def _normalize(d: dict[str, Any]) -> DataResource:
-    ds_id = d.get("id", "")
+    ds_id = d["id"]
     tags = d.get("tags") or []
-    created = d.get("createdAt") or ""
-    year = int(created[:4]) if created[:4].isdigit() else None
+    created = d.get("createdAt")
+    year = int(created[:4]) if created and created[:4].isdigit() else None
     author = d.get("author")
     # The file path is escaped as huggingface_hub's own hf_hub_url escapes it: a space
     # made the URL invalid, and '#', '?' or '%' in a name requested a different file.
@@ -92,14 +138,14 @@ async def search(
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         expect=list,  # an error envelope is an outage, not zero datasets
+        check=_check_datasets,
     )
-    items = data
-    return len(items), [compact(_normalize(d)) for d in items]
+    return len(data), [compact(_normalize(d)) for d in data]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     ds_id = local_id(resource_id, "hf")
-    if not _DATASET_ID_RE.fullmatch(ds_id) or ".." in ds_id:
+    if not _is_dataset_id(ds_id):
         raise NotFoundError(f"malformed HuggingFace id {resource_id!r}")
     try:
         body = await _http.request_json(
@@ -112,6 +158,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
             expect=dict,
+            check=_check_dataset,
         )
     except NotFoundError:
         raise NotFoundError(f"HuggingFace has no dataset {ds_id!r}") from None
