@@ -8,6 +8,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A HuggingFace split that the dataset viewer converted only in part (its first 5 GB)
+  is listed as `<config>/partial-<split>/…` instead of `<config>/<split>/…`, so a
+  query on it no longer passes for one over the whole split (825 of allenai/c4's
+  1,006 converted files). The files of a split converted in several parts
+  (`<split>-part0`, `-part1`, …) now have distinct names; they shared one, and only
+  the first could be picked with `file=`.
 - Resolving a gated HuggingFace dataset, a dataset built by a loading script, or one
   whose converted file list is too large to list no longer reports a failed
   datasets-server lookup. The dataset viewer answers these with HTTP 401 or 501, which
