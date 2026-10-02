@@ -6,7 +6,9 @@ marker and dataset-level PROV-O provenance). It does NOT emit RecordSet/Field
 structures: those describe tabular column semantics, which require reading file
 internals (a later operate-on-data capability). The output is therefore a valid
 schema.org Dataset with Croissant FileObject distributions plus dataset-level
-provenance, not a RecordSet-complete 1.1 manifest. Pure transform — never does
+provenance, not a RecordSet-complete 1.1 manifest. A file whose source gives no
+MIME type or checksum is still listed, without them; the Croissant validator
+(mlcroissant) reports such a file as incomplete. Pure transform — never does
 I/O (in particular it never calls the async ``citation.render``; it only reuses
 an already-populated ``r.citation``).
 """
@@ -14,14 +16,52 @@ an already-populated ``r.citation``).
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 from data_aggregator_mcp.models import Creator, DataResource, Link
 
+# The @context of MLCommons' own Croissant 1.1 examples (mlcommons/croissant
+# datasets/1.1/zenodo-head-mri/metadata.json, 2026-10-02), so `conformsTo`,
+# `citeAs` and `md5` are the Croissant terms (dct:conformsTo, cr:citeAs, cr:md5)
+# rather than schema.org names, and mlcroissant can load the manifest (it reads
+# `@language`). tests/test_croissant_observed.py holds the copy it is checked against.
 _CONTEXT = {
+    "@language": "en",
     "@vocab": "https://schema.org/",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
     "cr": "http://mlcommons.org/croissant/",
-    "sc": "https://schema.org/",
+    "rai": "http://mlcommons.org/croissant/RAI/",
+    "data": {"@id": "cr:data", "@type": "@json"},
+    "dataType": {"@id": "cr:dataType", "@type": "@vocab"},
     "dct": "http://purl.org/dc/terms/",
+    "examples": {"@id": "cr:examples", "@type": "@json"},
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "samplingRate": "cr:samplingRate",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform",
     "prov": "http://www.w3.org/ns/prov#",
     # odrl prefix reserved for B3's license-compatibility policy (odrl:Offer).
     # B2 emits no odrl: keys; the prefix is declared now so B3 needs no context change.
@@ -53,13 +93,16 @@ _SOURCE_DISPLAY = {
 def _file_object(
     name: str, url: str | None, mime: str | None, size: int | None, checksum: str | None
 ) -> dict[str, Any]:
-    obj: dict[str, Any] = {"@type": "cr:FileObject", "@id": name, "name": name}
+    # A file name is not an IRI (spaces, `#`, `?`); the @id is the percent-encoded
+    # name, which keeps distinct names distinct. mlcroissant refuses an @id with
+    # whitespace, which failed the whole manifest.
+    obj: dict[str, Any] = {"@type": "cr:FileObject", "@id": quote(name), "name": name}
     if url:
         obj["contentUrl"] = url
     if mime:
         obj["encodingFormat"] = mime
     if size is not None:
-        obj["contentSize"] = size
+        obj["contentSize"] = f"{size} B"  # schema.org contentSize is Text
     if checksum and ":" in checksum:
         algo, _, hexval = checksum.partition(":")
         if algo in ("sha256", "md5"):
