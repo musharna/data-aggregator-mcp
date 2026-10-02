@@ -35,6 +35,12 @@ from data_aggregator_mcp.models import DataResource
 logger = logging.getLogger(__name__)
 
 _MAX_CHARS = 2000
+# Module constants are not mutated: httpx upper-cases the method, and header names are
+# case-insensitive, so a case mutant of either is equivalent. test_embeddings_observed
+# pins the request each one builds.
+_METHOD = "POST"
+_JSON_CONTENT = {"Content-Type": "application/json"}
+_AUTHORIZATION = "Authorization"
 # bool is an int subclass; a JSON true is not a coordinate.
 _NUMBER_TYPES = (int, float)
 # RFC 6750 §2.1 b64token. Anything else cannot go in the header: httpx raises a bare
@@ -101,14 +107,14 @@ async def embed(client: httpx.AsyncClient, texts: list[str]) -> list[list[float]
     if key and not _BEARER_TOKEN.fullmatch(key):
         logger.warning("semantic re-rank skipped: EMBEDDING_API_KEY is not a bearer token")
         return None
-    headers = {"Content-Type": "application/json"}
+    headers = dict(_JSON_CONTENT)
     if key:
-        headers["Authorization"] = f"Bearer {key}"
+        headers[_AUTHORIZATION] = f"Bearer {key}"
     payload = json.dumps({"model": model, "input": texts})
     try:
         body = await _http.request_json(
             client,
-            "POST",
+            _METHOD,
             f"{base}/embeddings",
             service="embeddings",
             content=payload,
