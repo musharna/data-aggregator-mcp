@@ -19,6 +19,11 @@ from data_aggregator_mcp.models import DataResource
 logger = logging.getLogger(__name__)
 
 DOI_BASE = "https://doi.org"
+# httpx upper-cases the method and reads header names case-insensitively, so these are
+# constants: any spelling of them sends the same request (tests/test_citation_observed.py).
+_GET = "GET"
+_ACCEPT = "Accept"
+_CONTENT_TYPE = "Content-Type"
 
 # Structured formats with a dedicated content-negotiation MIME; any other value is
 # treated as a CSL style name rendered as a text bibliography (apa, mla, vancouver, ...).
@@ -66,7 +71,7 @@ def _answers_for(fmt: str) -> frozenset[str]:
 def _media_type(resp: httpx.Response) -> str:
     """The response's media type, without parameters, lower-cased (RFC 9110 §8.3.1:
     type and subtype are case-insensitive; KISTI sends ``application/x-Research-Info-Systems``)."""
-    return resp.headers.get("content-type", "").partition(";")[0].strip().lower()
+    return resp.headers.get(_CONTENT_TYPE, "").partition(";")[0].strip().lower()
 
 
 def _csl_json_from_metadata(r: DataResource) -> str:
@@ -75,16 +80,14 @@ def _csl_json_from_metadata(r: DataResource) -> str:
         item["author"] = [{"literal": c.name} for c in r.creators]
     if r.year:
         item["issued"] = {"date-parts": [[r.year]]}
-    if r.doi:
-        item["DOI"] = r.doi
-    return json.dumps(item)
+    return json.dumps(item)  # only records without a DOI get here: render asks doi.org
 
 
 async def render(client: httpx.AsyncClient, resource: DataResource, fmt: str) -> str | None:
     """Render a citation for ``resource`` in ``fmt``. DOI records use DOI content
     negotiation; non-DOI records yield CSL-JSON from metadata only. Fail soft: any
     failure logs a warning and returns None — this enrichment never raises (spec §8)."""
-    fmt = (fmt or "").strip().lower()
+    fmt = fmt.strip().lower()
     if not fmt:
         return None
     try:
@@ -100,10 +103,10 @@ async def render(client: httpx.AsyncClient, resource: DataResource, fmt: str) ->
             return None
         resp = await _http.request_with_retry(
             client,
-            "GET",
+            _GET,
             _doi_url(resource.doi),
             service="DOI content negotiation",
-            headers={"Accept": _accept_for(fmt)},
+            headers={_ACCEPT: _accept_for(fmt)},
         )
         media = _media_type(resp)
         if media not in _answers_for(fmt):
