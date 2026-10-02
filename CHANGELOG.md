@@ -11,6 +11,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `operate` `schema` and `preview` name the first column of a CSV that starts with a
   UTF-8 byte-order mark (as Excel's "CSV UTF-8" writes it) without the mark, as `head`
   and `sql` already did. A column name copied from `preview` into a query now matches.
+- `operate` `preview` of a CSV no longer returns half a row when its 64 KB read ends
+  inside a quoted field that holds line breaks (a poem, an address, a long comment).
+  The half row came back as data, its later columns empty; it is now left out and the
+  page is marked `truncated`.
 
 ## [0.54.14] - 2026-10-02
 
