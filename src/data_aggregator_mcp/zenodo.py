@@ -234,7 +234,7 @@ def pushable(filters: Mapping[str, Any], /) -> dict[str, Any]:
     act = _pushdown.active(filters)
     out = {k: v for k, v in act.items() if k in _pushdown.YEAR_FILTERS}
     kind = act.get("kind")
-    if kind is not None and _pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, kind):
+    if kind is not None and _filter_clauses({"kind": kind}):
         out["kind"] = kind
     return out
 

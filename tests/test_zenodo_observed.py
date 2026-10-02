@@ -169,3 +169,14 @@ def test_a_grant_named_only_by_title_keeps_it_and_a_wrong_typed_title_is_refused
     rec["metadata"]["grants"][0]["title"] = 7
     with pytest.raises(_http.UpstreamEnvelopeError):
         zenodo._check_record(rec)
+
+
+def test_a_wrong_typed_resource_type_is_refused_not_read_as_other():
+    # ``_normalize`` reads ``str(type)``, so 7 would otherwise pass as kind "other".
+    rec = copy.deepcopy(_FULL)
+    rec["metadata"]["resource_type"] = {"type": "software"}
+    zenodo._check_record(rec)
+    assert zenodo._normalize(rec).kind == "software"  # positive control
+    rec["metadata"]["resource_type"]["type"] = 7
+    with pytest.raises(_http.UpstreamEnvelopeError, match="no Zenodo record in"):
+        zenodo._check_record(rec)
