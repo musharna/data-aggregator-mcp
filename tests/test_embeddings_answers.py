@@ -223,8 +223,10 @@ _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
 
-def _endpoint_or_skip() -> None:
-    if not os.environ.get("EMBEDDING_API_BASE"):
+def _endpoint_or_skip(real_env: dict[str, str]) -> None:
+    # Asks the operator's environment, not os.environ: the autouse fixture above has
+    # set a mock endpoint, which live_env overrides only when a real one exists.
+    if not real_env.get("EMBEDDING_API_BASE"):
         pytest.skip("no EMBEDDING_API_BASE configured")
 
 
@@ -233,7 +235,7 @@ def _endpoint_or_skip() -> None:
 async def test_live_rerank_ranks_the_matching_record_first(live_env):
     """Moved from test_live_p5, where it read EMBEDDING_API_BASE without ``live_env``:
     the autouse fixture had already cleared it, so the test always skipped."""
-    _endpoint_or_skip()
+    _endpoint_or_skip(live_env)
     rs = [
         DataResource(
             id="b", source="zenodo", kind="dataset", title="quantum chromodynamics lattice"
@@ -251,11 +253,13 @@ async def test_live_rerank_ranks_the_matching_record_first(live_env):
 @_live_only
 @pytest.mark.asyncio
 async def test_live_answers_pass_the_check(live_env):
-    """The check must refuse no real answer: batches of 1 to 20 inputs, including an
-    empty string and a long text, each come back as one finite vector per input."""
-    _endpoint_or_skip()
-    words = ["soil", "moisture", "maize", "", "x" * 2000, "RNA-seq of root tips", "β-catenin"]
-    batches = [words[:1], words[:2], words, (words * 3)[:20]]
+    """The check must refuse no real answer: batches of 1 to 4 inputs, including an
+    empty string, non-ASCII text and a 2,000-character text, each come back as one
+    finite vector per input. (Batches stay small: a CPU-only local server under load
+    took ~3 s per input, and the request timeout is 30 s.)"""
+    _endpoint_or_skip(live_env)
+    words = ["soil", "moisture", "maize", "", "RNA-seq of root tips", "β-catenin", "x" * 2000]
+    batches = [words[:1], words[:2], words[2:6], words[6:]]
     async with httpx.AsyncClient() as client:
         for texts in batches:
             vecs = await embeddings.embed(client, texts)
