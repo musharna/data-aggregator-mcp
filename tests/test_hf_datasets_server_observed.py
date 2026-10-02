@@ -8,9 +8,10 @@ import logging
 import httpx
 import pytest
 
-from data_aggregator_mcp import _http, hf_datasets_server
+from data_aggregator_mcp import _http, hf_datasets_server, huggingface
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from tests.test_hf_datasets_server_answers import _C4, _GATED, _LICHESS, _SCRIPT
+from tests.test_huggingface_answers import _SROIE
 
 _DSS = "https://datasets-server.huggingface.co/parquet"
 
@@ -203,3 +204,26 @@ async def test_the_file_list_is_capped_in_order_and_the_cap_is_logged(n, caplog)
         [] if n == cap else [f"datasets-server: o/n exposes {n} parquet files; capping to {cap}"]
     )
     assert [m.getMessage() for m in caplog.records] == expected
+
+
+@pytest.mark.asyncio
+async def test_a_renamed_dataset_is_looked_up_by_its_current_name():
+    """The Hub redirects an old name (``imdb``) to the dataset; datasets-server answers
+    the old name 404 ``RenamedDatasetError``, which read as "no converted view"."""
+    asked: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "datasets-server.huggingface.co":
+            asked.append(request.url.params["dataset"])
+            return httpx.Response(200, json=_C4)
+        assert request.url.path == "/api/datasets/imdb"
+        return httpx.Response(200, json={**_SROIE, "id": "stanfordnlp/imdb"})
+
+    async with _client(handler) as c:
+        r = await huggingface.resolve(c, "hf:imdb")
+    assert asked == ["stanfordnlp/imdb"]
+    assert r.id == "hf:stanfordnlp/imdb"
+    assert [f.name for f in r.files if f.source == "hf-datasets-server"] == [
+        "af/partial-train/0000.parquet",
+        "am/train/0000.parquet",
+    ]

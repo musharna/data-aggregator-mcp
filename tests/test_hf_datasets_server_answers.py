@@ -123,3 +123,17 @@ async def test_live_a_partial_conversion_is_named_partial():
         "plain_text/train/0000.parquet",
         "plain_text/unsupervised/0000.parquet",
     ]
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_a_renamed_dataset_gets_its_converted_files():
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        r = await huggingface.resolve(c, "hf:imdb")
+    assert r.id == "hf:stanfordnlp/imdb"
+    assert {f.name for f in r.files if f.source == "hf-datasets-server"} == {
+        "plain_text/test/0000.parquet",
+        "plain_text/train/0000.parquet",
+        "plain_text/unsupervised/0000.parquet",
+    }
+    assert r.errors == {}
