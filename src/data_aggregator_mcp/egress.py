@@ -40,14 +40,14 @@ from data_aggregator_mcp.errors import ValidationError
 #: performance knob.
 ALLOW_PRIVATE_ENV = "DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS"
 
-#: Seconds an approved (host, port) stays approved. Files in one record almost always share
+#: Seconds an approved host stays approved. Files in one record almost always share
 #: a host, so without this a 4-file fetch pays four resolutions of the same name — enough to
 #: measurably serialize a parallel download. Deliberately SHORT, and only successful
 #: verdicts are cached: a longer window would widen the DNS-rebinding gap the module
 #: docstring already declines to defend against, and there is no reason to also make it
 #: last minutes.
 _APPROVAL_TTL_S = 30.0
-_approved: dict[tuple[str, int], float] = {}
+_approved: dict[str, float] = {}
 
 
 def _clear_cache() -> None:
@@ -58,27 +58,23 @@ def _clear_cache() -> None:
 def _is_public(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     """True only for addresses that are routable on the public internet.
 
-    Deliberately a denylist of *categories* rather than of specific ranges: link-local
-    covers the cloud metadata services (169.254.169.254 and fd00:ec2::254), and reserved
-    covers the blocks that get repurposed later. A range-by-range list would need editing
-    every time IANA allocates something.
+    Judged by stdlib *categories* rather than a list of ranges, which would need editing
+    every time IANA allocates something. ``is_global`` does most of it: on every supported
+    Python it is ``not is_private`` (and, for IPv4, outside RFC 6598 shared space,
+    100.64.0.0/10 — carrier NAT and every Tailscale node), and the private set already
+    holds loopback, link-local (the 169.254.169.254 metadata service), unique-local
+    (fd00:ec2::254), unspecified and RFC 1918. Naming those again changed no verdict.
 
-    ``is_global`` is the allowlist half: the categories above miss RFC 6598 shared
-    address space (100.64.0.0/10 — carrier NAT, and every Tailscale node), which the
-    stdlib counts as neither private nor reserved. An IPv4-mapped IPv6 literal
-    (``::ffff:100.64.0.1``) is judged as the IPv4 address it carries, since that is
-    where the connection lands.
+    What ``is_global`` lets through, the two named categories catch: multicast (224.0.0.0/4,
+    ff00::/8), and the IETF-reserved IPv6 blocks the private set does not list, among them
+    ``::/8``, which holds the IPv4-compatible ``::127.0.0.1`` and the NAT64 prefix
+    ``64:ff9b::/96`` (``64:ff9b::7f00:1`` carries 127.0.0.1). An IPv4-mapped IPv6 literal
+    (``::ffff:100.64.0.1``) is judged as the IPv4 address it carries, since that is where
+    the connection lands.
     """
     if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
         ip = ip.ipv4_mapped
-    return ip.is_global and not (
-        ip.is_private
-        or ip.is_loopback
-        or ip.is_link_local
-        or ip.is_reserved
-        or ip.is_multicast
-        or ip.is_unspecified
-    )
+    return ip.is_global and not (ip.is_reserved or ip.is_multicast)
 
 
 def split_url(url: str, *, what: str) -> SplitResult:
@@ -98,8 +94,11 @@ def split_url(url: str, *, what: str) -> SplitResult:
     return parts
 
 
-def _target(url: str, what: str) -> tuple[str, int] | None:
-    """Host and port to check, or None when there is nothing to check."""
+def _target(url: str, what: str) -> str | None:
+    """Host to check, or None when there is nothing to check.
+
+    The host alone: the verdict is about the addresses a name resolves to, which do not
+    depend on the port, so neither the lookup nor the approval cache takes one."""
     if os.environ.get(ALLOW_PRIVATE_ENV) == "1":
         return None
 
@@ -112,7 +111,7 @@ def _target(url: str, what: str) -> tuple[str, int] | None:
     host = parts.hostname
     if not host:
         raise ValidationError(f"{what}: URL has no host; refusing to fetch {url}")
-    return host, parts.port or (443 if parts.scheme == "https" else 80)
+    return host
 
 
 async def assert_public_url(url: str, *, what: str) -> None:
@@ -136,19 +135,18 @@ async def assert_public_url(url: str, *, what: str) -> None:
     parallel fetches until ``test_fetch_parallel_overlaps_in_time`` caught it. The loop's
     own resolver keeps the guard off the critical path.
     """
-    target = _target(url, what)
-    if target is None:
+    host = _target(url, what)
+    if host is None:
         return
-    host, port = target
 
     loop = asyncio.get_running_loop()
     now = loop.time()
-    approved_at = _approved.get(target)
+    approved_at = _approved.get(host)
     if approved_at is not None and now - approved_at < _APPROVAL_TTL_S:
         return
 
     try:
-        infos = await loop.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+        infos = await loop.getaddrinfo(host, None, proto=socket.IPPROTO_TCP)
     except socket.gaierror:
         return  # no address == nowhere to reach; see the docstring
     except UnicodeError as exc:
@@ -162,7 +160,7 @@ async def assert_public_url(url: str, *, what: str) -> None:
         addr = info[4][0]
         try:
             ip = ipaddress.ip_address(addr)
-        except ValueError:  # pragma: no cover — getaddrinfo returns literals
+        except ValueError:  # getaddrinfo returns literals; pinned with a stubbed resolver
             raise ValidationError(
                 f"{what}: {host!r} resolved to an unparseable address {addr!r}; "
                 f"refusing to fetch {url}"
@@ -177,7 +175,7 @@ async def assert_public_url(url: str, *, what: str) -> None:
 
     # Cached only after every address passed, so a rejection is never remembered as an
     # approval — and re-checked from scratch once the short TTL lapses.
-    _approved[target] = now
+    _approved[host] = now
 
 
 async def enforce_on_request(request: Any) -> None:
