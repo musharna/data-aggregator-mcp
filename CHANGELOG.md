@@ -8,6 +8,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- When `understand=true` or `multi_query=true` cannot use the LLM endpoint, the server
+  log says why. Every failure (an error status, a malformed answer, an unreachable
+  endpoint, the egress guard refusing a local server) used to show only "query
+  understanding unavailable", with nothing logged. Each now logs one warning naming the
+  cause, with the API key removed from it. An `LLM_API_KEY` with a line break (as a
+  `.env` file with Windows line endings leaves it) or a non-ASCII character, and an
+  `LLM_API_BASE` that is not an http(s) URL, are refused before any request. A
+  line-broken key or a base without `http://` used to be retried as a network failure,
+  adding about 3 seconds per LLM call. An answer without a message is retried like any
+  other malformed answer.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
