@@ -9,7 +9,9 @@ none may raise.
 
 from __future__ import annotations
 
+import itertools
 import os
+from types import SimpleNamespace
 from typing import Any
 
 import httpx
@@ -49,6 +51,23 @@ class _Client:
 def _accepting_client() -> _Client:
     by_url = {t.url: _ACCEPTED[name] for name, t in health._PROBE_TARGETS.items()}
     return _Client(lambda url: httpx.Response(200, json=by_url[url]))
+
+
+@pytest.fixture
+def clock(monkeypatch):
+    """time.monotonic for the probe only: 1.0 at each start, 3.0 at each answer (2000 ms).
+
+    Patched on the module's own ``time`` name, so the event loop's clock is untouched."""
+    ticks = itertools.cycle([1.0, 3.0])
+    monkeypatch.setattr(health, "time", SimpleNamespace(monotonic=lambda: next(ticks)))
+
+
+def _target(check=lambda body: None, expect: type = dict) -> health._Target:
+    return health._Target("https://probe.test/x?y=1", expect, check)
+
+
+async def _probe(answer: Any, target: health._Target | None = None) -> dict:
+    return await health._probe_one(_Client(lambda url: answer), "zenodo", target or _target())
 
 
 # --- the answers a down endpoint gives, reported as down (seen to fail on the old code) ---
@@ -122,6 +141,116 @@ def test_each_probe_is_judged_by_its_adapters_own_check() -> None:
         "literature": (dict, _eutils._check_esearch),
         "huggingface": (list, huggingface._check_datasets),
     }
+
+
+# --- the exact report and request (pin the existing behaviour) ---
+
+
+async def test_the_request_is_one_get_with_the_probe_timeout() -> None:
+    client = _accepting_client()
+    await health.probe_sources(client)
+    assert client.calls == [
+        ("GET", t.url, {"timeout": 5.0}) for t in health._PROBE_TARGETS.values()
+    ]
+
+
+@pytest.mark.parametrize("status", [200, 201, 299])
+async def test_a_2xx_with_an_accepted_body_is_up(clock, status) -> None:
+    r = await _probe(httpx.Response(status, json={}))
+    assert r == {"name": "zenodo", "status": "up", "latency_ms": 2000, "detail": None}
+
+
+@pytest.mark.parametrize("status", [199, 300, 301, 404, 429, 500, 503])
+async def test_a_non_2xx_is_down_with_its_status_and_latency(clock, status) -> None:
+    r = await _probe(httpx.Response(status, json={}))
+    assert r == {"name": "zenodo", "status": "down", "latency_ms": 2000, "detail": f"HTTP {status}"}
+
+
+async def test_a_body_the_check_refuses_is_down_with_the_reason(clock) -> None:
+    def check(body: dict) -> None:
+        if "hits" not in body:
+            raise ValueError("no hits")
+
+    r = await _probe(httpx.Response(200, json={"error": "x"}), _target(check))
+    assert r == {
+        "name": "zenodo",
+        "status": "down",
+        "latency_ms": 2000,
+        "detail": "HTTP 200 with an unusable body: ValueError('no hits')",
+    }
+    ok = await health._probe_one(
+        _Client(lambda url: httpx.Response(200, json={"hits": 1})), "zenodo", _target(check)
+    )
+    assert ok["status"] == "up"
+
+
+async def test_a_wrong_top_level_type_is_down() -> None:
+    r = await _probe(httpx.Response(200, json={"error": "rate"}), _target(expect=list))
+    assert r["status"] == "down"
+    assert r["detail"] == (
+        "HTTP 200 with an unusable body: "
+        """UnexpectedShapeError('expected list JSON, got dict: {"error":"rate"}')"""
+    )
+    assert (await _probe(httpx.Response(200, json=[]), _target(expect=list)))["status"] == "up"
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        httpx.ConnectError("refused"),
+        httpx.ReadTimeout("slow"),
+        httpx.TooManyRedirects("loop"),
+        RuntimeError("nobody expected this"),
+    ],
+)
+async def test_any_exception_from_the_request_is_down_never_raised(exc) -> None:
+    r = await _probe(exc)
+    assert r == {"name": "zenodo", "status": "down", "latency_ms": None, "detail": repr(exc)}
+    assert (await _probe(httpx.Response(200, json={})))["status"] == "up"
+
+
+async def test_an_unexpected_exception_inside_the_check_is_down_never_raised(clock) -> None:
+    def check(body: dict) -> None:
+        raise KeyError("hits")
+
+    r = await _probe(httpx.Response(200, json={}), _target(check))
+    assert r == {
+        "name": "zenodo",
+        "status": "down",
+        "latency_ms": 2000,
+        "detail": "HTTP 200 with an unusable body: KeyError('hits')",
+    }
+
+
+async def test_a_detail_is_cut_at_200_characters() -> None:
+    exc = httpx.ConnectError("x" * 500)
+    r = await _probe(exc)
+    assert r["detail"] == repr(exc)[:200]
+    assert len(r["detail"]) == 200
+
+    def check(body: dict) -> None:
+        raise ValueError("y" * 500)
+
+    r = await _probe(httpx.Response(200, json={}), _target(check))
+    assert len(r["detail"]) == 200
+    assert r["detail"].startswith("HTTP 200 with an unusable body: ValueError('yyy")
+
+
+async def test_probe_sources_reports_each_source_in_order_with_its_own_answer() -> None:
+    zen = health._PROBE_TARGETS["zenodo"].url
+    accepting = _accepting_client()
+
+    def answer(url: str) -> Any:
+        return httpx.Response(503) if url == zen else accepting.answer(url)
+
+    results = await health.probe_sources(_Client(answer))
+    assert [(r["name"], r["status"]) for r in results] == [
+        ("zenodo", "down"),
+        ("datacite", "up"),
+        ("omics", "up"),
+        ("literature", "up"),
+        ("huggingface", "up"),
+    ]
 
 
 # --- live ---
