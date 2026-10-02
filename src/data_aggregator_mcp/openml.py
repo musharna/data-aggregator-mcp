@@ -23,7 +23,6 @@ from data_aggregator_mcp.models import (
     Link,
     compact,
     local_id,
-    normalize_access,
     year_from,
 )
 
@@ -197,7 +196,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         creators=[Creator(name=n) for n in _str_list(desc.get("creator"))],
         year=year_from(desc.get("upload_date")),
         license=desc.get("licence"),
-        access=normalize_access("open"),
+        access="open",
         subjects=_str_list(desc.get("tag")),
         last_updated=desc.get("upload_date"),
         files=files,
