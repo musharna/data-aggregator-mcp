@@ -13,6 +13,9 @@ import pyarrow.parquet as pq
 
 _PARQUET_EXTS = (".parquet", ".pq")
 _CSV_SNIFF_BYTES = 64_000
+# A leading UTF-8 byte-order mark (Excel's "CSV UTF-8" writes one) is not part of the
+# first column's name: DuckDB drops it, so head/sql and schema/preview must agree.
+_TEXT_ENCODING = "utf-8-sig"
 
 
 def _is_parquet(name: str) -> bool:
@@ -57,7 +60,7 @@ def _read_head_text(url: str, n: int) -> tuple[str, bool]:
         nl = raw.rfind(b"\n")
         if nl >= 0:
             raw = raw[: nl + 1]
-    return raw.decode("utf-8", "replace"), capped
+    return raw.decode(_TEXT_ENCODING, "replace"), capped
 
 
 def _schema_csv(url: str, file: str) -> dict:
