@@ -25,7 +25,7 @@ def _resource(doi=None, ident=None):
 
 
 def _msg(updated_by):
-    return {"message": {"updated-by": updated_by}}
+    return {"message": {"DOI": "10.1/work", "updated-by": updated_by}}
 
 
 @pytest.mark.asyncio
@@ -200,3 +200,26 @@ async def test_live_pdb_entry_with_retracted_paper():
         clean = await trust.annotate(c, await pdb.resolve(c, "pdb:6VXX"))
     assert retr.retracted is True and retr.retraction_doi
     assert clean.retracted is False
+
+
+@_live_only
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("doi", "update_type"),
+    [
+        ("10.1016/j.adengl.2021.11.027", "withdrawal"),
+        ("10.2514/6.2018-2123", "withdrawal"),
+        ("10.1016/j.asr.2025.03.045", "removal"),
+        ("10.29328/journal.jcmhs.1001023", "partial_retraction"),
+    ],
+)
+async def test_live_withdrawn_and_removed_papers_are_retracted(doi, update_type):
+    """These read as clean before 2026-10-02: only ``type == "retraction"`` counted."""
+    async with httpx.AsyncClient(timeout=60) as c:
+        body = (await c.get(trust.CROSSREF.format(doi=doi), headers=trust._HEADERS)).json()
+        out = await trust.annotate(c, _resource(doi=doi))
+        control = await trust.annotate(c, _resource(doi="10.1038/nature14539"))
+    notices = [u["DOI"] for u in body["message"]["updated-by"] if u["type"] == update_type]
+    assert out.retracted is True and out.retraction_doi == notices[0]
+    assert control.retracted is False
+    trust._check_work(body)  # the live answer is a well-formed work
