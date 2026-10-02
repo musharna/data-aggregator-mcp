@@ -8,6 +8,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `chemical=` and `tissue=` find the ChEBI or UBERON term whose name or synonym is
+  the one given even when EBI OLS ranks it low. The lookup took OLS's ten most
+  relevant terms, and for common names the match was not among them, so
+  `chemical="aspirin"`, `tissue="skin"` and `tissue="bone"` were reported as
+  unresolved and the search was not expanded. A name with spaces around it is now
+  matched too.
+- An EBI OLS answer for `chemical=` or `tissue=` that is missing its result list or
+  has a wrong-typed field is reported in `errors` as a lookup failure instead of
+  "no match", and is no longer remembered as "no match" for an hour.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
