@@ -8,6 +8,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
+  lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
+  such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
+- A NASA CMR answer missing its hit count or collection list is reported as a
+  malformed answer instead of zero hits, a collection without a concept id is no
+  longer returned as `nasacmr:`, and a wrong-typed field no longer escapes as a bare
+  error.
+- data.gov datasets keep every theme as a subject. Some publishers give a theme as a
+  labelled concept instead of plain text (70 of 3,472 datasets sampled), and those
+  themes were dropped.
+- A data.gov answer missing its result list is reported as a malformed answer instead
+  of zero hits or "no such dataset", and a wrong-typed field no longer escapes as a
+  bare error.
 - An OmicsDI record's `doi` is the dataset's own DOI, not the DOI of the paper that
   describes it. Every OmicsDI record with a publication reported the paper's DOI as
   its own, so a dataset and its paper could be taken for the same record; the paper's
