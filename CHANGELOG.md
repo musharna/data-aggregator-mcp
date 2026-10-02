@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `resolve` with `cite=` no longer returns a web page or a different format as the
+  citation. For DOIs whose registration agency cannot produce the format asked for,
+  doi.org answers with something else: Chinese ISTIC DOIs with the publisher's HTML
+  page, Taiwanese Airiti DOIs with CSL-JSON for every format. The citation is now
+  null in that case, as for any other citation that cannot be rendered.
+
 ## [0.54.14] - 2026-10-02
 
 ### Fixed
