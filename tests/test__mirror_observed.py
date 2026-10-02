@@ -75,3 +75,43 @@ def test_the_groups_do_not_depend_on_the_order_records_arrive_in() -> None:
     for perm in itertools.islice(itertools.permutations(recs), 0, None, 997):
         out = _mirror.collapse_mirrors(list(perm))
         assert {frozenset([r.id, *(m.id for m in r.mirrors)]) for r in out} == expected
+
+
+def test_a_doi_collision_keeps_the_better_copy_and_a_tie_keeps_the_first() -> None:
+    first = _r("zenodo:1", doi="10.5281/ZENODO.1")
+    same = _r("dataone:2", source="dataone", doi="10.5281/zenodo.1")
+    no_doi = _r("zenodo:3")
+    assert _mirror.dedup_by_doi([no_doi, first, same]) == [first, no_doi]
+    assert _mirror.dedup_by_doi([same, first]) == [same]
+    discovery = _r("nasacmr:C1-X", source="nasacmr", doi="10.3334/x")
+    datacite = _r("datacite:10.3334/x", source="figshare", doi="10.3334/x")
+    native = _r("dataone:doi:10.3334/x", source="dataone", doi="10.3334/x")
+    assert _mirror.dedup_by_doi([discovery, datacite]) == [datacite]
+    assert _mirror.dedup_by_doi([datacite, discovery]) == [datacite]
+    assert _mirror.dedup_by_doi([discovery, datacite, native]) == [native]
+    assert [_mirror.fetch_priority(r) for r in (discovery, datacite, native)] == [
+        _mirror.DISCOVERY_ONLY_PRIORITY,
+        _mirror.DATACITE_PRIORITY,
+        _mirror.NATIVE_PRIORITY,
+    ]
+
+
+def test_records_without_a_fingerprint_never_match_on_the_missing_part() -> None:
+    """Two records from different sources with the same title but no author (or no
+    year) have no fingerprint, so nothing joins them; the same pair with an author and
+    a year folds."""
+    bare = [
+        _r("zenodo:1", title="Atlas", year=2020),
+        _r("dryad:2", source="dryad", title="Atlas", year=2020),
+    ]
+    assert [r.id for r in _mirror.collapse_mirrors(bare)] == ["zenodo:1", "dryad:2"]
+    no_year = [
+        _r("zenodo:1", title="Atlas", author="Ada Lovelace"),
+        _r("dryad:2", source="dryad", title="Atlas", author="Ada Lovelace"),
+    ]
+    assert [r.id for r in _mirror.collapse_mirrors(no_year)] == ["zenodo:1", "dryad:2"]
+    full = [
+        _r("zenodo:1", title="Atlas", author="Ada Lovelace", year=2020),
+        _r("dryad:2", source="dryad", title="Atlas", author="Ada Lovelace", year=2020),
+    ]
+    assert [r.id for r in _mirror.collapse_mirrors(full)] == ["zenodo:1"]
