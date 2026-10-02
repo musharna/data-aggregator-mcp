@@ -81,6 +81,21 @@ async def test_rewrite_strips_and_drops_blank_entity_fields(monkeypatch) -> None
     assert ru.chemical is None
 
 
+async def test_rewrite_drops_a_boolean_year_or_confidence(monkeypatch) -> None:
+    """JSON true is a Python int subclass: taken as a number it is year 1, confidence 1.0.
+    Positive control: the numeric fields of the same answer still land."""
+    answer = {"keyword_core": "x", "year_min": True, "year_max": 2020, "confidence": False}
+    async with _llm(monkeypatch, answer, []) as client:
+        ru = await query_understanding.rewrite(client, "q")
+    assert ru is not None
+    assert (ru.year_min, ru.year_max, ru.confidence) == (None, 2020, None)
+    answer = {"keyword_core": "x", "year_min": 2010, "confidence": 1}
+    async with _llm(monkeypatch, answer, []) as client:
+        ru = await query_understanding.rewrite(client, "q")
+    assert ru is not None
+    assert (ru.year_min, ru.confidence) == (2010, 1.0)
+
+
 # ---------------------------------------------------------------------------
 # expand
 # ---------------------------------------------------------------------------
