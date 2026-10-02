@@ -115,10 +115,61 @@ _LANDING_AWARE = frozenset({"dataverse"})
 _ZENODO_DOI_RE = re.compile(r"10\.5281/zenodo\.(\d+)", re.IGNORECASE)
 
 
-def _first(items: list[dict[str, Any]] | None, key: str) -> str | None:
+def _main(items: list[dict[str, Any]] | None, key: str, type_key: str, main: str | None) -> Any:
+    """The entry of the main type (titles: untyped; descriptions: ``Abstract``), else the
+    first. Records list subtitles, translated titles, contact blocks and series lines in
+    any order, so the first entry is not the title or the abstract (probe 2026-10-01)."""
     if not items:
         return None
-    return items[0].get(key)
+    return next((i for i in items if i.get(type_key) == main), items[0]).get(key)
+
+
+# The attribute lists `_normalize` reads, and the text fields read off their entries.
+_LIST_FIELDS = {
+    "titles": ("title", "titleType"),
+    "descriptions": ("description", "descriptionType"),
+    "creators": ("name", "givenName", "familyName"),
+    "subjects": ("subject",),
+    "rightsList": ("rights", "rightsUri", "rightsIdentifier"),
+    "fundingReferences": ("funderName", "awardNumber", "awardTitle"),
+    "relatedIdentifiers": ("relationType", "relatedIdentifier"),
+}
+
+
+def _is_record(item: object) -> bool:
+    """A DataCite record carrying the fields `_normalize` reads, each of the type it reads."""
+    if not isinstance(item, dict) or not isinstance(item.get("relationships"), dict | None):
+        return False
+    a = item.get("attributes")
+    if not (
+        isinstance(a, dict)
+        and isinstance(a.get("doi"), str)
+        and isinstance(a.get("types"), dict | None)
+        and all(isinstance(a.get(k), str | None) for k in ("updated", "url"))
+    ):
+        return False
+    for field, text_keys in _LIST_FIELDS.items():
+        entries = a.get(field)
+        if entries is None:
+            continue
+        if not isinstance(entries, list) or not all(
+            isinstance(e, dict) and all(isinstance(e.get(k), str | None) for k in text_keys)
+            for e in entries
+        ):
+            return False
+    return True
+
+
+def _check_record(body: dict) -> None:
+    if not _is_record(body.get("data")):
+        raise _http.UpstreamEnvelopeError(f"no DataCite record in {body!r:.200}")
+
+
+def _check_records(body: dict) -> None:
+    data, meta = body.get("data"), body.get("meta")
+    total = meta.get("total") if isinstance(meta, dict) else None
+    if not (isinstance(data, list) and all(_is_record(d) for d in data) and type(total) is int):
+        raise _http.UpstreamEnvelopeError(f"no DataCite record list in {body!r:.200}")
 
 
 def _year(value: Any) -> int | None:
@@ -191,7 +242,16 @@ def _metrics(a: dict[str, Any]) -> Metrics | None:
     return Metrics(citations=cites, views=views, downloads=dls)
 
 
-def _creator(c: dict[str, Any]) -> Creator:
+def _creator_name(c: dict[str, Any]) -> str:
+    """``name``, else "Family, Given" (DataCite's own form for ``name``) from the parts:
+    90,315 records name a creator only by ``givenName``/``familyName`` (probe 2026-10-01)."""
+    if c.get("name"):
+        return c["name"]
+    return ", ".join(p for p in (c.get("familyName"), c.get("givenName")) if p)
+
+
+def _creator(c: dict[str, Any]) -> Creator | None:
+    """The creator, or None when it has neither a name nor an ORCID."""
     orcid = None
     for nid in c.get("nameIdentifiers") or []:
         ident = nid.get("nameIdentifier") or ""
@@ -204,11 +264,12 @@ def _creator(c: dict[str, Any]) -> Creator:
         if cand:
             orcid = cand
             break
-    return Creator(name=c.get("name", ""), orcid=orcid)
+    name = _creator_name(c)
+    return Creator(name=name, orcid=orcid) if name or orcid else None
 
 
 def _normalize(item: dict[str, Any]) -> DataResource:
-    a = item.get("attributes", {}) or {}
+    a = item["attributes"]
     client_id = (((item.get("relationships") or {}).get("client") or {}).get("data") or {}).get(
         "id", ""
     )
@@ -220,15 +281,15 @@ def _normalize(item: dict[str, Any]) -> DataResource:
         id=f"datacite:{doi}",
         source=_source_for_client(client_id),
         kind=_KIND_MAP.get(rt, _pushdown.OTHER_KIND),
-        title=_first(a.get("titles"), "title") or "",
-        creators=[_creator(c) for c in (a.get("creators") or [])],
+        title=_main(a.get("titles"), "title", "titleType", None) or "",
+        creators=[c for c in map(_creator, a.get("creators") or []) if c is not None],
         funding=[
             FundingRef(funder=f["funderName"], award=f.get("awardNumber") or f.get("awardTitle"))
             for f in (a.get("fundingReferences") or [])
             if f.get("funderName")
         ],
         year=_year(a.get("publicationYear")),
-        description=_first(a.get("descriptions"), "description"),
+        description=_main(a.get("descriptions"), "description", "descriptionType", "Abstract"),
         doi=doi,
         subjects=[s.get("subject", "") for s in (a.get("subjects") or []) if s.get("subject")],
         license=license_,
@@ -305,9 +366,10 @@ async def search(
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         expect=dict,
+        check=_check_records,
     )
-    items = (body.get("data", []) or [])[offset % capped :]
-    total = int((body.get("meta") or {}).get("total", len(items)))
+    items = body["data"][offset % capped :]
+    total = body["meta"]["total"]
     return total, [compact(_normalize(it)) for it in items]
 
 
@@ -330,14 +392,11 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
             expect=dict,
+            check=_check_record,
         )
     except NotFoundError:
         raise NotFoundError(f"DataCite has no DOI {doi!r}") from None
-    data = body.get("data")
-    if not isinstance(data, dict):
-        raise NotFoundError(
-            f"DataCite returned a malformed response for {doi!r} (missing 'data' key)"
-        )
+    data = body["data"]
     resource = _normalize(data)
     if resource.source == "zenodo" and resource.doi and "zenodo." in resource.doi:
         recid = resource.doi.rsplit("zenodo.", 1)[-1]
