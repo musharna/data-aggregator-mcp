@@ -28,6 +28,9 @@ from data_aggregator_mcp.models import DataResource, Mirror
 # from the central registry, which also feeds the fetch gate, so the two cannot drift.
 DISCOVERY_ONLY_SOURCES: frozenset[str] = sources.DISCOVERY_ONLY
 
+# ``fetch_priority`` values, lowest first; only their order matters.
+DISCOVERY_ONLY_PRIORITY, DATACITE_PRIORITY, NATIVE_PRIORITY = range(3)
+
 
 def fetch_priority(r: DataResource) -> int:
     """DOI-collision precedence: higher wins. A fetchable copy must beat a discovery-only
@@ -37,14 +40,14 @@ def fetch_priority(r: DataResource) -> int:
     happens to share a DOI (e.g. ORNL DAAC records held by both CMR and DataONE) from
     shadowing the verified fetchable copy purely by interleave position."""
     if r.source in DISCOVERY_ONLY_SOURCES:
-        return 0
+        return DISCOVERY_ONLY_PRIORITY
     if r.id.startswith("datacite:"):
-        return 1
-    return 2
+        return DATACITE_PRIORITY
+    return NATIVE_PRIORITY
 
 
 def dedup_by_doi(resources: list[DataResource]) -> list[DataResource]:
-    """Dedup by lowercased DOI, preserving first-seen order. On collision the
+    """Dedup by case-folded DOI (DOIs are case-insensitive), preserving first-seen order. On collision the
     higher-``fetch_priority`` record wins (fetchable native > DataCite > discovery-only),
     so the fetchable copy survives regardless of encounter order; ties keep the first seen.
     Records without a DOI are always kept.
@@ -56,7 +59,7 @@ def dedup_by_doi(resources: list[DataResource]) -> list[DataResource]:
         if not r.doi:
             no_doi.append(r)
             continue
-        key = r.doi.lower()
+        key = r.doi.casefold()
         existing = by_doi.get(key)
         if existing is None:
             by_doi[key] = r
@@ -99,7 +102,7 @@ def fingerprint_key(r: DataResource) -> tuple[str, str, int] | None:
     """``(normalized_title, first_author_name_key, year)`` ONLY when all three are
     present/non-empty; else None (so a missing field can never satisfy the title
     path). Conservative content-identity key."""
-    title = normalize_title(r.title) if r.title else ""
+    title = normalize_title(r.title)
     author = first_author_name_key(r)
     if not title or not author or r.year is None:
         return None
@@ -112,14 +115,12 @@ def checksums(r: DataResource) -> set[str]:
     return {f.checksum for f in r.files if f.checksum}
 
 
-def survivor_rank(r: DataResource) -> tuple[int, int]:
-    """Lower sorts first = better survivor. DOI-bearing beats DOI-less; among
-    DOI-bearing, a native id (not ``datacite:``-prefixed) beats a ``datacite:``
-    one — same precedence spirit as ``dedup_by_doi``. Ties fall through to first-seen
-    order (stable sort on the group's encounter order)."""
-    has_doi = 0 if r.doi else 1
-    is_datacite = 1 if r.id.startswith("datacite:") else 0
-    return (has_doi, is_datacite)
+def survivor_rank(r: DataResource) -> tuple[bool, bool]:
+    """Lower sorts first = better survivor (``False`` < ``True``). DOI-bearing beats
+    DOI-less; among DOI-bearing, a native id (not ``datacite:``-prefixed) beats a
+    ``datacite:`` one — same precedence spirit as ``dedup_by_doi``. Ties go to the
+    earliest record (``collapse_mirrors``)."""
+    return (not r.doi, r.id.startswith("datacite:"))
 
 
 def collapse_mirrors(records: list[DataResource]) -> list[DataResource]:
