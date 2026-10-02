@@ -8,6 +8,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A client that declares elicitation support as a bare `elicitation: {}` is now asked
+  to correct an organism, disease, tissue, chemical or assay term that matches
+  nothing. The MCP specification treats that declaration as form support, and it was
+  the only way to declare elicitation before protocol version 2025-11-25, but the
+  server read it as no support, so the search ran without the filter and never asked.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
