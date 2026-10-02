@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.10] - 2026-10-01
+
 ### Fixed
 
 - BioStudies file download URLs escape the file's path. A name with a space gave an
