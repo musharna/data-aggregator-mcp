@@ -243,8 +243,8 @@ async def test_object_url_5xx_raises_dataaggreagtor_error():
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
         with pytest.raises(DataAggregatorError):
             await dataone._object_url(c, "urn:uuid:test-5xx")
-    # must have retried (MAX_RETRIES=3)
-    assert call_count == dataone.MAX_RETRIES
+    # must have retried (_http's default of 3 tries)
+    assert call_count == 3
 
 
 @pytest.mark.asyncio

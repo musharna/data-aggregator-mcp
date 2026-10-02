@@ -36,8 +36,10 @@ DEFAULT_SIZE = 10
 MAX_SIZE = 50
 # Most data objects attached to one resolved package (each needs its own CN resolve).
 MANIFEST_CAP = 1000
-DEFAULT_TIMEOUT = 30.0
-MAX_RETRIES = 3
+# httpx upper-cases the method and reads header names case-insensitively, so a
+# spelling mutant of either sends the same request.
+_GET = "GET"
+_ACCEPT_JSON = {"Accept": "application/json"}
 
 # Lucene special characters that must be backslash-escaped when user-supplied
 # strings are interpolated into a Solr query (boolean operators && and || are
@@ -125,7 +127,6 @@ def _normalize(doc: dict) -> DataResource:
         year=year_from(doc.get("datePublished"), doc.get("dateUploaded")),
         last_updated=doc.get("dateModified"),
         doi=doi,
-        files=[],
     )
 
 
@@ -134,13 +135,11 @@ async def _solr(
 ) -> tuple[int, list[dict]]:
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         SOLR,
         service="DataONE search",
         params={"q": query, "fl": fl, "rows": str(rows), "start": str(start), "wt": "json"},
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
+        headers=_ACCEPT_JSON,
         expect=dict,
         check=_check_solr,
     )
@@ -165,7 +164,7 @@ def _first_url(xml_text: str) -> str | None:
         # ValueError subclass for it, which ParseError alone would let escape
         return None
     for el in root.iter():
-        if el.tag.rsplit("}", 1)[-1] == "url" and el.text:
+        if (el.tag == "url" or el.tag.endswith("}url")) and el.text:
             return el.text.strip()
     return None
 
@@ -180,17 +179,18 @@ async def _object_url(client: httpx.AsyncClient, pid: str) -> str | None:
     silently-truncated manifest."""
     resp = await _http.request_with_retry(
         client,
-        "GET",
+        _GET,
         RESOLVE.format(pid=quote(pid, safe="")),
         service="DataONE resolve",
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         not_found_returns=None,
-        follow_redirects=False,
+        # None reads as "don't follow" in _http and httpx alike; True is pinned by
+        # test_object_url_303_returns_location_without_following.
+        follow_redirects=False,  # pragma: no mutate
     )
     if resp is None:  # 404 → object not locatable
         return None
-    location = resp.headers.get("location")
+    # Header names are case-insensitive, so a spelling mutant reads the same header.
+    location = resp.headers.get("location")  # pragma: no mutate
     if location:  # 303 redirect (live CN behavior)
         return location
     return _first_url(resp.text)  # 200 ObjectLocationList body (legacy / non-redirect)
