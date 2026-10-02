@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Resolving a GBIF dataset that GBIF has deleted reports it as not found, with the
+  date it was deleted. GBIF still answers with the deleted dataset's record, so it came
+  back as a live dataset whose archive link no longer works (GBIF lists 25,205 deleted
+  datasets).
+- A GBIF id that is not a dataset key (GBIF keys are UUIDs) is reported as not found
+  instead of as a GBIF outage.
+- A GBIF answer missing its result list or count is reported as a malformed answer
+  instead of zero hits, and a wrong-typed field no longer escapes as a bare error or
+  turns a keyword string into one-letter subjects.
+
 ## [0.54.14] - 2026-10-02
 
 ### Fixed
