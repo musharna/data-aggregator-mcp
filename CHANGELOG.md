@@ -8,6 +8,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Resolving a renamed HuggingFace dataset by its old name (`hf:imdb`, now
+  stanfordnlp/imdb) lists its converted Parquet files. The datasets-server lookup used
+  the old name, which it answers with "not found", so the dataset looked unconvertible
+  and could not be queried with `operate`.
 - A HuggingFace datasets-server answer missing its file list is reported as a
   malformed answer instead of "no converted files", a converted file with a missing
   or wrong-typed field fails the answer instead of being dropped in silence, and a
