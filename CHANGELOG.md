@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.12] - 2026-10-01
+
 ### Fixed
 
 - DataCite creators named only by their given and family names keep their names
