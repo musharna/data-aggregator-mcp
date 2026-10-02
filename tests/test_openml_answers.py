@@ -138,7 +138,7 @@ async def test_a_record_without_its_description_is_a_malformed_answer(body):
     seen: list[str] = []
     answers = {"5": httpx.Response(200, json=body), "61": httpx.Response(200, json=_IRIS)}
     async with _client(answers, seen) as c:
-        with pytest.raises(UpstreamUnavailableError, match="unparseable 200 body"):
+        with pytest.raises(UpstreamUnavailableError, match="200 body.*no dataset description in"):
             await openml.resolve(c, "openml:5")
         r = await openml.resolve(c, "openml:61")  # positive control
     assert [f.name for f in r.files] == ["iris.arff"]
@@ -164,7 +164,7 @@ async def test_a_list_without_its_datasets_is_a_malformed_answer(body):
     real "no match" is the 412 code 372."""
     seen: list[str] = []
     async with _client({"5": httpx.Response(200, json=body)}, seen) as c:
-        with pytest.raises(UpstreamUnavailableError, match="unparseable 200 body"):
+        with pytest.raises(UpstreamUnavailableError, match="200 body.*no dataset list in"):
             await openml.search(c, "iris", size=5)
     async with _client({"5": httpx.Response(200, json=_ONE_HIT)}, seen) as c:
         total, recs = await openml.search(c, "iris", size=5)  # positive control

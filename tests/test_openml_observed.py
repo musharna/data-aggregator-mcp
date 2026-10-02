@@ -132,6 +132,12 @@ async def test_resolve_names_the_arff_by_its_last_path_segment():
 
 
 @pytest.mark.asyncio
+async def test_resolve_names_an_unnamed_parquet_after_its_dataset():
+    r = await _resolve({"id": "61", "name": "iris", "parquet_url": "https://h/get/61"})
+    assert [f.name for f in r.files] == ["dataset_61.pq"]
+
+
+@pytest.mark.asyncio
 async def test_search_requests_one_escaped_name_segment_capped_at_the_page_limit():
     seen: list[httpx.Request] = []
     body = {"data": {"dataset": [{"did": 61, "name": "iris"}, {"did": 969, "name": "iris"}]}}
