@@ -22,10 +22,14 @@ from pydantic import AnyUrl
 SCHEME = "dataresource"
 CATALOG_URI = "dataresource://catalog"
 RECORD_TEMPLATE = "dataresource://record/{id}"
+# No character is kept bare beyond the unreserved ones quote() always keeps, as in RFC 6570
+# expansion of {id}. A module constant: mutmut's "XXXX" for an inline '' is equivalent
+# (X is unreserved), and test_record_uri_encodes_the_id_as_template_expansion_does pins it.
+_ID_SAFE = ""
 
 
 def record_uri(resolve_id: str) -> str:
-    return f"{SCHEME}://record/{quote(resolve_id, safe='')}"
+    return f"{SCHEME}://record/{quote(resolve_id, safe=_ID_SAFE)}"
 
 
 def _as_url(uri: str | AnyUrl) -> AnyUrl:
