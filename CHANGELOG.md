@@ -15,6 +15,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `relate` gives the same answer every time for the same records. When two records
   shared more than one identifier, the order of those hints, and which spelling of a
   DOI was shown, could change after a server restart.
+- `relate` finds a link given as an `ncbi.nlm.nih.gov/pubmed/<id>` address, an OpenML
+  `search?type=data&id=<id>` page, or an RCSB page for an entry cited before release
+  (`structure/unreleased/<id>`). Records that cite another record this way (an ICPSR
+  study cited by a PubMed article, a Zenodo deposit referencing an OpenML dataset) got
+  no link hint.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
