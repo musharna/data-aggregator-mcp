@@ -261,6 +261,36 @@ def test_no_wrong_typed_field_escapes_as_a_bare_error():
     assert refused > 0  # the walk reached the check
 
 
+@pytest.mark.parametrize(
+    ("product_type", "kind"),
+    [
+        ("dataset", "dataset"),  # live: doi_________::55556335c2d8550b3c93b32bc482b008
+        ("software", "software"),  # live: openaire____::2168e948062ee3dc11cdf3ce9b216b75
+        ("other", "other"),  # live: doi_________::8d87044408b0e2a872c10a3112f56ae1
+        ("annotation", "other"),  # not a Graph API type: unknown, not a publication
+        (None, "other"),
+    ],
+)
+def test_a_research_product_keeps_its_own_type_as_its_kind(product_type, kind):
+    """The entity endpoint serves every research-product type, and every record was
+    called a publication: resolving a dataset's id said ``kind="publication"``."""
+    # Positive control: a publication is still a publication.
+    assert openaire._normalize_openaire(_FULL).kind == "publication"
+    assert openaire._normalize_openaire({**_FULL, "type": product_type}).kind == kind
+
+
+@live_only
+@pytest.mark.asyncio
+async def test_live_a_dataset_resolves_as_a_dataset():
+    """A dataset id from ``type=dataset`` search (2026-10-02); it resolved as a publication."""
+    async with httpx.AsyncClient() as client:
+        r = await openaire.resolve(client, "openaire:doi_________::55556335c2d8550b3c93b32bc482b008")
+        # Positive control: a publication id still resolves as a publication.
+        p = await openaire.resolve(client, "openaire:doi_dedup___::d1aa1aac03810099b29c270cba83da9d")
+    assert (r.kind, r.doi) == ("dataset", "10.25549/examiner-m10957")
+    assert (p.kind, p.doi) == ("publication", "10.1007/s00425-012-1626-x")
+
+
 @live_only
 @pytest.mark.asyncio
 async def test_live_empty_pages_are_answers_not_malformed():

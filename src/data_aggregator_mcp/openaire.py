@@ -26,6 +26,10 @@ BASE_URL = "https://api.openaire.eu/graph/v1/researchProducts"
 _TAG = re.compile(r"<[^>]+>")  # bounded, no nested quantifiers — safe on short strings
 _WS = re.compile(r"\s+")
 
+# The Graph API's four research-product types, each also a DataResource kind. Search
+# asks for publications only, but the entity endpoint serves every type.
+_KINDS = frozenset({"publication", "dataset", "software", "other"})
+
 # Every field ``_normalize_openaire`` reads, at the type it reads it as. Each may be
 # absent or null (OpenAIRE writes an empty list as null), except the record's ``id``.
 _RECORD_FIELDS = {
@@ -128,13 +132,18 @@ def _license_of(record: dict) -> str | None:
     return None
 
 
+def _kind_of(record: dict) -> str:
+    kind = record.get("type")
+    return kind if kind in _KINDS else "other"
+
+
 def _normalize_openaire(record: dict) -> DataResource:
     descriptions = record.get("descriptions") or []
     description = _strip_tags(descriptions[0]) if descriptions and descriptions[0] else None
     return DataResource(
         id=f"openaire:{record['id']}",
         source="openaire",
-        kind="publication",
+        kind=_kind_of(record),
         title=record.get("mainTitle") or "",
         creators=[
             Creator(name=a["fullName"]) for a in (record.get("authors") or []) if a.get("fullName")
