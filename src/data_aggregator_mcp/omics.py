@@ -179,7 +179,7 @@ def _normalize(db: str, doc: dict[str, Any]) -> DataResource:
 
 
 async def _search_db(
-    client: httpx.AsyncClient, db: str, query: str, size: int, offset: int = 0
+    client: httpx.AsyncClient, db: str, query: str, size: int, offset: int
 ) -> tuple[int, list[DataResource]]:
     count, ids = await _eutils.esearch(client, db, query, retmax=size, retstart=offset)
     if not ids:
@@ -299,7 +299,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise NotFoundError(f"no omics record for {acc!r} in {prefix}")
     doc, resource = matches[0]
     if prefix == "sra":
-        files = await ena.filereport(client, resource.id.partition(":")[2])
+        files = await ena.filereport(client, resource.id.removeprefix("sra:"))
         if files:
             resource = resource.model_copy(update={"files": files})
     elif prefix == "geo":
