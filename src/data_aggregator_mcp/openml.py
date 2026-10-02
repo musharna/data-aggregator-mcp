@@ -24,6 +24,7 @@ from data_aggregator_mcp.models import (
     compact,
     local_id,
     normalize_access,
+    year_from,
 )
 
 LIST = "https://www.openml.org/api/v1/json/data/list/data_name/{q}/limit/{n}"
@@ -35,8 +36,11 @@ PREFIXES = {"openml"}
 _DID_RE = re.compile(r"0*[1-9][0-9]*")
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+_GET = "GET"
+_ACCEPT_JSON = {"Accept": "application/json"}
+# A query is one path segment: quote() escapes "/" too.
+_SEGMENT_SAFE = ""
 _NO_RESULTS = "372"  # a list query that matched nothing
 _UNKNOWN_DATASET = "111"  # a record id OpenML has no dataset for
 # The record fields resolve reads, by the JSON types OpenML sends for them.
@@ -72,7 +76,8 @@ def _check_list(body: dict) -> None:
     data = body.get("data")
     datasets = data.get("dataset") if isinstance(data, dict) else None
     if not isinstance(datasets, list) or not all(
-        isinstance(d, dict) and type(d.get("did")) is int for d in datasets
+        isinstance(d, dict) and type(d.get("did")) is int and isinstance(d.get("name"), str)
+        for d in datasets
     ):
         raise _http.UpstreamEnvelopeError(f"no dataset list in {body!r:.200}")
 
@@ -88,9 +93,9 @@ def _check_record(body: dict) -> None:
         raise _http.UpstreamEnvelopeError(f"no dataset description in {body!r:.200}")
 
 
-def _tags(raw: object) -> list[str]:
-    """OpenML serialises a one-element tag list as a bare string; ``list()`` of that
-    char-splits it. Normalise both forms to a list of whole tags."""
+def _str_list(raw: object) -> list[str]:
+    """OpenML serialises a one-element list (``tag``, ``creator``) as a bare string;
+    ``list()`` of that char-splits it. Normalise both forms to a list of whole values."""
     if isinstance(raw, str):
         return [raw] if raw else []
     if isinstance(raw, list):
@@ -99,14 +104,7 @@ def _tags(raw: object) -> list[str]:
 
 
 def _normalize_list_entry(d: dict) -> DataResource:
-    did = d.get("did")
-    return DataResource(
-        id=f"openml:{did}",
-        source="openml",
-        kind="dataset",
-        title=d.get("name") or "",
-        files=[],
-    )
+    return DataResource(id=f"openml:{d['did']}", source="openml", kind="dataset", title=d["name"])
 
 
 async def search(
@@ -116,11 +114,10 @@ async def search(
         return 0, []
     body = await _http.request_json(
         client,
-        "GET",
-        LIST.format(q=quote(query, safe=""), n=min(size, MAX_SIZE)),
+        _GET,
+        LIST.format(q=quote(query, safe=_SEGMENT_SAFE), n=min(size, MAX_SIZE)),
         service="OpenML search",
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
+        headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         # A 404 here means the list endpoint moved — an outage, not "no datasets".
         # OpenML's real "no match" is HTTP 412 with its error code 372.
@@ -133,8 +130,12 @@ async def search(
     return len(datasets), [compact(_normalize_list_entry(d)) for d in datasets]
 
 
+def _last_segment(url: str) -> str:
+    return url.rpartition("/")[2]
+
+
 def _parquet_name(url: str, did: str) -> str:
-    tail = url.rsplit("/", 1)[-1]
+    tail = _last_segment(url)
     return tail if tail.endswith((".pq", ".parquet")) else f"dataset_{did}.pq"
 
 
@@ -147,11 +148,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     did = str(int(did))
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         RECORD.format(did=did),
         service="OpenML resolve",
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
+        headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         # OpenML's "no such dataset" is HTTP 412 code 111; the helper hands that answer
         # back as `no_content_returns`.
@@ -167,10 +167,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     files: list[FileEntry] = []
     arff_url = desc.get("url")
     if arff_url:
-        md5 = desc.get("md5_checksum") or ""
+        md5 = desc.get("md5_checksum")
         files.append(
             FileEntry(
-                name=arff_url.rsplit("/", 1)[-1],
+                name=_last_segment(arff_url),
                 url=arff_url,
                 mime="text/plain",
                 checksum=f"md5:{md5}" if md5 else None,
@@ -188,28 +188,17 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             )
         )
 
-    creator = desc.get("creator")
-    if isinstance(creator, str) and creator:
-        creators = [Creator(name=creator)]
-    elif isinstance(creator, list):
-        creators = [Creator(name=str(c)) for c in creator if c]
-    else:
-        creators = []
-    year = None
-    up = desc.get("upload_date") or ""
-    if up[:4].isdigit():
-        year = int(up[:4])
     return DataResource(
         id=f"openml:{did}",
         source="openml",
         kind="dataset",
-        title=desc.get("name") or "",
+        title=desc["name"],
         description=desc.get("description"),
-        creators=creators,
-        year=year,
+        creators=[Creator(name=n) for n in _str_list(desc.get("creator"))],
+        year=year_from(desc.get("upload_date")),
         license=desc.get("licence"),
         access=normalize_access("open"),
-        subjects=_tags(desc.get("tag")),
+        subjects=_str_list(desc.get("tag")),
         last_updated=desc.get("upload_date"),
         files=files,
         links=[Link(rel="landing_page", target_id=_LANDING.format(did=did))],
