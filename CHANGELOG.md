@@ -6,6 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `operate` `schema` and `preview` name the first column of a CSV that starts with a
+  UTF-8 byte-order mark (as Excel's "CSV UTF-8" writes it) without the mark, as `head`
+  and `sql` already did. A column name copied from `preview` into a query now matches.
+
 ## [0.54.14] - 2026-10-02
 
 ### Fixed
