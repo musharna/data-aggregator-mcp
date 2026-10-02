@@ -330,6 +330,90 @@ def worker(monkeypatch):
             con.interrupt()
 
 
+# About 2 s of work on a laptop: 40 times the interrupt interval, so a working interrupt
+# always lands first, and short enough that a mutant that never interrupts fails fast.
+_LONG = (
+    "SELECT count(*) FROM range(700) a, range(700) b, range(700) c"
+    " WHERE a.range + b.range + c.range = -1"
+)
+
+
+def test_an_interrupt_skips_a_connection_already_closed() -> None:
+    """A thread may close its connection between two interrupts; that must not stop the
+    interrupts reaching the connections still running."""
+    closed = duckdb.connect()
+    closed.close()
+    running = duckdb.connect()
+    ended: list[str] = []
+
+    def endless() -> None:
+        try:
+            running.execute(_LONG)
+        except duckdb.InterruptException:
+            ended.append("interrupted")
+
+    t = threading.Thread(target=endless)
+    t.start()
+    try:
+        for _ in range(int(_THREAD_END_GUARD_S / duckquery._INTERRUPT_EVERY_S)):
+            if not t.is_alive():
+                break
+            duckquery._interrupt([closed, running])
+            t.join(duckquery._INTERRUPT_EVERY_S)
+        assert ended == ["interrupted"]
+    finally:
+        running.interrupt()
+        t.join()
+
+
+async def test_a_limit_reached_before_the_connection_opens_still_stops_it() -> None:
+    """The limit can fall before the worker thread has opened its connection (the thread
+    pool busy, the thread not yet started). One interrupt then reaches nothing, so the
+    interrupts go on until the thread ends and stop the connection it opens later."""
+    may_open = threading.Event()
+    outcomes: list[str] = []
+    ended = threading.Semaphore(0)
+    cons: list = []
+
+    def work(sql: str, opened) -> str:
+        may_open.wait(_THREAD_END_GUARD_S)
+        con = duckdb.connect()
+        cons.append(con)
+        opened(con)
+        try:
+            out = str(con.execute(sql).fetchone()[0])
+            outcomes.append("finished")
+            return out
+        except duckdb.InterruptException:
+            outcomes.append("InterruptException")
+            raise
+        finally:
+            con.close()
+            ended.release()
+
+    # Positive control: a call that is not cancelled runs to its answer.
+    may_open.set()
+    assert await duckquery._interruptible(work, "SELECT 41 + 1") == "42"
+    await asyncio.to_thread(ended.acquire, timeout=_THREAD_END_GUARD_S)
+    may_open.clear()
+    try:
+        call = asyncio.ensure_future(duckquery._interruptible(work, _LONG))
+        await asyncio.sleep(0)
+        call.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await call
+        may_open.set()
+        await asyncio.to_thread(ended.acquire, timeout=_THREAD_END_GUARD_S)
+        assert outcomes == ["finished", "InterruptException"]
+        await asyncio.gather(*duckquery._STOPPING)
+    finally:
+        # A failing run must not leave its thread waiting or querying.
+        may_open.set()
+        for con in cons:
+            with contextlib.suppress(duckdb.ConnectionException):
+                con.interrupt()
+
+
 # 3000**3 joined rows: many times the 2 s limit (the old code ran it to the end, ~15 s).
 _ENDLESS = "SELECT count(*) FROM data a, data b, data c WHERE a.i + b.i + c.i = -1"
 
@@ -367,34 +451,6 @@ async def test_a_query_past_the_wall_clock_limit_is_interrupted(
         assert unreported == []
     finally:
         loop.set_exception_handler(None)
-
-
-def test_an_interrupt_skips_a_connection_already_closed() -> None:
-    """A thread may close its connection between two interrupts; that must not stop the
-    interrupts reaching the connections still running."""
-    closed = duckdb.connect()
-    closed.close()
-    running = duckdb.connect()
-    ended: list[str] = []
-
-    def endless() -> None:
-        try:
-            running.execute("SELECT count(*) FROM range(3000) a, range(3000) b, range(3000) c")
-        except duckdb.InterruptException:
-            ended.append("interrupted")
-
-    t = threading.Thread(target=endless)
-    t.start()
-    try:
-        for _ in range(int(_THREAD_END_GUARD_S / duckquery._INTERRUPT_EVERY_S)):
-            if not t.is_alive():
-                break
-            duckquery._interrupt([closed, running])
-            t.join(duckquery._INTERRUPT_EVERY_S)
-        assert ended == ["interrupted"]
-    finally:
-        running.interrupt()
-        t.join()
 
 
 @_live_only
