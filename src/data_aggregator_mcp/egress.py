@@ -151,6 +151,12 @@ async def assert_public_url(url: str, *, what: str) -> None:
         infos = await loop.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
     except socket.gaierror:
         return  # no address == nowhere to reach; see the docstring
+    except UnicodeError as exc:
+        # The resolver IDNA-encodes the name first, and a name with an empty label
+        # (``a..b``, ``.example.org``) or one over 63 octets cannot be encoded: it is not
+        # a hostname at all. Refused like split_url's malformed URLs, naming file and URL,
+        # instead of a bare "'idna' codec can't encode ..." that names neither.
+        raise ValidationError(f"{what}: malformed URL ({exc}); refusing to fetch {url}") from None
 
     for info in infos:
         addr = info[4][0]
