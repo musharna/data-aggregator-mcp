@@ -128,99 +128,61 @@ def collapse_mirrors(records: list[DataResource]) -> list[DataResource]:
     each group to one survivor, and annotates the survivor's ``mirrors[]`` with the
     other members.
 
-    A record joins a group iff it shares ANY full ``algo:hex`` file checksum with a
-    member (byte-identical → definitional identity, source-agnostic) OR has the same
-    ``fingerprint_key`` (normalized-title + first-author name + year, all present)
-    as a member AND comes from a DIFFERENT source than every member already in that
-    group. Title-only or partial matches never merge.
+    Two groups are one dataset if a record of each shares ANY full ``algo:hex`` file
+    checksum (byte-identical → definitional identity, source-agnostic) OR the same
+    ``fingerprint_key`` (normalized-title + first-author name + year, all present),
+    and groups are merged until no two are. Title-only or partial matches never merge.
 
-    The CROSS-SOURCE requirement on the fingerprint path is load-bearing: B7 is
-    *cross-repo* dedup. Two same-source records that share title+author+year are
-    almost always VERSION SIBLINGS (e.g. Zenodo record v1/v2), a relationship already
-    modeled by ``is_latest``/``superseded_by`` (B1) — folding them as "mirrors" would
-    be wrong. Only a copy in a DIFFERENT repository is a mirror. (Byte-identical
-    checksums still fold regardless of source: identical bytes are the same data, and
-    version siblings differ in bytes so they do not collide on the checksum path.)
+    A fingerprint match never merges two groups whose records ALL come from one
+    source: two same-source records that share title+author+year are almost always
+    VERSION SIBLINGS (e.g. Zenodo record v1/v2), a relationship already modeled by
+    ``is_latest``/``superseded_by`` (B1). Once a group spans two sources, a matching
+    record from either joins it: through DataCite a deposit is listed under its
+    concept DOI and each version DOI, and those fold with the copy in the other
+    repository into one result. (Byte-identical checksums fold regardless of source:
+    identical bytes are the same data, and version siblings differ in bytes.)
 
-    Survivor selection is deterministic (``survivor_rank`` + first-seen order). The
-    survivor's ``mirrors`` lists every OTHER group member as ``Mirror(source,id,doi)``;
-    a record is never its own mirror. First-seen order of survivors is preserved.
-    Deterministic, no I/O.
+    The survivor is the member with the best ``survivor_rank``, ties going to the
+    earliest in ``records``; its ``mirrors`` lists every OTHER member, in ``records``
+    order, as ``Mirror(source,id,doi)``. Survivors come out in the order of each
+    group's earliest record. Deterministic, no I/O.
     """
+    keys = [fingerprint_key(r) for r in records]
+    sums = [checksums(r) for r in records]
 
-    class _Group:
-        __slots__ = ("members", "keys", "checksums", "sources", "order")
+    def same_dataset(a: list[int], b: list[int]) -> bool:
+        """Whether two groups (indices into ``records``) hold one dataset."""
+        if any(sums[i] & sums[j] for i in a for j in b):
+            return True
+        if not any(keys[i] is not None and keys[i] == keys[j] for i in a for j in b):
+            return False
+        return len({records[i].source for i in a + b}) > 1
 
-        def __init__(self, order: int) -> None:
-            self.members: list[DataResource] = []
-            self.keys: set[tuple[str, str, int]] = set()
-            self.checksums: set[str] = set()
-            self.sources: set[str] = set()
-            self.order = order
-
-    groups: list[_Group] = []
-    for r in records:
-        key = fingerprint_key(r)
-        sums = checksums(r)
-        target: _Group | None = None
+    # Merge to a fixpoint: a group can match an earlier one only through a record a
+    # later merge brings in (A~D, B~E, C~D and C~E: C joins A, then B matches A+C), so
+    # one pass is not enough. A pass that merges leaves fewer groups, so one pass per
+    # record always reaches the fixpoint.
+    groups = [[i] for i in range(len(records))]
+    for _ in records:
+        merged: list[list[int]] = []
         for g in groups:
-            checksum_hit = bool(sums & g.checksums)
-            # Fingerprint match only counts CROSS-source — a same-source title+author+
-            # year match is a version sibling (B1's domain), not a cross-repo mirror.
-            fingerprint_hit = key is not None and key in g.keys and r.source not in g.sources
-            if checksum_hit or fingerprint_hit:
-                target = g
-                break
-        if target is None:
-            target = _Group(len(groups))
-            groups.append(target)
-        target.members.append(r)
-        if key is not None:
-            target.keys.add(key)
-        target.checksums |= sums
-        target.sources.add(r.source)
-
-    # Post-pass: union groups that share any checksum or fingerprint key, iterating
-    # to fixpoint. The forward pass above uses greedy first-match, which misses
-    # transitive connections: e.g. A(md5:X), B(sha:Y), C(md5:X + sha:Y) arriving
-    # in order A,B,C — C joins A's group via md5:X, but B is stranded even though
-    # it shares sha:Y with C. The union pass merges those stranded groups.
-    changed = True
-    while changed:
-        changed = False
-        merged_groups: list[_Group] = []
-        for g in groups:
-            absorbed = False
-            for mg in merged_groups:
-                checksum_overlap = bool(g.checksums & mg.checksums)
-                # Fingerprint merge: any shared key where NOT all members share the
-                # same source (the cross-source guard still applies globally — if two
-                # groups have the same fingerprint key but all members come from the
-                # same source, they are version siblings and must not be merged).
-                key_overlap = bool(g.keys & mg.keys) and not (
-                    g.sources <= mg.sources and len(g.sources) == 1 and g.sources == mg.sources
-                )
-                if checksum_overlap or key_overlap:
-                    mg.members.extend(g.members)
-                    mg.keys |= g.keys
-                    mg.checksums |= g.checksums
-                    mg.sources |= g.sources
-                    absorbed = True
-                    changed = True
+            for mg in merged:
+                if same_dataset(g, mg):
+                    mg.extend(g)
                     break
-            if not absorbed:
-                merged_groups.append(g)
-        groups = merged_groups
+            else:
+                merged.append(g)
+        if len(merged) == len(groups):
+            break
+        groups = merged
 
     out: list[DataResource] = []
     for g in groups:
-        if len(g.members) == 1:
-            out.append(g.members[0])
-            continue
-        # Stable pick: best rank wins, first-seen order breaks ties.
-        survivor = min(enumerate(g.members), key=lambda im: (survivor_rank(im[1]), im[0]))[1]
+        best = min(g, key=lambda i: (survivor_rank(records[i]), i))
         mirrors = [
-            Mirror(source=m.source, id=m.id, doi=m.doi) for m in g.members if m is not survivor
+            Mirror(source=records[i].source, id=records[i].id, doi=records[i].doi)
+            for i in sorted(g)
+            if i != best
         ]
-        out.append(survivor.model_copy(update={"mirrors": mirrors}))
+        out.append(records[best].model_copy(update={"mirrors": mirrors}))
     return out
