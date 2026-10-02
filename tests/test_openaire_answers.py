@@ -292,9 +292,13 @@ def test_a_research_product_keeps_its_own_type_as_its_kind(product_type, kind):
 async def test_live_a_dataset_resolves_as_a_dataset():
     """A dataset id from ``type=dataset`` search (2026-10-02); it resolved as a publication."""
     async with httpx.AsyncClient() as client:
-        r = await openaire.resolve(client, "openaire:doi_________::55556335c2d8550b3c93b32bc482b008")
+        r = await openaire.resolve(
+            client, "openaire:doi_________::55556335c2d8550b3c93b32bc482b008"
+        )
         # Positive control: a publication id still resolves as a publication.
-        p = await openaire.resolve(client, "openaire:doi_dedup___::d1aa1aac03810099b29c270cba83da9d")
+        p = await openaire.resolve(
+            client, "openaire:doi_dedup___::d1aa1aac03810099b29c270cba83da9d"
+        )
     assert (r.kind, r.doi) == ("dataset", "10.25549/examiner-m10957")
     assert (p.kind, p.doi) == ("publication", "10.1007/s00425-012-1626-x")
 
@@ -318,4 +322,6 @@ async def test_live_empty_pages_are_answers_not_malformed():
 async def test_live_an_unknown_id_is_not_found():
     async with httpx.AsyncClient() as client:
         with pytest.raises(NotFoundError, match=r"^\[NotFoundError\] OpenAIRE → HTTP 404: "):
-            await openaire.resolve(client, "openaire:doi_dedup___::00000000000000000000000000000000")
+            await openaire.resolve(
+                client, "openaire:doi_dedup___::00000000000000000000000000000000"
+            )
