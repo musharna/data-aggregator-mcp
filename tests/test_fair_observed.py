@@ -11,7 +11,7 @@ import pytest
 
 from data_aggregator_mcp import fair
 from data_aggregator_mcp.fair import ESSENTIAL, IMPORTANT, USEFUL
-from data_aggregator_mcp.models import Creator, FileEntry, FundingRef, Link
+from data_aggregator_mcp.models import Creator, FileEntry, FundingRef, Link, Taxon
 from tests.test_fair import _bare, _gap_ids, _live_only, _rich
 
 # Table 1 "FAIR data maturity model indicators" (pp. 11-12), all 41 rows.
@@ -250,6 +250,60 @@ def test_r11_03_gap_does_not_call_a_missing_licence_free_text():
     assert gap in fair.assess(_bare()).gaps
     assert gap in fair.assess(_bare().model_copy(update={"license": "see LICENSE.txt"})).gaps
     assert gap not in fair.assess(_bare().model_copy(update={"license": "MIT"})).gaps
+
+
+# --- each predicate's alternatives, one at a time -----------------------------
+
+
+def test_f1_doi_from_either_field():
+    assert not _fails(_bare().model_copy(update={"doi": "10.1/x"}), "F1")
+    assert not _fails(_bare().model_copy(update={"identifiers": {"doi": "10.1/x"}}), "F1")
+    assert _fails(_bare().model_copy(update={"identifiers": {"pmid": "123"}}), "F1")
+    assert _fails(_bare(), "F1")
+
+
+def test_f2_needs_title_description_and_creators_or_subjects():
+    described = _bare().model_copy(update={"description": "d"})
+    assert not _fails(described.model_copy(update={"creators": [Creator(name="A")]}), "F2")
+    assert not _fails(described.model_copy(update={"subjects": ["soil"]}), "F2")
+    assert _fails(described, "F2")
+    full = described.model_copy(update={"subjects": ["soil"]})
+    assert _fails(full.model_copy(update={"title": ""}), "F2")
+    assert _fails(full.model_copy(update={"description": ""}), "F2")
+
+
+def test_i2_taxa_or_subjects():
+    assert not _fails(_bare().model_copy(update={"taxa": [Taxon(taxid=9606, name="H")]}), "I2")
+    assert not _fails(_bare().model_copy(update={"subjects": ["soil"]}), "I2")
+    assert _fails(_bare(), "I2")
+
+
+@pytest.mark.parametrize(
+    ("lic", "machine"),
+    [
+        # A licence URL or phrase, recognised by the phrase alone (too long, spaced, or
+        # carrying no family token or version for the compact-id rule).
+        ("https://creativecommons.org/licenses/by/4.0/", True),
+        ("Public Domain", True),
+        ("https://spdx.org/licenses/Zed.html", True),
+        # A family token, whole.
+        ("gpl", True),
+        ("cc-zero", True),
+        ("  MIT  ", True),
+        # A compact SPDX-shaped id: no space, at most 40 characters, and a hyphen or a digit.
+        ("Info-ZIP", True),
+        ("X11", True),
+        ("a" * 38 + "-1", True),
+        ("a" * 39 + "-1", False),
+        ("Public", False),
+        ("unknown", False),
+        ("", False),
+        (None, False),
+    ],
+)
+def test_machine_readable_licence(lic, machine):
+    assert fair._machine_readable_license(lic) is machine
+    assert ("RDA-R1.1-03M" in _ids(_bare().model_copy(update={"license": lic}))) is not machine
 
 
 # --- live: records whose shape the defects were found on ----------------------
