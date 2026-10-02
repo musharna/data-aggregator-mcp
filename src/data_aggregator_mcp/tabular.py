@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+import itertools
 
 import fsspec
 import pyarrow.parquet as pq
@@ -16,6 +17,7 @@ _CSV_SNIFF_BYTES = 64_000
 # A leading UTF-8 byte-order mark (Excel's "CSV UTF-8" writes one) is not part of the
 # first column's name: DuckDB drops it, so head/sql and schema/preview must agree.
 _TEXT_ENCODING = "utf-8-sig"
+_CUT_MARK = "_"  # see _preview_csv; any character but a quote, delimiter or line break
 
 
 def _is_parquet(name: str) -> bool:
@@ -100,12 +102,16 @@ def _preview_parquet(url: str, n: int) -> dict:
 
 def _preview_csv(url: str, file: str, n: int) -> dict:
     head, capped = _read_head_text(url, _CSV_SNIFF_BYTES)
-    reader = csv.DictReader(io.StringIO(head), delimiter=_delimiter(file))
-    rows = []
-    for i, row in enumerate(reader):
-        if i >= n:
-            break
-        rows.append(dict(row))
+    # The window ends at a line break, but a line break inside a quoted field does not
+    # end a row, so the last record may be half a row. A mark appended after the cut
+    # becomes a record of its own when the break did end a row, and is swallowed into
+    # the half row's open field when it did not: either way the last record is no row.
+    cut = capped and "\n" in head
+    text = head + _CUT_MARK if cut else head
+    reader = csv.DictReader(io.StringIO(text), delimiter=_delimiter(file))
+    rows = [dict(row) for row in itertools.islice(reader, n)]
+    if cut and next(reader, None) is None:
+        rows = rows[:-1]
     cols = [{"name": h, "type": "string"} for h in (reader.fieldnames or [])]
     out: dict = {"format": _format(file), "columns": cols, "rows": rows, "row_estimate": None}
     if capped and (len(rows) < n or "\n" not in head):
