@@ -8,6 +8,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `understand=true` searches the years a query names even when the model gives them
+  high to low. Asked for "arabidopsis root datasets between 2018 and 2016", llama3.1
+  answered `year_min` 2018 and `year_max` 2016, and the search returned no results and
+  no error; the years are now applied as 2016 to 2018.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
