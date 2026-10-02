@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 import urllib.parse
+from collections.abc import Mapping
 
 import httpx
 
@@ -25,9 +26,80 @@ BASE_URL = "https://api.openaire.eu/graph/v1/researchProducts"
 _TAG = re.compile(r"<[^>]+>")  # bounded, no nested quantifiers — safe on short strings
 _WS = re.compile(r"\s+")
 
+# Every field ``_normalize_openaire`` reads, at the type it reads it as. Each may be
+# absent or null (OpenAIRE writes an empty list as null), except the record's ``id``.
+_RECORD_FIELDS = {
+    "mainTitle": str,
+    "publicationDate": str,
+    "type": str,
+    "authors": list,
+    "descriptions": list,
+    "pids": list,
+    "instances": list,
+    "subjects": list,
+    "bestAccessRight": dict,
+}
+_AUTHOR_FIELDS = {"fullName": str}
+_PID_FIELDS = {"scheme": str, "value": str}
+_INSTANCE_FIELDS = {"pids": list, "license": str}
+_SUBJECT_FIELDS = {"subject": dict}
+_VALUE_FIELDS = {"value": str}
+_ACCESS_FIELDS = {"label": str}
+
 
 def _strip_tags(text: str) -> str:
     return _WS.sub(" ", _TAG.sub(" ", text)).strip()
+
+
+def _typed(item: object, kinds: Mapping[str, type]) -> bool:
+    return isinstance(item, dict) and all(
+        item.get(k) is None or isinstance(item[k], t) for k, t in kinds.items()
+    )
+
+
+def _pids_typed(pids: list | None) -> bool:
+    return all(_typed(p, _PID_FIELDS) for p in pids or [])
+
+
+def _is_record(record: object) -> bool:
+    """A non-empty ``id``, and every field ``_normalize_openaire`` reads at its type."""
+    if not (isinstance(record, dict) and _typed(record, _RECORD_FIELDS)):
+        return False
+    rid = record.get("id")
+    return (
+        isinstance(rid, str)
+        and rid != ""
+        and all(_typed(a, _AUTHOR_FIELDS) for a in record.get("authors") or [])
+        and all(d is None or isinstance(d, str) for d in record.get("descriptions") or [])
+        and _pids_typed(record.get("pids"))
+        and all(
+            _typed(i, _INSTANCE_FIELDS) and _pids_typed(i.get("pids"))
+            for i in record.get("instances") or []
+        )
+        and all(
+            _typed(s, _SUBJECT_FIELDS) and _typed(s.get("subject") or {}, _VALUE_FIELDS)
+            for s in record.get("subjects") or []
+        )
+        and _typed(record.get("bestAccessRight") or {}, _ACCESS_FIELDS)
+    )
+
+
+def _check_record(body: dict) -> None:
+    if not _is_record(body):
+        raise _http.UpstreamEnvelopeError(f"no OpenAIRE record in {body!r:.200}")
+
+
+def _check_page(body: dict) -> None:
+    """The hit count and result list every search answer carries: no match is
+    ``numFound`` 0 and ``results: []``, and a page past the last is ``results: []``."""
+    header, results = body.get("header"), body.get("results")
+    if not (
+        isinstance(header, dict)
+        and type(header.get("numFound")) is int
+        and isinstance(results, list)
+        and all(_is_record(r) for r in results)
+    ):
+        raise _http.UpstreamEnvelopeError(f"no OpenAIRE result list in {body!r:.200}")
 
 
 def _doi_of(record: dict) -> str | None:
@@ -50,9 +122,9 @@ def _access_of(record: dict) -> str | None:
 
 def _license_of(record: dict) -> str | None:
     for inst in record.get("instances") or []:
-        lic = inst.get("license")
-        if lic and str(lic).strip():
-            return str(lic).strip()
+        lic = (inst.get("license") or "").strip()
+        if lic:
+            return lic
     return None
 
 
@@ -60,7 +132,7 @@ def _normalize_openaire(record: dict) -> DataResource:
     descriptions = record.get("descriptions") or []
     description = _strip_tags(descriptions[0]) if descriptions and descriptions[0] else None
     return DataResource(
-        id=f"openaire:{record.get('id', '')}",
+        id=f"openaire:{record['id']}",
         source="openaire",
         kind="publication",
         title=record.get("mainTitle") or "",
@@ -73,7 +145,7 @@ def _normalize_openaire(record: dict) -> DataResource:
         subjects=[
             s["subject"]["value"]
             for s in (record.get("subjects") or [])
-            if s.get("subject", {}).get("value")
+            if (s.get("subject") or {}).get("value")
         ],
         license=_license_of(record),
         access=_access_of(record),
@@ -99,10 +171,10 @@ async def search(
         service="OpenAIRE",
         params=params,
         expect=dict,
+        check=_check_page,
     )
-    total = int(data.get("header", {}).get("numFound", 0) or 0)
-    results = (data.get("results", []) or [])[offset % capped :]
-    return total, [_normalize_openaire(r) for r in results]
+    results = data["results"][offset % capped :]
+    return data["header"]["numFound"], [_normalize_openaire(r) for r in results]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
@@ -116,8 +188,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         f"{BASE_URL}/{urllib.parse.quote(oid, safe='')}",
         service="OpenAIRE",
         expect=dict,
+        check=_check_record,
     )
-    record["id"] = record.get("id") or oid  # single-entity payload may omit/null its own id
     resource = _normalize_openaire(record)
     links, links_error = await scholix.links_for(client, resource.doi)
     ids, ids_error = await idconv.identifiers_for(client, resource.doi)
