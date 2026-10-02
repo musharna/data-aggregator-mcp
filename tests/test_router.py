@@ -404,11 +404,12 @@ async def test_resolve_routes_datacite_prefix(httpx_mock: HTTPXMock) -> None:
         url="https://api.datacite.org/dois/10.5061/dryad.x",
         json={"data": _DATACITE_ITEM},
     )
-    # DataCite resolve now fans out to the Dryad manifest resolver; an empty
-    # version link short-circuits dryad.files to [] (no /files call).
+    # DataCite resolve now fans out to the Dryad manifest resolver; Dryad's 404 for a
+    # DOI it does not hold short-circuits dryad.files to [] (no /files call).
     httpx_mock.add_response(
         url="https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.x",
-        json={"_links": {}},
+        status_code=404,
+        json={"error": "not-found"},
     )
     async with httpx.AsyncClient() as client:
         r = await router.resolve(client, "datacite:10.5061/dryad.x")
@@ -423,7 +424,8 @@ async def test_resolve_routes_bare_doi_to_datacite(httpx_mock: HTTPXMock) -> Non
     )
     httpx_mock.add_response(
         url="https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.x",
-        json={"_links": {}},
+        status_code=404,
+        json={"error": "not-found"},
     )
     async with httpx.AsyncClient() as client:
         r = await router.resolve(client, "10.5061/dryad.x")
