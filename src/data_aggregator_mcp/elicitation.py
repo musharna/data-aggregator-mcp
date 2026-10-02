@@ -80,20 +80,27 @@ _RESOLVERS: dict[str, tuple[Callable[[httpx.AsyncClient, str], Awaitable[Any]], 
 
 
 def supports_form_elicitation(session: Any) -> bool:
-    """True only when the client advertised **form** mode.
+    """True when the client advertised **form** mode, explicitly or by the bare form.
+
+    MCP 2025-11-25 and 2026-07-28 (client/elicitation, "Capabilities"): a client
+    declares ``elicitation: {"form": {}, "url": {}}``, must support at least one mode,
+    and "for backwards compatibility, an empty capabilities object is equivalent to
+    declaring support for ``form`` mode only". In 2025-06-18 the bare
+    ``elicitation: {}`` was the ONLY shape. So form is supported when ``form`` is
+    present, or when the capability is present with neither mode named. A URL-only
+    client is not form-capable: "Servers MUST NOT send elicitation requests with modes
+    that are not supported by the client."
 
     Deliberately not ``session.check_client_capability`` — that helper stops at
-    ``have.elicitation is None`` (mcp 2.2.0 ``server/connection.py::check_capability``,
-    which the docstring there says mirrors v1 verbatim) and never looks at the
-    sub-capability, so it returns True for a URL-only client. The spec
-    treats the two modes as independent and requires only that a client support at
-    least one (``types.py:319``), so a URL-only client is a real shape — and sending it
-    a form request would be a protocol violation we'd have talked ourselves into.
+    ``have.elicitation is None`` (mcp 2.2.0 ``server/connection.py::check_capability``)
+    and never looks at the sub-capability, so it returns True for a URL-only client.
     """
     params = getattr(session, "client_params", None)
     caps = getattr(params, "capabilities", None)
     elicitation = getattr(caps, "elicitation", None)
-    return getattr(elicitation, "form", None) is not None
+    if elicitation is None:
+        return False
+    return elicitation.form is not None or elicitation.url is None
 
 
 async def _resolves(client: httpx.AsyncClient, field: str, value: str) -> bool:
