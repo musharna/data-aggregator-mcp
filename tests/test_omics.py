@@ -193,7 +193,7 @@ async def test_resolve_sra_attaches_ena_manifest(httpx_mock: HTTPXMock, monkeypa
                 "run_accession": "SRR9",
                 "fastq_ftp": "ftp.sra.ebi.ac.uk/x/SRR9.fastq.gz",
                 "fastq_bytes": "10",
-                "fastq_md5": "abc",
+                "fastq_md5": "0123456789abcdef0123456789abcdef",
             }
         ],
     )
