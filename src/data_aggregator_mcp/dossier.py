@@ -45,7 +45,7 @@ def _property_value(eid: str, name: str, value: str, **extra: Any) -> dict[str, 
     return ent
 
 
-def _version_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | None:
+def _version_result(r: DataResource, id_prefix: str) -> dict[str, Any] | None:
     """Version-currency assessment — only when version info is present
     (``is_latest is not None``); absence of version links is NOT a claim of latest."""
     if r.is_latest is None:
@@ -62,7 +62,7 @@ def _version_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | No
     return _property_value(f"#{id_prefix}version-currency", "version-currency", value, **extra)
 
 
-def _license_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | None:
+def _license_result(r: DataResource, id_prefix: str) -> dict[str, Any] | None:
     """Licence assessment — only when a licence is stated. Carries the raw value and
     the normalized SPDX id; an unrecognized licence is "unrecognized", never invented."""
     if not r.license:
@@ -79,7 +79,7 @@ def _license_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | No
     )
 
 
-def _fair_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | None:
+def _fair_result(r: DataResource, id_prefix: str) -> dict[str, Any] | None:
     """FAIR assessment — only when ``resource.fair`` is attached (by the handler)."""
     fa = r.fair
     if fa is None:
@@ -103,7 +103,7 @@ def _fair_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | None:
     )
 
 
-def _retraction_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] | None:
+def _retraction_result(r: DataResource, id_prefix: str) -> dict[str, Any] | None:
     """Retraction/integrity assessment — only when ``resource.trust`` is attached.
 
     HONESTY: ``retracted is None`` is reported as "unknown / not checked" and asserts
@@ -138,7 +138,7 @@ def _retraction_result(r: DataResource, id_prefix: str = "") -> dict[str, Any] |
     )
 
 
-def _identifier_result(r: DataResource, id_prefix: str = "") -> dict[str, Any]:
+def _identifier_result(r: DataResource, id_prefix: str) -> dict[str, Any]:
     """Source/DOI/ID-chain assessment — always present (every record has a source +
     canonical id). Records the source repo, canonical id, DOI, cross-identifiers,
     accessions, and the qualified version/relation links (rel -> target)."""
@@ -160,7 +160,7 @@ def _identifier_result(r: DataResource, id_prefix: str = "") -> dict[str, Any]:
     )
 
 
-def assessment_entities(resource: DataResource, id_prefix: str = "") -> list[dict[str, Any]]:
+def assessment_entities(resource: DataResource, id_prefix: str) -> list[dict[str, Any]]:
     """The non-None per-signal assessment entities, in fixed order (version, licence,
     FAIR, retraction, identifier-chain). The single reuse seam: ``dossier.render`` builds
     the per-record crate with ``id_prefix=""`` (so the @ids stay ``#version-currency`` etc.,

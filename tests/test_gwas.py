@@ -55,20 +55,6 @@ async def test_search_normalizes_studies():
 
 
 @pytest.mark.asyncio
-async def test_search_null_total_falls_back_to_page_length():
-    payload = {
-        "_embedded": {"studies": _SEARCH["_embedded"]["studies"]},
-        "page": {"totalElements": None},
-    }
-
-    async with httpx.AsyncClient(
-        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload))
-    ) as c:
-        total, recs = await gwas.search(c, "asthma", size=2)
-    assert total == 2 and len(recs) == 2  # int, not None
-
-
-@pytest.mark.asyncio
 async def test_search_paginates_by_page_number():
     captured = {}
 
@@ -247,10 +233,10 @@ async def test_live_trait_search_is_exact_as_the_source_declares():
 
 @pytest.mark.asyncio
 async def test_search_offset_not_on_page_boundary_starts_at_offset():
-    """M7 (audit 2026-09-22): offset=3,size=10 fetched page 0 and returned ACC000..,
+    """M7 (audit 2026-09-22): offset=3,size=10 fetched page 0 and returned GCST000..,
     repeating three records the router had already consumed. The page-boundary slice
     (zenodo/dandi/datacite pattern) must drop the first ``offset % size`` records."""
-    accs = [f"ACC{i:03d}" for i in range(25)]
+    accs = [f"GCST{i:03d}" for i in range(25)]
 
     def handler(req: httpx.Request) -> httpx.Response:
         size, page = int(req.url.params["size"]), int(req.url.params["page"])
@@ -314,3 +300,25 @@ async def test_every_request_waits_past_the_slowest_reply_the_catalog_gives():
     assert r.year == 2007 and r.errors == {}
     assert set(read_timeouts) == {"v2", "studies", "publications"}
     assert all(t > slowest_reply_seen for t in read_timeouts.values()), read_timeouts
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_search_at_the_largest_tool_size_is_answered():
+    """The search tool allows 50 per call, and a live test at size 3 cannot see an
+    upstream cap (the zenodo lesson). Asthma has more than 50 studies, so a full page
+    comes back and every row passes the page check."""
+    async with httpx.AsyncClient(timeout=60) as c:
+        total, recs = await gwas.search(c, "asthma", size=50)
+    assert total > 50 and len(recs) == 50
+    assert all(r.id.startswith("gwas:GCST") for r in recs)
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_page_past_the_end_is_empty_not_malformed():
+    """Past the last page the Catalog leaves out `_embedded`; the page check must read
+    that as an empty page with the real total, not as a broken answer."""
+    async with httpx.AsyncClient(timeout=60) as c:
+        total, recs = await gwas.search(c, "asthma", size=10, offset=1000)
+    assert 50 < total < 1000 and recs == []

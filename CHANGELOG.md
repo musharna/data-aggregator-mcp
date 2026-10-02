@@ -54,6 +54,24 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   inside a quoted field that holds line breaks (a poem, an address, a long comment).
   The half row came back as data, its later columns empty; it is now left out and the
   page is marked `truncated`.
+- An NCBI failure is reported as an error instead of an empty answer. When NCBI's
+  summary service failed, PubMed reported a real PMID as "no record"; when its link
+  service failed, a PubMed record or BioProject came back with no data links; and a
+  search answer without its result read as zero hits. A wrong-typed field in an NCBI
+  answer no longer escapes as a bare error.
+- A GWAS Catalog answer missing its study list or total is reported as a malformed
+  answer instead of zero hits, a study answer without an accession is no longer
+  reported as "no such study", and a wrong-typed field no longer escapes as a bare
+  error. A trait with no studies, and a page past the last one, still come back empty.
+- Resolving a GBIF dataset that GBIF has deleted reports it as not found, with the
+  date it was deleted. GBIF still answers with the deleted dataset's record, so it came
+  back as a live dataset whose archive link no longer works (GBIF lists 25,205 deleted
+  datasets).
+- A GBIF id that is not a dataset key (GBIF keys are UUIDs) is reported as not found
+  instead of as a GBIF outage.
+- A GBIF answer missing its result list or count is reported as a malformed answer
+  instead of zero hits, and a wrong-typed field no longer escapes as a bare error or
+  turns a keyword string into one-letter subjects.
 
 ## [0.54.14] - 2026-10-02
 
