@@ -10,7 +10,7 @@ import pytest
 
 from data_aggregator_mcp import _http, hf_datasets_server
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
-from tests.test_hf_datasets_server_answers import _C4, _GATED, _SCRIPT
+from tests.test_hf_datasets_server_answers import _C4, _GATED, _LICHESS, _SCRIPT
 
 _DSS = "https://datasets-server.huggingface.co/parquet"
 
@@ -125,6 +125,25 @@ async def test_a_file_without_a_size_is_read():
     async with _client(lambda r: httpx.Response(200, json={"parquet_files": [entry]})) as c:
         (f,) = await hf_datasets_server.parquet_files(c, "o/n")
     assert (f.name, f.size) == ("c/s/0003.parquet", None)
+
+
+@pytest.mark.asyncio
+async def test_the_name_is_the_files_path_on_the_conversion_branch():
+    """A split converted only in part keeps its ``partial-`` directory in the name, so a
+    query on it cannot pass for one over the whole split; the parts of a split too
+    large for one directory each get their own names."""
+    sent = {"allenai/c4": _C4, "Lichess/standard-chess-games": _LICHESS}
+    async with _client(lambda r: httpx.Response(200, json=sent[r.url.params["dataset"]])) as c:
+        c4 = await hf_datasets_server.parquet_files(c, "allenai/c4")
+        lichess = await hf_datasets_server.parquet_files(c, "Lichess/standard-chess-games")
+    assert [(f.name, f.url) for f in c4] == [
+        ("af/partial-train/0000.parquet", _C4["parquet_files"][0]["url"]),
+        ("am/train/0000.parquet", _C4["parquet_files"][1]["url"]),
+    ]
+    assert [(f.name, f.url) for f in lichess] == [
+        ("default/train-part0/0000.parquet", _LICHESS["parquet_files"][0]["url"]),
+        ("default/train-part1/0000.parquet", _LICHESS["parquet_files"][1]["url"]),
+    ]
 
 
 @pytest.mark.parametrize(

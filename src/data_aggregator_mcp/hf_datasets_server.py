@@ -33,6 +33,16 @@ def _is_no_view(resp: httpx.Response) -> bool:
     return resp.status_code in _NO_VIEW_STATUSES
 
 
+def _name(p: dict) -> str:
+    """The file's path on the dataset's conversion branch, ``<config>/<dir>/<file>``.
+    The directory is the URL's, not ``split``: HF puts a split it converted only in
+    part (its first 5 GB) under ``partial-<split>`` and a split of over 10,000 files
+    under ``<split>-part<n>``, so a name built from ``split`` passed a partial file for
+    the whole split and gave the parts' files one name each."""
+    directory, filename = p["url"].rsplit("/", 2)[1:]
+    return f"{p['config']}/{directory}/{filename}"
+
+
 async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry]:
     """The datasets-server auto-converted Parquet files for ``ds_id``.
 
@@ -59,7 +69,7 @@ async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry
     entries = body.get("parquet_files", [])
     files = [
         FileEntry(
-            name=f"{p['config']}/{p['split']}/{p['url'].rsplit('/', 1)[-1]}",
+            name=_name(p),
             url=p["url"],
             size=p.get("size"),
             source="hf-datasets-server",

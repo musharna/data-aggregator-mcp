@@ -14,6 +14,9 @@
 - 501 ``DatasetWithScriptNotSupportedError`` for a script dataset
   (bookcorpus/bookcorpus), ``TooBigContentError`` for a file list over 10 MB
   (HuggingFaceFW/fineweb).
+- a split of over 10,000 files sits under ``<split>-part<n>`` directories, each
+  numbering its files from ``0000.parquet`` (Lichess/standard-chess-games: 26,138
+  files in ``train-part0`` to ``train-part2``).
 - 404 ``RenamedDatasetError`` for a dataset's old name (``imdb``, which the Hub
   redirects to stanfordnlp/imdb).
 """
@@ -59,6 +62,26 @@ _C4 = {
     "partial": True,
 }
 
+# Lichess/standard-chess-games, verbatim: the first file of two of the three parts HF
+# split its 26,138-file train split into.
+_LICHESS = {
+    "parquet_files": [
+        {
+            "dataset": "Lichess/standard-chess-games",
+            "config": "default",
+            "split": "train",
+            "url": "https://huggingface.co/datasets/Lichess/standard-chess-games/resolve/"
+            f"refs%2Fconvert%2Fparquet/default/train-part{n}/0000.parquet",
+            "filename": "0000.parquet",
+            "size": size,
+        }
+        for n, size in ((0, 37303902), (1, 167375975))
+    ],
+    "pending": [],
+    "failed": [],
+    "partial": False,
+}
+
 # The 401 (bigcode/the-stack) and 501 (bookcorpus/bookcorpus) bodies, verbatim.
 _GATED = {
     "error": "The dataset does not exist, or is not accessible without authentication "
@@ -83,3 +106,20 @@ async def test_live_gated_and_script_datasets_have_no_view_and_resolve_clean(ds_
         r = await huggingface.resolve(c, f"hf:{ds_id}")
     assert r.id == f"hf:{ds_id}"
     assert r.errors == {}  # an answer, not a failed lookup: the record is cacheable
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_a_partial_conversion_is_named_partial():
+    async with httpx.AsyncClient(timeout=60) as c:
+        files = await hf_datasets_server.parquet_files(c, "alexandrainst/da-wit")
+    assert files
+    assert all("/partial-" in f.name and f.name.endswith(".parquet") for f in files)
+    # Positive control: a whole conversion is named by its plain split.
+    async with httpx.AsyncClient(timeout=60) as c:
+        whole = await hf_datasets_server.parquet_files(c, "stanfordnlp/imdb")
+    assert sorted(f.name for f in whole) == [
+        "plain_text/test/0000.parquet",
+        "plain_text/train/0000.parquet",
+        "plain_text/unsupervised/0000.parquet",
+    ]
