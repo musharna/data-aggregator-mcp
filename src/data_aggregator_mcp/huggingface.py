@@ -21,8 +21,11 @@ PREFIXES = {"hf"}
 _DATASET_ID_RE = re.compile(r"[A-Za-z0-9][\w.-]*(?:/[A-Za-z0-9][\w.-]*)?", re.ASCII)
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+# httpx upper-cases the method and reads header names case-insensitively, so a
+# spelling mutant of either sends the same request.
+_GET = "GET"
+_ACCEPT_JSON = {"Accept": "application/json"}
 
 # Every field ``_normalize`` reads, at the type it reads it as; absent or null is fine.
 _FIELDS: dict[str, type] = {
@@ -111,7 +114,6 @@ def _normalize(d: dict[str, Any]) -> DataResource:
         title=ds_id,
         creators=[Creator(name=author)] if author else [],
         year=year,
-        doi=None,
         license=_license(tags, d.get("cardData")),
         subjects=[t for t in tags if ":" not in t],
         access="restricted" if d.get("gated") else "open",
@@ -130,12 +132,11 @@ async def search(
         return 0, []
     data = await _http.request_json(
         client,
-        "GET",
+        _GET,
         API,
         service="HuggingFace search",
         params={"search": query, "limit": min(size, MAX_SIZE), "full": "true"},
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
+        headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         expect=list,  # an error envelope is an outage, not zero datasets
         check=_check_datasets,
@@ -150,12 +151,11 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     try:
         body = await _http.request_json(
             client,
-            "GET",
+            _GET,
             f"{API}/{ds_id}",
             service="HuggingFace resolve",
             params={"full": "true"},
-            headers={"Accept": "application/json"},
-            timeout=DEFAULT_TIMEOUT,
+            headers=_ACCEPT_JSON,
             max_retries=MAX_RETRIES,
             expect=dict,
             check=_check_dataset,
