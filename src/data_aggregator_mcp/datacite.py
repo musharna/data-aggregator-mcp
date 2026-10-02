@@ -49,7 +49,6 @@ from data_aggregator_mcp.models import (
 
 BASE_URL = "https://api.datacite.org"
 PREFIXES = frozenset({"datacite"})  # bare DOIs (containing '/') also route here (router.resolve)
-MAX_RETRIES = 3
 _GET = "GET"
 _ACCEPT_JSON = {"Accept": "application/json"}
 DEFAULT_SIZE = 10
@@ -115,6 +114,8 @@ _LANDING_AWARE = frozenset({"dataverse"})
 # it. Deliberately narrow: a Zenodo record minted under any other prefix still takes
 # the fetch-then-delegate path in `resolve`, so this changes cost, not coverage.
 _ZENODO_DOI_RE = re.compile(r"10\.5281/zenodo\.(\d+)", re.IGNORECASE)
+# A Zenodo record minted under another prefix ends in zenodo.<record number>.
+_ZENODO_RECID_RE = re.compile(r"zenodo\.(\d+)$")
 
 
 def _main(items: list[dict[str, Any]] | None, key: str, type_key: str, main: str | None) -> Any:
@@ -303,7 +304,6 @@ def _normalize(item: dict[str, Any]) -> DataResource:
             for r in (a.get("relatedIdentifiers") or [])
             if r.get("relationType") and r.get("relatedIdentifier")
         ],
-        files=[],  # DataCite is metadata-only
     )
 
 
@@ -329,7 +329,7 @@ def pushable(filters: Mapping[str, Any], /) -> dict[str, Any]:
     act = _pushdown.active(filters)
     out = {k: v for k, v in act.items() if k in _pushdown.YEAR_FILTERS}
     kind = act.get("kind")
-    if kind is not None and _pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, kind):
+    if kind is not None and _filter_clauses({"kind": kind}):
         out["kind"] = kind
     return out
 
@@ -365,7 +365,6 @@ async def search(
         service="DataCite search",
         params=params,
         headers=_ACCEPT_JSON,
-        max_retries=MAX_RETRIES,
         expect=dict,
         check=_check_records,
     )
@@ -390,7 +389,6 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             f"{BASE_URL}/dois/{_http.doi_path(doi)}",
             service="DataCite resolve",
             headers=_ACCEPT_JSON,
-            max_retries=MAX_RETRIES,
             expect=dict,
             check=_check_record,
         )
@@ -399,10 +397,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     data = body["data"]
     resource = _normalize(data)
     record_doi = data["attributes"]["doi"]  # a str: _check_record requires it
-    if resource.source == "zenodo" and "zenodo." in record_doi:
-        recid = record_doi.rpartition("zenodo.")[2]
-        if recid.isdigit():
-            return await zenodo.resolve(client, f"zenodo:{recid}")
+    recid = _ZENODO_RECID_RE.search(record_doi) if resource.source == "zenodo" else None
+    if recid is not None:
+        return await zenodo.resolve(client, f"zenodo:{recid.group(1)}")
     resolver = _FILE_RESOLVERS.get(resource.source)
     if resolver is not None:
         if resource.source in _LANDING_AWARE:
