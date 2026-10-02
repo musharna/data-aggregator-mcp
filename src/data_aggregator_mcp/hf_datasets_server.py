@@ -33,6 +33,21 @@ def _is_no_view(resp: httpx.Response) -> bool:
     return resp.status_code in _NO_VIEW_STATUSES
 
 
+def _is_file(p: object) -> bool:
+    """A converted file carrying every field the mapping reads, at its type."""
+    return (
+        isinstance(p, dict)
+        and all(isinstance(p.get(k), str) and p[k] for k in ("config", "split", "url"))
+        and (p.get("size") is None or type(p["size"]) is int)
+    )
+
+
+def _check_parquet(body: dict) -> None:
+    files = body.get("parquet_files")
+    if not (isinstance(files, list) and all(_is_file(p) for p in files)):
+        raise _http.UpstreamEnvelopeError(f"no datasets-server parquet list in {body!r:.200}")
+
+
 def _name(p: dict) -> str:
     """The file's path on the dataset's conversion branch, ``<config>/<dir>/<file>``.
     The directory is the URL's, not ``split``: HF puts a split it converted only in
@@ -61,12 +76,12 @@ async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         expect=dict,
+        check=_check_parquet,
         empty_answer=_is_no_view,
         no_content_returns=None,
     )
     if body is None:
         raise NotFoundError(f"{_SERVICE} has no readable converted view of {ds_id!r}")
-    entries = body.get("parquet_files", [])
     files = [
         FileEntry(
             name=_name(p),
@@ -74,8 +89,7 @@ async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry
             size=p.get("size"),
             source="hf-datasets-server",
         )
-        for p in entries
-        if p.get("url") and p.get("config") and p.get("split")
+        for p in body["parquet_files"]
     ]
     if len(files) > MAX_DSS_FILES:
         logger.warning(

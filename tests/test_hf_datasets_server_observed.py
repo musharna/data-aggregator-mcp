@@ -103,6 +103,48 @@ async def test_any_other_error_status_is_an_outage(status):
             await hf_datasets_server.parquet_files(c, "o/n")
 
 
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"partial": False},  # no file list at all
+        {"parquet_files": None, "partial": False},
+        {"parquet_files": {"0": _entry(0)}, "partial": False},
+        {"parquet_files": [_entry(0), "x"]},
+        {"parquet_files": [_entry(0), _entry(1, url=None)]},
+        {"parquet_files": [_entry(0), _entry(1, url="")]},
+        {"parquet_files": [_entry(0), _entry(1, config=None)]},
+        {"parquet_files": [_entry(0), _entry(1, config="")]},
+        {"parquet_files": [_entry(0), _entry(1, split=None)]},
+        {"parquet_files": [_entry(0), _entry(1, split="")]},
+        {"parquet_files": [_entry(0), _entry(1, size="12")]},
+        {"parquet_files": [_entry(0), _entry(1, size=True)]},
+        {"parquet_files": [_entry(0), _entry(1, size=1.5)]},
+        {"parquet_files": [_entry(0), {k: v for k, v in _entry(1).items() if k != "url"}]},
+    ],
+)
+@pytest.mark.asyncio
+async def test_a_malformed_200_is_retried_then_an_outage_never_fewer_files(body):
+    sent: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(request)
+        if request.url.params["dataset"] == "o/ok":
+            return httpx.Response(200, json=_C4)
+        return httpx.Response(200, json=body)
+
+    async with _client(handler) as c:
+        with pytest.raises(
+            UpstreamUnavailableError,
+            match=r"^\[UpstreamUnavailableError\] HF datasets-server returned an unparseable "
+            r"200 body after 2 tries: UpstreamEnvelopeError\(\"no datasets-server parquet "
+            r"list in \{",
+        ):
+            await hf_datasets_server.parquet_files(c, "o/bad")
+        assert len(sent) == 2
+        # Positive control: a well-formed answer is read.
+        assert len(await hf_datasets_server.parquet_files(c, "o/ok")) == 2
+
+
 @pytest.mark.parametrize("size", [None, 0, 7])
 @pytest.mark.asyncio
 async def test_a_file_maps_to_its_entry_and_size_may_be_null(size):

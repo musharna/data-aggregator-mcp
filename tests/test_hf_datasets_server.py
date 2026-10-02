@@ -57,13 +57,6 @@ async def test_parquet_files_empty_list():
 
 
 @pytest.mark.asyncio
-async def test_parquet_files_skips_malformed_entries():
-    body = {"parquet_files": [{"config": "d", "split": "s"}, {"url": "u"}]}  # each missing a field
-    async with _client(lambda r: httpx.Response(200, json=body)) as c:
-        assert await hf_datasets_server.parquet_files(c, "o/n") == []
-
-
-@pytest.mark.asyncio
 async def test_parquet_files_caps_and_warns(caplog):
     many = {
         "parquet_files": [
