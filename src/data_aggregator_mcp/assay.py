@@ -1,22 +1,24 @@
-"""EDAM assay/method lookups: assay name -> canonical label + exact synonyms.
+"""EDAM assay/method lookups: assay name -> canonical label + synonyms.
 
 Internal helper (NOT a router adapter). Backs the ``assay=`` search-input
 expansion — the fifth ontology-grounded recall axis after ``organism=`` (NCBI
 Taxonomy), ``disease=`` (MeSH), ``tissue=`` (UBERON) and ``chemical=`` (ChEBI).
-A near-verbatim clone of ``anatomy.py``: it queries the same EBI OLS4 search API
-(``GET /ols4/api/search?ontology=edam&exact=true``) via the shared
-``_http.request_json`` helper.
+It asks EBI OLS4 for the EDAM terms whose label or a synonym is the name, through
+``_ols.exact_search`` (shared with ``anatomy`` and ``chemistry``; it says why
+``queryFields`` is needed and what counts as a malformed answer).
 
 EDAM is the right backend for the assay/method axis (OBI returns the terms but
 with empty ``synonym`` — zero recall value). TWO client-side filters in
-``_pick_edam`` are load-bearing (both proven by a live probe — neither OLS param
-self-enforces):
+``_pick_edam`` are load-bearing:
 
 1. ``obo_id`` must start with ``"EDAM:topic_"``. EDAM mixes id-classes
    (``topic_``, ``data_``, ``format_``, ``operation_``); assay/method concepts
-   are EDAM *topics*, so ``data_``/``format_``/``operation_`` are rejected.
+   are EDAM *topics*, so ``data_``/``format_``/``operation_`` are rejected. The
+   search does not restrict them: ``q=Protein structure`` answers
+   ``EDAM:data_1460`` first and the topic second.
 2. An exact (case-insensitive) match of the input to ``label`` OR an entry in
-   ``synonym`` is required. ``exact=true`` does NOT hard-filter.
+   ``synonym`` is required. It is the definition of a match, so a looser
+   upstream match cannot expand into a wrong term.
 
 No synonym cap needed (EDAM lists are small). No exact match → None
 (conservative: never expand into a wrong term). Results are cached in-process
@@ -31,7 +33,7 @@ from typing import Any
 
 import httpx
 
-from data_aggregator_mcp import _http
+from data_aggregator_mcp import _ols
 from data_aggregator_mcp._cache import MISS, TTLCache
 
 
@@ -39,11 +41,8 @@ from data_aggregator_mcp._cache import MISS, TTLCache
 class EdamInfo:
     edam_id: str  # e.g. "EDAM:topic_3169"
     canonical: str  # OLS label
-    synonyms: tuple[str, ...]  # exact entry synonyms (excludes the canonical label)
+    synonyms: tuple[str, ...]  # OLS ``synonym`` entries, in OLS's order
 
-
-OLS_SEARCH = "https://www.ebi.ac.uk/ols4/api/search"
-_HEADERS = {"User-Agent": "data-aggregator-mcp (https://github.com/musharna/data-aggregator-mcp)"}
 
 _NEG = object()  # cached "no match" (distinct from a missing key)
 _CACHE = TTLCache(maxsize=4096, ttl=3600.0)
@@ -104,25 +103,7 @@ async def resolve_edam(client: httpx.AsyncClient, name: str) -> EdamInfo | None:
     cached = _CACHE.get(key)
     if cached is not MISS:
         return None if cached is _NEG else cached
-    body = await _http.request_json(
-        client,
-        "GET",
-        OLS_SEARCH,
-        service="EBI OLS (EDAM)",
-        headers=_HEADERS,
-        params={
-            "q": name,
-            "ontology": "edam",
-            "exact": "true",
-            "fieldList": "obo_id,label,synonym,is_defining_ontology,is_obsolete",
-            "rows": "10",
-        },
-        timeout=30.0,
-        max_retries=2,
-        expect=dict,
-    )
-    response = body.get("response")
-    docs = response.get("docs") if isinstance(response, dict) else None
-    info = _pick_edam(docs if isinstance(docs, list) else [], key)
+    docs = await _ols.exact_search(client, name, ontology="edam", service="EBI OLS (EDAM)")
+    info = _pick_edam(docs, key)
     _CACHE.set(key, info if info is not None else _NEG)
     return info
