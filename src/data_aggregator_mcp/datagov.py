@@ -181,10 +181,17 @@ def _creators(hit: dict, dcat: dict) -> list[Creator]:
     return [Creator(name=name)] if name else []
 
 
+def _label(term: object) -> object:
+    """A keyword or theme as text. Some publishers give a theme as a SKOS concept,
+    ``{"@type": "Concept", "prefLabel": "Tobacco Products"}`` (70 of 3,472 live hits on
+    2026-10-02); its label is the theme, as the catalog's own ``theme`` field reads it."""
+    return term.get("prefLabel") if isinstance(term, dict) else term
+
+
 def _subjects(dcat: dict) -> list[str]:
     """DCAT keywords, then themes, de-duplicated in order."""
     out: list[str] = []
-    for term in [*(dcat.get("keyword") or []), *(dcat.get("theme") or [])]:
+    for term in map(_label, [*(dcat.get("keyword") or []), *(dcat.get("theme") or [])]):
         if isinstance(term, str) and term and term not in out:
             out.append(term)
     return out

@@ -182,3 +182,24 @@ def test_no_wrong_typed_field_escapes_as_a_bare_error():
             except Exception as exc:  # noqa: BLE001 - the point is that nothing escapes
                 escaped.append((path, value, type(exc).__name__))
     assert escaped == []
+
+
+def test_a_theme_given_as_a_skos_concept_is_read_by_its_label():
+    """Live: center-for-tobacco-products-strategic-priority-i-public-education (2026-10-02)
+    gives its only theme as a SKOS concept; the catalog's own top-level ``theme`` reads
+    it as "Tobacco Products". The concept was dropped from subjects."""
+    dcat = {
+        "keyword": ["Tobacco Products/ Public Education"],
+        "theme": [{"@type": "Concept", "prefLabel": "Tobacco Products"}],
+    }
+    assert datagov._subjects(dcat) == [
+        "Tobacco Products/ Public Education",
+        "Tobacco Products",
+    ]
+    # Positive control: string themes still read, after keywords, de-duplicated; a
+    # concept without a label, and a term that is neither, add nothing.
+    mixed = {
+        "keyword": ["water", "water", 7],
+        "theme": ["Environment", {"prefLabel": "water"}, {"@type": "Concept"}, ""],
+    }
+    assert datagov._subjects(mixed) == ["water", "Environment"]

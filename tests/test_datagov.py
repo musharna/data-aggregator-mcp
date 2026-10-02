@@ -287,3 +287,14 @@ async def test_live_offset_walk_matches_one_long_page():
         _t, long_page = await datagov.search(c, "water", size=10)
         _t, second = await datagov.search(c, "water", size=5, offset=5)
     assert [r.id for r in second] == [r.id for r in long_page[5:10]]
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_theme_given_as_a_skos_concept_is_a_subject():
+    slug = "center-for-tobacco-products-strategic-priority-i-public-education"
+    async with httpx.AsyncClient(timeout=60) as c:
+        r = await datagov.resolve(c, f"datagov:{slug}")
+    # The theme is {"@type": "Concept", "prefLabel": "Tobacco Products"}; the keyword
+    # beside it is a plain string (positive control).
+    assert r.subjects == ["Tobacco Products/ Public Education", "Tobacco Products"]
