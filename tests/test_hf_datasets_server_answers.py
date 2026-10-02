@@ -18,6 +18,17 @@
   redirects to stanfordnlp/imdb).
 """
 
+import os
+
+import httpx
+import pytest
+
+from data_aggregator_mcp import hf_datasets_server, huggingface
+from data_aggregator_mcp.errors import NotFoundError
+
+_LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
+_live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+
 _CONVERTED = "https://huggingface.co/datasets/allenai/c4/resolve/refs%2Fconvert%2Fparquet"
 
 # allenai/c4, verbatim: its first file (config "af", converted in part) and the first
@@ -60,3 +71,15 @@ _SCRIPT = {
     "convert_to_parquet CLI from the datasets library. See: "
     "https://huggingface.co/docs/datasets/main/en/cli#convert-to-parquet"
 }
+
+
+@_live_only
+@pytest.mark.parametrize("ds_id", ["bigcode/the-stack", "bookcorpus/bookcorpus"])
+@pytest.mark.asyncio
+async def test_live_gated_and_script_datasets_have_no_view_and_resolve_clean(ds_id):
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        with pytest.raises(NotFoundError, match=r"has no readable converted view"):
+            await hf_datasets_server.parquet_files(c, ds_id)
+        r = await huggingface.resolve(c, f"hf:{ds_id}")
+    assert r.id == f"hf:{ds_id}"
+    assert r.errors == {}  # an answer, not a failed lookup: the record is cacheable

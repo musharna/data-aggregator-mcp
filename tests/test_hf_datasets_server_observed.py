@@ -9,8 +9,8 @@ import httpx
 import pytest
 
 from data_aggregator_mcp import _http, hf_datasets_server
-from data_aggregator_mcp.errors import UpstreamUnavailableError
-from tests.test_hf_datasets_server_answers import _C4
+from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
+from tests.test_hf_datasets_server_answers import _C4, _GATED, _SCRIPT
 
 _DSS = "https://datasets-server.huggingface.co/parquet"
 
@@ -65,6 +65,31 @@ async def test_an_outage_is_retried_once_and_named():
         ):
             await hf_datasets_server.parquet_files(c, "o/n")
     assert len(sent) == hf_datasets_server.MAX_RETRIES == 2
+
+
+@pytest.mark.parametrize(("status", "body"), [(401, _GATED), (501, _SCRIPT), (404, {"error": "x"})])
+@pytest.mark.asyncio
+async def test_no_readable_view_is_not_found_not_an_outage(status, body):
+    sent: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(request)
+        if request.url.params["dataset"] == "o/ok":
+            return httpx.Response(200, json=_C4)
+        return httpx.Response(status, json=body)
+
+    async with _client(handler) as c:
+        with pytest.raises(NotFoundError) as exc:
+            await hf_datasets_server.parquet_files(c, "o/gated")
+        # Positive control: the same client reads a converted dataset.
+        assert len(await hf_datasets_server.parquet_files(c, "o/ok")) == 2
+    if status == 404:
+        assert str(exc.value).startswith("[NotFoundError] HF datasets-server → HTTP 404: ")
+    else:
+        assert str(exc.value) == (
+            "[NotFoundError] HF datasets-server has no readable converted view of 'o/gated'"
+        )
+    assert len(sent) == 2  # a permanent answer: not retried
 
 
 @pytest.mark.parametrize("status", [400, 403, 422])

@@ -9,6 +9,7 @@ import logging
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import FileEntry
 
 logger = logging.getLogger(__name__)
@@ -22,14 +23,23 @@ _SERVICE = "HF datasets-server"
 # spelling mutant of either sends the same request.
 _GET = "GET"
 _ACCEPT_JSON = {"Accept": "application/json"}
+# Error statuses that answer "no converted view an anonymous caller can read", not an
+# outage (the API's OpenAPI spec; probed 2026-10-02): 401 = gated, private or missing;
+# 501 = a script dataset, a blocked one, a failed job, or a file list over 10 MB.
+_NO_VIEW_STATUSES = (401, 501)
+
+
+def _is_no_view(resp: httpx.Response) -> bool:
+    return resp.status_code in _NO_VIEW_STATUSES
 
 
 async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry]:
     """The datasets-server auto-converted Parquet files for ``ds_id``.
 
-    Raises ``NotFoundError`` (via ``_http.request_json``) when the dataset has no
-    converted view — the caller treats that as the normal "not operable via
-    datasets-server" signal and keeps the raw siblings.
+    Raises ``NotFoundError`` when the dataset has no converted view an anonymous
+    caller can read (404; 401 gated or private; 501 unsupported) — the caller treats
+    that as the normal "not operable via datasets-server" signal and keeps the raw
+    siblings.
     """
     body = await _http.request_json(
         client,
@@ -41,7 +51,11 @@ async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         expect=dict,
+        empty_answer=_is_no_view,
+        no_content_returns=None,
     )
+    if body is None:
+        raise NotFoundError(f"{_SERVICE} has no readable converted view of {ds_id!r}")
     entries = body.get("parquet_files", [])
     files = [
         FileEntry(
