@@ -70,6 +70,9 @@ _CONTEXT = {
 
 _CONFORMS_TO = "http://mlcommons.org/croissant/1.1"
 
+# FileEntry.checksum is "<algo>:<digest>"; these algos are FileObject properties.
+_CHECKSUM_KEYS = ("sha256", "md5")
+
 # Conservative derivation rels: "this entity came FROM that target". Mapping any
 # other rel (is_supplement_to/cites/part_of/...) to prov:wasDerivedFrom would
 # overstate provenance — the cardinal honesty failure for a provenance feature.
@@ -103,10 +106,9 @@ def _file_object(
         obj["encodingFormat"] = mime
     if size is not None:
         obj["contentSize"] = f"{size} B"  # schema.org contentSize is Text
-    if checksum and ":" in checksum:
-        algo, _, hexval = checksum.partition(":")
-        if algo in ("sha256", "md5"):
-            obj[algo] = hexval
+    for algo in _CHECKSUM_KEYS:
+        if checksum and checksum.startswith(f"{algo}:"):
+            obj[algo] = checksum[len(algo) + 1 :]
     return obj
 
 
@@ -121,13 +123,11 @@ def _agent(creator: Creator) -> dict[str, Any]:
 
 
 def _target_id(target_id: str) -> str:
-    """Resolve a link target to an @id. A URL passes through; a DOI (``10.…``)
-    gets the doi.org prefix; ANY OTHER identifier (a bare accession like
-    ``GSE12345``, a PMID, …) is emitted verbatim — fabricating a ``doi.org`` URL
-    for a non-DOI would assert a false DOI, the cardinal provenance-honesty
-    failure for a provenance feature."""
-    if target_id.startswith(("http://", "https://")):
-        return target_id
+    """Resolve a link target to an @id. A DOI (``10.…``) gets the doi.org
+    prefix; ANY OTHER identifier (a URL, a bare accession like ``GSE12345``, a
+    PMID, …) is emitted verbatim — fabricating a ``doi.org`` URL for a non-DOI
+    would assert a false DOI, the cardinal provenance-honesty failure for a
+    provenance feature."""
     if target_id.startswith("10."):  # DOI
         return f"https://doi.org/{target_id}"
     return target_id

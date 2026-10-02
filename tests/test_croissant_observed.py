@@ -195,3 +195,103 @@ def test_live_zenodo_record_with_spaced_file_names_renders_valid_ids() -> None:
     assert not any(re.search(r"\s", f["@id"]) for f in dist)
     sized = [f for f in dist if "contentSize" in f]
     assert sized and all(re.fullmatch(r"\d+ B", f["contentSize"]) for f in sized)
+
+
+# --- exact field mapping (mutant burn-down, #88) ----------------------------
+
+
+def test_full_record_maps_to_exactly_these_fields() -> None:
+    m = croissant.render(_full_resource())
+    del m["@context"]
+    assert m == {
+        "@type": "Dataset",
+        "conformsTo": "http://mlcommons.org/croissant/1.1",
+        "name": "Rice genomes",
+        "description": "d",
+        "identifier": "https://doi.org/10.5281/zenodo.1",
+        "keywords": ["rice"],
+        "license": "cc-by-4.0",
+        "usageInfo": "cc-by-4.0",
+        "datePublished": "2024",
+        "dateModified": "2025-01-02",
+        "creator": [{"@type": "Person", "name": "A. Author"}],
+        "prov:wasAttributedTo": [
+            {
+                "@type": "Person",
+                "@id": "https://orcid.org/0000-0002-1825-0097",
+                "name": "A. Author",
+            }
+        ],
+        "prov:wasDerivedFrom": [{"@id": "https://doi.org/10.1/parent"}],
+        "publisher": {"@type": "Organization", "name": "Zenodo"},
+        "citeAs": "@dataset{a, title={Rice genomes}}",
+        "distribution": [
+            {
+                "@type": "cr:FileObject",
+                "@id": "a.csv",
+                "name": "a.csv",
+                "contentUrl": "https://x/a.csv",
+                "encodingFormat": "text/csv",
+                "contentSize": "10 B",
+                "md5": "ab",
+            },
+            {
+                "@type": "cr:FileObject",
+                "@id": "b.bin",
+                "name": "b.bin",
+                "contentUrl": "https://x/b.bin",
+                "sha256": "cd",
+            },
+        ],
+    }
+
+
+def test_bare_record_carries_only_the_required_fields() -> None:
+    # Every optional field absent: no key is emitted for it, not even a null.
+    r = DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="T")
+    m = croissant.render(r)
+    del m["@context"]
+    assert m == {
+        "@type": "Dataset",
+        "conformsTo": "http://mlcommons.org/croissant/1.1",
+        "name": "T",
+        "publisher": {"@type": "Organization", "name": "Zenodo"},
+        "distribution": [],
+    }
+
+
+@pytest.mark.parametrize(
+    ("checksum", "expected"),
+    [
+        ("md5:ab12", {"md5": "ab12"}),
+        ("sha256:cd34", {"sha256": "cd34"}),
+        ("md5:a:b", {"md5": "a:b"}),  # the digest is everything after the first colon
+        ("sha1:ef56", {}),  # not a Croissant checksum property
+        ("xmd5:ab12", {}),
+        ("md5ab12", {}),
+        (None, {}),
+    ],
+)
+def test_checksum_becomes_the_croissant_property_of_its_algorithm(
+    checksum: str | None, expected: dict
+) -> None:
+    r = DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="T")
+    r.files = [FileEntry(name="a.csv", checksum=checksum)]
+    f = croissant.render(r)["distribution"][0]
+    assert {k: f[k] for k in ("md5", "sha256") if k in f} == expected
+    assert f["name"] == "a.csv"  # the file is listed either way
+
+
+@pytest.mark.parametrize(
+    ("target", "at_id"),
+    [
+        ("10.5061/dryad.parent", "https://doi.org/10.5061/dryad.parent"),
+        ("http://example.org/concept", "http://example.org/concept"),
+        ("https://doi.org/10.1/x", "https://doi.org/10.1/x"),
+        ("GSE12345", "GSE12345"),
+    ],
+)
+def test_derivation_target_id(target: str, at_id: str) -> None:
+    r = DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="T")
+    r.links = [Link(rel="is_new_version_of", target_id=target)]
+    assert croissant.render(r)["prov:wasDerivedFrom"] == [{"@id": at_id}]
