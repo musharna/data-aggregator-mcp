@@ -161,3 +161,87 @@ async def test_a_search_answer_without_its_records_and_total_is_a_malformed_answ
     assert total == 7 and [r.id for r in recs] == ["datacite:10.48660/26100072"]
     async with _client({"data": [], "meta": {"total": 0, "totalPages": 0, "page": 1}}) as c:
         assert await datacite.search(c, "zzqqxxnohitxyz") == (0, [])  # the live no-hit answer
+
+
+# Every field `_normalize` reads, nested as DataCite serves it (live types 2026-10-01:
+# counts and publicationYear int, relationships.client.data an object with a str id,
+# nameIdentifiers a list of objects).
+_FULL = {
+    "id": "10.1234/full",
+    "type": "dois",
+    "attributes": {
+        "doi": "10.1234/full",
+        "titles": [{"title": "T", "titleType": "AlternativeTitle"}],
+        "descriptions": [{"description": "D", "descriptionType": "Abstract"}],
+        "creators": [
+            {
+                "name": "Doe, J.",
+                "givenName": "J.",
+                "familyName": "Doe",
+                "nameIdentifiers": [
+                    {"nameIdentifier": "0000-0002-1825-0097", "nameIdentifierScheme": "ORCID"}
+                ],
+            }
+        ],
+        "subjects": [{"subject": "s"}],
+        "rightsList": [{"rights": "CC0", "rightsUri": "https://x", "rightsIdentifier": "cc0-1.0"}],
+        "fundingReferences": [{"funderName": "F", "awardNumber": "1", "awardTitle": "A"}],
+        "relatedIdentifiers": [{"relationType": "IsPartOf", "relatedIdentifier": "10.1/y"}],
+        "types": {"resourceTypeGeneral": "Dataset"},
+        "publicationYear": 2023,
+        "updated": "2024-01-01T00:00:00Z",
+        "url": "https://example.org/landing",
+        "citationCount": 1,
+        "viewCount": 2,
+        "downloadCount": 3,
+    },
+    "relationships": {"client": {"data": {"id": "tdl.tdl", "type": "clients"}}},
+}
+_WRONG = ["x", 7, True, 1.5, [1], {"k": 1}, None]
+
+
+def _paths(node, path=()):
+    yield path
+    if isinstance(node, dict):
+        for k, v in node.items():
+            yield from _paths(v, (*path, k))
+    elif isinstance(node, list) and node:
+        yield from _paths(node[0], (*path, 0))
+
+
+def _with(path, value):
+    import copy
+
+    rec = copy.deepcopy(_FULL)
+    *parents, last = path
+    node = rec
+    for p in parents:
+        node = node[p]
+    node[last] = value
+    return rec
+
+
+def test_no_wrong_typed_field_escapes_as_a_bare_error():
+    """Review of #168: `_is_record` checked fewer fields than `_normalize` reads
+    (creators[].nameIdentifiers, the relationships chain, the usage counts), so a
+    wrong-typed one still escaped as a bare AttributeError / pydantic error. This walks
+    every field of a full record and every wrong type: each must be refused by the check
+    or normalize cleanly, so a field the reader adds without the check fails here."""
+    full = datacite._normalize(_FULL)  # positive control: the full record reads whole
+    assert full.creators == [Creator(name="Doe, J.", orcid="0000-0002-1825-0097")]
+    assert full.source == "tdl.tdl" and full.metrics is not None and full.metrics.downloads == 3
+    escaped = []
+    for path in _paths(_FULL):
+        if not path:
+            continue
+        for value in _WRONG:
+            rec = _with(path, value)
+            try:
+                datacite._check_record({"data": rec})
+            except _http.UpstreamEnvelopeError:
+                continue
+            try:
+                datacite._normalize(rec)
+            except Exception as exc:  # noqa: BLE001 - the point is that nothing escapes
+                escaped.append((path, value, type(exc).__name__))
+    assert escaped == []

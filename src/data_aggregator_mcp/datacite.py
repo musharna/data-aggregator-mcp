@@ -139,28 +139,59 @@ _LIST_FIELDS = {
 }
 
 
+_NAME_IDENTIFIER_KEYS = ("nameIdentifier", "nameIdentifierScheme")
+_COUNTS = ("citationCount", "viewCount", "downloadCount")
+# relationships.client.data.id: the client the record's source is named from.
+_CLIENT_PATH = ("relationships", "client", "data")
+
+
+def _are_entries(entries: object, text_keys: tuple[str, ...]) -> bool:
+    """Absent, or a list of objects whose ``text_keys`` are each a str or absent."""
+    return entries is None or (
+        isinstance(entries, list)
+        and all(
+            isinstance(e, dict) and all(isinstance(e.get(k), str | None) for k in text_keys)
+            for e in entries
+        )
+    )
+
+
+def _client(item: dict[str, Any]) -> object:
+    """``relationships.client.data``: None when a level is absent; a level that is not an
+    object is returned as found, for `_is_record` to refuse."""
+    node: object = item
+    for key in _CLIENT_PATH:
+        if not isinstance(node, dict):
+            return node
+        node = node.get(key)
+    return node
+
+
+def _client_id(item: dict[str, Any]) -> str:
+    client = _client(item)
+    return (client.get("id") if isinstance(client, dict) else None) or ""
+
+
 def _is_record(item: object) -> bool:
-    """A DataCite record carrying the fields `_normalize` reads, each of the type it reads."""
-    if not isinstance(item, dict) or not isinstance(item.get("relationships"), dict | None):
+    """A DataCite record carrying every field `_normalize` reads, each of the type it reads.
+    tests/test_datacite_answers.py walks every field with every wrong type against it."""
+    if not isinstance(item, dict):
         return False
+    client = _client(item)
     a = item.get("attributes")
-    if not (
-        isinstance(a, dict)
+    return (
+        (client is None or (isinstance(client, dict) and isinstance(client.get("id"), str | None)))
+        and isinstance(a, dict)
         and isinstance(a.get("doi"), str)
         and isinstance(a.get("types"), dict | None)
         and all(isinstance(a.get(k), str | None) for k in ("updated", "url"))
-    ):
-        return False
-    for field, text_keys in _LIST_FIELDS.items():
-        entries = a.get(field)
-        if entries is None:
-            continue
-        if not isinstance(entries, list) or not all(
-            isinstance(e, dict) and all(isinstance(e.get(k), str | None) for k in text_keys)
-            for e in entries
-        ):
-            return False
-    return True
+        and all(a.get(k) is None or type(a.get(k)) is int for k in _COUNTS)
+        and all(_are_entries(a.get(f), keys) for f, keys in _LIST_FIELDS.items())
+        and all(
+            _are_entries(c.get("nameIdentifiers"), _NAME_IDENTIFIER_KEYS)
+            for c in a.get("creators") or []
+        )
+    )
 
 
 def _check_record(body: dict) -> None:
@@ -273,9 +304,7 @@ def _creator(c: dict[str, Any]) -> Creator | None:
 
 def _normalize(item: dict[str, Any]) -> DataResource:
     a = item["attributes"]
-    client_id = (((item.get("relationships") or {}).get("client") or {}).get("data") or {}).get(
-        "id", ""
-    )
+    client_id = _client_id(item)
     rt = (a.get("types") or {}).get("resourceTypeGeneral")
     rights = a.get("rightsList") or []
     license_ = _license_from_rights(rights)
