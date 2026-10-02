@@ -118,7 +118,11 @@ async def _resolves(client: httpx.AsyncClient, field: str, value: str) -> bool:
         return True
 
 
-def _build_schema(pending: list[tuple[str, str, str]]) -> types.ElicitRequestedSchema:
+# (field, registry label, form hint, the value that matched nothing)
+_Pending = tuple[str, str, str, str]
+
+
+def _build_schema(pending: list[_Pending]) -> types.ElicitRequestedSchema:
     """One form, one top-level string property per unresolved field (the schema subset
     forbids nesting). Every field is optional — leaving one blank means "search without
     that expansion", which must stay a first-class choice, not a dead end."""
@@ -130,13 +134,15 @@ def _build_schema(pending: list[tuple[str, str, str]]) -> types.ElicitRequestedS
                 "title": f"{field} (not found in {ontology})",
                 "description": f"Enter {hint} — or leave blank to search without it.",
             }
-            for field, ontology, hint in pending
+            for field, ontology, hint, _ in pending
         },
     }
 
 
-def _message(pending: list[tuple[str, str, str]]) -> str:
-    parts = [f"{field}={value!r} was not found in {ontology}" for field, ontology, value in pending]
+def _message(pending: list[_Pending]) -> str:
+    parts = [
+        f"{field}={value!r} was not found in {ontology}" for field, ontology, _, value in pending
+    ]
     joined = "; ".join(parts)
     return (
         f"Could not resolve {joined}. "
@@ -166,21 +172,20 @@ async def correct_unresolved(
     if session is None or not supports_form_elicitation(session):
         return {}
 
-    pending: list[tuple[str, str, str]] = []
+    pending: list[_Pending] = []
     for field, (_, ontology, hint) in _RESOLVERS.items():
         value = params.get(field)
         if not value or not value.strip():
             continue
         if await _resolves(client, field, value):
             continue
-        pending.append((field, ontology, hint))
+        pending.append((field, ontology, hint, value))
     if not pending:
         return {}
 
-    prompt_pending = [(f, o, params[f] or "") for f, o, _ in pending]
     try:
         result = await session.elicit_form(
-            _message(prompt_pending),
+            _message(pending),
             _build_schema(pending),
             related_request_id,
         )
@@ -192,7 +197,7 @@ async def correct_unresolved(
         return {}
     content = getattr(result, "content", None) or {}
     corrections: dict[str, str] = {}
-    for field, _, _ in pending:
+    for field, _, _, _ in pending:
         replacement = content.get(field)
         # Blank is a deliberate answer ("proceed without it"), not a correction. Anything
         # non-string is a malformed client response — ignore rather than trust it.
