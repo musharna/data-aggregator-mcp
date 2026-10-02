@@ -12,6 +12,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   malformed answer instead of zero hits, a record answer that is not a record (an
   empty object or an error message) is no longer returned as an untitled record, and
   a wrong-typed field no longer escapes as a bare error.
+- Resolving an `openaire:` id of a dataset, software or other research product
+  reports that kind. Every OpenAIRE record was called a publication, although only
+  search is limited to publications.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
