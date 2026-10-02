@@ -40,6 +40,11 @@ MANIFEST_CAP = 1000
 # spelling mutant of either sends the same request.
 _GET = "GET"
 _ACCEPT_JSON = {"Accept": "application/json"}
+# A PID is one path segment: quote() escapes "/" too.
+_SEGMENT_SAFE = ""
+# The CN answers 303 to the Member Node; following it would fetch the object bytes
+# instead of the locator (pinned by test_object_url_303_returns_location_without_following).
+_UNFOLLOWED = False
 
 # Lucene special characters that must be backslash-escaped when user-supplied
 # strings are interpolated into a Solr query (boolean operators && and || are
@@ -180,12 +185,10 @@ async def _object_url(client: httpx.AsyncClient, pid: str) -> str | None:
     resp = await _http.request_with_retry(
         client,
         _GET,
-        RESOLVE.format(pid=quote(pid, safe="")),
+        RESOLVE.format(pid=quote(pid, safe=_SEGMENT_SAFE)),
         service="DataONE resolve",
         not_found_returns=None,
-        # None reads as "don't follow" in _http and httpx alike; True is pinned by
-        # test_object_url_303_returns_location_without_following.
-        follow_redirects=False,  # pragma: no mutate
+        follow_redirects=_UNFOLLOWED,
     )
     if resp is None:  # 404 → object not locatable
         return None

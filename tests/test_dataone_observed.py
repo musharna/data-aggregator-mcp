@@ -149,7 +149,7 @@ async def test_errors_name_the_dataone_service_and_object():
         return httpx.Response(500, text="ServiceFailure")
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(down)) as c:
-        with pytest.raises(UpstreamUnavailableError, match="DataONE resolve"):
+        with pytest.raises(UpstreamUnavailableError, match=r"\] DataONE resolve exhausted"):
             await dataone._object_url(c, "urn:uuid:x")
     async with _recording([], _answer(), _answer()) as c:
         with pytest.raises(NotFoundError, match="DataONE has no object 'nope'"):
