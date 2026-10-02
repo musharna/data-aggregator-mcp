@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- An NCBI failure is reported as an error instead of an empty answer. When NCBI's
+  summary service failed, PubMed reported a real PMID as "no record"; when its link
+  service failed, a PubMed record or BioProject came back with no data links; and a
+  search answer without its result read as zero hits. A wrong-typed field in an NCBI
+  answer no longer escapes as a bare error.
+
 ## [0.54.14] - 2026-10-02
 
 ### Fixed
