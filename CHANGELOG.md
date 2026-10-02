@@ -8,6 +8,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Resolving a gated HuggingFace dataset, a dataset built by a loading script, or one
+  whose converted file list is too large to list no longer reports a failed
+  datasets-server lookup. The dataset viewer answers these with HTTP 401 or 501, which
+  was reported as an outage, so the record carried an error and was never cached; it
+  now resolves with its repository files, like any dataset without a converted view.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
