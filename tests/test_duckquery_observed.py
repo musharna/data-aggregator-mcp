@@ -2,17 +2,24 @@
 """What duckquery observably does: the statements it accepts and refuses, the rows it
 fetches, and the exact shape of what it returns."""
 
+import asyncio
+import contextlib
+import gc
+import threading
+
 import pytest
 
 pytest.importorskip("duckdb")
 pytest.importorskip("pyarrow")
 
 import duckdb
+import httpx
 
-from data_aggregator_mcp import duckquery
-from data_aggregator_mcp.errors import ValidationError
+from data_aggregator_mcp import duckquery, operate
+from data_aggregator_mcp.errors import OperateNotSupportedError, ValidationError
+from data_aggregator_mcp.models import FileEntry
 from tests.test_duckquery import PARQUET_URL
-from tests.test_operate import _LIVE_PARQUET, _live_only
+from tests.test_operate import _LIVE_PARQUET, _live_only, _res, patch_resolve  # noqa: F401
 
 
 class _Counted:
@@ -47,7 +54,7 @@ def fetched(monkeypatch) -> list[int]:
     """The row count of every fetch the engine makes, in order."""
     counts: list[int] = []
     real = duckquery._connect
-    monkeypatch.setattr(duckquery, "_connect", lambda u, f: _Counted(real(u, f), counts))
+    monkeypatch.setattr(duckquery, "_connect", lambda u, f, o: _Counted(real(u, f, o), counts))
     return counts
 
 
@@ -272,3 +279,152 @@ async def test_live_sql_over_a_real_remote_parquet_keeps_its_cap(monkeypatch) ->
         assert len(out["rows"]) == operate.ROW_CAP and out["truncated"] is True
         with pytest.raises(duckdb.ParserException):
             await operate.run(c, "hf:live", "sql", query="SELECT * FROM data a, data b) --")
+
+
+# How long to wait for an engine thread to end. A hang guard, not a time budget: the old
+# code's thread ran to the end of its query after a timeout; the fixed one ends at an
+# interrupt.
+_THREAD_END_GUARD_S = 60
+
+
+class _Worker:
+    """How each engine thread ended, recorded from inside the thread."""
+
+    def __init__(self) -> None:
+        self.outcomes: list[str] = []
+        self.ended = threading.Semaphore(0)
+        self.cons: list = []
+
+    async def wait_for_end(self) -> None:
+        await asyncio.to_thread(self.ended.acquire, timeout=_THREAD_END_GUARD_S)
+
+
+@pytest.fixture
+def worker(monkeypatch):
+    w = _Worker()
+    real_run, real_connect = duckquery._run, duckquery._connect
+
+    def run(*args):
+        try:
+            out = real_run(*args)
+        except Exception as exc:
+            w.outcomes.append(type(exc).__name__)
+            w.ended.release()
+            raise
+        w.outcomes.append("finished")
+        w.ended.release()
+        return out
+
+    def connect(*args):
+        con = real_connect(*args)
+        w.cons.append(con)
+        return con
+
+    monkeypatch.setattr(duckquery, "_run", run)
+    monkeypatch.setattr(duckquery, "_connect", connect)
+    yield w
+    # Stop anything the code under test left running, so a failing run cannot hang the
+    # session; the assertions were made before this point.
+    for con in w.cons:
+        with contextlib.suppress(duckdb.ConnectionException):
+            con.interrupt()
+
+
+# 3000**3 joined rows: many times the 2 s limit (the old code ran it to the end, ~15 s).
+_ENDLESS = "SELECT count(*) FROM data a, data b, data c WHERE a.i + b.i + c.i = -1"
+
+
+async def test_a_query_past_the_wall_clock_limit_is_interrupted(
+    patch_resolve, worker, monkeypatch, tmp_path
+) -> None:
+    """operate's wall-clock limit cancelled the await, not the thread doing the work: the
+    timeout was reported and the query ran on in the server (to 13.65 s after a timeout
+    reported at 1.14 s). The thread is now interrupted, and its outcome is taken, so
+    asyncio has no unretrieved error to report."""
+    src = tmp_path / "n.csv"
+    src.write_text("i\n" + "".join(f"{k}\n" for k in range(3000)))
+    patch_resolve(_res([FileEntry(name="n.csv", url=src.as_uri())]))
+    monkeypatch.setattr(operate, "WALL_TIMEOUT_S", 2.0)
+    loop = asyncio.get_running_loop()
+    unreported: list[dict] = []
+    loop.set_exception_handler(lambda _loop, ctx: unreported.append(ctx))
+    try:
+        async with httpx.AsyncClient() as c:
+            # Positive control: a query inside the limit is answered and its thread ends.
+            ok = await operate.run(c, "zenodo:1", "sql", query="SELECT count(*) AS n FROM data")
+            assert ok["rows"] == [{"n": 3000}]
+            await worker.wait_for_end()
+            assert worker.outcomes == ["finished"]
+            with pytest.raises(
+                OperateNotSupportedError,
+                match=r"\] operate op='sql' exceeded 2\.0s wall-clock limit$",
+            ):
+                await operate.run(c, "zenodo:1", "sql", query=_ENDLESS)
+        await worker.wait_for_end()
+        assert worker.outcomes == ["finished", "InterruptException"]
+        await asyncio.gather(*duckquery._STOPPING)
+        gc.collect()
+        assert unreported == []
+    finally:
+        loop.set_exception_handler(None)
+
+
+def test_an_interrupt_skips_a_connection_already_closed() -> None:
+    """A thread may close its connection between two interrupts; that must not stop the
+    interrupts reaching the connections still running."""
+    closed = duckdb.connect()
+    closed.close()
+    running = duckdb.connect()
+    ended: list[str] = []
+
+    def endless() -> None:
+        try:
+            running.execute("SELECT count(*) FROM range(3000) a, range(3000) b, range(3000) c")
+        except duckdb.InterruptException:
+            ended.append("interrupted")
+
+    t = threading.Thread(target=endless)
+    t.start()
+    try:
+        for _ in range(int(_THREAD_END_GUARD_S / duckquery._INTERRUPT_EVERY_S)):
+            if not t.is_alive():
+                break
+            duckquery._interrupt([closed, running])
+            t.join(duckquery._INTERRUPT_EVERY_S)
+        assert ended == ["interrupted"]
+    finally:
+        running.interrupt()
+        t.join()
+
+
+@_live_only
+async def test_live_a_query_past_the_wall_clock_limit_is_interrupted(worker, monkeypatch) -> None:
+    """Real execution: over a real Parquet downloaded over HTTPS, a query past the limit
+    ends its thread at an interrupt, and one inside the limit is answered."""
+    from data_aggregator_mcp import router
+    from data_aggregator_mcp.models import DataResource
+
+    res = DataResource(
+        id="hf:live",
+        source="huggingface",
+        kind="dataset",
+        title="t",
+        files=[FileEntry(name="0000.parquet", url=_LIVE_PARQUET)],
+    )
+
+    async def fake_resolve(client, rid):
+        return res
+
+    monkeypatch.setattr(router, "resolve", fake_resolve)
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        ok = await operate.run(c, "hf:live", "sql", query="SELECT count(*) AS n FROM data")
+        assert ok["rows"] == [{"n": 3432}]
+        await worker.wait_for_end()
+        monkeypatch.setattr(operate, "WALL_TIMEOUT_S", 3.0)
+        endless = (
+            "FROM data a, data b, data c SELECT count(*) WHERE a.label + b.label + c.label = -1"
+        )
+        with pytest.raises(OperateNotSupportedError, match=r"exceeded 3\.0s wall-clock limit$"):
+            await operate.run(c, "hf:live", "sql", query=endless)
+    await worker.wait_for_end()
+    assert worker.outcomes == ["finished", "InterruptException"]
