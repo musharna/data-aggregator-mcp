@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `operate` SQL accepts a `;` inside a string (`WHERE go = 'GO:1;GO:2'`), a query that
+  ends in a `--` comment, and DuckDB's other query forms (`FROM data WHERE ...`, a
+  leading comment). It still refuses anything that is not a single query.
+- `operate` SQL always returns at most its row cap. A query ending in `) --` used to
+  switch the cap off, so the server read every row of the result into memory.
+- `operate` `peek` profiles a file that has a header and no rows. It used to fail with
+  a Python error; the null percentage is now empty for such a file.
+
 ## [0.54.14] - 2026-10-02
 
 ### Fixed
