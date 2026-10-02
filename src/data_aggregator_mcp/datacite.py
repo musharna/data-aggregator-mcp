@@ -49,12 +49,14 @@ from data_aggregator_mcp.models import (
 
 BASE_URL = "https://api.datacite.org"
 PREFIXES = frozenset({"datacite"})  # bare DOIs (containing '/') also route here (router.resolve)
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 3
+_GET = "GET"
+_ACCEPT_JSON = {"Accept": "application/json"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 
 # DataCite types.resourceTypeGeneral → DataResource.kind
+_KIND_FIELD = "types.resourceTypeGeneral"
 _KIND_MAP = {
     "Dataset": "dataset",
     "Collection": "dataset",
@@ -194,7 +196,7 @@ _EU_REPO_ACCESS = {
 def _access_status(r: dict[str, Any]) -> str | None:
     """The access status an info:eu-repo rights entry states; None for any other entry."""
     for field in ("rightsUri", "rights"):
-        status = _EU_REPO_ACCESS.get((r.get(field) or "").strip().lower())
+        status = _EU_REPO_ACCESS.get(str(r.get(field)).strip().lower())
         if status:
             return status
     return None
@@ -219,8 +221,8 @@ def _access_from_rights(rights_list: list[dict[str, Any]] | None) -> str | None:
         if status:
             return status
     for r in rights_list or []:
-        ident = (r.get("rightsIdentifier") or "").lower()
-        uri = (r.get("rightsUri") or "").lower()
+        ident = str(r.get("rightsIdentifier")).lower()  # absent → "none": matches no rule
+        uri = str(r.get("rightsUri")).lower()
         # Host check, not substring: "creativecommons.org" appearing anywhere in a
         # URI also matches http://paywall.example.com/creativecommons.org, which
         # would flip a closed record to access="open".
@@ -254,8 +256,8 @@ def _creator(c: dict[str, Any]) -> Creator | None:
     """The creator, or None when it has neither a name nor an ORCID."""
     orcid = None
     for nid in c.get("nameIdentifiers") or []:
-        ident = nid.get("nameIdentifier") or ""
-        scheme = (nid.get("nameIdentifierScheme") or "").upper()
+        ident = str(nid.get("nameIdentifier"))  # absent → "None": not an ORCID
+        scheme = str(nid.get("nameIdentifierScheme")).upper()
         # Only treat it as an ORCID when the source SAYS so — an ISNI/GND id can
         # match the ORCID shape, so the regex alone is not sufficient evidence.
         if scheme != "ORCID" and "orcid.org" not in ident.lower():
@@ -273,14 +275,14 @@ def _normalize(item: dict[str, Any]) -> DataResource:
     client_id = (((item.get("relationships") or {}).get("client") or {}).get("data") or {}).get(
         "id", ""
     )
-    rt = (a.get("types") or {}).get("resourceTypeGeneral", "")
+    rt = (a.get("types") or {}).get("resourceTypeGeneral")
     rights = a.get("rightsList") or []
     license_ = _license_from_rights(rights)
-    doi = a.get("doi")
+    doi = a["doi"]
     return DataResource(
         id=f"datacite:{doi}",
         source=_source_for_client(client_id),
-        kind=_KIND_MAP.get(rt, _pushdown.OTHER_KIND),
+        kind=_KIND_MAP.get(str(rt), _pushdown.OTHER_KIND),  # absent → "None" → other
         title=_main(a.get("titles"), "title", "titleType", None) or "",
         creators=[c for c in map(_creator, a.get("creators") or []) if c is not None],
         funding=[
@@ -291,7 +293,7 @@ def _normalize(item: dict[str, Any]) -> DataResource:
         year=_year(a.get("publicationYear")),
         description=_main(a.get("descriptions"), "description", "descriptionType", "Abstract"),
         doi=doi,
-        subjects=[s.get("subject", "") for s in (a.get("subjects") or []) if s.get("subject")],
+        subjects=[s["subject"] for s in (a.get("subjects") or []) if s.get("subject")],
         license=license_,
         access=_access_from_rights(rights),
         metrics=_metrics(a),
@@ -317,7 +319,7 @@ def _filter_clauses(filters: Mapping[str, Any]) -> list[str]:
         )
     ]
     if (kind := filters.get("kind")) is not None:
-        clauses.append(_pushdown.kind_clause("types.resourceTypeGeneral", _KIND_MAP, kind))
+        clauses.append(_pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, kind))
     return [c for c in clauses if c is not None]
 
 
@@ -327,7 +329,7 @@ def pushable(filters: Mapping[str, Any], /) -> dict[str, Any]:
     act = _pushdown.active(filters)
     out = {k: v for k, v in act.items() if k in _pushdown.YEAR_FILTERS}
     kind = act.get("kind")
-    if kind is not None and _pushdown.kind_clause("types.resourceTypeGeneral", _KIND_MAP, kind):
+    if kind is not None and _pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, kind):
         out["kind"] = kind
     return out
 
@@ -358,12 +360,11 @@ async def search(
         params["page[number]"] = str(offset // capped + 1)
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         f"{BASE_URL}/dois",
         service="DataCite search",
         params=params,
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
+        headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         expect=dict,
         check=_check_records,
@@ -385,11 +386,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     try:
         body = await _http.request_json(
             client,
-            "GET",
+            _GET,
             f"{BASE_URL}/dois/{_http.doi_path(doi)}",
             service="DataCite resolve",
-            headers={"Accept": "application/json"},
-            timeout=DEFAULT_TIMEOUT,
+            headers=_ACCEPT_JSON,
             max_retries=MAX_RETRIES,
             expect=dict,
             check=_check_record,
@@ -398,19 +398,20 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise NotFoundError(f"DataCite has no DOI {doi!r}") from None
     data = body["data"]
     resource = _normalize(data)
-    if resource.source == "zenodo" and resource.doi and "zenodo." in resource.doi:
-        recid = resource.doi.rsplit("zenodo.", 1)[-1]
+    record_doi = data["attributes"]["doi"]  # a str: _check_record requires it
+    if resource.source == "zenodo" and "zenodo." in record_doi:
+        recid = record_doi.rpartition("zenodo.")[2]
         if recid.isdigit():
             return await zenodo.resolve(client, f"zenodo:{recid}")
     resolver = _FILE_RESOLVERS.get(resource.source)
-    if resolver is not None and resource.doi:
+    if resolver is not None:
         if resource.source in _LANDING_AWARE:
             # The host repo is a federation (Dataverse): the record's own landing URL
             # names the installation that holds it. Any other server cannot resolve it.
-            landing = (data.get("attributes") or {}).get("url")
-            file_list = await resolver(client, resource.doi, landing_url=landing)
+            landing = data["attributes"].get("url")
+            file_list = await resolver(client, record_doi, landing_url=landing)
         else:
-            file_list = await resolver(client, resource.doi)
+            file_list = await resolver(client, record_doi)
         if file_list:
             resource = resource.model_copy(update={"files": file_list})
     return resource
