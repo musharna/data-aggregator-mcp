@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
+  lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
+  such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
+- A NASA CMR answer missing its hit count or collection list is reported as a
+  malformed answer instead of zero hits, a collection without a concept id is no
+  longer returned as `nasacmr:`, and a wrong-typed field no longer escapes as a bare
+  error.
+
 ## [0.54.14] - 2026-10-02
 
 ### Fixed
