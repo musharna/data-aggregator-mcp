@@ -421,6 +421,15 @@ async def test_live_search_returns_hits() -> None:
 
 
 @live_only
+async def test_live_search_at_the_largest_tool_size_is_answered() -> None:
+    """Zenodo refuses an anonymous page over 25 (HTTP 400); at MAX_SIZE 50 every search
+    for 26-50 records failed (2026-10-02)."""
+    async with httpx.AsyncClient() as client:
+        total, results = await zenodo.search(client, "climate", size=50)
+    assert total > 25 and len(results) == 25
+
+
+@live_only
 async def test_live_resolve_known_record_has_files() -> None:
     async with httpx.AsyncClient() as client:
         total, results = await zenodo.search(client, "arabidopsis", size=1)

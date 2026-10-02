@@ -37,7 +37,7 @@ def test_the_advertised_schema_defaults_come_from_the_modules_that_enforce_them(
     search = next(t for t in tool_specs.TOOLS if t.name == "search")
     size = search.input_schema["properties"]["size"]
     assert size["default"] == zenodo.DEFAULT_SIZE
-    assert size["maximum"] == zenodo.MAX_SIZE
+    assert size["maximum"] == tool_specs.SEARCH_MAX_SIZE == 50
     fetch_tool = next(t for t in tool_specs.TOOLS if t.name == "fetch")
     max_bytes = fetch_tool.input_schema["properties"]["max_bytes"]
     assert max_bytes["default"] == fetch_mod.DEFAULT_MAX_BYTES
