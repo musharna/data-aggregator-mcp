@@ -8,6 +8,40 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
+  lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
+  such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
+- A NASA CMR answer missing its hit count or collection list is reported as a
+  malformed answer instead of zero hits, a collection without a concept id is no
+  longer returned as `nasacmr:`, and a wrong-typed field no longer escapes as a bare
+  error.
+- data.gov datasets keep every theme as a subject. Some publishers give a theme as a
+  labelled concept instead of plain text (70 of 3,472 datasets sampled), and those
+  themes were dropped.
+- A data.gov answer missing its result list is reported as a malformed answer instead
+  of zero hits or "no such dataset", and a wrong-typed field no longer escapes as a
+  bare error.
+- An OmicsDI record's `doi` is the dataset's own DOI, not the DOI of the paper that
+  describes it. Every OmicsDI record with a publication reported the paper's DOI as
+  its own, so a dataset and its paper could be taken for the same record; the paper's
+  DOI is now a `described_in` link, and a PRIDE dataset's own DOI is filled in.
+- OmicsDI MetaboLights records keep their paper's DOI and PubMed id when the
+  publication is written "title. DOI. PMID:n"; the DOI was dropped (3 of 4 records
+  sampled) and the PubMed id never read.
+- An OmicsDI id whose repository or accession contains `/`, `..`, `?`, `#` or `%` is
+  refused before any request; `omicsdi:pride:../../evil?injected=1` reached another
+  OmicsDI endpoint.
+- An OmicsDI answer missing its result list is reported as a malformed answer instead
+  of zero hits, and a wrong-typed field, or a record for a different accession, no
+  longer escapes as a bare error or comes back as the wrong record.
+- A Hugging Face search or resolve no longer fails on a dataset whose card lists its
+  licences instead of naming one. A card with `license: []` (for example
+  `priyank-m/SROIE_2019_text_recognition`) made the whole search return no Hugging Face
+  results, and the dataset could not be resolved. The first listed licence is used,
+  or none.
+- A malformed Hugging Face answer (a dataset without an id, or a field of the wrong
+  type) is reported as a malformed answer instead of escaping as a bare error or
+  becoming a record with the id `hf:`.
 - `operate` `schema` and `preview` name the first column of a CSV that starts with a
   UTF-8 byte-order mark (as Excel's "CSV UTF-8" writes it) without the mark, as `head`
   and `sql` already did. A column name copied from `preview` into a query now matches.
