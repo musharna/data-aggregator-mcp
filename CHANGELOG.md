@@ -8,6 +8,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `resolve(format="croissant")` manifests load in MLCommons' Croissant validator
+  (`mlcroissant`). The manifest's `@context` declared only namespace prefixes, so the
+  validator failed on every manifest before checking it, and `conformsTo`, `citeAs`
+  and `md5` were schema.org names rather than the Croissant terms. The context is now
+  the one MLCommons' Croissant 1.1 examples use. A file whose name has a space (2 of 24 live
+  records sampled) no longer fails the whole manifest; its `@id` is the
+  percent-encoded name, and `name` is unchanged. `contentSize` is text in bytes
+  (`"10 B"`), not a number. A file whose source gives no MIME type or checksum is
+  still listed without them, and the validator reports it as incomplete.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
