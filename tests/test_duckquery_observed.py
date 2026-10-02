@@ -128,3 +128,23 @@ async def test_anything_but_a_query_is_refused_before_any_read(query, fetched) -
     assert fetched == []
     ok = await duckquery.run_sql(PARQUET_URL, "sample.parquet", "SELECT id FROM data")
     assert len(ok["rows"]) == 3
+
+
+async def test_peek_profiles_a_file_with_a_header_and_no_rows(tmp_path) -> None:
+    """DuckDB's SUMMARIZE answers NULL for the null percentage of an empty column, and
+    ``float(None)`` escaped as a bare TypeError, so peek could not profile a header-only
+    file. Positive control: the same file with one row is profiled with a real float."""
+    empty = tmp_path / "empty.csv"
+    empty.write_text("id,name\n")
+    out = await duckquery.run_peek(empty.as_uri(), "empty.csv")
+    assert out["row_count"] == 0
+    assert [
+        (c["column_name"], c["null_percentage"], c["approx_unique"]) for c in out["columns"]
+    ] == [
+        ("id", None, 0),
+        ("name", None, 0),
+    ]
+    one = tmp_path / "one.csv"
+    one.write_text("id,name\n1,a\n")
+    out = await duckquery.run_peek(one.as_uri(), "one.csv")
+    assert [c["null_percentage"] for c in out["columns"]] == [0.0, 0.0]

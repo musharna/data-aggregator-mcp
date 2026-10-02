@@ -122,7 +122,8 @@ def _normalize_summary_row(d: dict) -> dict:
     SUMMARIZE hands back ``column_name, column_type, min, max, approx_unique, avg, std,
     q25, q50, q75, count, null_percentage``. We surface a normalized subset:
 
-    - ``null_percentage`` is coerced to a real ``float`` (DuckDB returns a Decimal).
+    - ``null_percentage`` is coerced to a real ``float`` (DuckDB returns a Decimal), and
+      is ``None`` for a file with no rows (DuckDB answers NULL: there is no percentage).
     - ``approx_unique`` keeps its name — it is an APPROXIMATE distinct count (HyperLogLog),
       never an exact ``distinct``/``unique``.
     - ``min``/``max`` are stringified (column-type-dependent) for a uniform wire type;
@@ -141,7 +142,7 @@ def _normalize_summary_row(d: dict) -> dict:
     return {
         "column_name": str(d["column_name"]),
         "column_type": str(d["column_type"]),
-        "null_percentage": float(d["null_percentage"]),
+        "null_percentage": None if d["null_percentage"] is None else float(d["null_percentage"]),
         "approx_unique": None if d["approx_unique"] is None else int(d["approx_unique"]),
         "min": _s(d["min"]),
         "max": _s(d["max"]),
