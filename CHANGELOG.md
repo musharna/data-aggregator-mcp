@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- DataONE `search` returns only the latest version of each dataset, as DataONE's own
+  search does. Every update leaves the old version in the index, and 108,568 of
+  110,671 hits for "salmon" were superseded copies; the total counted them too.
+- A DataONE answer missing its result list or count is reported as a malformed answer
+  instead of zero hits or "no such object", and a wrong-typed field no longer escapes
+  as a bare error.
+
 ## [0.54.12] - 2026-10-01
 
 ### Fixed
