@@ -354,23 +354,8 @@ def test_normalize_extracts_related_links() -> None:
     assert ("is_version_of", "10.1/v1") in rels
 
 
-# ---------------------------------------------------------------------------
-# Fix — resolve() must raise typed error (not KeyError) on missing "data" key
-# ---------------------------------------------------------------------------
-
-
-async def test_resolve_200_without_data_key_raises_typed_error(httpx_mock: HTTPXMock) -> None:
-    """A 200 response whose body lacks 'data' (e.g. an error envelope) must raise
-    a DataAggregatorError subclass, never a bare KeyError."""
-    from data_aggregator_mcp.errors import DataAggregatorError
-
-    httpx_mock.add_response(
-        url="https://api.datacite.org/dois/10.5061/dryad.bad",
-        json={"errors": [{"title": "Something went wrong"}]},
-    )
-    async with httpx.AsyncClient() as client:
-        with pytest.raises(DataAggregatorError):
-            await datacite.resolve(client, "datacite:10.5061/dryad.bad")
+# A 200 without a `data` record: tests/test_datacite_answers.py (now retried, then
+# UpstreamUnavailableError, instead of NotFoundError).
 
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"

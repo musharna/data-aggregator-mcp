@@ -49,12 +49,13 @@ from data_aggregator_mcp.models import (
 
 BASE_URL = "https://api.datacite.org"
 PREFIXES = frozenset({"datacite"})  # bare DOIs (containing '/') also route here (router.resolve)
-DEFAULT_TIMEOUT = 30.0
-MAX_RETRIES = 3
+_GET = "GET"
+_ACCEPT_JSON = {"Accept": "application/json"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 
 # DataCite types.resourceTypeGeneral → DataResource.kind
+_KIND_FIELD = "types.resourceTypeGeneral"
 _KIND_MAP = {
     "Dataset": "dataset",
     "Collection": "dataset",
@@ -113,12 +114,96 @@ _LANDING_AWARE = frozenset({"dataverse"})
 # it. Deliberately narrow: a Zenodo record minted under any other prefix still takes
 # the fetch-then-delegate path in `resolve`, so this changes cost, not coverage.
 _ZENODO_DOI_RE = re.compile(r"10\.5281/zenodo\.(\d+)", re.IGNORECASE)
+# A Zenodo record minted under another prefix ends in zenodo.<record number>.
+_ZENODO_RECID_RE = re.compile(r"zenodo\.(\d+)$")
 
 
-def _first(items: list[dict[str, Any]] | None, key: str) -> str | None:
+def _main(items: list[dict[str, Any]] | None, key: str, type_key: str, main: str | None) -> Any:
+    """The entry of the main type (titles: untyped; descriptions: ``Abstract``), else the
+    first. Records list subtitles, translated titles, contact blocks and series lines in
+    any order, so the first entry is not the title or the abstract (probe 2026-10-01)."""
     if not items:
         return None
-    return items[0].get(key)
+    return next((i for i in items if i.get(type_key) == main), items[0]).get(key)
+
+
+# The attribute lists `_normalize` reads, and the text fields read off their entries.
+_LIST_FIELDS = {
+    "titles": ("title", "titleType"),
+    "descriptions": ("description", "descriptionType"),
+    "creators": ("name", "givenName", "familyName"),
+    "subjects": ("subject",),
+    "rightsList": ("rights", "rightsUri", "rightsIdentifier"),
+    "fundingReferences": ("funderName", "awardNumber", "awardTitle"),
+    "relatedIdentifiers": ("relationType", "relatedIdentifier"),
+}
+
+
+_NAME_IDENTIFIER_KEYS = ("nameIdentifier", "nameIdentifierScheme")
+_COUNTS = ("citationCount", "viewCount", "downloadCount")
+# relationships.client.data.id: the client the record's source is named from.
+_CLIENT_PATH = ("relationships", "client", "data")
+
+
+def _are_entries(entries: object, text_keys: tuple[str, ...]) -> bool:
+    """Absent, or a list of objects whose ``text_keys`` are each a str or absent."""
+    return entries is None or (
+        isinstance(entries, list)
+        and all(
+            isinstance(e, dict) and all(isinstance(e.get(k), str | None) for k in text_keys)
+            for e in entries
+        )
+    )
+
+
+def _client(item: dict[str, Any]) -> object:
+    """``relationships.client.data``: None when a level is absent; a level that is not an
+    object is returned as found, for `_is_record` to refuse."""
+    node: object = item
+    for key in _CLIENT_PATH:
+        if not isinstance(node, dict):
+            return node
+        node = node.get(key)
+    return node
+
+
+def _client_id(item: dict[str, Any]) -> str:
+    client = _client(item)
+    return (client.get("id") if isinstance(client, dict) else None) or ""
+
+
+def _is_record(item: object) -> bool:
+    """A DataCite record carrying every field `_normalize` reads, each of the type it reads.
+    tests/test_datacite_answers.py walks every field with every wrong type against it."""
+    if not isinstance(item, dict):
+        return False
+    client = _client(item)
+    a = item.get("attributes")
+    return (
+        (client is None or (isinstance(client, dict) and isinstance(client.get("id"), str | None)))
+        and isinstance(a, dict)
+        and isinstance(a.get("doi"), str)
+        and isinstance(a.get("types"), dict | None)
+        and all(isinstance(a.get(k), str | None) for k in ("updated", "url"))
+        and all(a.get(k) is None or type(a.get(k)) is int for k in _COUNTS)
+        and all(_are_entries(a.get(f), keys) for f, keys in _LIST_FIELDS.items())
+        and all(
+            _are_entries(c.get("nameIdentifiers"), _NAME_IDENTIFIER_KEYS)
+            for c in a.get("creators") or []
+        )
+    )
+
+
+def _check_record(body: dict) -> None:
+    if not _is_record(body.get("data")):
+        raise _http.UpstreamEnvelopeError(f"no DataCite record in {body!r:.200}")
+
+
+def _check_records(body: dict) -> None:
+    data, meta = body.get("data"), body.get("meta")
+    total = meta.get("total") if isinstance(meta, dict) else None
+    if not (isinstance(data, list) and all(_is_record(d) for d in data) and type(total) is int):
+        raise _http.UpstreamEnvelopeError(f"no DataCite record list in {body!r:.200}")
 
 
 def _year(value: Any) -> int | None:
@@ -143,7 +228,7 @@ _EU_REPO_ACCESS = {
 def _access_status(r: dict[str, Any]) -> str | None:
     """The access status an info:eu-repo rights entry states; None for any other entry."""
     for field in ("rightsUri", "rights"):
-        status = _EU_REPO_ACCESS.get((r.get(field) or "").strip().lower())
+        status = _EU_REPO_ACCESS.get(str(r.get(field)).strip().lower())
         if status:
             return status
     return None
@@ -168,8 +253,8 @@ def _access_from_rights(rights_list: list[dict[str, Any]] | None) -> str | None:
         if status:
             return status
     for r in rights_list or []:
-        ident = (r.get("rightsIdentifier") or "").lower()
-        uri = (r.get("rightsUri") or "").lower()
+        ident = str(r.get("rightsIdentifier")).lower()  # absent → "none": matches no rule
+        uri = str(r.get("rightsUri")).lower()
         # Host check, not substring: "creativecommons.org" appearing anywhere in a
         # URI also matches http://paywall.example.com/creativecommons.org, which
         # would flip a closed record to access="open".
@@ -191,11 +276,20 @@ def _metrics(a: dict[str, Any]) -> Metrics | None:
     return Metrics(citations=cites, views=views, downloads=dls)
 
 
-def _creator(c: dict[str, Any]) -> Creator:
+def _creator_name(c: dict[str, Any]) -> str:
+    """``name``, else "Family, Given" (DataCite's own form for ``name``) from the parts:
+    90,315 records name a creator only by ``givenName``/``familyName`` (probe 2026-10-01)."""
+    if c.get("name"):
+        return c["name"]
+    return ", ".join(p for p in (c.get("familyName"), c.get("givenName")) if p)
+
+
+def _creator(c: dict[str, Any]) -> Creator | None:
+    """The creator, or None when it has neither a name nor an ORCID."""
     orcid = None
     for nid in c.get("nameIdentifiers") or []:
-        ident = nid.get("nameIdentifier") or ""
-        scheme = (nid.get("nameIdentifierScheme") or "").upper()
+        ident = str(nid.get("nameIdentifier"))  # absent → "None": not an ORCID
+        scheme = str(nid.get("nameIdentifierScheme")).upper()
         # Only treat it as an ORCID when the source SAYS so — an ISNI/GND id can
         # match the ORCID shape, so the regex alone is not sufficient evidence.
         if scheme != "ORCID" and "orcid.org" not in ident.lower():
@@ -204,33 +298,32 @@ def _creator(c: dict[str, Any]) -> Creator:
         if cand:
             orcid = cand
             break
-    return Creator(name=c.get("name", ""), orcid=orcid)
+    name = _creator_name(c)
+    return Creator(name=name, orcid=orcid) if name or orcid else None
 
 
 def _normalize(item: dict[str, Any]) -> DataResource:
-    a = item.get("attributes", {}) or {}
-    client_id = (((item.get("relationships") or {}).get("client") or {}).get("data") or {}).get(
-        "id", ""
-    )
-    rt = (a.get("types") or {}).get("resourceTypeGeneral", "")
+    a = item["attributes"]
+    client_id = _client_id(item)
+    rt = (a.get("types") or {}).get("resourceTypeGeneral")
     rights = a.get("rightsList") or []
     license_ = _license_from_rights(rights)
-    doi = a.get("doi")
+    doi = a["doi"]
     return DataResource(
         id=f"datacite:{doi}",
         source=_source_for_client(client_id),
-        kind=_KIND_MAP.get(rt, _pushdown.OTHER_KIND),
-        title=_first(a.get("titles"), "title") or "",
-        creators=[_creator(c) for c in (a.get("creators") or [])],
+        kind=_KIND_MAP.get(str(rt), _pushdown.OTHER_KIND),  # absent → "None" → other
+        title=_main(a.get("titles"), "title", "titleType", None) or "",
+        creators=[c for c in map(_creator, a.get("creators") or []) if c is not None],
         funding=[
             FundingRef(funder=f["funderName"], award=f.get("awardNumber") or f.get("awardTitle"))
             for f in (a.get("fundingReferences") or [])
             if f.get("funderName")
         ],
         year=_year(a.get("publicationYear")),
-        description=_first(a.get("descriptions"), "description"),
+        description=_main(a.get("descriptions"), "description", "descriptionType", "Abstract"),
         doi=doi,
-        subjects=[s.get("subject", "") for s in (a.get("subjects") or []) if s.get("subject")],
+        subjects=[s["subject"] for s in (a.get("subjects") or []) if s.get("subject")],
         license=license_,
         access=_access_from_rights(rights),
         metrics=_metrics(a),
@@ -240,7 +333,6 @@ def _normalize(item: dict[str, Any]) -> DataResource:
             for r in (a.get("relatedIdentifiers") or [])
             if r.get("relationType") and r.get("relatedIdentifier")
         ],
-        files=[],  # DataCite is metadata-only
     )
 
 
@@ -256,7 +348,7 @@ def _filter_clauses(filters: Mapping[str, Any]) -> list[str]:
         )
     ]
     if (kind := filters.get("kind")) is not None:
-        clauses.append(_pushdown.kind_clause("types.resourceTypeGeneral", _KIND_MAP, kind))
+        clauses.append(_pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, kind))
     return [c for c in clauses if c is not None]
 
 
@@ -266,7 +358,7 @@ def pushable(filters: Mapping[str, Any], /) -> dict[str, Any]:
     act = _pushdown.active(filters)
     out = {k: v for k, v in act.items() if k in _pushdown.YEAR_FILTERS}
     kind = act.get("kind")
-    if kind is not None and _pushdown.kind_clause("types.resourceTypeGeneral", _KIND_MAP, kind):
+    if kind is not None and _filter_clauses({"kind": kind}):
         out["kind"] = kind
     return out
 
@@ -297,17 +389,16 @@ async def search(
         params["page[number]"] = str(offset // capped + 1)
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         f"{BASE_URL}/dois",
         service="DataCite search",
         params=params,
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
+        headers=_ACCEPT_JSON,
         expect=dict,
+        check=_check_records,
     )
-    items = (body.get("data", []) or [])[offset % capped :]
-    total = int((body.get("meta") or {}).get("total", len(items)))
+    items = body["data"][offset % capped :]
+    total = body["meta"]["total"]
     return total, [compact(_normalize(it)) for it in items]
 
 
@@ -323,35 +414,30 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     try:
         body = await _http.request_json(
             client,
-            "GET",
+            _GET,
             f"{BASE_URL}/dois/{_http.doi_path(doi)}",
             service="DataCite resolve",
-            headers={"Accept": "application/json"},
-            timeout=DEFAULT_TIMEOUT,
-            max_retries=MAX_RETRIES,
+            headers=_ACCEPT_JSON,
             expect=dict,
+            check=_check_record,
         )
     except NotFoundError:
         raise NotFoundError(f"DataCite has no DOI {doi!r}") from None
-    data = body.get("data")
-    if not isinstance(data, dict):
-        raise NotFoundError(
-            f"DataCite returned a malformed response for {doi!r} (missing 'data' key)"
-        )
+    data = body["data"]
     resource = _normalize(data)
-    if resource.source == "zenodo" and resource.doi and "zenodo." in resource.doi:
-        recid = resource.doi.rsplit("zenodo.", 1)[-1]
-        if recid.isdigit():
-            return await zenodo.resolve(client, f"zenodo:{recid}")
+    record_doi = data["attributes"]["doi"]  # a str: _check_record requires it
+    recid = _ZENODO_RECID_RE.search(record_doi) if resource.source == "zenodo" else None
+    if recid is not None:
+        return await zenodo.resolve(client, f"zenodo:{recid.group(1)}")
     resolver = _FILE_RESOLVERS.get(resource.source)
-    if resolver is not None and resource.doi:
+    if resolver is not None:
         if resource.source in _LANDING_AWARE:
             # The host repo is a federation (Dataverse): the record's own landing URL
             # names the installation that holds it. Any other server cannot resolve it.
-            landing = (data.get("attributes") or {}).get("url")
-            file_list = await resolver(client, resource.doi, landing_url=landing)
+            landing = data["attributes"].get("url")
+            file_list = await resolver(client, record_doi, landing_url=landing)
         else:
-            file_list = await resolver(client, resource.doi)
+            file_list = await resolver(client, record_doi)
         if file_list:
             resource = resource.model_copy(update={"files": file_list})
     return resource
