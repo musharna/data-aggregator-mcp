@@ -91,7 +91,7 @@ async def test_resolve_pride_routes_to_pride_files(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_resolve_non_fetchable_repo_has_empty_files():
-    rec = {"accession": "PXD9", "name": "x", "description": "y"}
+    rec = {"accession": "MSV000001", "name": "x", "description": "y"}
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json=rec))
     ) as c:
@@ -148,7 +148,11 @@ async def test_resolve_enriches_metabolights_doi_and_submitter_fallback():
         r = await omicsdi.resolve(c, "omicsdi:metabolights_dataset:MTBLS9830")
     assert [cr.name for cr in r.creators] == ["Jane Roe"]  # submitter_name, not author
     assert r.organism == ["Homo sapiens"]
-    assert r.doi == "10.1101/2023.01.09.523234"
+    # the publication's DOI is the paper's, not the dataset's
+    assert r.doi is None
+    assert [lnk.target_id for lnk in r.links if lnk.rel == "described_in"] == [
+        "10.1101/2023.01.09.523234"
+    ]
     assert r.identifiers.get("pmid") is None  # no leading-digit token
 
 
@@ -174,3 +178,59 @@ async def test_resolve_malformed_id_raises():
     ) as c:
         with pytest.raises(NotFoundError):
             await omicsdi.resolve(c, "omicsdi:onlytwo")
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_search_at_the_largest_size_passes_the_answer_check():
+    """A full page of live hits passes `_check_search` (1,561 of 1,561 sampled did)."""
+    async with httpx.AsyncClient(timeout=60) as c:
+        total, recs = await omicsdi.search(c, "proteome", size=omicsdi.MAX_SIZE)
+    assert total == len(recs) > 0
+
+
+@_live_only
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("rid", "doi", "papers", "identifiers"),
+    [
+        # the PRIDE dataset's own DOI, beside its paper's
+        (
+            "omicsdi:pride:PXD026702",
+            "10.6019/PXD026702",
+            ["10.1016/J.CELREP.2022.111241"],
+            {},
+        ),
+        # a leading PMID; the DOI ending the string is a Mol Cell Proteomics article
+        ("omicsdi:pride:PXD002724", None, ["10.1074/mcp.M115.055079"], {"pmid": "26419955"}),
+        # MetaboLights: "<title>. <doi>. PMID:<pmid>"
+        (
+            "omicsdi:metabolights_dataset:MTBLS806",
+            None,
+            ["10.3390/metabo9050095"],
+            {"pmid": "31083459"},
+        ),
+    ],
+)
+async def test_live_resolve_keeps_a_papers_doi_out_of_the_records_doi(
+    monkeypatch, rid, doi, papers, identifiers
+):
+    # the file listings are PRIDE's and MetaboLights' own boundaries, tested there
+    monkeypatch.setattr("data_aggregator_mcp.pride.files", lambda c, a: _aempty())
+    monkeypatch.setattr("data_aggregator_mcp.metabolights.files", lambda c, a: _aempty())
+    async with httpx.AsyncClient(timeout=60) as c:
+        r = await omicsdi.resolve(c, rid)
+    assert r.doi == doi
+    assert [lnk.target_id for lnk in r.links if lnk.rel == "described_in"] == papers
+    assert r.identifiers == identifiers
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_resolve_an_unknown_or_miscased_accession_is_not_found():
+    async with httpx.AsyncClient(timeout=60) as c:
+        # positive control: the canonical accession resolves
+        assert (await omicsdi.resolve(c, "omicsdi:massive:MSV000081764")).title
+        for rid in ("omicsdi:pride:PXD999999999", "omicsdi:massive:msv000081764"):
+            with pytest.raises(NotFoundError, match=r"^\[NotFoundError\] OmicsDI has no "):
+                await omicsdi.resolve(c, rid)

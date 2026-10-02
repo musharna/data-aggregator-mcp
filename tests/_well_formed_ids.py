@@ -12,6 +12,7 @@ WELL_FORMED = {
     "gbif": "6d27080f-ed47-48e2-90e8-cdebaba11a03",
     "gwas": "GCST000028",
     "hf": "owner/name",
+    "nasacmr": "C2586786218-POCLOUD",
     "omicsdi": "pride:PXD000001",
     "openml": "61",
     "pdb": "1ABC",
