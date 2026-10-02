@@ -225,7 +225,9 @@ SOURCES: tuple[SourceSpec, ...] = (
         status="live",
         fetchable=True,
         operable=True,
-        id_example="zenodo:7654321",
+        # A record id, open, with files: 7654321 was a concept id that redirected to a
+        # restricted, fileless "Incorrect upload" (test_live_every_advertised_id_example_...).
+        id_example="zenodo:1254563",
     ),
     _spec(
         "dataone",
