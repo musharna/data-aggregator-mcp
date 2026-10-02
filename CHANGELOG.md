@@ -8,6 +8,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `list_sources(check_health=true)` reports a source as up only when its upstream
+  gives an answer the source can use. It counted any status below 400 as up, so a
+  maintenance page served with HTTP 200, an NCBI error inside a 200, or a redirect
+  showed the source as up. The literature probe asked Europe PMC, which literature
+  search does not use; it now asks PubMed. DataCite and omics are now probed at the
+  search endpoints they use, instead of DataCite's heartbeat and NCBI's database list.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
