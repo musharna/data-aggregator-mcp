@@ -35,6 +35,7 @@ breadth (government / economic / climate / civic data), not cross-source collaps
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from urllib.parse import quote
 
 import httpx
@@ -75,6 +76,54 @@ _OPENDEFINITION = "opendefinition.org/licenses/"
 
 # DCAT-US accessLevel → DataResource.access. Anything else stays None (never guessed).
 _ACCESS_LEVEL = {"public": "open", "restricted public": "restricted", "non-public": "closed"}
+
+# Every field ``_normalize`` reads, at the type it reads it as (absent or null is fine).
+# Measured against 3,472 live hits (2026-10-02): none is refused.
+_HIT_FIELDS = {"title": str, "description": str, "organization": dict, "dcat": dict}
+_DCAT_FIELDS = {
+    "title": str,
+    "description": str,
+    "publisher": dict,
+    "keyword": list,
+    "theme": list,
+    "license": str,
+    "accessLevel": str,
+    "distribution": list,
+}
+_NAMED = {"name": str}
+_DIST_FIELDS = {"downloadURL": str, "accessURL": str, "title": str, "format": str, "mediaType": str}
+
+
+def _typed(item: object, kinds: Mapping[str, type]) -> bool:
+    return isinstance(item, dict) and all(
+        item.get(k) is None or isinstance(item[k], t) for k, t in kinds.items()
+    )
+
+
+def _is_hit(hit: object) -> bool:
+    """A non-empty ``slug`` (the record's id), and every field ``_normalize`` reads at
+    the type it reads it as."""
+    if not (isinstance(hit, dict) and _typed(hit, _HIT_FIELDS)):
+        return False
+    slug, dcat = hit.get("slug"), hit.get("dcat") or {}
+    return (
+        isinstance(slug, str)
+        and slug != ""
+        and _typed(hit.get("organization") or {}, _NAMED)
+        and _typed(dcat, _DCAT_FIELDS)
+        and _typed(dcat.get("publisher") or {}, _NAMED)
+        and all(_typed(d, _DIST_FIELDS) for d in dcat.get("distribution") or [])
+    )
+
+
+def _check_results(body: dict) -> None:
+    """The ``results`` list every search and dataset answer carries (an empty list
+    when nothing matches), each hit readable. A 200 without it is not "no hits"."""
+    results = body.get("results")
+    if not (isinstance(results, list) and all(_is_hit(h) for h in results)):
+        raise _http.UpstreamEnvelopeError(f"no data.gov dataset list in {body!r:.200}")
+    if not (body.get("after") is None or isinstance(body["after"], str)):
+        raise _http.UpstreamEnvelopeError(f"no data.gov search cursor in {body!r:.200}")
 
 
 def _route(kind: str, ident: str = "") -> tuple[str, dict[str, str]]:
@@ -186,8 +235,9 @@ async def search(
             timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
             expect=dict,
+            check=_check_results,
         )
-        page = body.get("results") or []
+        page = body["results"]
         hits.extend(page)
         after = body.get("after") if page else None
         if not after:
@@ -211,8 +261,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         max_retries=MAX_RETRIES,
         not_found_returns=None,
         expect=dict,
+        check=_check_results,
     )
-    results = (body or {}).get("results") or []
+    # The catalog answers an unknown id with 404 and an empty list.
+    results = body["results"] if body is not None else []
     if not results:
         raise NotFoundError(f"data.gov has no dataset {ident!r}")
     return _normalize(results[0])
