@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 from urllib.parse import urljoin
 
@@ -30,6 +30,7 @@ from data_aggregator_mcp.models import (
     compact,
     local_id,
     normalize_access,
+    year_from,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,16 +40,26 @@ BASE_URL = "https://zenodo.org"
 _RECORD_URL_RE = re.compile(r"^https://zenodo\.org/api/records/(\d+)$")
 _RECORD_ID_RE = re.compile(r"[0-9]+")
 PREFIXES = frozenset({"zenodo"})  # bare-numeric ids also route here (see router.resolve)
-DEFAULT_TIMEOUT = 30.0
-MAX_RETRIES = 3
 DEFAULT_SIZE = 10
-MAX_SIZE = 50
+# Zenodo refuses an anonymous page over 25 records: "400 Page size cannot be greater
+# than 25. Please use authenticated requests to increase the limit to 100." (live
+# 2026-10-02). At 50 every search asking for 26-50 records failed. The router pages each
+# source in its own coordinates, so a source returning fewer than asked is fine.
+MAX_SIZE = 25
 
 # Search returns FULL records (manifest included); compact() strips files[] for the search
 # view, so a naive search→resolve re-fetches what we already had. Stash the raw record here
 # so resolve() can skip the redundant GET. Short TTL: resolve-after-search is near-immediate,
 # and a longer window risks serving a stale manifest.
 _SEARCH_CACHE: TTLCache = TTLCache(maxsize=256, ttl=600)
+
+# httpx upper-cases the method and reads header names case-insensitively, so a
+# spelling mutant of either sends the same request.
+_GET = "GET"
+_HEAD = "HEAD"
+_ACCEPT_JSON = {"Accept": "application/json"}
+# The field a kind filter targets; ``pushable`` only asks whether a clause exists.
+_KIND_FIELD = "resource_type.type"
 
 # Zenodo resource_type.type → DataResource.kind
 _KIND_MAP = {
@@ -58,6 +69,86 @@ _KIND_MAP = {
 }
 
 
+def _opt(value: object, kind: type) -> bool:
+    """Absent or null, or a ``kind`` (``True`` is not an ``int``)."""
+    return value is None or (type(value) is int if kind is int else isinstance(value, kind))
+
+
+def _fields(item: object, kinds: Mapping[str, type]) -> bool:
+    return isinstance(item, dict) and all(_opt(item.get(k), t) for k, t in kinds.items())
+
+
+def _items(value: object, ok: Callable[[Any], bool]) -> bool:
+    return value is None or (isinstance(value, list) and all(ok(v) for v in value))
+
+
+_META_FIELDS = {
+    "title": str,
+    "publication_date": str,
+    "description": str,
+    "resource_type": dict,
+    "license": dict,
+    "access_right": str,
+    "relations": dict,
+}
+
+
+def _is_record(r: object) -> bool:
+    """An int id, and every field ``_normalize`` reads at the type it reads it as
+    (absent or null is fine)."""
+    if not (isinstance(r, dict) and type(r.get("id")) is int and _opt(r.get("doi"), str)):
+        return False
+    meta, stats = r.get("metadata"), r.get("stats") or {}
+    if not (isinstance(meta, dict) and _fields(meta, _META_FIELDS) and isinstance(stats, dict)):
+        return False
+    rtype, lic, rel = (
+        meta.get("resource_type") or {},
+        meta.get("license") or {},
+        meta.get("relations") or {},
+    )
+    return (
+        _items(
+            r.get("files"),
+            lambda f: (
+                _fields(f, {"key": str, "size": int, "checksum": str, "links": dict})
+                and _opt((f.get("links") or {}).get("self"), str)
+            ),
+        )
+        and _fields(stats, {"views": int, "downloads": int})
+        and _opt(rtype.get("type"), str)
+        and _opt(lic.get("id"), str)
+        and _items(meta.get("creators"), lambda c: _fields(c, {"name": str, "orcid": str}))
+        and _items(
+            meta.get("grants"),
+            lambda g: (
+                _fields(g, {"code": str, "title": str, "funder": dict})
+                and _opt((g.get("funder") or {}).get("name"), str)
+            ),
+        )
+        and _items(meta.get("keywords"), lambda k: isinstance(k, str))
+        and _items(
+            meta.get("related_identifiers"),
+            lambda x: _fields(x, {"relation": str, "identifier": str}),
+        )
+        and _items(rel.get("version"), lambda v: _fields(v, {"is_last": bool}))
+    )
+
+
+def _check_record(body: dict) -> None:
+    if not _is_record(body):
+        raise _http.UpstreamEnvelopeError(f"no Zenodo record in {body!r:.200}")
+
+
+def _check_hits(body: dict) -> None:
+    hits = body.get("hits")
+    records = hits.get("hits") if isinstance(hits, dict) else None
+    total = hits.get("total") if isinstance(hits, dict) else None
+    if not (
+        isinstance(records, list) and all(_is_record(r) for r in records) and type(total) is int
+    ):
+        raise _http.UpstreamEnvelopeError(f"no Zenodo record list in {body!r:.200}")
+
+
 def _is_last_version(meta: dict[str, Any]) -> bool | None:
     """Zenodo's authoritative version-currency flag: ``metadata.relations.version[0].is_last``
     (Zenodo knows the whole version set of the concept). None when the record carries no
@@ -65,23 +156,18 @@ def _is_last_version(meta: dict[str, Any]) -> bool | None:
     ``links.latest`` redirect) — resolve() follows that redirect for a non-latest record
     (``_latest_version_id``); search never does."""
     versions = (meta.get("relations") or {}).get("version") or []
-    if not versions or not isinstance(versions[0], dict):
-        return None
-    is_last = versions[0].get("is_last")
-    return is_last if isinstance(is_last, bool) else None
+    return versions[0].get("is_last") if versions else None
 
 
 def _normalize(record: dict[str, Any]) -> DataResource:
-    meta = record.get("metadata", {}) or {}
+    meta = record["metadata"]
     rtype = (meta.get("resource_type") or {}).get("type")
-    pub_date = meta.get("publication_date") or ""
-    year = int(pub_date[:4]) if pub_date[:4].isdigit() else None
     files: list[FileEntry] = []
-    for f in record.get("files", []) or []:
-        links = f.get("links", {}) or {}
+    for f in record.get("files") or []:
+        links = f.get("links") or {}
         files.append(
             FileEntry(
-                name=f.get("key", ""),
+                name=f.get("key") or "",
                 size=f.get("size"),
                 url=links.get("self"),
                 checksum=f.get("checksum"),
@@ -90,31 +176,28 @@ def _normalize(record: dict[str, Any]) -> DataResource:
     stats = record.get("stats") or {}
     views, downloads = stats.get("views"), stats.get("downloads")
     metrics = (
-        Metrics(
-            views=int(views) if views is not None else None,
-            downloads=int(downloads) if downloads is not None else None,
-        )
+        Metrics(views=views, downloads=downloads)
         if (views is not None or downloads is not None)
         else None
     )
     return DataResource(
-        id=f"zenodo:{record.get('id')}",
+        id=f"zenodo:{record['id']}",
         source="zenodo",
-        kind=_KIND_MAP.get(rtype or "", _pushdown.OTHER_KIND),
-        title=meta.get("title", ""),
+        kind=_KIND_MAP.get(str(rtype), _pushdown.OTHER_KIND),
+        title=meta.get("title") or "",
         creators=[
-            Creator(name=c.get("name", ""), orcid=_orcid(c.get("orcid")))
-            for c in meta.get("creators", []) or []
+            Creator(name=c.get("name") or "", orcid=_orcid(c.get("orcid")))
+            for c in meta.get("creators") or []
         ],
         funding=[
             FundingRef(funder=funder_name, award=g.get("code") or g.get("title"))
             for g in (meta.get("grants") or [])
             if (funder_name := (g.get("funder") or {}).get("name"))
         ],
-        year=year,
+        year=year_from(meta.get("publication_date")),
         description=meta.get("description"),
         doi=record.get("doi"),
-        subjects=list(meta.get("keywords", []) or []),
+        subjects=list(meta.get("keywords") or []),
         license=(meta.get("license") or {}).get("id"),
         access=normalize_access(meta.get("access_right")),
         links=[
@@ -141,7 +224,7 @@ def _filter_clauses(filters: Mapping[str, Any]) -> list[str]:
         )
     ]
     if (kind := filters.get("kind")) is not None:
-        clauses.append(_pushdown.kind_clause("resource_type.type", _KIND_MAP, kind))
+        clauses.append(_pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, kind))
     return [c for c in clauses if c is not None]
 
 
@@ -151,7 +234,7 @@ def pushable(filters: Mapping[str, Any], /) -> dict[str, Any]:
     act = _pushdown.active(filters)
     out = {k: v for k, v in act.items() if k in _pushdown.YEAR_FILTERS}
     kind = act.get("kind")
-    if kind is not None and _pushdown.kind_clause("resource_type.type", _KIND_MAP, kind):
+    if kind is not None and _filter_clauses({"kind": kind}):
         out["kind"] = kind
     return out
 
@@ -183,22 +266,18 @@ async def search(
         params["page"] = str(offset // capped + 1)
     data = await _http.request_json(
         client,
-        "GET",
+        _GET,
         f"{BASE_URL}/api/records",
         service="Zenodo search",
         params=params,
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
+        headers=_ACCEPT_JSON,
         expect=dict,
+        check=_check_hits,
     )
-    hits = data.get("hits", {}) or {}
-    records = hits.get("hits", []) or []
-    sliced = records[offset % capped :]
-    total = int(hits.get("total", len(records)))
+    sliced = data["hits"]["hits"][offset % capped :]
+    total = data["hits"]["total"]
     for r in sliced:  # stash raw records so resolve() can skip a redundant GET
-        if r.get("id") is not None:
-            _SEARCH_CACHE.set(f"zenodo:{r['id']}", r)
+        _SEARCH_CACHE.set(f"zenodo:{r['id']}", r)
     return total, [compact(_normalize(r)) for r in sliced]
 
 
@@ -208,16 +287,22 @@ async def _latest_version_id(client: httpx.AsyncClient, rid: str) -> str | None:
     followed). None means ``rid`` is itself the latest; a failed lookup or an answer
     with no record id raises, so it is never read as "no newer version"."""
     url = f"{BASE_URL}/api/records/{rid}/versions/latest"
+    # follow_redirects=None reads as "don't follow" in _http and httpx alike, and mutmut
+    # ignores a pragma inside a call, so the call is exempt whole. Its arguments are
+    # pinned by test_zenodo_observed: the method and URL, the 2 tries, the service name,
+    # and False by the 301 being read rather than followed.
+    # pragma: no mutate start
     resp = await _http.request_with_retry(
         client,
-        "HEAD",
+        _HEAD,
         url,
         service="Zenodo latest version",
-        timeout=DEFAULT_TIMEOUT,
         max_retries=2,
         follow_redirects=False,
     )
-    location = resp.headers.get("location") if resp.is_redirect else None
+    # pragma: no mutate end
+    # Header names are case-insensitive, so a spelling mutant reads the same header.
+    location = resp.headers.get("location") if resp.is_redirect else None  # pragma: no mutate
     m = _RECORD_URL_RE.match(urljoin(url, location)) if location else None
     if m is None:
         raise UpstreamUnavailableError(
@@ -257,13 +342,12 @@ async def resolve(client: httpx.AsyncClient, record_id: str) -> DataResource:
     try:
         record = await _http.request_json(
             client,
-            "GET",
+            _GET,
             f"{BASE_URL}/api/records/{rid}",
             service="Zenodo resolve",
-            headers={"Accept": "application/json"},
-            timeout=DEFAULT_TIMEOUT,
-            max_retries=MAX_RETRIES,
+            headers=_ACCEPT_JSON,
             expect=dict,
+            check=_check_record,
         )
     except NotFoundError:
         raise NotFoundError(f"Zenodo has no record id={rid!r}") from None

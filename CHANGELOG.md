@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A search asking for more than 25 results returns Zenodo's results again. Zenodo
+  refuses an anonymous page over 25 records, and the adapter asked for up to 50, so
+  every search for 26-50 results came back without Zenodo. The `search` tool's limit
+  stays 50.
+- A Zenodo answer missing its record list or total is reported as a malformed answer
+  instead of zero hits, and a wrong-typed field no longer escapes as a bare error.
+
 ## [0.54.13] - 2026-10-02
 
 ### Fixed

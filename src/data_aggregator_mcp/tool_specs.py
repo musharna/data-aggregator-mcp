@@ -22,6 +22,11 @@ from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import zenodo
 from data_aggregator_mcp.models import DataResource, FetchResult, RelateResult, SearchResult
 
+# The page size the router is built for (its per-page enrichment fan-out assumes <= 50),
+# enforced by server.call_tool's schema validation. Each source caps its own request at
+# its MAX_SIZE (Zenodo 25, UniProt 25), and the router pages it in its own coordinates.
+SEARCH_MAX_SIZE = 50
+
 TOOLS: list[types.Tool] = [
     types.Tool(
         name="search",
@@ -73,7 +78,7 @@ TOOLS: list[types.Tool] = [
                     "description": "Max results (1-50, default 10)",
                     "default": zenodo.DEFAULT_SIZE,
                     "minimum": 1,
-                    "maximum": zenodo.MAX_SIZE,
+                    "maximum": SEARCH_MAX_SIZE,
                 },
                 "sources": {
                     "type": "array",
