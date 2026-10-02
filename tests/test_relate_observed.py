@@ -164,3 +164,104 @@ async def test_live_relate_joins_a_paper_to_its_study_and_not_proteins_by_taxon(
     assert out.errors == {}, out.errors
     idents = [h for h in out.hints if h.kind == "shared_identifier"]
     assert idents == [_ident_hint("pmid", pmid, ["gwas:GCST000001", f"pubmed:{pmid}"])], out.hints
+
+
+# --- landing-page URLs: each form a real record or landing page uses ------------------
+
+
+@pytest.mark.parametrize(
+    ("url", "rid"),
+    [
+        # zenodo's current form, and the legacy form real related identifiers still use
+        ("https://zenodo.org/records/7421899", "zenodo:7421899"),
+        ("https://zenodo.org/record/7391890#.Y5STINLMLlg", "zenodo:7391890"),
+        ("https://sandbox.zenodo.org/records/2", "https://sandbox.zenodo.org/records/2"),
+        # PubMed's form, and NCBI's (301 to PubMed; ICPSR, NEMAR and Zenodo records cite it)
+        ("https://pubmed.ncbi.nlm.nih.gov/31234567/", "pubmed:31234567"),
+        ("https://www.ncbi.nlm.nih.gov/pubmed/17254445", "pubmed:17254445"),
+        ("http://ncbi.nlm.nih.gov/pubmed/17254445", "pubmed:17254445"),
+        (
+            "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE100000",
+            "geo:GSE100000",
+        ),
+        ("https://www.ncbi.nlm.nih.gov/bioproject/PRJNA257197/", "bioproject:PRJNA257197"),
+        ("https://www.ncbi.nlm.nih.gov/sra/SRX1000000", "sra:SRX1000000"),
+        ("https://www.ebi.ac.uk/gwas/studies/GCST000001", "gwas:GCST000001"),
+        # OpenML: /d/<id>, and the search page it redirects to, parameters in any order
+        ("https://www.openml.org/d/47276", "openml:47276"),
+        ("https://openml.org/search?type=data&status=active&id=40669", "openml:40669"),
+        ("https://www.openml.org/search?type=data&sort=runs&id=61", "openml:61"),
+        ("https://www.openml.org/search?id=61&type=data", "openml:61"),
+        ("https://www.openml.org/search?type=data&id=61#runs", "openml:61"),
+        # a task with the same number, or look-alike parameters, are not dataset 61
+        (
+            "https://www.openml.org/search?type=task&id=61",
+            "https://www.openml.org/search?type=task&id=61",
+        ),
+        (
+            "https://www.openml.org/search?type=data&task_id=61",
+            "https://www.openml.org/search?type=data&task_id=61",
+        ),
+        (
+            "https://www.openml.org/search?subtype=data&id=61",
+            "https://www.openml.org/search?subtype=data&id=61",
+        ),
+        # RCSB: an entry cited before its release keeps its unreleased/ URL (now a 404)
+        ("https://www.rcsb.org/structure/4HHB", "pdb:4HHB"),
+        ("https://www.rcsb.org/structure/unreleased/8CJN", "pdb:8CJN"),
+        ("https://www.rcsb.org/structure/unreleased", "https://www.rcsb.org/structure/unreleased"),
+        ("https://dandiarchive.org/dandiset/000003", "dandi:000003"),
+        ("https://dandiarchive.org/dandiset/000003/0.230629.1955", "dandi:000003"),
+        ("https://huggingface.co/datasets/le-teen/college-roi-data", "hf:le-teen/college-roi-data"),
+        ("https://huggingface.co/datasets/o/n?row=3", "hf:o/n"),
+        ("  https://www.openml.org/d/61  ", "openml:61"),
+        ("10.5281/zenodo.2", "10.5281/zenodo.2"),
+        ("", ""),
+        (None, None),
+    ],
+)
+def test_url_to_id_maps_each_real_landing_form(url: str | None, rid: str | None) -> None:
+    assert relate_mod._url_to_id(url) == rid
+
+
+@live_only
+async def test_live_relate_links_records_cited_by_landing_url() -> None:
+    """Real records whose metadata names another record only by its landing-page URL:
+    an ICPSR study cited by a PubMed article (NCBI's /pubmed/ form), a Zenodo deposit
+    referencing an OpenML dataset (OpenML's search-page form), and a Zenodo deposit
+    identical to a Hugging Face and an OpenML dataset. Each link is read from the
+    resolved record first, so a changed upstream fails the premise, not `relate`."""
+    cases = [
+        (
+            "datacite:10.3886/icpsr00001.v4",
+            "https://www.ncbi.nlm.nih.gov/pubmed/17254445",
+            "pubmed:17254445",
+        ),
+        (
+            "zenodo:22743095",
+            "https://openml.org/search?type=data&status=active&id=40669",
+            "openml:40669",
+        ),
+        (
+            "zenodo:22945909",
+            "https://huggingface.co/datasets/le-teen/college-roi-data",
+            "hf:le-teen/college-roi-data",
+        ),
+        ("zenodo:22945909", "https://www.openml.org/d/47276", "openml:47276"),
+    ]
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        for src, url, target in cases:
+            rec = await router.resolve(client, src)
+            rels = [link.rel for link in rec.links if link.target_id == url]
+            assert len(rels) == 1, f"{src} no longer links {url}: {rec.links}"
+            out = await router.relate(client, [src, target])
+            assert out.errors == {}, out.errors
+            assert out.hints == [
+                JoinHint(
+                    kind="explicit_link",
+                    resources=[src, target],
+                    key=rels[0],
+                    evidence=f"{src} links to {target} via {rels[0]!r} (target_id={url!r})",
+                    suggestion=f"{src} {rels[0]} {target} (declared in source metadata)",
+                )
+            ], out.hints

@@ -62,7 +62,13 @@ def _norm(value: str | None) -> str | None:
 # here — ``_norm`` already canonicalizes those.
 _URL_ID_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"^(?:https?://)?(?:www\.)?zenodo\.org/records?/(\d+)"), "zenodo:{0}"),
-    (re.compile(r"^(?:https?://)?pubmed\.ncbi\.nlm\.nih\.gov/(\d+)"), "pubmed:{0}"),
+    # PubMed's own form, and the NCBI form it still answers with a redirect.
+    (
+        re.compile(
+            r"^(?:https?://)?(?:pubmed\.ncbi\.nlm\.nih\.gov|(?:www\.)?ncbi\.nlm\.nih\.gov/pubmed)/(\d+)"
+        ),
+        "pubmed:{0}",
+    ),
     (
         re.compile(
             r"^(?:https?://)?(?:www\.)?ncbi\.nlm\.nih\.gov/geo/query/acc\.cgi\?acc=([A-Za-z0-9]+)"
@@ -76,7 +82,22 @@ _URL_ID_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"^(?:https?://)?(?:www\.)?ncbi\.nlm\.nih\.gov/sra/([A-Za-z0-9]+)"), "sra:{0}"),
     (re.compile(r"^(?:https?://)?(?:www\.)?ebi\.ac\.uk/gwas/studies/([A-Za-z0-9]+)"), "gwas:{0}"),
     (re.compile(r"^(?:https?://)?(?:www\.)?openml\.org/d/(\d+)"), "openml:{0}"),
-    (re.compile(r"^(?:https?://)?(?:www\.)?rcsb\.org/structure/([A-Za-z0-9]+)"), "pdb:{0}"),
+    # Where /d/<id> redirects: a search page whose `type=data` and `id` parameters may come
+    # in any order (`type=task&id=…` is a task, not a dataset, so `type=data` is required).
+    (
+        re.compile(
+            r"^(?:https?://)?(?:www\.)?openml\.org/search\?(?=(?:[^#&]*&)*type=data(?:[&#]|$))"
+            r"(?:[^#&]*&)*id=(\d+)(?:[&#]|$)"
+        ),
+        "openml:{0}",
+    ),
+    # A four-character PDB id; an entry cited before release is under `unreleased/`.
+    (
+        re.compile(
+            r"^(?:https?://)?(?:www\.)?rcsb\.org/structure/(?:unreleased/)?(\d[A-Za-z0-9]{3})(?![A-Za-z0-9])"
+        ),
+        "pdb:{0}",
+    ),
     (re.compile(r"^(?:https?://)?(?:www\.)?dandiarchive\.org/dandiset/(\d+)"), "dandi:{0}"),
     (re.compile(r"^(?:https?://)?huggingface\.co/datasets/([^/\s?#]+)/([^/\s?#]+)"), "hf:{0}/{1}"),
 )
