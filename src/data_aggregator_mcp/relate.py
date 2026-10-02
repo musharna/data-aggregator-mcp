@@ -105,34 +105,45 @@ def detect(resources: list[DataResource]) -> list[JoinHint]:
     return hints
 
 
+# The `identifiers` schemes that name a work (a paper or a deposit), so that two
+# resources sharing one are the same work or a paper-data pair. Values are compared
+# within a scheme only: PubMed 9606 and NCBI taxon 9606 are different things. Other
+# `identifiers` entries are not work ids: UniProt's `taxid` and `gene` are shared by
+# every protein of a species or gene, and BioStudies' cross-reference accessions are
+# also in `accessions`, which the accession detector joins on.
+_WORK_ID_SCHEMES = ("doi", "pmid", "pmcid")
+
+
 def _shared_identifier(resources: list[DataResource]) -> list[JoinHint]:
-    by_id: dict[str, list[str]] = {}
-    display: dict[str, str] = {}
+    by_id: dict[tuple[str, str], list[str]] = {}
+    display: dict[tuple[str, str], str] = {}
     for r in resources:
-        values: set[str] = set()
+        values: set[tuple[str, str]] = set()
         if r.doi:
-            values.add(r.doi)
-        for v in r.identifiers.values():
+            values.add(("doi", r.doi))
+        for scheme in _WORK_ID_SCHEMES:
+            v = r.identifiers.get(scheme)
             if v:
-                values.add(v)
-        for v in values:
+                values.add((scheme, v))
+        for scheme, v in values:
             n = _norm(v)
             if not n:
                 continue
-            display.setdefault(n, v)
-            ids = by_id.setdefault(n, [])
+            display.setdefault((scheme, n), v)
+            ids = by_id.setdefault((scheme, n), [])
             if r.id not in ids:  # one resource counts once per value -> no self-hint
                 ids.append(r.id)
     hints: list[JoinHint] = []
-    for n, ids in by_id.items():
+    for (scheme, n), ids in by_id.items():
         if len(ids) >= 2:
+            shown = display[(scheme, n)]
             hints.append(
                 JoinHint(
                     kind="shared_identifier",
                     resources=ids,
-                    key=display[n],
-                    evidence=f"identifier {display[n]!r} shared by {len(ids)} resources",
-                    suggestion=f"same work or paper-data link via {display[n]}",
+                    key=shown,
+                    evidence=f"{scheme} {shown!r} shared by {len(ids)} resources",
+                    suggestion=f"same work or paper-data link via {scheme} {shown}",
                 )
             )
     return hints
