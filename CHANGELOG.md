@@ -8,6 +8,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `rank=semantic` no longer fails the search, or reorders it on numbers that are not
+  similarities, when the embedding endpoint sends a malformed answer. A text or null
+  value in a vector raised an error out of the search, and a NaN, an infinity, a
+  vector of the wrong length or rows out of order were ranked as if they were real;
+  such an answer now leaves the results in relevance order with the usual
+  `errors["semantic"]` note, and the failure is logged on the server.
+- An `EMBEDDING_API_KEY` that is not a valid bearer token (a non-ASCII character, a
+  space or a line break, e.g. from a pasted key) is refused with a log line that
+  does not quote it, and semantic re-rank is skipped; a non-ASCII key used to fail
+  inside the HTTP library.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
