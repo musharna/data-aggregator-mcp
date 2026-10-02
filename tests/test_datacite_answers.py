@@ -119,6 +119,7 @@ def test_the_title_is_the_main_title_when_one_is_listed():
         {"data": _record(titles="A record")},
         {"data": _record(creators=[{"name": ["A", "B"]}])},
         {"data": _record(updated=20260101)},
+        {"data": _record(url=["https://example.org/landing"])},
     ],
 )
 @pytest.mark.asyncio
