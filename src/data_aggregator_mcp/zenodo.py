@@ -30,6 +30,7 @@ from data_aggregator_mcp.models import (
     compact,
     local_id,
     normalize_access,
+    year_from,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,8 +40,6 @@ BASE_URL = "https://zenodo.org"
 _RECORD_URL_RE = re.compile(r"^https://zenodo\.org/api/records/(\d+)$")
 _RECORD_ID_RE = re.compile(r"[0-9]+")
 PREFIXES = frozenset({"zenodo"})  # bare-numeric ids also route here (see router.resolve)
-DEFAULT_TIMEOUT = 30.0
-MAX_RETRIES = 3
 DEFAULT_SIZE = 10
 # Zenodo refuses an anonymous page over 25 records: "400 Page size cannot be greater
 # than 25. Please use authenticated requests to increase the limit to 100." (live
@@ -53,6 +52,14 @@ MAX_SIZE = 25
 # so resolve() can skip the redundant GET. Short TTL: resolve-after-search is near-immediate,
 # and a longer window risks serving a stale manifest.
 _SEARCH_CACHE: TTLCache = TTLCache(maxsize=256, ttl=600)
+
+# httpx upper-cases the method and reads header names case-insensitively, so a
+# spelling mutant of either sends the same request.
+_GET = "GET"
+_HEAD = "HEAD"
+_ACCEPT_JSON = {"Accept": "application/json"}
+# The field a kind filter targets; ``pushable`` only asks whether a clause exists.
+_KIND_FIELD = "resource_type.type"
 
 # Zenodo resource_type.type → DataResource.kind
 _KIND_MAP = {
@@ -155,11 +162,9 @@ def _is_last_version(meta: dict[str, Any]) -> bool | None:
 def _normalize(record: dict[str, Any]) -> DataResource:
     meta = record["metadata"]
     rtype = (meta.get("resource_type") or {}).get("type")
-    pub_date = meta.get("publication_date") or ""
-    year = int(pub_date[:4]) if pub_date[:4].isdigit() else None
     files: list[FileEntry] = []
-    for f in record.get("files", []) or []:
-        links = f.get("links", {}) or {}
+    for f in record.get("files") or []:
+        links = f.get("links") or {}
         files.append(
             FileEntry(
                 name=f.get("key") or "",
@@ -178,21 +183,21 @@ def _normalize(record: dict[str, Any]) -> DataResource:
     return DataResource(
         id=f"zenodo:{record['id']}",
         source="zenodo",
-        kind=_KIND_MAP.get(rtype or "", _pushdown.OTHER_KIND),
+        kind=_KIND_MAP.get(str(rtype), _pushdown.OTHER_KIND),
         title=meta.get("title") or "",
         creators=[
             Creator(name=c.get("name") or "", orcid=_orcid(c.get("orcid")))
-            for c in meta.get("creators", []) or []
+            for c in meta.get("creators") or []
         ],
         funding=[
             FundingRef(funder=funder_name, award=g.get("code") or g.get("title"))
             for g in (meta.get("grants") or [])
             if (funder_name := (g.get("funder") or {}).get("name"))
         ],
-        year=year,
+        year=year_from(meta.get("publication_date")),
         description=meta.get("description"),
         doi=record.get("doi"),
-        subjects=list(meta.get("keywords", []) or []),
+        subjects=list(meta.get("keywords") or []),
         license=(meta.get("license") or {}).get("id"),
         access=normalize_access(meta.get("access_right")),
         links=[
@@ -219,7 +224,7 @@ def _filter_clauses(filters: Mapping[str, Any]) -> list[str]:
         )
     ]
     if (kind := filters.get("kind")) is not None:
-        clauses.append(_pushdown.kind_clause("resource_type.type", _KIND_MAP, kind))
+        clauses.append(_pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, kind))
     return [c for c in clauses if c is not None]
 
 
@@ -229,7 +234,7 @@ def pushable(filters: Mapping[str, Any], /) -> dict[str, Any]:
     act = _pushdown.active(filters)
     out = {k: v for k, v in act.items() if k in _pushdown.YEAR_FILTERS}
     kind = act.get("kind")
-    if kind is not None and _pushdown.kind_clause("resource_type.type", _KIND_MAP, kind):
+    if kind is not None and _pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, kind):
         out["kind"] = kind
     return out
 
@@ -261,13 +266,11 @@ async def search(
         params["page"] = str(offset // capped + 1)
     data = await _http.request_json(
         client,
-        "GET",
+        _GET,
         f"{BASE_URL}/api/records",
         service="Zenodo search",
         params=params,
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
+        headers=_ACCEPT_JSON,
         expect=dict,
         check=_check_hits,
     )
@@ -284,16 +287,22 @@ async def _latest_version_id(client: httpx.AsyncClient, rid: str) -> str | None:
     followed). None means ``rid`` is itself the latest; a failed lookup or an answer
     with no record id raises, so it is never read as "no newer version"."""
     url = f"{BASE_URL}/api/records/{rid}/versions/latest"
+    # follow_redirects=None reads as "don't follow" in _http and httpx alike, and mutmut
+    # ignores a pragma inside a call, so the call is exempt whole. Its arguments are
+    # pinned by test_zenodo_observed: the method and URL, the 2 tries, the service name,
+    # and False by the 301 being read rather than followed.
+    # pragma: no mutate start
     resp = await _http.request_with_retry(
         client,
-        "HEAD",
+        _HEAD,
         url,
         service="Zenodo latest version",
-        timeout=DEFAULT_TIMEOUT,
         max_retries=2,
         follow_redirects=False,
     )
-    location = resp.headers.get("location") if resp.is_redirect else None
+    # pragma: no mutate end
+    # Header names are case-insensitive, so a spelling mutant reads the same header.
+    location = resp.headers.get("location") if resp.is_redirect else None  # pragma: no mutate
     m = _RECORD_URL_RE.match(urljoin(url, location)) if location else None
     if m is None:
         raise UpstreamUnavailableError(
@@ -333,12 +342,10 @@ async def resolve(client: httpx.AsyncClient, record_id: str) -> DataResource:
     try:
         record = await _http.request_json(
             client,
-            "GET",
+            _GET,
             f"{BASE_URL}/api/records/{rid}",
             service="Zenodo resolve",
-            headers={"Accept": "application/json"},
-            timeout=DEFAULT_TIMEOUT,
-            max_retries=MAX_RETRIES,
+            headers=_ACCEPT_JSON,
             expect=dict,
             check=_check_record,
         )

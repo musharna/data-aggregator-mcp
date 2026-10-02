@@ -106,10 +106,15 @@ def _zenodo_retry_budget_s() -> float:
     ``TimeoutExpired`` (a failure) instead of the non-zero exit (a skip) the
     test was written to handle - and blocked merges on an unrelated repo.
     """
-    from data_aggregator_mcp import _http, zenodo
+    import inspect
 
-    backoff = sum(min(1.0 * 2**i, _http._RETRY_AFTER_CAP) for i in range(zenodo.MAX_RETRIES - 1))
-    return zenodo.DEFAULT_TIMEOUT * zenodo.MAX_RETRIES + backoff + 30.0  # +interpreter/import slack
+    from data_aggregator_mcp import _http
+
+    # zenodo.search passes neither, so _http's defaults are what it retries with.
+    params = inspect.signature(_http.request_json).parameters
+    tries, timeout = params["max_retries"].default, params["timeout"].default
+    backoff = sum(min(1.0 * 2**i, _http._RETRY_AFTER_CAP) for i in range(tries - 1))
+    return timeout * tries + backoff + 30.0  # +interpreter/import slack
 
 
 @pytest.mark.skipif(os.environ.get("RECAP_NO_NET") == "1", reason="offline")
