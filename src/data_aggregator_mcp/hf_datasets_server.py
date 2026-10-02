@@ -17,6 +17,11 @@ DSS_API = "https://datasets-server.huggingface.co"
 MAX_DSS_FILES = 100
 DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+_SERVICE = "HF datasets-server"
+# httpx upper-cases the method and reads header names case-insensitively, so a
+# spelling mutant of either sends the same request.
+_GET = "GET"
+_ACCEPT_JSON = {"Accept": "application/json"}
 
 
 async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry]:
@@ -28,11 +33,11 @@ async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry
     """
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         f"{DSS_API}/parquet",
-        service="HF datasets-server",
+        service=_SERVICE,
         params={"dataset": ds_id},
-        headers={"Accept": "application/json"},
+        headers=_ACCEPT_JSON,
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         expect=dict,
