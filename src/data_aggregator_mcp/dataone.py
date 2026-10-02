@@ -49,6 +49,22 @@ _SEARCH_FL = (
 )
 _RESOLVE_FL = "identifier,title,author,origin,dateUploaded,datePublished,dateModified,resourceMap"
 _DATA_FL = "identifier,fileName,size,checksum,checksumAlgorithm"
+# Latest version only, as DataONE's own search UI does (MetacatUI ``Search.js``
+# excludes ``obsoletedBy:*``): every update leaves the old version indexed, and
+# 108,568 of 110,671 live "salmon" hits were superseded copies (2026-10-01).
+_SEARCH_FILTER = " AND formatType:METADATA AND -obsoletedBy:*"
+# Fields read as text and as lists of text; ``size`` is the one number.
+_TEXT_FIELDS = (
+    "title",
+    "author",
+    "dateUploaded",
+    "datePublished",
+    "dateModified",
+    "fileName",
+    "checksum",
+    "checksumAlgorithm",
+)
+_TEXT_LIST_FIELDS = ("origin", "resourceMap")
 
 
 def _escape_lucene(value: str) -> str:
@@ -65,16 +81,40 @@ def _escape_lucene(value: str) -> str:
     return "".join(out)
 
 
+def _is_doc(doc: object) -> bool:
+    """A non-empty identifier, and every other field the readers use has the type they
+    read it as (absent is fine)."""
+    if not (isinstance(doc, dict) and isinstance(doc.get("identifier"), str) and doc["identifier"]):
+        return False
+    lists = [doc.get(k) for k in _TEXT_LIST_FIELDS]
+    size = doc.get("size")
+    return (
+        all(isinstance(doc.get(k), str | None) for k in _TEXT_FIELDS)
+        and all(
+            v is None or (isinstance(v, list) and all(isinstance(x, str) for x in v)) for v in lists
+        )
+        and (size is None or type(size) is int)
+    )
+
+
+def _check_solr(body: dict) -> None:
+    resp = body.get("response")
+    docs = resp.get("docs") if isinstance(resp, dict) else None
+    found = resp.get("numFound") if isinstance(resp, dict) else None
+    if not (isinstance(docs, list) and all(_is_doc(d) for d in docs) and type(found) is int):
+        raise _http.UpstreamEnvelopeError(f"no DataONE result list in {body!r:.200}")
+
+
 def _creators(doc: dict) -> list[Creator]:
     origin = doc.get("origin")
-    if isinstance(origin, list) and origin:
-        return [Creator(name=str(o)) for o in origin if o]
+    if origin:
+        return [Creator(name=o) for o in origin if o]
     author = doc.get("author")
-    return [Creator(name=str(author))] if author else []
+    return [Creator(name=author)] if author else []
 
 
 def _normalize(doc: dict) -> DataResource:
-    pid = doc.get("identifier", "")
+    pid = doc["identifier"]
     doi = pid[4:] if pid[:4].lower() == "doi:" else None
     return DataResource(
         id=f"dataone:{pid}",
@@ -102,16 +142,16 @@ async def _solr(
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         expect=dict,
+        check=_check_solr,
     )
-    resp = body.get("response", {}) or {}
-    return int(resp.get("numFound", 0)), (resp.get("docs") or [])
+    return body["response"]["numFound"], body["response"]["docs"]
 
 
 async def search(
     client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
 ) -> tuple[int, list[DataResource]]:
     capped = min(size, MAX_SIZE)
-    q = f"({_escape_lucene(query)}) AND formatType:METADATA"
+    q = f"({_escape_lucene(query)}){_SEARCH_FILTER}"
     total, docs = await _solr(client, q, rows=capped, start=offset, fl=_SEARCH_FL)
     return total, [compact(_normalize(d)) for d in docs]
 
@@ -157,9 +197,7 @@ async def _object_url(client: httpx.AsyncClient, pid: str) -> str | None:
 
 
 async def _file_entry(client: httpx.AsyncClient, doc: dict) -> FileEntry | None:
-    pid = doc.get("identifier")
-    if not pid:
-        return None
+    pid = doc["identifier"]
     url = await _object_url(client, pid)
     if not url:
         return None
@@ -208,7 +246,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise NotFoundError(f"DataONE has no object {pid!r}")
     resource = _normalize(docs[0])
     rmaps = docs[0].get("resourceMap")
-    rmap = rmaps[0] if isinstance(rmaps, list) and rmaps else None
+    rmap = rmaps[0] if rmaps else None
     if not rmap:
         return resource  # metadata-only package
     _escaped_rmap = _escape_lucene(rmap)

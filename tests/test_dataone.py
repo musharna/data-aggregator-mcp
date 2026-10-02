@@ -64,6 +64,22 @@ async def test_live_search():
         assert recs[0].id.startswith("dataone:") and recs[0].source == "dataone"
 
 
+@_live_only
+@pytest.mark.asyncio
+async def test_live_search_returns_latest_versions_only():
+    """41 of the first 50 live "salmon" hits were superseded versions (2026-10-01)."""
+    async with httpx.AsyncClient(timeout=60) as c:
+        total, recs = await dataone.search(c, "salmon", size=50)
+        assert total > 0 and len(recs) == 50  # positive control: hits come back
+        pids = " OR ".join(
+            f'"{dataone._escape_lucene(r.id.removeprefix("dataone:"))}"' for r in recs
+        )
+        stale, _ = await dataone._solr(
+            c, f"identifier:({pids}) AND obsoletedBy:*", rows=0, fl="identifier"
+        )
+        assert stale == 0
+
+
 _META_DOC = {
     "response": {
         "numFound": 1,
@@ -308,7 +324,9 @@ async def test_search_escapes_lucene_special_chars_in_query():
     assert captured_q, "no request made"
     q = captured_q[0]
     # The structural suffix must survive verbatim
-    assert q.endswith(" AND formatType:METADATA"), f"structural suffix missing in: {q!r}"
+    assert q.endswith(" AND formatType:METADATA AND -obsoletedBy:*"), (
+        f"structural suffix missing in: {q!r}"
+    )
     # The literal closing paren from the evil query must be escaped
     assert "\\)" in q, f"unescaped ) in: {q!r}"
     # The structural opening paren must still be present (first char or near start)
