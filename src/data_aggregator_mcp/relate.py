@@ -194,24 +194,21 @@ def _shared_accession(resources: list[DataResource]) -> list[JoinHint]:
     return hints
 
 
-def _address_map(resources: list[DataResource], *, include_accessions: bool) -> dict[str, str]:
-    """Map each resource's addressable ids (id, doi, optionally accessions), normalized,
-    to the OWNING resource id. First writer wins on a collision (shared doi is handled by
-    the identifier detector, not here)."""
+def _address_map(addresses: list[tuple[str, str | None]]) -> dict[str, str]:
+    """Map each ``(owner id, address)`` pair's address, normalized, to the OWNING resource
+    id. First writer wins on a collision (shared doi is handled by the identifier
+    detector, not here)."""
     addr: dict[str, str] = {}
-    for r in resources:
-        candidates = [r.id, r.doi]
-        if include_accessions:
-            candidates += list(r.accessions)
-        for c in candidates:
-            n = _norm(c)
-            if n:
-                addr.setdefault(n, r.id)
+    for owner, a in addresses:
+        n = _norm(a)
+        if n:
+            addr.setdefault(n, owner)
     return addr
 
 
 def _explicit_link(resources: list[DataResource]) -> list[JoinHint]:
-    addr = _address_map(resources, include_accessions=True)
+    # A link may name its target by id, DOI or accession.
+    addr = _address_map([(r.id, a) for r in resources for a in (r.id, r.doi, *r.accessions)])
     hints: list[JoinHint] = []
     seen: set[tuple[str, str, str]] = set()
     for r in resources:
@@ -239,13 +236,14 @@ def _explicit_link(resources: list[DataResource]) -> list[JoinHint]:
 
 
 def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
-    addr = _address_map(resources, include_accessions=False)
+    # A newer version is named by id or DOI, never by an accession it shares with others.
+    addr = _address_map([(r.id, a) for r in resources for a in (r.id, r.doi)])
     # Collect resolved directed edges older -> newer (newer is claimed newer than older,
     # via older.superseded_by). A well-formed version graph is a DAG; a cycle means
     # contradictory upstream metadata, which we report as such rather than inventing a
     # direction.
     edges: list[tuple[str, str, str]] = []  # (older, newer, raw_key)
-    succ: dict[str, set[str]] = {}
+    succ: dict[str, str] = {}  # older -> newer; superseded_by names one resource
     for r in resources:
         raw = r.superseded_by
         if not raw:
@@ -257,33 +255,30 @@ def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
         if not newer or newer == r.id:
             continue
         edges.append((r.id, newer, raw))
-        succ.setdefault(newer, set())
-        succ.setdefault(r.id, set()).add(newer)
+        succ[r.id] = newer
 
     def _reaches(start: str, target: str) -> bool:
         """True if `target` is reachable from `start` following superseded_by edges —
-        i.e. start's lineage loops back to target, so the pair sits on a cycle."""
-        stack = [start]
-        visited: set[str] = set()
-        while stack:
-            node = stack.pop()
+        i.e. start's lineage loops back to target, so the pair sits on a cycle. Each
+        resource has one successor, so the walk is a chain; a chain that has not met
+        `target` within len(succ) steps never will (it ended, or loops elsewhere)."""
+        node = start
+        for _ in succ:
+            if node not in succ:
+                return False
+            node = succ[node]
             if node == target:
                 return True
-            if node in visited:
-                continue
-            visited.add(node)
-            stack.extend(succ.get(node, ()))
         return False
 
     hints: list[JoinHint] = []
     seen: set[tuple[str, str]] = set()
     for older, newer, raw in edges:
-        pair = (older, newer) if older <= newer else (newer, older)
-        if pair in seen:
+        a, b = sorted((older, newer))
+        if (a, b) in seen:
             continue
-        seen.add(pair)
+        seen.add((a, b))
         if _reaches(newer, older):  # newer transitively claims older is newer -> cycle
-            a, b = pair
             hints.append(
                 JoinHint(
                     kind="version_lineage",
