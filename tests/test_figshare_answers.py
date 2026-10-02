@@ -12,11 +12,11 @@ Probed live 2026-10-02 (api.figshare.com/v2 and api.datacite.org, anonymous):
   confidential one is also ``is_embargoed: true`` with null files. A metadata-only record
   is ``"files": []``. An article with no DOI answers ``"doi": ""`` (MMU 33549700).
 - An md5 Figshare has not computed yet is ``"computed_md5": ""`` beside a supplied one
-  (4 of 517 files; one is Griffith's video below).
-- 52 article records (two random pages of /articles, the shapes above, a 326-file
-  figshare+ article): ``doi`` always a string, ``files`` a list or null-while-embargoed,
-  every file's name, download_url and md5s strings, size an int, ``is_link_only`` a bool;
-  the check refuses 0 of them. The 326-file list was complete (sizes sum to the article's
+  (4 of 528 files; one is Griffith's video below).
+- 52 article records and one version record (two pages of /articles, the shapes
+  above, a 326-file figshare+ article): ``doi`` always a string, ``files`` a list or
+  null-while-embargoed, every file's name, download_url and md5s strings, size an int,
+  ``is_link_only`` a bool; the check refuses 0 of them. The 326-file list was complete (sizes sum to the article's
   ``size``), so the embedded list is not paged at that size.
 """
 
