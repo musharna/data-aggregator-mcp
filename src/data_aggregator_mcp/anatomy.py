@@ -3,19 +3,18 @@
 Internal helper (NOT a router adapter). Backs the ``tissue=`` search-input
 expansion — the third ontology-grounded recall axis after ``organism=`` (NCBI
 Taxonomy) and ``disease=`` (MeSH). This is the FIRST expansion backed by a
-NON-NCBI client: it queries the EBI OLS4 search API
-(``GET /ols4/api/search?ontology=uberon&exact=true``) via the shared
-``_http.request_json`` helper rather than NCBI E-utilities.
+NON-NCBI client: it asks EBI OLS4 for the UBERON terms whose label or a synonym is
+the name, through ``_ols.exact_search`` (shared with ``chemistry``; it says why
+``queryFields`` is needed and what counts as a malformed answer).
 
-TWO client-side filters in ``_pick_uberon`` are load-bearing (both proven by a
-live probe — neither OLS param self-enforces):
+TWO client-side filters in ``_pick_uberon`` are load-bearing:
 
 1. ``obo_id`` must start with ``"UBERON:"``. ``ontology=uberon`` does NOT
    hard-restrict — ``q=hepar`` leaks ``PR:`` (Protein Ontology) terms.
 2. An exact (case-insensitive) match of the input to ``label`` OR an entry in
-   ``synonym`` is required. ``exact=true`` does NOT hard-filter — the top
-   relevance hit is not guaranteed canonical (``q=liver`` also returns
-   "caudate lobe of liver").
+   ``synonym`` is required. It is the definition of a match, so a looser
+   upstream match cannot expand into a wrong term (``exact=true`` alone
+   matched other fields too: ``q=liver`` returned "caudate lobe of liver").
 
 No exact match → None (conservative: never expand into a wrong term). Results
 are cached in-process keyed by lowercased name (negative results too). HTTP
@@ -29,7 +28,7 @@ from typing import Any
 
 import httpx
 
-from data_aggregator_mcp import _http
+from data_aggregator_mcp import _ols
 from data_aggregator_mcp._cache import MISS, TTLCache
 
 
@@ -37,11 +36,8 @@ from data_aggregator_mcp._cache import MISS, TTLCache
 class UberonInfo:
     uberon_id: str  # e.g. "UBERON:0002107"
     canonical: str  # OLS label
-    synonyms: tuple[str, ...]  # exact entry synonyms (excludes the canonical label)
+    synonyms: tuple[str, ...]  # OLS ``synonym`` entries (exact and related alike)
 
-
-OLS_SEARCH = "https://www.ebi.ac.uk/ols4/api/search"
-_HEADERS = {"User-Agent": "data-aggregator-mcp (https://github.com/musharna/data-aggregator-mcp)"}
 
 _NEG = object()  # cached "no match" (distinct from a missing key)
 _CACHE = TTLCache(maxsize=4096, ttl=3600.0)
@@ -101,25 +97,7 @@ async def resolve_uberon(client: httpx.AsyncClient, name: str) -> UberonInfo | N
     cached = _CACHE.get(key)
     if cached is not MISS:
         return None if cached is _NEG else cached
-    body = await _http.request_json(
-        client,
-        "GET",
-        OLS_SEARCH,
-        service="EBI OLS (UBERON)",
-        headers=_HEADERS,
-        params={
-            "q": name,
-            "ontology": "uberon",
-            "exact": "true",
-            "fieldList": "obo_id,label,synonym,is_defining_ontology,is_obsolete",
-            "rows": "10",
-        },
-        timeout=30.0,
-        max_retries=2,
-        expect=dict,
-    )
-    response = body.get("response")
-    docs = response.get("docs") if isinstance(response, dict) else None
-    info = _pick_uberon(docs if isinstance(docs, list) else [], key)
+    docs = await _ols.exact_search(client, name, ontology="uberon", service="EBI OLS (UBERON)")
+    info = _pick_uberon(docs, key)
     _CACHE.set(key, info if info is not None else _NEG)
     return info

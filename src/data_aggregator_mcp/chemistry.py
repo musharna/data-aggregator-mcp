@@ -3,22 +3,21 @@
 Internal helper (NOT a router adapter). Backs the ``chemical=`` search-input
 expansion — the fourth ontology-grounded recall axis after ``organism=`` (NCBI
 Taxonomy), ``disease=`` (MeSH) and ``tissue=`` (UBERON). A near-verbatim clone
-of ``anatomy.py``: it queries the same EBI OLS4 search API
-(``GET /ols4/api/search?ontology=chebi&exact=true``) via the shared
-``_http.request_json`` helper.
+of ``anatomy.py``: it asks EBI OLS4 for the ChEBI terms whose label or a synonym
+is the name, through ``_ols.exact_search`` (shared with ``anatomy``).
 
-TWO client-side filters in ``_pick_chebi`` are load-bearing (both proven by a
-live probe — neither OLS param self-enforces):
+TWO client-side filters in ``_pick_chebi`` are load-bearing:
 
 1. ``obo_id`` must start with ``"CHEBI:"``. ``ontology=chebi`` does NOT
    hard-restrict cross-ontology leaks.
 2. An exact (case-insensitive) match of the input to ``label`` OR an entry in
-   ``synonym`` is required. ``exact=true`` does NOT hard-filter — the top
-   relevance hit is not guaranteed canonical (``q=aspirin`` returns
-   "aspirin-triggered protectin D1" before the real ``aspirin``/``CHEBI:15365``).
+   ``synonym`` is required. It is the definition of a match, so a looser
+   upstream match cannot expand into a wrong term (``exact=true`` alone
+   matched other fields too: ``q=aspirin`` returned ten "aspirin-triggered ..."
+   terms and no ``CHEBI:15365``).
 
 ChEBI realism: synonym lists are large (many IUPAC variants), so the matched
-canonical's synonyms are capped to ``_MAX_SYNONYMS = 12`` exact synonyms (the
+canonical's synonyms are capped to ``_MAX_SYNONYMS = 12`` synonyms (the
 canonical label is always retained) to bound the OR-group query size. UBERON
 and MeSH need no cap.
 
@@ -34,7 +33,7 @@ from typing import Any
 
 import httpx
 
-from data_aggregator_mcp import _http
+from data_aggregator_mcp import _ols
 from data_aggregator_mcp._cache import MISS, TTLCache
 
 
@@ -42,11 +41,8 @@ from data_aggregator_mcp._cache import MISS, TTLCache
 class ChebiInfo:
     chebi_id: str  # e.g. "CHEBI:27732"
     canonical: str  # OLS label
-    synonyms: tuple[str, ...]  # exact entry synonyms (excludes the canonical label), capped
+    synonyms: tuple[str, ...]  # OLS ``synonym`` entries, any scope; canonical excluded; capped
 
-
-OLS_SEARCH = "https://www.ebi.ac.uk/ols4/api/search"
-_HEADERS = {"User-Agent": "data-aggregator-mcp (https://github.com/musharna/data-aggregator-mcp)"}
 
 _MAX_SYNONYMS = 12  # ChEBI synonym lists are large; cap the OR-group to a sane size.
 
@@ -123,25 +119,7 @@ async def resolve_chebi(client: httpx.AsyncClient, name: str) -> ChebiInfo | Non
     cached = _CACHE.get(key)
     if cached is not MISS:
         return None if cached is _NEG else cached
-    body = await _http.request_json(
-        client,
-        "GET",
-        OLS_SEARCH,
-        service="EBI OLS (ChEBI)",
-        headers=_HEADERS,
-        params={
-            "q": name,
-            "ontology": "chebi",
-            "exact": "true",
-            "fieldList": "obo_id,label,synonym,is_defining_ontology,is_obsolete",
-            "rows": "10",
-        },
-        timeout=30.0,
-        max_retries=2,
-        expect=dict,
-    )
-    response = body.get("response")
-    docs = response.get("docs") if isinstance(response, dict) else None
-    info = _pick_chebi(docs if isinstance(docs, list) else [], key)
+    docs = await _ols.exact_search(client, name, ontology="chebi", service="EBI OLS (ChEBI)")
+    info = _pick_chebi(docs, key)
     _CACHE.set(key, info if info is not None else _NEG)
     return info
