@@ -47,8 +47,10 @@ _HEADERS = {
     "User-Agent": "data-aggregator-mcp (+https://github.com/musharna/data-aggregator-mcp)",
     "Accept": "application/json",
 }
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+# httpx upper-cases the method, so a spelling mutant of it sends the same request
+# (test_trust_observed.py pins the GET).
+_GET = "GET"
 
 
 _DESCRIBED_IN = "described_in"
@@ -103,9 +105,9 @@ def _check_work(body: dict) -> None:
         raise _http.UpstreamEnvelopeError(f"no Crossref work in {body!r:.200}")
 
 
-# Outcome of one Crossref lookup: a found work's signals, "absent" (not a Crossref work),
-# or "failed" (outage / unparseable) — kept apart so a failure never reads as clean.
-_Lookup = TrustSignals | Literal["absent", "failed"]
+# Outcome of one Crossref lookup: a found work's signals, None (not a Crossref work), or
+# "failed" (outage / unparseable) — kept apart so a failure never reads as clean.
+_Lookup = TrustSignals | Literal["failed"] | None
 
 
 async def annotate(client: httpx.AsyncClient, resource: DataResource) -> TrustSignals:
@@ -132,18 +134,17 @@ async def _check(client: httpx.AsyncClient, doi: str) -> _Lookup:
     try:
         body = await _http.request_json(
             client,
-            "GET",
+            _GET,
             CROSSREF.format(doi=_http.doi_path(doi)),
             service="Crossref retraction",
             headers=_HEADERS,
-            timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
             not_found_returns=None,  # 404 → not a Crossref work → unknown
             expect=dict,
             check=_check_work,
         )
         if body is None:
-            return "absent"
+            return None  # 404: not a Crossref work
         updates = body["message"].get("updated-by", [])
         notice = next((u for u in updates if _update_type(u) in _RETRACTIONS), None)
         return TrustSignals(
