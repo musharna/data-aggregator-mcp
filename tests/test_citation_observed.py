@@ -87,9 +87,10 @@ async def test_a_failed_request_names_the_service_and_the_record(caplog) -> None
     async with _answering(sent, httpx.Response(404, text="DOI not found")) as client:
         assert await citation.render(client, _rec(), "bibtex") is None
     assert len(sent) == 1
-    [msg] = [r.getMessage() for r in caplog.records]
-    assert msg.startswith("citation render failed for pubmed:1 (bibtex): NotFoundError(")
-    assert "DOI content negotiation" in msg
+    assert [r.getMessage() for r in caplog.records] == [
+        "citation render failed for pubmed:1 (bibtex): "
+        "NotFoundError('DOI content negotiation → HTTP 404: DOI not found')"
+    ]
 
 
 @pytest.mark.parametrize(

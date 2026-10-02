@@ -30,9 +30,12 @@ def _rec(doi: str = "10.1038/x") -> DataResource:
     return DataResource(id=f"literature:{doi}", source="x", kind="publication", title="T", doi=doi)
 
 
-async def _render(content_type: str, body: str, fmt: str) -> str | None:
+async def _render(content_type: str | None, body: str, fmt: str) -> str | None:
+    """Answer 200 ``body`` as ``content_type``; ``None`` sends no Content-Type header."""
+    headers = {} if content_type is None else {"content-type": content_type}
+
     def handler(req: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, headers={"content-type": content_type}, text=body)
+        return httpx.Response(200, headers=headers, content=body.encode())
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         return await citation.render(client, _rec(), fmt)
@@ -52,7 +55,8 @@ _WRONG = [
     ("bibtex", "text/html", _HTML, _BIB),
     ("ris", "text/html", _HTML, _RIS),
     ("apa", "text/html", _HTML, _STYLE),
-    # no content type at all
+    # no content type at all, and an empty one
+    ("bibtex", None, _BIBTEX, _BIB),
     ("bibtex", "", _BIBTEX, _BIB),
 ]
 
@@ -63,7 +67,7 @@ async def test_an_answer_in_another_format_is_not_a_citation(
 ) -> None:
     caplog.set_level(logging.WARNING, logger="data_aggregator_mcp.citation")
     assert await _render(content_type, body, fmt) is None
-    media = content_type.partition(";")[0]
+    media = (content_type or "").partition(";")[0]
     [msg] = [r.getMessage() for r in caplog.records]
     assert msg == (
         f"citation: doi.org has no {fmt!r} citation of 10.1038/x (literature:10.1038/x); "
