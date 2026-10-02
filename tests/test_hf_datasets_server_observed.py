@@ -3,6 +3,7 @@
 Shapes from the live API (2026-10-02): see ``test_hf_datasets_server_answers.py``.
 """
 
+import inspect
 import logging
 
 import httpx
@@ -28,7 +29,8 @@ def _client(handler) -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
 
-_BRANCH = "https://huggingface.co/datasets/o/n/resolve/refs%2Fconvert%2Fparquet"
+_ON_BRANCH = "/resolve/refs%2Fconvert%2Fparquet/"
+_BRANCH = f"https://huggingface.co/datasets/o/n{_ON_BRANCH[:-1]}"
 
 
 def _entry(i: int, **over) -> dict:
@@ -48,8 +50,10 @@ async def test_the_request_is_exactly_what_datasets_server_is_sent():
     assert [(s.method, str(s.url), s.headers.get("accept")) for s in sent] == [
         ("GET", f"{_DSS}?dataset=allenai%2Fc4", "application/json")
     ]
+    # The timeout is _http's default.
+    timeout = inspect.signature(_http.request_json).parameters["timeout"].default
     assert sent[0].extensions["timeout"] == dict.fromkeys(
-        ("connect", "read", "write", "pool"), hf_datasets_server.DEFAULT_TIMEOUT
+        ("connect", "read", "write", "pool"), timeout
     )
 
 
@@ -125,6 +129,8 @@ async def test_any_other_error_status_is_an_outage(status):
         {"parquet_files": [_entry(0), _entry(1, url=f"{_BRANCH}/c//0001.parquet")]},
         {"parquet_files": [_entry(0), _entry(1, url=f"{_BRANCH}/c/s/")]},
         {"parquet_files": [_entry(0), _entry(1, url=f"{_BRANCH}//s/0001.parquet")]},
+        # the branch path itself holds the branch again
+        {"parquet_files": [_entry(0), _entry(1, url=f"{_BRANCH}/c{_ON_BRANCH}c/s/0001.parquet")]},
         {"parquet_files": [_entry(0), _entry(1, size="12")]},
         {"parquet_files": [_entry(0), _entry(1, size=True)]},
         {"parquet_files": [_entry(0), _entry(1, size=1.5)]},

@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 DSS_API = "https://datasets-server.huggingface.co"
 MAX_DSS_FILES = 100
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
 _SERVICE = "HF datasets-server"
 # httpx upper-cases the method and reads header names case-insensitively, so a
@@ -78,7 +77,6 @@ async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry
         service=_SERVICE,
         params={"dataset": ds_id},
         headers=_ACCEPT_JSON,
-        timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         expect=dict,
         check=_check_parquet,
