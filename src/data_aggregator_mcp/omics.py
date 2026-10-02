@@ -92,8 +92,7 @@ def _reading(db: str, doc: dict[str, Any]) -> Iterator[None]:
         yield
     except _Unreadable as exc:
         raise UpstreamUnavailableError(
-            f"NCBI esummary ({db}) answered an unreadable summary for uid "
-            f"{doc.get('uid')!r}: {exc}"
+            f"NCBI esummary ({db}) answered an unreadable summary for uid {doc.get('uid')!r}: {exc}"
         ) from None
 
 
