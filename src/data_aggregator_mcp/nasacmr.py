@@ -34,6 +34,60 @@ MAX_RETRIES = 3
 
 # An open-content licence URL embedded in the free-text UseConstraints, if any.
 _OPEN_URL_RE = re.compile(r"https?://(?:creativecommons\.org|www\.opendefinition\.org)/\S+")
+# A collection concept id: "C", digits, "-", the provider id. CMR answers any other
+# shape with HTTP 400 ("Concept-id [x] is not valid."), and a granule or service id
+# (G…/S…) is not a collection.
+_CONCEPT_ID_RE = re.compile(r"C[0-9]+-[A-Za-z0-9_]+")
+
+
+def _opt(value: object, kind: type) -> bool:
+    """Absent or null, or a ``kind``."""
+    return value is None or isinstance(value, kind)
+
+
+def _entries(value: object, fields: tuple[str, ...]) -> bool:
+    """Null, or a list whose object entries carry each of ``fields`` as a string or null.
+    Entries that are not objects are skipped by the readers, so they pass."""
+    return value is None or (
+        isinstance(value, list)
+        and all(all(_opt(e.get(f), str) for f in fields) for e in value if isinstance(e, dict))
+    )
+
+
+def _is_item(item: object) -> bool:
+    """A collection concept id, and every field ``_normalize`` reads at the type it reads
+    it as. ``UseConstraints`` is free-form and read defensively, so it is not checked."""
+    if not isinstance(item, dict):
+        return False
+    meta, umm = item.get("meta"), item.get("umm")
+    if not (isinstance(meta, dict) and isinstance(umm, dict)):
+        return False
+    cid, doi = meta.get("concept-id"), umm.get("DOI")
+    return (
+        isinstance(cid, str)
+        and _CONCEPT_ID_RE.fullmatch(cid) is not None
+        and _opt(meta.get("revision-date"), str)
+        and _opt(umm.get("EntryTitle"), str)
+        and _opt(umm.get("Abstract"), str)
+        and _opt(doi, dict)
+        and _opt((doi or {}).get("DOI"), str)
+        and _entries(umm.get("DataCenters"), ("ShortName",))
+        and _entries(umm.get("ScienceKeywords"), ("Term", "Topic", "Category"))
+        and _entries(umm.get("RelatedUrls"), ("URL",))
+        and _entries(umm.get("DataDates"), ("Type",))
+    )
+
+
+def _check_page(body: dict) -> None:
+    """An int hit count and a list of collections (search and resolve read the same
+    endpoint). A 200 without them is not "no hits"."""
+    items = body.get("items")
+    if not (
+        type(body.get("hits")) is int
+        and isinstance(items, list)
+        and all(_is_item(i) for i in items)
+    ):
+        raise _http.UpstreamEnvelopeError(f"no NASA CMR collection list in {body!r:.200}")
 
 
 def _strip_doi(raw: str | None) -> str | None:
@@ -120,11 +174,10 @@ def _pub_year(umm: dict) -> int | None:
 
 
 def _normalize(item: dict) -> DataResource:
-    meta = item.get("meta") or {}
-    umm = item.get("umm") or {}
+    meta, umm = item["meta"], item["umm"]
     spdx, access = _license_and_access(umm)
     return DataResource(
-        id=f"nasacmr:{meta.get('concept-id') or ''}",
+        id=f"nasacmr:{meta['concept-id']}",
         source="nasacmr",
         kind="dataset",
         title=umm.get("EntryTitle") or "",
@@ -153,13 +206,15 @@ async def search(
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         expect=dict,
+        check=_check_page,
     )
-    total = int(body.get("hits") or 0)
-    return total, [compact(_normalize(i)) for i in (body.get("items") or [])]
+    return body["hits"], [compact(_normalize(i)) for i in body["items"]]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     cid = local_id(resource_id, "nasacmr")
+    if not _CONCEPT_ID_RE.fullmatch(cid):
+        raise NotFoundError(f"malformed NASA CMR collection id {resource_id!r}")
     body = await _http.request_json(
         client,
         "GET",
@@ -169,8 +224,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         expect=dict,
+        check=_check_page,
     )
-    items = body.get("items") or []
+    items = body["items"]
     if not items:
         raise NotFoundError(f"NASA CMR has no collection {cid!r}")
     return _normalize(items[0])
