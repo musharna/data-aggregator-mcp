@@ -19,7 +19,9 @@ router so the fetchable GBIF record wins the DOI collision in ``_dedup``.
 
 from __future__ import annotations
 
-from urllib.parse import quote
+import uuid
+from collections.abc import Callable
+from typing import Any
 
 import httpx
 
@@ -52,6 +54,67 @@ _AUTHOR_CONTACT_TYPES = {
     "PRINCIPAL_INVESTIGATOR",
     "AUTHOR",
 }
+
+# The string fields the readers below use; each may be absent or null.
+_TEXT_FIELDS = (
+    "title",
+    "description",
+    "doi",
+    "license",
+    "pubDate",
+    "publicationDate",
+    "created",
+    "modified",
+    "publishingOrganizationTitle",
+    "deleted",
+)
+_CONTACT_FIELDS = ("type", "firstName", "lastName", "organization")
+_ENDPOINT_FIELDS = ("type", "url")
+
+
+def _texts(item: object, keys: tuple[str, ...]) -> bool:
+    return isinstance(item, dict) and all(isinstance(item.get(k), str | None) for k in keys)
+
+
+def _items(value: object, ok: Callable[[Any], bool]) -> bool:
+    return value is None or (isinstance(value, list) and all(ok(v) for v in value))
+
+
+def _is_keyword(k: object) -> bool:
+    return isinstance(k, str | None)
+
+
+def _is_dataset(doc: object) -> bool:
+    """A non-empty string key, and every other field the readers use at the type they
+    read it as (absent or null is fine)."""
+    return (
+        isinstance(doc, dict)
+        and isinstance(doc.get("key"), str)
+        and bool(doc["key"])
+        and _texts(doc, _TEXT_FIELDS)
+        and _items(doc.get("contacts"), lambda c: _texts(c, _CONTACT_FIELDS))
+        and _items(doc.get("keywords"), _is_keyword)
+        and _items(
+            doc.get("keywordCollections"),
+            lambda c: isinstance(c, dict) and _items(c.get("keywords"), _is_keyword),
+        )
+        and _items(doc.get("endpoints"), lambda e: _texts(e, _ENDPOINT_FIELDS))
+    )
+
+
+def _check_dataset(body: dict) -> None:
+    if not _is_dataset(body):
+        raise _http.UpstreamEnvelopeError(f"no GBIF dataset in {body!r:.200}")
+
+
+def _check_hits(body: dict) -> None:
+    results = body.get("results")
+    if not (
+        isinstance(results, list)
+        and all(_is_dataset(d) for d in results)
+        and type(body.get("count")) is int
+    ):
+        raise _http.UpstreamEnvelopeError(f"no GBIF dataset list in {body!r:.200}")
 
 
 def _access_from_spdx(spdx: str | None) -> str | None:
@@ -94,9 +157,9 @@ def _creators(doc: dict) -> list[Creator]:
 def _subjects(doc: dict) -> list[str]:
     """Keywords: a flat ``keywords`` list on the search index, or the structured
     ``keywordCollections`` on the resolve record. Order-preserving dedup."""
-    flat: list[str] = [str(k) for k in (doc.get("keywords") or []) if k]
+    flat: list[str] = [k for k in (doc.get("keywords") or []) if k]
     for coll in doc.get("keywordCollections") or []:
-        flat.extend(str(k) for k in (coll.get("keywords") or []) if k)
+        flat.extend(k for k in (coll.get("keywords") or []) if k)
     seen: set[str] = set()
     out: list[str] = []
     for k in flat:
@@ -107,7 +170,7 @@ def _subjects(doc: dict) -> list[str]:
 
 
 def _normalize(doc: dict) -> DataResource:
-    key = doc.get("key") or ""
+    key = doc["key"]
     spdx = normalize_spdx(doc.get("license"))
     return DataResource(
         id=f"gbif:{key}",
@@ -131,7 +194,7 @@ def _archive_files(doc: dict) -> list[FileEntry]:
     """The Darwin Core Archive endpoint(s) — a direct-download zip with no upstream
     checksum, so ``checksum`` is left None and fetch runs unverified. Non-archive
     endpoints (EML metadata, feeds) are not fetch targets and are skipped."""
-    key = doc.get("key") or "dataset"
+    key = doc["key"]
     out: list[FileEntry] = []
     for ep in doc.get("endpoints") or []:
         if (ep.get("type") or "").upper() != "DWC_ARCHIVE":
@@ -157,25 +220,35 @@ async def search(
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         expect=dict,
+        check=_check_hits,
     )
-    total = int(body.get("count") or 0)
-    return total, [compact(_normalize(d)) for d in (body.get("results") or [])]
+    return body["count"], [compact(_normalize(d)) for d in body["results"]]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    key = local_id(resource_id, "gbif")
+    # Every dataset key is a UUID, and GBIF answers anything else with HTTP 400, which
+    # would surface as an outage. Parsing it also keeps the path to one segment.
+    try:
+        key = str(uuid.UUID(local_id(resource_id, "gbif")))
+    except ValueError:
+        raise NotFoundError(f"malformed GBIF dataset key {resource_id!r} (not a UUID)") from None
     doc = await _http.request_json(
         client,
         "GET",
-        DATASET.format(key=quote(key, safe="")),
+        DATASET.format(key=key),
         service="GBIF dataset",
         timeout=DEFAULT_TIMEOUT,
         max_retries=MAX_RETRIES,
         not_found_returns=None,
         expect=dict,
+        check=_check_dataset,
     )
     if doc is None:
         raise NotFoundError(f"GBIF has no dataset {key!r}")
+    if doc.get("deleted"):
+        # The registry keeps a deleted dataset's record (HTTP 200) with the deletion
+        # time; its archive URL no longer serves the data.
+        raise NotFoundError(f"GBIF dataset {key!r} was deleted on {doc['deleted']}")
     resource = _normalize(doc)
     files = _archive_files(doc)
     return resource.model_copy(update={"files": files}) if files else resource

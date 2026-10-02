@@ -9,6 +9,7 @@ WELL_FORMED = {
     "biostudies": "S-EPMC1234567",
     "cellxgene": "af893e86-8e9f-41f1-a474-ef05359b1fb7",
     "dandi": "000004",
+    "gbif": "6d27080f-ed47-48e2-90e8-cdebaba11a03",
     "gwas": "GCST000028",
     "hf": "owner/name",
     "omicsdi": "pride:PXD000001",
