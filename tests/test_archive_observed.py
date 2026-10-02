@@ -129,6 +129,26 @@ def test_the_name_decides_the_format_in_any_case(tmp_path: Path) -> None:
     assert not (tmp_path / "c").exists()  # refused before anything was created
 
 
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("a.zip", True),
+        ("A.ZIP", True),
+        ("a.tar", True),
+        ("a.tar.gz", True),
+        ("a.TGZ", True),
+        ("a.tar.bz2", True),
+        ("a.tbz2", True),
+        ("a.tar.xz", True),
+        ("a.gz", False),
+        ("a.zip.txt", False),
+        ("zip", False),
+    ],
+)
+def test_is_archive_reads_the_suffix_tables(name: str, expected: bool) -> None:
+    assert archive.is_archive(name) is expected
+
+
 # --- unreadable archives -----------------------------------------------------------
 
 
@@ -237,6 +257,29 @@ def test_a_zip_member_outside_the_dir_is_refused_beside_one_inside(
     assert _files(tmp_path / "evil") == []
 
 
+@pytest.mark.parametrize("kind", ["zip", "tar"])
+def test_an_absolute_member_path_is_refused(tmp_path: Path, kind: str) -> None:
+    victim = tmp_path / "victim.txt"
+    if kind == "zip":
+        good = _zip(tmp_path / "good.zip", {"victim.txt": b"fine"})
+        evil = _zip(tmp_path / "evil.zip", {str(victim): b"pwned"})
+    else:
+        good = _tar(tmp_path / "good.tar", [("victim.txt", b"fine")])
+        evil = _tar(tmp_path / "evil.tar", [(str(victim), b"pwned")])
+    assert archive.extract_archive(good, tmp_path / "ok", max_bytes=100) == [
+        (tmp_path / "ok" / "victim.txt").resolve()
+    ]
+    with pytest.raises(
+        UpstreamUnavailableError,
+        match=_msg(
+            f"[UpstreamUnavailableError] archive member {str(victim)!r} escapes the "
+            "extraction dir — refusing"
+        ),
+    ):
+        archive.extract_archive(evil, tmp_path / "out", max_bytes=100)
+    assert not victim.exists()
+
+
 @pytest.mark.parametrize(
     ("kind", "linkname"),
     [(tarfile.SYMTYPE, "/etc/passwd"), (tarfile.LNKTYPE, "plain.txt")],
@@ -260,6 +303,45 @@ def test_a_tar_link_member_is_refused_beside_a_plain_tar(
 
 
 # --- what is written, and where ----------------------------------------------------
+
+
+def test_directory_entries_before_files_are_skipped_not_the_end(tmp_path: Path) -> None:
+    """Real archives list their directories first (Zenodo's Codeml.zip: ``Codeml/``)."""
+    z = _zip(tmp_path / "d.zip", {"top/a.txt": b"a", "top/b.txt": b"b"}, dirs=("top/",))
+    t = _tar(
+        tmp_path / "d.tar",
+        [
+            _typed("top", tarfile.DIRTYPE),
+            _typed("top/fifo", tarfile.FIFOTYPE),
+            ("top/a.txt", b"a"),
+            ("top/b.txt", b"b"),
+        ],
+    )
+    for arc, dest in ((z, tmp_path / "z"), (t, tmp_path / "t")):
+        assert _rel(archive.extract_archive(arc, dest, max_bytes=100), dest) == [
+            "top/a.txt",
+            "top/b.txt",
+        ]
+        assert _files(dest) == ["top/a.txt", "top/b.txt"]
+
+
+@pytest.mark.parametrize("kind", ["zip", "tar"])
+def test_nested_members_land_in_a_new_nested_or_existing_dest(tmp_path: Path, kind: str) -> None:
+    members = {"x/y/one.txt": b"1", "x/y/two.txt": b"2", "x/three.txt": b"3"}
+    arc = (
+        _zip(tmp_path / "n.zip", members)
+        if kind == "zip"
+        else _tar(tmp_path / "n.tar", list(members.items()))
+    )
+    fresh = tmp_path / "new" / "deeper"
+    got = archive.extract_archive(arc, fresh, max_bytes=100)
+    assert got == [(fresh / n).resolve() for n in members]  # archive order, absolute
+    existing = tmp_path / "existing"
+    existing.mkdir()
+    (existing / "kept.txt").write_bytes(b"k")
+    archive.extract_archive(arc, existing, max_bytes=100)
+    assert _files(existing) == ["kept.txt", "x/three.txt", "x/y/one.txt", "x/y/two.txt"]
+    assert (existing / "x/y/two.txt").read_bytes() == b"2"
 
 
 def test_a_repeated_member_is_one_file_holding_the_last_copy(tmp_path: Path) -> None:
@@ -289,6 +371,33 @@ def test_the_bound_is_cumulative_inclusive_and_leaves_nothing(tmp_path: Path, ki
     ):
         archive.extract_archive(arc, tmp_path / "over", max_bytes=599)
     assert _files(tmp_path / "over") == []  # neither the whole a.bin nor the partial b.bin
+
+
+@pytest.mark.parametrize("kind", ["zip", "tar"])
+def test_a_member_is_read_at_most_64_kib_at_a_time(
+    tmp_path: Path, kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A compressed member can expand far past ``max_bytes``; reading it whole before
+    counting would hold all of it in memory. Each read asks for at most 64 KiB."""
+    big = {"big.bin": b"\0" * 300_000}
+    arc = (
+        _zip(tmp_path / "b.zip", big)
+        if kind == "zip"
+        else _tar(tmp_path / "b.tar.gz", list(big.items()), mode="w:gz")
+    )
+    cls = zipfile.ZipExtFile if kind == "zip" else tarfile.ExFileObject
+    sizes: list[int | None] = []
+    real_read = cls.read
+
+    def spy(self, n=-1):  # type: ignore[no-untyped-def]
+        sizes.append(n)
+        return real_read(self, n)
+
+    monkeypatch.setattr(cls, "read", spy)
+    archive.extract_archive(arc, tmp_path / "out", max_bytes=300_000)
+    assert (tmp_path / "out" / "big.bin").stat().st_size == 300_000
+    assert sizes and set(sizes) == {1 << 16}
+    assert len(sizes) == 6  # five chunks of 64 KiB cover 300,000 bytes, then the empty read
 
 
 # --- real archives from a live Zenodo record -----------------------------------------
@@ -332,6 +441,15 @@ def real_archives(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """The record's archives as fetched (md5-checked), downloaded once for the module."""
     root, _ = asyncio.run(_fetch_real(tmp_path_factory.mktemp("dl"), extract=False))
     return root
+
+
+@live_only
+async def test_live_zenodo_zip_and_tgz_extract_every_member(tmp_path: Path) -> None:
+    root, paths = await _fetch_real(tmp_path, extract=True)
+    rel = sorted(p.relative_to(root).as_posix() for p in paths)
+    want = sorted([*_EXPECTED, *(m for ms in _EXPECTED.values() for m in ms)])
+    assert rel == want
+    assert (root / "Genome_assembly/Genome_assembly.sh").read_bytes().startswith(b"#")
 
 
 @live_only
