@@ -8,6 +8,8 @@ resolve fan-out being the only network boundary `relate` has.
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 
 import httpx
 import pytest
@@ -82,6 +84,56 @@ def test_shared_identifier_ignores_biostudies_xref_types() -> None:
             suggestion="joinable on accession GSE5",
         )
     ]
+
+
+def _paper_and_study() -> list:
+    # one paper, one study citing it; each id given twice, in different forms and orders
+    return [
+        _res(
+            "pubmed:5",
+            doi="10.1/X",
+            identifiers={"pmcid": "PMC9", "pmid": "5", "doi": "https://doi.org/10.1/x"},
+        ),
+        _res("gwas:G1", doi="doi:10.1/x", identifiers={"pmid": "5", "pmcid": "pmc9"}),
+    ]
+
+
+def test_shared_identifier_order_and_shown_form_are_fixed() -> None:
+    # The `doi` field first, then doi/pmid/pmcid; each key shown as first given.
+    assert relate_mod.detect(_paper_and_study()) == [
+        _ident_hint("doi", "10.1/X", ["pubmed:5", "gwas:G1"]),
+        _ident_hint("pmid", "5", ["pubmed:5", "gwas:G1"]),
+        _ident_hint("pmcid", "PMC9", ["pubmed:5", "gwas:G1"]),
+    ]
+
+
+_HASH_PROBE = (
+    "from tests.test_relate_observed import _paper_and_study\n"
+    "from data_aggregator_mcp import relate\n"
+    "print([(h.key, h.evidence) for h in relate.detect(_paper_and_study())])\n"
+)
+
+
+def test_shared_identifier_output_does_not_depend_on_the_hash_seed() -> None:
+    # Iterating a set of strings made the hint order and the shown form vary with
+    # PYTHONHASHSEED, so one server process answered differently from the next.
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(p for p in sys.path if p)}
+    outs = {
+        subprocess.run(
+            [sys.executable, "-c", _HASH_PROBE],
+            env={**env, "PYTHONHASHSEED": str(seed)},
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=60,
+        ).stdout
+        for seed in range(1, 9)
+    }
+    assert outs == {
+        "[('10.1/X', \"doi '10.1/X' shared by 2 resources\"), "
+        "('5', \"pmid '5' shared by 2 resources\"), "
+        "('PMC9', \"pmcid 'PMC9' shared by 2 resources\")]\n"
+    }
 
 
 @live_only

@@ -118,14 +118,11 @@ def _shared_identifier(resources: list[DataResource]) -> list[JoinHint]:
     by_id: dict[tuple[str, str], list[str]] = {}
     display: dict[tuple[str, str], str] = {}
     for r in resources:
-        values: set[tuple[str, str]] = set()
-        if r.doi:
-            values.add(("doi", r.doi))
-        for scheme in _WORK_ID_SCHEMES:
-            v = r.identifiers.get(scheme)
-            if v:
-                values.add((scheme, v))
-        for scheme, v in values:
+        # A list in a fixed order (the `doi` field, then each scheme), not a set: the
+        # order of the hints and the form each key is shown in must not depend on
+        # PYTHONHASHSEED. A value given twice is counted once by the `ids` check below.
+        given = [("doi", r.doi), *((s, r.identifiers.get(s)) for s in _WORK_ID_SCHEMES)]
+        for scheme, v in [(s, v) for s, v in given if v]:
             n = _norm(v)
             if not n:
                 continue
