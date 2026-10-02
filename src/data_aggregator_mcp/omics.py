@@ -59,7 +59,10 @@ def _year_from(text: str | None) -> int | None:
 
 def _normalize_geo(doc: dict[str, Any]) -> DataResource:
     acc = doc.get("accession", "")
-    organism = [doc["taxon"]] if doc.get("taxon") else []
+    # GEO's ``taxon`` names every organism of the entry, joined by "; " ("Homo sapiens;
+    # Mus musculus": 11 of 600 live gds summaries). Read as one name, the taxonomy
+    # lookup matched only one of them and the record lost the others.
+    organism = [name.strip() for name in (doc.get("taxon") or "").split(";") if name.strip()]
     return DataResource(
         id=f"geo:{acc}",
         source="geo",
