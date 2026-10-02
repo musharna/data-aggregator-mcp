@@ -8,6 +8,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- An OSF file listing that comes back malformed is reported as a malformed answer
+  instead of "no files" or a manifest cut short, a file without a name or download
+  link is no longer listed, a wrong-typed field no longer escapes as a bare error,
+  and a paging or folder link that leaves `api.osf.io` is not followed. A DataCite
+  DOI whose last part is not an OSF id sends no OSF request.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
