@@ -5,7 +5,7 @@ The remote source is read eagerly into an in-memory table named ``data``; all ex
 access (every filesystem, local or remote) is then disabled and the configuration
 locked, so a user SELECT cannot read local files, reach the network, write, or
 re-enable anything.
-Only a single SELECT/WITH statement is accepted. Sync calls run in
+Only a single query statement, as DuckDB parses it, is accepted. Sync calls run in
 ``asyncio.to_thread``; the whole call is wall-clock-bounded by the caller.
 
 Security posture (see ``_connect``): the source is materialized via ``CREATE
@@ -35,11 +35,9 @@ bounds.
 from __future__ import annotations
 
 import asyncio
-import re
 
 from data_aggregator_mcp.errors import ValidationError
 
-_SELECT_RE = re.compile(r"^\s*(select|with)\b", re.IGNORECASE)
 _PARQUET_EXTS = (".parquet", ".pq")
 DEFAULT_ROW_CAP = 1000
 
@@ -51,12 +49,21 @@ def _reader(url: str, file: str) -> str:
 
 
 def _validate_select(query: str) -> str:
-    q = query.strip().rstrip(";")
-    if ";" in q:
+    """Refuse anything but one query statement, as DuckDB's own parser reads it.
+
+    A text check could not tell a ``;`` between statements from one inside a string
+    (``WHERE go = 'GO:1;GO:2'`` was refused), and its prefix regex refused DuckDB's own
+    query forms (``FROM data``, a leading comment). Malformed SQL raises DuckDB's
+    ``ParserException`` here, before the source is downloaded.
+    """
+    import duckdb
+
+    statements = duckdb.extract_statements(query)
+    if len(statements) > 1:
         raise ValidationError("operate sql accepts a single statement only")
-    if not _SELECT_RE.match(q):
+    if not statements or statements[0].type != duckdb.StatementType.SELECT:
         raise ValidationError("operate sql accepts a read-only SELECT/WITH query only")
-    return q
+    return query
 
 
 def _connect(url: str, file: str):
@@ -81,7 +88,10 @@ def _connect(url: str, file: str):
 def _run(url: str, file: str, sql: str, row_cap: int) -> dict:
     con = _connect(url, file)
     try:
-        rel = con.execute(f"SELECT * FROM ({sql}) LIMIT {row_cap + 1}")  # nosec B608 - user SQL is the feature; sandboxed by _connect
+        # The cap is put on the parsed query, not appended to its text: a trailing
+        # ``--`` in the user's SQL commented out an appended ``) LIMIT n``, so a query
+        # ending ``... ) --`` fetched every row of a cross join into Python.
+        rel = con.sql(sql).limit(row_cap + 1)
         cols = [{"name": d[0], "type": str(d[1])} for d in rel.description]
         rows = rel.fetchall()
     finally:
