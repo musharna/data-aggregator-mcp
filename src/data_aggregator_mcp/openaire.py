@@ -22,6 +22,8 @@ from data_aggregator_mcp.models import Creator, DataResource, normalize_access
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 BASE_URL = "https://api.openaire.eu/graph/v1/researchProducts"
+_GET = "GET"
+_ESCAPE_ALL = ""  # quote(safe=...): an id is one path segment, so even "/" is escaped
 
 _TAG = re.compile(r"<[^>]+>")  # bounded, no nested quantifiers — safe on short strings
 _WS = re.compile(r"\s+")
@@ -109,7 +111,8 @@ def _check_page(body: dict) -> None:
 def _doi_of(record: dict) -> str | None:
     def _scan(pids: list[dict] | None) -> str | None:
         for p in pids or []:
-            if (p.get("scheme") or "").lower() == "doi" and p.get("value"):
+            scheme = p.get("scheme")
+            if isinstance(scheme, str) and scheme.lower() == "doi" and p.get("value"):
                 return p["value"]
         return None
 
@@ -158,7 +161,6 @@ def _normalize_openaire(record: dict) -> DataResource:
         ],
         license=_license_of(record),
         access=_access_of(record),
-        files=[],
     )
 
 
@@ -175,7 +177,7 @@ async def search(
         params["page"] = offset // capped + 1
     data = await _http.request_json(
         client,
-        "GET",
+        _GET,
         BASE_URL,
         service="OpenAIRE",
         params=params,
@@ -193,8 +195,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise NotFoundError(f"unroutable openaire id {resource_id!r}")
     record = await _http.request_json(
         client,
-        "GET",
-        f"{BASE_URL}/{urllib.parse.quote(oid, safe='')}",
+        _GET,
+        f"{BASE_URL}/{urllib.parse.quote(oid, safe=_ESCAPE_ALL)}",
         service="OpenAIRE",
         expect=dict,
         check=_check_record,

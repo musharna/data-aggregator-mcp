@@ -160,6 +160,9 @@ async def test_a_broken_search_answer_is_an_outage_not_no_hits(body):
         {**_FULL, "id": None},
         {**_FULL, "id": 7},
         {**_FULL, "authors": "Jan, Rehker"},  # was a bare TypeError
+        # An instance's pids as a string was read letter by letter: a bare AttributeError.
+        {**_FULL, "pids": [], "instances": [{"pids": "10.1007/s00425-012-1626-x"}]},
+        {**_FULL, "bestAccessRight": {"label": 7}},  # was access "unknown"
         {"message": "Internal Server Error", "error": "Internal Server Error", "code": 500},
     ],
 )
@@ -208,6 +211,10 @@ async def test_a_broken_record_answer_is_an_outage_not_a_record(body, monkeypatc
 
 _WRONG = ["x", 7, True, 1.5, [1], {"k": 1}, None]
 
+# A live-shaped hit whose own pids carry no DOI, so the reader falls back to the
+# instances' pids (12 of 600 live hits sampled had a DOI only there or nowhere).
+_FALLBACK = {**_FULL, "pids": [{"scheme": "pmid", "value": "22460777"}]}
+
 
 def _paths(node, path=()):
     yield path
@@ -229,8 +236,8 @@ def _with(base, path, value):
 
 
 def test_no_wrong_typed_field_escapes_as_a_bare_error():
-    """Every field of a full hit set to every JSON type: the check refuses it, or the
-    hit reads cleanly. A field the reader starts using without the check fails here."""
+    """Every field of a full hit, and of a hit read through its DOI fallback, set to
+    every JSON type: the check refuses it, or the hit reads cleanly. A field the reader starts using without the check fails here."""
     # Positive control: the full hit passes and reads whole.
     assert openaire._is_record(_FULL)
     full = openaire._normalize_openaire(_FULL)
@@ -244,12 +251,13 @@ def test_no_wrong_typed_field_escapes_as_a_bare_error():
     )
     assert full.creators == [Creator(name="Jan, Rehker"), Creator(name="Magdalena, Lachnit")]
     assert full.description == "The parasitic plant species Cuscuta reflexa and Phelipanche"
+    assert openaire._normalize_openaire(_FALLBACK).doi == "10.1007/s00425-012-1626-x"
     escaped, refused = [], 0
-    for path in _paths(_FULL):
+    for base, path in [(b, p) for b in (_FULL, _FALLBACK) for p in _paths(b)]:
         if not path:
             continue
         for value in _WRONG:
-            rec = _with(_FULL, path, value)
+            rec = _with(base, path, value)
             if not openaire._is_record(rec):
                 refused += 1
                 continue
