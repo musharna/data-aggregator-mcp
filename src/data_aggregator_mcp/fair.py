@@ -334,9 +334,9 @@ def assess(resource: DataResource) -> FairAssessment:
         else:
             gaps.append(ind.gap)
 
-    dim_scores = {
-        dim: round(100 * passed_w[dim] / total_w[dim]) if total_w[dim] else 0 for dim in _DIMENSIONS
-    }
+    # Every dimension has indicators (test_every_dimension_has_indicators), so no
+    # total is zero.
+    dim_scores = {dim: round(100 * passed_w[dim] / total_w[dim]) for dim in _DIMENSIONS}
     overall = round(sum(dim_scores[dim] for dim in _DIMENSIONS) / len(_DIMENSIONS))
 
     return FairAssessment(
