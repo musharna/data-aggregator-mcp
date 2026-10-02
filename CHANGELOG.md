@@ -8,6 +8,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A search `cursor` that no search could have produced is refused as an invalid or
+  corrupt cursor before anything is requested. A cursor listing more query variants
+  than a multi-query search makes (at most 4) sent one request per variant to every
+  source; one listing none answered with an empty page; an unknown `kind` or an
+  unexpected filter emptied every page; and a filter or `sources` value of the wrong
+  type failed with a bare Python error. Cursors returned by `search` are unaffected.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
