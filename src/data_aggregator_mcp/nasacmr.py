@@ -29,11 +29,68 @@ SEARCH = "https://cmr.earthdata.nasa.gov/search/collections.umm_json"
 PREFIXES = {"nasacmr"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
-DEFAULT_TIMEOUT = 30.0
-MAX_RETRIES = 3
+_GET = "GET"  # a constant: httpx upper-cases a mutated "get", so the literal would survive
+# DataDates types that date the collection itself; UPDATE/REVIEW/DELETE date a revision.
+_CREATED_TYPES = ("CREATE", "PRODUCTION")
 
 # An open-content licence URL embedded in the free-text UseConstraints, if any.
 _OPEN_URL_RE = re.compile(r"https?://(?:creativecommons\.org|www\.opendefinition\.org)/\S+")
+# A collection concept id: "C", digits, "-", the provider id. CMR answers any other
+# shape with HTTP 400 ("Concept-id [x] is not valid."), and a granule or service id
+# (G…/S…) is not a collection.
+_CONCEPT_ID_RE = re.compile(r"C[0-9]+-[A-Za-z0-9_]+")
+
+
+def _opt(value: object, kind: type) -> bool:
+    """Absent or null, or a ``kind``."""
+    return value is None or isinstance(value, kind)
+
+
+def _entries(value: object, fields: tuple[str, ...]) -> bool:
+    """Null, or a list whose object entries carry each of ``fields`` as a string or null.
+    Entries that are not objects are skipped by the readers, so they pass."""
+    return value is None or (
+        isinstance(value, list)
+        and all(all(_opt(e.get(f), str) for f in fields) for e in value if isinstance(e, dict))
+    )
+
+
+def _is_item(item: object) -> bool:
+    """A collection concept id, and every field ``_normalize`` reads at the type it reads
+    it as. ``UseConstraints`` is free-form and read defensively, so it is not checked, and
+    a DataDates entry's ``Type`` and ``Date`` are read as any type (``str()``,
+    ``year_from``), so only the list is."""
+    if not isinstance(item, dict):
+        return False
+    meta, umm = item.get("meta"), item.get("umm")
+    if not (isinstance(meta, dict) and isinstance(umm, dict)):
+        return False
+    cid, doi = meta.get("concept-id"), umm.get("DOI")
+    return (
+        isinstance(cid, str)
+        and _CONCEPT_ID_RE.fullmatch(cid) is not None
+        and _opt(meta.get("revision-date"), str)
+        and _opt(umm.get("EntryTitle"), str)
+        and _opt(umm.get("Abstract"), str)
+        and _opt(doi, dict)
+        and _opt((doi or {}).get("DOI"), str)
+        and _entries(umm.get("DataCenters"), ("ShortName",))
+        and _entries(umm.get("ScienceKeywords"), ("Term", "Topic", "Category"))
+        and _entries(umm.get("RelatedUrls"), ("URL",))
+        and _entries(umm.get("DataDates"), ())
+    )
+
+
+def _check_page(body: dict) -> None:
+    """An int hit count and a list of collections (search and resolve read the same
+    endpoint). A 200 without them is not "no hits"."""
+    items = body.get("items")
+    if not (
+        type(body.get("hits")) is int
+        and isinstance(items, list)
+        and all(_is_item(i) for i in items)
+    ):
+        raise _http.UpstreamEnvelopeError(f"no NASA CMR collection list in {body!r:.200}")
 
 
 def _strip_doi(raw: str | None) -> str | None:
@@ -81,25 +138,25 @@ def _license_and_access(umm: dict) -> tuple[str | None, str | None]:
     if not isinstance(uc, dict):
         return None, None
     lu = uc.get("LicenseURL")
-    text = " ".join(
-        s
-        for s in (
-            lu.get("Linkage") if isinstance(lu, dict) else None,
-            uc.get("Description"),
-            uc.get("LicenseText"),
-        )
-        if isinstance(s, str) and s  # a non-string leaf (schema violation) must not crash the join
-    )
-    m = _OPEN_URL_RE.search(text)
-    spdx = normalize_spdx(m.group(0).rstrip(".)") if m else None)
-    return spdx, ("open" if spdx else None)
+    for text in (
+        lu.get("Linkage") if isinstance(lu, dict) else None,
+        uc.get("Description"),
+        uc.get("LicenseText"),
+    ):
+        # A non-string leaf (schema violation) is skipped, not searched. normalize_spdx
+        # reads past the ")." that prose puts after a URL.
+        m = _OPEN_URL_RE.search(text) if isinstance(text, str) else None
+        if m:
+            spdx = normalize_spdx(m.group(0))
+            return spdx, ("open" if spdx else None)
+    return None, None
 
 
 def _links(umm: dict) -> list[Link]:
     """The primary Earthdata Search portal URL, so resolve points at where the granules
     (and their login-gated download) live."""
     for u in umm.get("RelatedUrls") or []:
-        if isinstance(u, dict) and (u.get("Type") or "") == "GET DATA" and u.get("URL"):
+        if isinstance(u, dict) and u.get("Type") == "GET DATA" and u.get("URL"):
             return [Link(rel="data_access", target_id=u["URL"])]
     return []
 
@@ -111,7 +168,7 @@ def _pub_year(umm: dict) -> int | None:
     dates = [dd for dd in umm.get("DataDates") or [] if isinstance(dd, dict)]
     for prefer_created in (True, False):
         for dd in dates:
-            if prefer_created and (dd.get("Type") or "").upper() not in ("CREATE", "PRODUCTION"):
+            if prefer_created and str(dd.get("Type")).upper() not in _CREATED_TYPES:
                 continue
             year = year_from(dd.get("Date"))
             if year:
@@ -120,11 +177,12 @@ def _pub_year(umm: dict) -> int | None:
 
 
 def _normalize(item: dict) -> DataResource:
-    meta = item.get("meta") or {}
-    umm = item.get("umm") or {}
+    """Discovery-only: ``files`` stays empty, the granule bytes live behind an Earthdata
+    login."""
+    meta, umm = item["meta"], item["umm"]
     spdx, access = _license_and_access(umm)
     return DataResource(
-        id=f"nasacmr:{meta.get('concept-id') or ''}",
+        id=f"nasacmr:{meta['concept-id']}",
         source="nasacmr",
         kind="dataset",
         title=umm.get("EntryTitle") or "",
@@ -137,7 +195,6 @@ def _normalize(item: dict) -> DataResource:
         access=access,
         last_updated=meta.get("revision-date"),
         links=_links(umm),
-        files=[],  # discovery-only: granule bytes live behind an Earthdata login
     )
 
 
@@ -146,31 +203,30 @@ async def search(
 ) -> tuple[int, list[DataResource]]:
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         SEARCH,
         service="NASA CMR search",
         params={"keyword": query, "page_size": str(min(size, MAX_SIZE)), "offset": str(offset)},
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         expect=dict,
+        check=_check_page,
     )
-    total = int(body.get("hits") or 0)
-    return total, [compact(_normalize(i)) for i in (body.get("items") or [])]
+    return body["hits"], [compact(_normalize(i)) for i in body["items"]]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     cid = local_id(resource_id, "nasacmr")
+    if not _CONCEPT_ID_RE.fullmatch(cid):
+        raise NotFoundError(f"malformed NASA CMR collection id {resource_id!r}")
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         SEARCH,
         service="NASA CMR resolve",
         params={"concept_id": cid},
-        timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         expect=dict,
+        check=_check_page,
     )
-    items = body.get("items") or []
+    items = body["items"]
     if not items:
         raise NotFoundError(f"NASA CMR has no collection {cid!r}")
     return _normalize(items[0])
