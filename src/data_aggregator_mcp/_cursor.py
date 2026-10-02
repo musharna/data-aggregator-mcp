@@ -20,8 +20,9 @@ _FILTER_KEYS = {"published_after", "published_before", "kind"}
 
 
 def encode(state: dict[str, Any]) -> str:
-    raw = json.dumps(state, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    return base64.urlsafe_b64encode(raw).decode("ascii")
+    # str.encode/bytes.decode default to UTF-8, and base64 output is ASCII.
+    raw = json.dumps(state, separators=(",", ":"), sort_keys=True).encode()
+    return base64.urlsafe_b64encode(raw).decode()
 
 
 def decode(token: str) -> dict[str, Any]:
@@ -30,7 +31,8 @@ def decode(token: str) -> dict[str, Any]:
     from .router import _VALID_KINDS, MAX_QUERY_VARIANTS
 
     try:
-        raw = base64.urlsafe_b64decode(token.encode("ascii"))
+        # Given a str, b64decode refuses non-ASCII itself (ValueError).
+        raw = base64.urlsafe_b64decode(token)
         state = json.loads(raw)
     except Exception as exc:
         raise ValidationError(f"invalid or corrupt cursor: {exc}") from exc
