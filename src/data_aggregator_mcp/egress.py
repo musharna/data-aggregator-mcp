@@ -16,6 +16,12 @@ the source, deliberately and of necessity — a ``CREATE VIEW`` would evaluate a
 and block the legitimate read too. So the lock protects the user's SELECT and structurally
 cannot protect the source read. The source URL has to be judged before the fetch begins.
 
+And judged at every hop, not only the first: a client that follows redirects by itself
+(fsspec's aiohttp session, DuckDB's httpfs) reaches a redirect target this module never
+sees. So a record URL is only ever read through an httpx client carrying
+``enforce_on_request`` or its sync twin — ``fetch`` through the server's client,
+``operate`` through ``sourceio``'s.
+
 KNOWN LIMITATION — this does not defeat DNS rebinding. The name is resolved here and
 resolved again by the HTTP client, so a server that answers public-then-private between
 those two lookups still wins. Closing that requires pinning the checked address into the
@@ -191,3 +197,21 @@ async def enforce_on_request(request: Any) -> None:
     for an annotation; httpx passes the request object positionally.
     """
     await assert_public_url(str(request.url), what="request")
+
+
+def enforce_on_request_sync(request: Any) -> None:
+    """The same per-hop check, as a synchronous ``httpx.Client`` request hook.
+
+    ``operate`` reads its source in worker threads (pyarrow and the CSV sniff are
+    synchronous), so ``sourceio`` gives them a sync client. A worker thread has no running
+    loop, so the async check runs on a loop of its own here. Called from a thread that
+    already runs a loop it raises rather than skip the check.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.run(assert_public_url(str(request.url), what="request"))
+        return
+    raise RuntimeError(
+        "enforce_on_request_sync called on a running event loop; hook an async client"
+    )

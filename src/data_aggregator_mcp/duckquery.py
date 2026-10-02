@@ -26,8 +26,9 @@ materialization is REQUIRED: DuckDB evaluates a ``CREATE VIEW`` lazily at query
 time, i.e. AFTER the lock, which would also block the legitimate source read —
 both ``file://`` and bare-path local reads route through ``LocalFileSystem``, so
 there is no view-based way to keep the legit read working while the FS is
-disabled. ``CREATE TABLE`` does the source read up front; httpfs http(s) range
-reads in production likewise complete during that eager read, before the lock.
+disabled. ``CREATE TABLE`` does the source read up front, before the lock, and it
+reads a local file: a remote source is downloaded first through ``sourceio``, whose
+client checks every redirect hop against the egress guard, which httpfs cannot do.
 Cost: the source is fully loaded into RAM at connect time, which the caller
 bounds.
 """
@@ -37,6 +38,7 @@ from __future__ import annotations
 import asyncio
 import re
 
+from data_aggregator_mcp import sourceio
 from data_aggregator_mcp.errors import ValidationError
 
 _SELECT_RE = re.compile(r"^\s*(select|with)\b", re.IGNORECASE)
@@ -67,7 +69,11 @@ def _connect(url: str, file: str):
     # Eager read FIRST (both filesystems still enabled), then lock them down. See the
     # module docstring: a CREATE VIEW would be evaluated lazily after the lock and
     # would block the legit source read too, so we materialize a TABLE here.
-    con.execute(f"CREATE TABLE data AS SELECT * FROM {_reader(url, file)};")  # nosec B608 - url is ''-escaped in _reader
+    # DuckDB never sees a remote URL: httpfs follows redirects with no egress check, so a
+    # public record URL that 302s into private space had its body read. sourceio
+    # downloads it through the guarded client and DuckDB reads the local copy.
+    with sourceio.local_copy(url) as local:
+        con.execute(f"CREATE TABLE data AS SELECT * FROM {_reader(local, file)};")  # nosec B608 - url is ''-escaped in _reader
     # The source is in memory by this line, so nothing downstream needs any file or
     # network access: turn ALL of it off. Naming filesystems to disable was a denylist
     # that httpfs outgrows — it also registers S3 (s3/s3a/s3n/r2/gcs) and HuggingFace
