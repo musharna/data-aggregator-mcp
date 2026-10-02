@@ -4,6 +4,8 @@ import ast
 from pathlib import Path
 
 import pytest
+from mcp import MCPError
+from mcp.types import INVALID_PARAMS
 
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import server, tool_specs, zenodo
@@ -47,8 +49,9 @@ def test_every_prompt_is_renderable_and_unknown_ones_fail_loud():
     for prompt in tool_specs.PROMPTS:
         required = {a.name: "x" for a in (prompt.arguments or []) if a.required}
         assert tool_specs.prompt_text(prompt.name, required).strip()
-    with pytest.raises(ValueError, match="unknown prompt"):
+    with pytest.raises(MCPError, match=r"^unknown prompt: 'no_such_prompt'$") as refused:
         tool_specs.prompt_text("no_such_prompt", {})
+    assert refused.value.code == INVALID_PARAMS
 
 
 def test_tool_specs_stays_free_of_request_handling_imports():

@@ -16,7 +16,8 @@ declare is refused with an input-validation error rather than silently dropped.
 
 from __future__ import annotations
 
-from mcp import types
+from mcp import MCPError, types
+from mcp.types import INVALID_PARAMS
 
 from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import zenodo
@@ -497,9 +498,32 @@ PROMPTS: list[types.Prompt] = [
 ]
 
 
+_PROMPTS_BY_NAME: dict[str, types.Prompt] = {p.name: p for p in PROMPTS}
+
+
+def _check_prompt_args(name: str, args: dict[str, str]) -> None:
+    """Refuse what the MCP spec says ``prompts/get`` refuses, as ``-32602 Invalid params``:
+    an unknown prompt or a missing required argument (blank counts as missing: it would
+    render "find datasets about: ."). An argument the prompt does not declare is refused
+    too, as every tool refuses one, so a misspelt ``organsim`` is not silently dropped."""
+    prompt = _PROMPTS_BY_NAME.get(name)
+    if prompt is None:
+        raise MCPError(INVALID_PARAMS, f"unknown prompt: {name!r}")
+    declared = [a.name for a in prompt.arguments or []]
+    undeclared = sorted(set(args) - set(declared))
+    if undeclared:
+        raise MCPError(INVALID_PARAMS, f"prompt {name!r} takes {declared}, not {undeclared}")
+    missing = [
+        a.name for a in prompt.arguments or [] if a.required and not args.get(a.name, "").strip()
+    ]
+    if missing:
+        raise MCPError(INVALID_PARAMS, f"prompt {name!r} requires {missing}")
+
+
 def prompt_text(name: str, args: dict[str, str]) -> str:
+    _check_prompt_args(name, args)
     if name == "find_data":
-        topic = args.get("topic", "")
+        topic = args["topic"]
         organism = args.get("organism")
         org = (
             f" Pass organism='{organism}' to expand the query with NCBI-Taxonomy synonyms."
@@ -512,17 +536,16 @@ def prompt_text(name: str, args: dict[str, str]) -> str:
             "files[] manifest, and `fetch` to download."
         )
     if name == "data_behind_paper":
-        paper = args.get("paper", "")
+        paper = args["paper"]
         return (
             f"Find the data behind '{paper}'. If it is a DOI/PMID, `resolve` it — publication "
             "resolve attaches links[] to datasets/accessions and normalized identifiers. Then "
             "`resolve`/`fetch` each linked dataset. Otherwise `search` for the paper first."
         )
-    if name == "search_resolve_fetch":
-        need = args.get("need", "")
-        return (
-            f"Goal: {need}. 1) `search` (add organism= to expand taxonomy synonyms). "
-            "2) `resolve` a chosen id for the full record + files[]. 3) `fetch` to download. "
-            "Use `list_sources` to see which sources are fetchable."
-        )
-    raise ValueError(f"unknown prompt: {name}")
+    # search_resolve_fetch: _check_prompt_args refused every name not in PROMPTS.
+    need = args["need"]
+    return (
+        f"Goal: {need}. 1) `search` (add organism= to expand taxonomy synonyms). "
+        "2) `resolve` a chosen id for the full record + files[]. 3) `fetch` to download. "
+        "Use `list_sources` to see which sources are fetchable."
+    )
