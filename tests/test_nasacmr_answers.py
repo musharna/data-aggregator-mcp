@@ -79,8 +79,8 @@ def _page(*items: object, hits: object = None) -> dict:
     return {"hits": len(items) if hits is None else hits, "took": 5, "items": list(items)}
 
 
-def _with(path, value):
-    item = copy.deepcopy(_FULL)
+def _with(path, value, base=None):
+    item = copy.deepcopy(_FULL if base is None else base)
     *parents, last = path
     node = item
     for p in parents:
@@ -146,21 +146,48 @@ async def test_a_malformed_answer_is_an_outage_not_no_hits(body):
     assert len(sent) == 6  # each call retried to the budget, not read once and accepted
 
 
-def test_no_wrong_typed_field_escapes_as_a_bare_error():
-    """Walk every field of a full record with every wrong JSON type: each must be refused
-    by the check or normalized cleanly, so a field the reader starts using without the
-    check fails here."""
-    # Positive control: the full record passes the check and reads whole.
-    nasacmr._check_page(_page(_FULL))
-    full = nasacmr._normalize(_FULL)
+def _variant(keyword: dict, related_url: dict) -> dict:
+    """``_FULL`` with its first keyword and related URL replaced: the walk only reaches a
+    fallback leaf (Topic, Category) or a GET DATA URL when the record makes the reader
+    read it."""
+    item = copy.deepcopy(_FULL)
+    item["umm"]["ScienceKeywords"][0] = keyword
+    item["umm"]["RelatedUrls"][0] = related_url
+    return item
+
+
+_GET_DATA = {"URL": "https://search.earthdata.nasa.gov/x", "Type": "GET DATA"}
+_WALKED = {
+    "full": (_FULL, ["SEA ICE", "OCEAN TEMPERATURE"]),
+    "topic fallback": (
+        _variant({"Category": "EARTH SCIENCE", "Topic": "OCEANS", "Term": None}, _GET_DATA),
+        ["OCEANS", "OCEAN TEMPERATURE"],
+    ),
+    "category fallback": (
+        _variant({"Category": "EARTH SCIENCE", "Topic": None, "Term": None}, _GET_DATA),
+        ["EARTH SCIENCE", "OCEAN TEMPERATURE"],
+    ),
+}
+
+
+@pytest.mark.parametrize(("base", "subjects"), list(_WALKED.values()), ids=list(_WALKED))
+def test_no_wrong_typed_field_escapes_as_a_bare_error(base, subjects):
+    """Walk every field of a record with every wrong JSON type: each must be refused by
+    the check or normalized cleanly, so a field the reader starts using without the check
+    fails here. The variants make the reader reach the keyword fallbacks and a GET DATA
+    URL, which the full record never reads."""
+    # Positive control: the record passes the check and reads whole.
+    nasacmr._check_page(_page(base))
+    full = nasacmr._normalize(base)
     assert full.creators == [Creator(name="NASA/JPL/PODAAC"), Creator(name="UK/MOD/MET")]
     assert full.license == "CC-BY-4.0" and full.year == 2013 and full.doi == "10.5067/GHOST-4RM02"
+    assert full.subjects == subjects and len(full.links) == 1
     escaped = []
-    for path in _paths(_FULL):
+    for path in _paths(base):
         if not path:
             continue
         for value in _WRONG:
-            item = _with(path, value)
+            item = _with(path, value, base)
             try:
                 nasacmr._check_page(_page(item))
             except _http.UpstreamEnvelopeError:
