@@ -6,6 +6,22 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- An OmicsDI record's `doi` is the dataset's own DOI, not the DOI of the paper that
+  describes it. Every OmicsDI record with a publication reported the paper's DOI as
+  its own, so a dataset and its paper could be taken for the same record; the paper's
+  DOI is now a `described_in` link, and a PRIDE dataset's own DOI is filled in.
+- OmicsDI MetaboLights records keep their paper's DOI and PubMed id when the
+  publication is written "title. DOI. PMID:n"; the DOI was dropped (3 of 4 records
+  sampled) and the PubMed id never read.
+- An OmicsDI id whose repository or accession contains `/`, `..`, `?`, `#` or `%` is
+  refused before any request; `omicsdi:pride:../../evil?injected=1` reached another
+  OmicsDI endpoint.
+- An OmicsDI answer missing its result list is reported as a malformed answer instead
+  of zero hits, and a wrong-typed field, or a record for a different accession, no
+  longer escapes as a bare error or comes back as the wrong record.
+
 ## [0.54.14] - 2026-10-02
 
 ### Fixed
