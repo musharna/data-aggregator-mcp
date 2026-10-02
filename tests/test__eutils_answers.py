@@ -15,6 +15,7 @@ no data links.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import httpx
 import pytest
@@ -228,3 +229,52 @@ async def test_live_esearch_answers_pass_the_check() -> None:
         count, ids = await _eutils.esearch(client, "pubmed", "cancer", retmax=2)
         assert count > 1_000_000 and len(ids) == 2
         assert await _eutils.esearch(client, "pubmed", "zzqqxxyyzz", retmax=2) == (0, [])
+
+
+# --- field walk: every field, every wrong JSON type, refused or read cleanly ---
+
+_WRONG = [None, True, 0, 1.5, "s", [], {}, ["s"], [0]]
+
+
+def _paths(node: object, path: tuple = ()) -> list[tuple]:
+    out = [path] if path else []
+    if isinstance(node, dict):
+        for k, v in node.items():
+            out += _paths(v, (*path, k))
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            out += _paths(v, (*path, i))
+    return out
+
+
+def _with(body: object, path: tuple, value: object) -> object:
+    import copy
+
+    out = copy.deepcopy(body)
+    node: Any = out
+    for step in path[:-1]:
+        node = node[step]
+    node[path[-1]] = value
+    return out
+
+
+_READERS = [
+    pytest.param(_esearch, ESEARCH_OK, id="esearch"),
+    pytest.param(_esummary, ESUMMARY_OK, id="esummary"),
+    pytest.param(_elink, ELINK_OK, id="elink"),
+]
+
+
+@pytest.mark.parametrize(("read", "full"), _READERS)
+async def test_no_wrong_typed_field_escapes_as_a_bare_error(read, full: dict) -> None:
+    await read(full)  # positive control: the full live-shaped answer reads cleanly
+    escapes = []
+    for path in _paths(full):
+        for value in _WRONG:
+            try:
+                await read(_with(full, path, value))
+            except UpstreamUnavailableError:
+                pass
+            except Exception as exc:  # noqa: BLE001 - every escape is collected and reported
+                escapes.append((path, value, repr(exc)))
+    assert escapes == []
