@@ -8,6 +8,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `search(collapse_mirrors=true)` compares the first author's whole name. It
+  compared only the last word, which for a "Family, Given" name (most DataCite and
+  Zenodo records) is the given name, so distinct datasets with the same generic title
+  and year were folded together when their first authors shared a given name, and a
+  copy whose author was written "Given Family" in one repository and "Family, Given"
+  in another was not folded.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
