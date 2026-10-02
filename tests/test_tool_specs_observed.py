@@ -12,6 +12,7 @@ import pytest
 from mcp import MCPError, types
 from mcp.types import INVALID_PARAMS
 
+from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp import (
     health,
     license_compat,
@@ -22,7 +23,6 @@ from data_aggregator_mcp import (
     tool_specs,
     zenodo,
 )
-from data_aggregator_mcp import fetch as fetch_mod
 from data_aggregator_mcp.models import FetchResult, SearchResult
 from tests.test_server_observed import _record
 
