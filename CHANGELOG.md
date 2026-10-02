@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- data.gov datasets keep every theme as a subject. Some publishers give a theme as a
+  labelled concept instead of plain text (70 of 3,472 datasets sampled), and those
+  themes were dropped.
+- A data.gov answer missing its result list is reported as a malformed answer instead
+  of zero hits or "no such dataset", and a wrong-typed field no longer escapes as a
+  bare error.
+
 ## [0.54.14] - 2026-10-02
 
 ### Fixed
