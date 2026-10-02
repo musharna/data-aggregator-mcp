@@ -1,20 +1,231 @@
-"""The Run Crate's run-level claims, pinned (#88 mutation burn-down of `run_crate`).
+"""The Run Crate pinned whole (#88 mutation burn-down of `run_crate`).
 
-`tests/test_run_crate.py` checks structure and reads a few fields. These tests pin what
-the crate says about the run itself, starting with ``sources_queried``: it names the data
-sources seen to take part in the page, so a key of ``SearchResult.errors`` that is a note
-about the run (``semantic``, ``filters``, ``query_syntax``, an ontology lookup) is not a
-source. Expected values are written out by hand, never rebuilt with the code's formulas.
+`tests/test_run_crate.py` checks structure and reads a few fields. These tests compare
+the crate's entities with literals written out by hand, so a garbled ``@type`` or
+``name``, a dropped field or a wrong expansion axis fails. ``sources_queried`` names the
+data sources seen to take part in the page, so a key of ``SearchResult.errors`` that is a
+note about the run (``semantic``, ``filters``, ``query_syntax``, an ontology lookup) is
+not a source. Expected values are never rebuilt with the code's own formulas.
 """
 
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import pytest
 
-from data_aggregator_mcp import router, run_crate, sources
-from tests.test_run_crate import _graph, _search_result
+from data_aggregator_mcp import __version__, fair, router, run_crate, sources
+from data_aggregator_mcp.models import (
+    AssayExpansion,
+    ChemicalExpansion,
+    FileEntry,
+    MeshExpansion,
+    SearchResult,
+    TaxonExpansion,
+    TissueExpansion,
+)
+from tests.test_run_crate import _graph, _resource, _search_result
+
+# --- the whole crate --------------------------------------------------------
+
+_EXPANSIONS: dict[str, Any] = {
+    "taxon_expansion": TaxonExpansion(
+        input="rice", taxid=4530, canonical_name="Oryza sativa", synonyms=["Asian rice"]
+    ),
+    "mesh_expansion": MeshExpansion(
+        input="blast", mesh_ui="D000001", canonical_name="Blast Disease", synonyms=[]
+    ),
+    "tissue_expansion": TissueExpansion(
+        input="leaf",
+        uberon_id="PO:0025034",
+        canonical_name="leaf",
+        synonyms=["foliage", "blade"],
+    ),
+    "chemical_expansion": ChemicalExpansion(
+        input="auxin", chebi_id="CHEBI:22676", canonical_name="auxin", synonyms=["IAA"]
+    ),
+    "assay_expansion": AssayExpansion(
+        input="rna-seq",
+        edam_id="EDAM:topic_3170",
+        canonical_name="RNA-Seq",
+        synonyms=["RNA sequencing"],
+    ),
+}
+
+
+def _rich(**over: Any) -> SearchResult:
+    """Two hits (one DOI'd and licensed, one with no DOI whose first file has no URL),
+    every expansion axis fired, a failed stream of each shape and two run notes."""
+    base = SearchResult(
+        query="rice leaf",
+        total=7,
+        count=2,
+        results=[
+            _resource(id="zenodo:1", doi="10.5281/zenodo.1", title="Rice A"),
+            _resource(
+                id="geo:GSE1",
+                source="geo",
+                doi=None,
+                title="Rice B",
+                license=None,
+                is_latest=None,
+                files=[FileEntry(name="no-url"), FileEntry(name="m", url="https://u/m")],
+            ),
+        ],
+        errors={
+            "datacite": "ReadTimeout: slow",
+            "omics/sra#v1": "HTTPStatusError: 503",
+            "filters": "2 records removed by the kind filter",
+            "semantic": "no embedding endpoint configured",
+        },
+        **_EXPANSIONS,
+    )
+    return base.model_copy(update=over)
+
+
+def test_run_level_entities_pinned_whole() -> None:
+    crate = run_crate.render(_rich())
+    assert crate["@context"] == "https://w3id.org/ro/crate/1.1/context"
+    graph = crate["@graph"]
+    assert graph[0] == {
+        "@id": "ro-crate-metadata.json",
+        "@type": "CreativeWork",
+        "conformsTo": {"@id": "https://w3id.org/ro/crate/1.1"},
+        "about": {"@id": "./"},
+    }
+    assert graph[1] == {
+        "@id": "./",
+        "@type": "Dataset",
+        "name": "Search run: rice leaf",
+        "mentions": {"@id": "#search-action"},
+        "hasPart": [{"@id": "#hit-0"}, {"@id": "#hit-1"}],
+    }
+    assert graph[2] == {
+        "@id": "https://github.com/musharna/data-aggregator-mcp",
+        "@type": "SoftwareApplication",
+        "name": "data-aggregator-mcp",
+        "version": __version__,
+    }
+    assert graph[3] == {
+        "@id": "#search-action",
+        "@type": "CreateAction",
+        "name": "data-aggregator-mcp search",
+        "instrument": {"@id": "https://github.com/musharna/data-aggregator-mcp"},
+        "object": {"@id": "./"},
+        "query": "rice leaf",
+        "result_count": 2,
+        "total": 7,
+        # data sources only: the record sources, plus each failed stream named as its
+        # records are (`omics/sra#v1` -> `sra`); the run notes are not sources.
+        "sources_queried": ["datacite", "geo", "sra", "zenodo"],
+        "result": [{"@id": "#hit-0"}, {"@id": "#hit-1"}],
+        "ontology_expansions": [
+            {
+                "axis": "taxon",
+                "input": "rice",
+                "ontology_id": 4530,
+                "canonical_name": "Oryza sativa",
+                "synonyms": ["Asian rice"],
+            },
+            {
+                "axis": "mesh",
+                "input": "blast",
+                "ontology_id": "D000001",
+                "canonical_name": "Blast Disease",
+                "synonyms": [],
+            },
+            {
+                "axis": "tissue",
+                "input": "leaf",
+                "ontology_id": "PO:0025034",
+                "canonical_name": "leaf",
+                "synonyms": ["foliage", "blade"],
+            },
+            {
+                "axis": "chemical",
+                "input": "auxin",
+                "ontology_id": "CHEBI:22676",
+                "canonical_name": "auxin",
+                "synonyms": ["IAA"],
+            },
+            {
+                "axis": "assay",
+                "input": "rna-seq",
+                "ontology_id": "EDAM:topic_3170",
+                "canonical_name": "RNA-Seq",
+                "synonyms": ["RNA sequencing"],
+            },
+        ],
+        "errors": {
+            "datacite": "ReadTimeout: slow",
+            "omics/sra#v1": "HTTPStatusError: 503",
+            "filters": "2 records removed by the kind filter",
+            "semantic": "no embedding endpoint configured",
+        },
+    }
+
+
+def test_hit_entities_and_their_assessments_in_order() -> None:
+    sr = _rich()
+    crate = run_crate.render(sr)
+    ids = [e["@id"] for e in crate["@graph"][4:]]
+    assert ids == [
+        "#hit-0",
+        "#hit-0-version-currency",
+        "#hit-0-licence",
+        "#hit-0-fair",
+        "#hit-0-identifier-chain",
+        "#hit-1",
+        "#hit-1-fair",
+        "#hit-1-identifier-chain",
+    ]
+    g = _graph(crate)
+    assert g["#hit-0"] == {
+        "@id": "#hit-0",
+        "@type": "Dataset",
+        "name": "Rice A",
+        "identifier": "https://doi.org/10.5281/zenodo.1",
+        "mentions": [
+            {"@id": "#hit-0-version-currency"},
+            {"@id": "#hit-0-licence"},
+            {"@id": "#hit-0-fair"},
+            {"@id": "#hit-0-identifier-chain"},
+        ],
+        "license": "cc-by-4.0",
+    }
+    # No DOI and a first file without a URL: the first file URL there is.
+    assert g["#hit-1"] == {
+        "@id": "#hit-1",
+        "@type": "Dataset",
+        "name": "Rice B",
+        "identifier": "https://u/m",
+        "mentions": [{"@id": "#hit-1-fair"}, {"@id": "#hit-1-identifier-chain"}],
+    }
+    assert g["#hit-1-identifier-chain"] == {
+        "@id": "#hit-1-identifier-chain",
+        "@type": "PropertyValue",
+        "name": "source-identifier-chain",
+        "value": "source repository geo; canonical id geo:GSE1",
+        "source": "geo",
+        "canonical_id": "geo:GSE1",
+    }
+    # FAIR is assessed per hit, on that hit (not on the other one, not left unset).
+    for i, hit in enumerate(sr.results):
+        assert g[f"#hit-{i}-fair"]["score"] == fair.assess(hit).score
+    assert g["#hit-0-fair"]["score"] != g["#hit-1-fair"]["score"]
+
+
+def test_hit_identifier_is_the_canonical_id_when_no_file_has_a_url() -> None:
+    sr = _rich(results=[_resource(id="geo:GSE2", doi=None, files=[FileEntry(name="a")])], count=1)
+    assert _graph(run_crate.render(sr))["#hit-0"]["identifier"] == "geo:GSE2"
+
+
+def test_only_the_axes_that_fired_are_echoed_in_order() -> None:
+    sr = _rich(taxon_expansion=None, tissue_expansion=None, assay_expansion=None)
+    exps = _graph(run_crate.render(sr))["#search-action"]["ontology_expansions"]
+    assert [e["axis"] for e in exps] == ["mesh", "chemical"]
+
 
 # --- sources_queried --------------------------------------------------------
 
