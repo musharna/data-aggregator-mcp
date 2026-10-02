@@ -12,6 +12,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   gene. Any two human UniProt entries were joined on taxon 9606, and a protein was
   joined to PubMed article 9606. A shared identifier is now a DOI, PubMed id or PMC id
   matched within its own kind, and the hint says which kind.
+- `relate` gives the same answer every time for the same records. When two records
+  shared more than one identifier, the order of those hints, and which spelling of a
+  DOI was shown, could change after a server restart.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
