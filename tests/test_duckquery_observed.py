@@ -419,7 +419,7 @@ _ENDLESS = "SELECT count(*) FROM data a, data b, data c WHERE a.i + b.i + c.i = 
 
 
 async def test_a_query_past_the_wall_clock_limit_is_interrupted(
-    patch_resolve, worker, monkeypatch, tmp_path
+    request, worker, monkeypatch, tmp_path
 ) -> None:
     """operate's wall-clock limit cancelled the await, not the thread doing the work: the
     timeout was reported and the query ran on in the server (to 13.65 s after a timeout
@@ -427,7 +427,8 @@ async def test_a_query_past_the_wall_clock_limit_is_interrupted(
     asyncio has no unretrieved error to report."""
     src = tmp_path / "n.csv"
     src.write_text("i\n" + "".join(f"{k}\n" for k in range(3000)))
-    patch_resolve(_res([FileEntry(name="n.csv", url=src.as_uri())]))
+    install = request.getfixturevalue("patch_resolve")  # a parameter would shadow the import
+    install(_res([FileEntry(name="n.csv", url=src.as_uri())]))
     monkeypatch.setattr(operate, "WALL_TIMEOUT_S", 2.0)
     loop = asyncio.get_running_loop()
     unreported: list[dict] = []
