@@ -1,3 +1,3 @@
 """data-aggregator-mcp — research-data acquisition MCP."""
 
-__version__ = "0.54.12"
+__version__ = "0.54.13"

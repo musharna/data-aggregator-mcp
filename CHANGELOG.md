@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.13] - 2026-10-02
+
 ### Fixed
 
 - DataONE `search` returns only the latest version of each dataset, as DataONE's own
