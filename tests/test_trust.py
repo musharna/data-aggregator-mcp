@@ -3,7 +3,7 @@ import os
 import httpx
 import pytest
 
-from data_aggregator_mcp import trust
+from data_aggregator_mcp import _http, trust
 from data_aggregator_mcp.models import DataResource, TrustSignals
 
 
@@ -216,7 +216,9 @@ async def test_live_pdb_entry_with_retracted_paper():
 async def test_live_withdrawn_and_removed_papers_are_retracted(doi, update_type):
     """These read as clean before 2026-10-02: only ``type == "retraction"`` counted."""
     async with httpx.AsyncClient(timeout=60) as c:
-        body = (await c.get(trust.CROSSREF.format(doi=doi), headers=trust._HEADERS)).json()
+        body = await _http.request_json(  # retried like the lookup; the check runs below
+            c, "GET", trust.CROSSREF.format(doi=doi), service="t", expect=dict
+        )
         out = await trust.annotate(c, _resource(doi=doi))
         control = await trust.annotate(c, _resource(doi="10.1038/nature14539"))
     notices = [u["DOI"] for u in body["message"]["updated-by"] if u["type"] == update_type]
