@@ -2,10 +2,14 @@
 
 ``assess(resource)`` computes a 0–100 FAIRness score plus F/A/I/R sub-scores and
 a list of actionable gaps, grounded in the **RDA FAIR Data Maturity Model**
-(Specification & Guidelines v0.90, RD-Alliance 2020). Each indicator carries its
-RDA id (e.g. ``RDA-F1-01D``) and priority (Essential/Important/Useful); gaps name
-that id and are framed as metadata-exposure gaps ("metadata does not expose X"),
-never value judgements about the dataset.
+(Specification and Guidelines v1.0, RDA FAIR Data Maturity Model Working Group 2020,
+https://doi.org/10.15497/rda00050). Each indicator carries its RDA id (e.g.
+``RDA-F1-01D``) and the priority Table 1 of that specification gives it
+(Essential/Important/Useful); gaps name that id and are framed as metadata-exposure
+gaps ("metadata does not expose X"), never value judgements about the dataset. An id
+ending ``D`` is an indicator about the data (its identifier, files, formats), one
+ending ``M`` is about the metadata; each predicate below carries the id of what it
+actually reads.
 
 This module implements only the MACHINE-EVALUABLE SUBSET — indicators computable
 from the metadata we already hold. Indicators that would require fetching the data
@@ -24,7 +28,7 @@ from dataclasses import dataclass
 
 from data_aggregator_mcp.models import DataResource, FairAssessment
 
-# Priority weights from the RDA Maturity Model.
+# Priority weights for the RDA Maturity Model's three priorities.
 ESSENTIAL = 3
 IMPORTANT = 2
 USEFUL = 1
@@ -68,6 +72,14 @@ _KNOWN_EXTS = (
     ".obo",
     ".owl",
 )
+
+# Single-stream compression suffixes: ``reads.fastq.gz`` is a FASTQ file, so the
+# suffix is set aside before the format is read. Archive containers (``.zip``,
+# ``.tar``) are not stripped: what is inside them is not known from the name.
+_COMPRESSION_EXTS = (".gz", ".bz2", ".xz", ".zst")
+
+# Free access protocols (RDA-A1.1-01D names HTTP and FTP as the common examples).
+_FREE_PROTOCOLS = ("https://", "http://", "ftp://")
 
 # License-family tokens that signal a machine-understandable reuse licence (R1.1b).
 # Matched as WHOLE tokens, never as substrings — substring matching is the trap
@@ -145,8 +157,8 @@ def _retrievable(r: DataResource) -> bool:
     return _has_doi(r) or any(f.url for f in r.files)
 
 
-def _open_protocol(r: DataResource) -> bool:
-    return any((f.url or "").startswith("https://") for f in r.files) or _has_doi(r)
+def _free_protocol(r: DataResource) -> bool:
+    return any(f.url.lower().startswith(_FREE_PROTOCOLS) for f in r.files if f.url) or _has_doi(r)
 
 
 def _has_file_format(r: DataResource) -> bool:
@@ -170,13 +182,24 @@ def _machine_license(r: DataResource) -> bool:
 
 
 def _provenance(r: DataResource) -> bool:
-    return bool(r.creators) and bool(r.funding or r.last_updated or r.links or r.source)
+    # ``source`` is the adapter that served the record and is set on every record, so
+    # it says nothing about provenance; it is not one of the alternatives.
+    return bool(r.creators) and bool(r.funding or r.last_updated or r.links)
+
+
+def _format_name(name: str) -> str:
+    """The file name with one compression suffix set aside, lower-cased."""
+    low = name.lower()
+    for ext in _COMPRESSION_EXTS:
+        if low.endswith(ext):
+            return low.removesuffix(ext)
+    return low
 
 
 def _community_standard(r: DataResource) -> bool:
     if r.accessions:
         return True
-    return any((f.name or "").lower().endswith(_KNOWN_EXTS) for f in r.files)
+    return any(_format_name(f.name).endswith(_KNOWN_EXTS) for f in r.files)
 
 
 # F4 / A2 are justified constants, NOT freebies:
@@ -207,14 +230,14 @@ INDICATORS: tuple[Indicator, ...] = (
     Indicator(
         "findable",
         "RDA-F3-01M",
-        IMPORTANT,
+        ESSENTIAL,
         _has_data_identifier,
         "metadata exposes no resolvable data identifier (RDA-F3-01M)",
     ),
     Indicator(
         "findable",
         "RDA-F4-01M",
-        IMPORTANT,
+        ESSENTIAL,
         _true,  # record came from a searchable registry/our fan-out (justified constant)
         "metadata is not indexed in a searchable resource (RDA-F4-01M)",
     ),
@@ -222,36 +245,36 @@ INDICATORS: tuple[Indicator, ...] = (
     Indicator(
         "accessible",
         "RDA-A1-01M",
-        ESSENTIAL,
+        IMPORTANT,
         _retrievable,
         "no resolvable identifier or download URL (RDA-A1-01M)",
     ),
     Indicator(
         "accessible",
-        "RDA-A1.1-01M",
+        "RDA-A1.1-01D",
         IMPORTANT,
-        _open_protocol,
-        "no open (https/doi) access protocol (RDA-A1.1-01M)",
+        _free_protocol,
+        "no DOI or download URL over a free protocol (http/https/ftp) (RDA-A1.1-01D)",
     ),
     Indicator(
         "accessible",
         "RDA-A2-01M",
-        IMPORTANT,
+        ESSENTIAL,
         _true,  # registry-backed metadata persists independently of the data (justified constant)
         "metadata does not persist independently of the data (RDA-A2-01M)",
     ),
     # INTEROPERABLE
     Indicator(
         "interoperable",
-        "RDA-I1-01M",
-        ESSENTIAL,
+        "RDA-I1-01D",
+        IMPORTANT,
         _has_file_format,
-        "no machine-readable file formats declared (RDA-I1-01M)",
+        "no machine-readable file formats declared (RDA-I1-01D)",
     ),
     Indicator(
         "interoperable",
         "RDA-I2-01M",
-        USEFUL,
+        IMPORTANT,
         _has_vocab,
         "no controlled-vocabulary terms (taxa/subjects) (RDA-I2-01M)",
     ),
@@ -275,7 +298,7 @@ INDICATORS: tuple[Indicator, ...] = (
         "RDA-R1.1-03M",
         IMPORTANT,
         _machine_license,
-        "licence is free text, not a machine-readable id (RDA-R1.1-03M)",
+        "no machine-readable licence id (RDA-R1.1-03M)",
     ),
     Indicator(
         "reusable",
@@ -286,10 +309,10 @@ INDICATORS: tuple[Indicator, ...] = (
     ),
     Indicator(
         "reusable",
-        "RDA-R1.3-01M",
-        USEFUL,
+        "RDA-R1.3-01D",
+        ESSENTIAL,
         _community_standard,
-        "no recognised community-standard format (RDA-R1.3-01M)",
+        "no recognised community-standard format (RDA-R1.3-01D)",
     ),
 )
 
