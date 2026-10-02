@@ -8,6 +8,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `resolve(format="ro-crate")` produces a valid RO-Crate 1.1 crate for records with
+  authors. Each author was written inside the dataset entry without an id, which
+  RO-Crate 1.1 does not allow (the RO-Crate validator rejected every such crate), and
+  the author's ORCID was left out. Each author is now its own `Person` entry,
+  identified by its ORCID when the record has one; `author` lists them by id.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
