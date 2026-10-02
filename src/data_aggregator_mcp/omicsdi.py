@@ -27,8 +27,11 @@ _LANDING = "https://www.omicsdi.org/dataset/{source}/{acc}"
 PREFIXES = {"omicsdi"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+_ACCEPT_JSON = {"Accept": "application/json"}
+# A module constant: mutmut does not mutate those, and a lower-cased method is the same
+# request (httpx upper-cases it); test_omicsdi_observed pins the method sent.
+_GET = "GET"
 
 # OmicsDI `source` codes for the mass-spectrometry modality we uniquely add
 # (proteomics + metabolomics). Deliberately excludes EGA (controlled-access human
@@ -43,6 +46,10 @@ _MODALITY_REPOS = {
     "peptide_atlas",
 }
 
+# A source code or an accession, the two parts of `omicsdi:<source>:<acc>`. Both go
+# into the record URL's path, so a `/`, `..`, `?`, `#` or `%` must never reach it;
+# every live search hit sampled (1,561 of 1,561, 2026-10-02) matches.
+_ID_PART_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 # OmicsDI `additional` is a free-form, repo-specific dict of string lists; the same
 # concept hides under different keys per source repo (PRIDE uses `submitter`/`species`,
@@ -52,45 +59,87 @@ _MODALITY_REPOS = {
 # is paper authorship, not dataset creation.
 _CREATOR_KEYS = ("submitter", "submitter_name")
 _ORGANISM_KEYS = ("species", "organism")
-_DOI_RE = re.compile(r"\b(10\.\d{4,}/[^\s\"<>]+?)[.,;:]*$", re.MULTILINE)
+# Every `additional` key the reader reads; `_check_record` holds each to a string list.
+_READ_KEYS = (*_CREATOR_KEYS, *_ORGANISM_KEYS, "publication", "doi")
+# `publication` is free text: PRIDE writes "<pmid> <citation> <doi>", MetaboLights
+# "<title>. <doi>. PMID:<pmid>". A DOI may sit anywhere; trailing punctuation is the
+# sentence's, not the DOI's.
+_DOI_RE = re.compile(r"\b10\.[0-9]{4,}/[^\s\"<>]+")
+_DOI_TRAILING = ".,;:"
+_LEADING_PMID_RE = re.compile(r"\s*([0-9]+)(?!\S)")
+_PMID_LABEL_RE = re.compile(r"\bPMID:\s*([0-9]+)")
+
+
+def _opt(value: object, typ: type) -> bool:
+    return value is None or isinstance(value, typ)
+
+
+def _is_str_list(value: object) -> bool:
+    return value is None or (isinstance(value, list) and all(isinstance(v, str) for v in value))
+
+
+def _is_hit(d: object) -> bool:
+    """A search hit carrying every field ``search`` reads, at the type it reads it as."""
+    return (
+        isinstance(d, dict)
+        and isinstance(d.get("source"), str)
+        and isinstance(d.get("id"), str)
+        and _opt(d.get("title"), str)
+        and _opt(d.get("description"), str)
+    )
+
+
+def _check_search(body: dict) -> None:
+    datasets = body.get("datasets")
+    if not (isinstance(datasets, list) and all(_is_hit(d) for d in datasets)):
+        raise _http.UpstreamEnvelopeError(f"no OmicsDI dataset list in {body!r:.200}")
+
+
+def _check_record(body: dict, acc: str) -> None:
+    """The record for ``acc`` (OmicsDI accessions are case-sensitive), with every
+    field ``_record`` reads at the type it reads it as (absent or null is fine)."""
+    additional = body.get("additional")
+    if not (
+        body.get("accession") == acc
+        and _opt(body.get("name"), str)
+        and _opt(body.get("description"), str)
+        and _opt(additional, dict)
+        and all(_is_str_list((additional or {}).get(key)) for key in _READ_KEYS)
+    ):
+        raise _http.UpstreamEnvelopeError(f"no OmicsDI record {acc} in {body!r:.200}")
 
 
 def _str_list(additional: dict, keys: tuple[str, ...]) -> list[str]:
-    """First present key whose value is a non-empty list of strings, deduped in
-    order. Skips empty/whitespace entries; never crosses repos to merge keys."""
+    """The first key whose list has a non-blank string, stripped and deduped in order.
+    Never crosses repos to merge keys."""
     for key in keys:
-        raw = additional.get(key)
-        if isinstance(raw, list):
-            seen: dict[str, None] = {}
-            for v in raw:
-                if isinstance(v, str) and v.strip():
-                    seen.setdefault(v.strip(), None)
-            if seen:
-                return list(seen)
+        seen = dict.fromkeys(v.strip() for v in additional.get(key) or [] if v.strip())
+        if seen:
+            return list(seen)
     return []
 
 
-def _pub_ids(additional: dict) -> tuple[str | None, str | None]:
-    """Best-effort (pmid, doi) from the free-text `additional.publication` strings.
-    pmid = a leading all-digit token (PRIDE convention); doi = first `10.x/...` match
-    anywhere (trailing punctuation trimmed). Either may be None."""
-    pmid = doi = None
-    for entry in additional.get("publication") or []:
-        if not isinstance(entry, str):
-            continue
-        if pmid is None:
-            head = entry.split(None, 1)[0] if entry.split() else ""
-            if head.isdigit():
-                pmid = head
-        if doi is None:
-            m = _DOI_RE.search(entry)
-            if m:
-                doi = m.group(1)
-    return pmid, doi
+def _publications(entries: list[str]) -> tuple[str | None, list[str]]:
+    """The first PMID (a leading all-digit token, or a ``PMID:`` label) and every
+    distinct paper DOI in the free-text ``additional.publication`` strings."""
+    pmid = None
+    dois: dict[str, None] = {}
+    for entry in entries:
+        m = _LEADING_PMID_RE.match(entry) or _PMID_LABEL_RE.search(entry)
+        if pmid is None and m:
+            pmid = m.group(1)
+        for found in _DOI_RE.findall(entry):
+            dois.setdefault(found.rstrip(_DOI_TRAILING))
+    return pmid, list(dois)
+
+
+def _own_doi(additional: dict) -> str | None:
+    """The dataset's own DOI (PRIDE lists it under ``additional.doi``), never a paper's."""
+    return next((v for v in additional.get("doi") or [] if _DOI_RE.fullmatch(v)), None)
 
 
 def _normalize(d: dict) -> DataResource:
-    source, acc = d.get("source", ""), d.get("id", "")
+    source, acc = d["source"], d["id"]
     return DataResource(
         id=f"omicsdi:{source}:{acc}",
         source="omicsdi",
@@ -98,7 +147,25 @@ def _normalize(d: dict) -> DataResource:
         title=d.get("title") or "",
         description=d.get("description"),
         links=[Link(rel="landing_page", target_id=_LANDING.format(source=source, acc=acc))],
-        files=[],
+    )
+
+
+def _record(resource_id: str, source: str, acc: str, body: dict) -> DataResource:
+    additional = body.get("additional") or {}
+    pmid, paper_dois = _publications(additional.get("publication") or [])
+    links = [Link(rel="landing_page", target_id=_LANDING.format(source=source, acc=acc))]
+    links += [Link(rel="described_in", target_id=doi) for doi in paper_dois]
+    return DataResource(
+        id=resource_id,
+        source="omicsdi",
+        kind="study",
+        title=body.get("name") or "",
+        description=body.get("description"),
+        creators=[Creator(name=n) for n in _str_list(additional, _CREATOR_KEYS)],
+        organism=_str_list(additional, _ORGANISM_KEYS),
+        doi=_own_doi(additional),
+        identifiers={"pmid": pmid} if pmid else {},
+        links=links,
     )
 
 
@@ -109,53 +176,38 @@ async def search(
         return 0, []
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         SEARCH,
         service="OmicsDI search",
         params={"query": query, "size": min(size, MAX_SIZE)},
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
+        headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         expect=dict,
+        check=_check_search,
     )
-    datasets = (body or {}).get("datasets") or []
-    kept = [d for d in datasets if d.get("source") in _MODALITY_REPOS]
+    kept = [d for d in body["datasets"] if d["source"] in _MODALITY_REPOS]
     return len(kept), [compact(_normalize(d)) for d in kept]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
-    parts = resource_id.split(":", 2)  # omicsdi:<source>:<acc>
-    if len(parts) != 3:
+    parts = resource_id.split(":")  # omicsdi:<source>:<acc>
+    if len(parts) != 3 or not all(_ID_PART_RE.fullmatch(p) for p in parts[1:]):
         raise NotFoundError(f"malformed OmicsDI id {resource_id!r}")
     _prefix, source, acc = parts
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         RECORD.format(source=source, acc=acc),
         service="OmicsDI resolve",
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
+        headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         not_found_returns=None,
         expect=dict,
+        check=lambda b: _check_record(b, acc),
     )
     if body is None:
         raise NotFoundError(f"OmicsDI has no {source}/{acc}")
-    additional = body.get("additional") or {}
-    pmid, doi = _pub_ids(additional)
-    resource = DataResource(
-        id=resource_id,
-        source="omicsdi",
-        kind="study",
-        title=body.get("name") or "",
-        description=body.get("description"),
-        creators=[Creator(name=n) for n in _str_list(additional, _CREATOR_KEYS)],
-        organism=_str_list(additional, _ORGANISM_KEYS),
-        doi=doi,
-        identifiers={"pmid": pmid} if pmid else {},
-        links=[Link(rel="landing_page", target_id=_LANDING.format(source=source, acc=acc))],
-        files=[],
-    )
+    resource = _record(resource_id, source, acc, body)
     if source == "pride":
         file_list = await pride.files(client, acc)
     elif source == "metabolights_dataset":
