@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A Hugging Face search or resolve no longer fails on a dataset whose card lists its
+  licences instead of naming one. A card with `license: []` (for example
+  `priyank-m/SROIE_2019_text_recognition`) made the whole search return no Hugging Face
+  results, and the dataset could not be resolved. The first listed licence is used,
+  or none.
+- A malformed Hugging Face answer (a dataset without an id, or a field of the wrong
+  type) is reported as a malformed answer instead of escaping as a bare error or
+  becoming a record with the id `hf:`.
+
 ## [0.54.14] - 2026-10-02
 
 ### Fixed
