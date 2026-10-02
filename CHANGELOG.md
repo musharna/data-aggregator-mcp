@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- DataCite creators named only by their given and family names keep their names
+  ("Kluth, Yannick"). Over 90,000 DataCite records list creators that way, and they
+  came back as nameless authors.
+- A DataCite record's description is its abstract and its title is its main title
+  when the record lists other kinds first (a contact block, a journal series line, an
+  alternative title).
+- A DataCite answer missing its record, record list or total is reported as a
+  malformed answer instead of "no such DOI" or zero hits, and a wrong-typed field no
+  longer escapes as a bare error.
+
 ## [0.54.11] - 2026-10-01
 
 ### Fixed
