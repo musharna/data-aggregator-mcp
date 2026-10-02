@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.54.14] - 2026-10-02
+
 ### Fixed
 
 - A search asking for more than 25 results returns Zenodo's results again. Zenodo
