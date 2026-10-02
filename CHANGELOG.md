@@ -8,6 +8,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A HuggingFace datasets-server answer missing its file list is reported as a
+  malformed answer instead of "no converted files", a converted file with a missing
+  or wrong-typed field fails the answer instead of being dropped in silence, and a
+  wrong-typed field no longer escapes as a bare error.
 - A HuggingFace split that the dataset viewer converted only in part (its first 5 GB)
   is listed as `<config>/partial-<split>/…` instead of `<config>/<split>/…`, so a
   query on it no longer passes for one over the whole split (825 of allenai/c4's
