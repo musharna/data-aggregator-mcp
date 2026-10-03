@@ -8,6 +8,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- An `organism=` or `disease=` search whose NCBI Taxonomy or MeSH lookup comes back
+  malformed (an error envelope, or a record without its id, name or entry terms) reports
+  the failure in `errors` and runs the query un-expanded. Before, the lookup was read as
+  "no match" and remembered for an hour, so the same name kept running un-expanded
+  after NCBI recovered. A MeSH record whose entry terms came back as one string no
+  longer turns the query into one-letter terms.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
