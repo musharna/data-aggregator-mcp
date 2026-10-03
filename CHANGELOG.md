@@ -34,6 +34,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - An OmicsDI answer missing its result list is reported as a malformed answer instead
   of zero hits, and a wrong-typed field, or a record for a different accession, no
   longer escapes as a bare error or comes back as the wrong record.
+- A malformed PRIDE file listing (for an `omicsdi:pride:` dataset) is reported as a
+  malformed answer. A file entry of the wrong shape escaped as a bare error, an entry
+  without a name was listed as a file named "", and a file count of `true` was read
+  as one file.
 - A Hugging Face search or resolve no longer fails on a dataset whose card lists its
   licences instead of naming one. A card with `license: []` (for example
   `priyank-m/SROIE_2019_text_recognition`) made the whole search return no Hugging Face
