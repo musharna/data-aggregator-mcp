@@ -72,6 +72,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   nothing. The MCP specification treats that declaration as form support, and it was
   the only way to declare elicitation before protocol version 2025-11-25, but the
   server read it as no support, so the search ran without the filter and never asked.
+- `search(collapse_mirrors=true)` compares the first author's whole name. It
+  compared only the last word, which for a "Family, Given" name (most DataCite and
+  Zenodo records) is the given name, so distinct datasets with the same generic title
+  and year were folded together when their first authors shared a given name, and a
+  copy whose author was written "Given Family" in one repository and "Family, Given"
+  in another was not folded.
+- `search(collapse_mirrors=true)` keeps the earliest of the best-ranked copies as the
+  survivor and lists the folded copies in result order. When copies were linked only
+  through a chain of shared file checksums, a later copy could be kept instead.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.

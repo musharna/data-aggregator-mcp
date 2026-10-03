@@ -169,7 +169,7 @@ TOOLS: list[types.Tool] = [
                         "mirror of a figshare deposit, GEO<->ArrayExpress — into one record, "
                         "annotating the survivor with the folded copies under mirrors[]. "
                         "Conservative: a merge needs a shared file checksum OR identical "
-                        "(normalized-title, first-author-surname, year); title-only or partial "
+                        "(normalized-title, first-author name, year); title-only or partial "
                         "matches never merge. Intra-page / best-effort only (a mirror on a "
                         "different page is not collapsed), so a page may return fewer than size "
                         "items; pagination is unaffected."
