@@ -320,6 +320,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   carries no DOI of its own no longer has its files attached to the DOI that was
   asked for, since nothing shows it is the same article. An embargoed article still
   comes back with no files.
+- Resolving a Dryad DOI that Dryad's API does not hold returns the DataCite record
+  with no file list instead of saying the DOI does not exist. More than half of the
+  Dryad DOIs DataCite lists (95,914 of 170,511) are single files from Dryad's old
+  repository, such as `10.5061/dryad.50kt0/1`, and none of them could be resolved; the
+  record links to the dataset it is part of, which lists its files.
+- A Dryad answer missing its version link, file list or file count is reported as a
+  malformed answer instead of an empty or shortened file list, a wrong-typed file field
+  no longer escapes as a bare error or turns into a wrong size or checksum, and a
+  pagination link that is not a path on datadryad.org is refused instead of being
+  requested from another host.
 
 ## [0.54.14] - 2026-10-02
 
