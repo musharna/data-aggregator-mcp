@@ -127,6 +127,25 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   high to low. Asked for "arabidopsis root datasets between 2018 and 2016", llama3.1
   answered `year_min` 2018 and `year_max` 2016, and the search returned no results and
   no error; the years are now applied as 2016 to 2018.
+- Resolving a renamed HuggingFace dataset by its old name (`hf:imdb`, now
+  stanfordnlp/imdb) lists its converted Parquet files. The datasets-server lookup used
+  the old name, which it answers with "not found", so the dataset looked unconvertible
+  and could not be queried with `operate`.
+- A HuggingFace datasets-server answer missing its file list is reported as a
+  malformed answer instead of "no converted files", a converted file with a missing
+  or wrong-typed field fails the answer instead of being dropped in silence, and a
+  wrong-typed field no longer escapes as a bare error.
+- A HuggingFace split that the dataset viewer converted only in part (its first 5 GB)
+  is listed as `<config>/partial-<split>/…` instead of `<config>/<split>/…`, so a
+  query on it no longer passes for one over the whole split (825 of allenai/c4's
+  1,006 converted files). The files of a split converted in several parts
+  (`<split>-part0`, `-part1`, …) now have distinct names; they shared one, and only
+  the first could be picked with `file=`.
+- Resolving a gated HuggingFace dataset, a dataset built by a loading script, or one
+  whose converted file list is too large to list no longer reports a failed
+  datasets-server lookup. The dataset viewer answers these with HTTP 401 or 501, which
+  was reported as an outage, so the record carried an error and was never cached; it
+  now resolves with its repository files, like any dataset without a converted view.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
