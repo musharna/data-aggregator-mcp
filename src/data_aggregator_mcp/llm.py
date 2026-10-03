@@ -92,11 +92,16 @@ def _parse_object(content: object) -> dict[str, Any] | None:
         parsed = json.loads(content)
     # RecursionError: deeply nested JSON exhausts the parser's stack.
     except (ValueError, RecursionError):
-        parsed = None
+        _not_an_object(content)
+        return None
     if not isinstance(parsed, dict):
-        logger.warning(_SKIPPED, f"the message content is not a JSON object: {content!r:.200}")
+        _not_an_object(content)
         return None
     return parsed
+
+
+def _not_an_object(content: str) -> None:
+    logger.warning(_SKIPPED, f"the message content is not a JSON object: {content!r:.200}")
 
 
 async def complete_json(
