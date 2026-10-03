@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.55.2] - 2026-10-03
+
 ### Fixed
 
 - Resolving an embargoed or confidential Figshare record, directly or through its
