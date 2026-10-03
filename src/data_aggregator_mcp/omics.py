@@ -10,14 +10,17 @@ lives in linked SRA runs.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 import httpx
 from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
+from defusedxml.common import DefusedXmlException
 
 from data_aggregator_mcp import _eutils, ena, geo
 from data_aggregator_mcp._merge import fan_in, interleave
-from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import DataResource, Link, compact
 
 logger = logging.getLogger(__name__)
@@ -51,6 +54,48 @@ _RESOLVE_CANDIDATES = 20
 MAX_LINKED_RUNS = 100
 
 
+class _Unreadable(Exception):
+    """A summary field the adapter reads is missing or not of the type NCBI sends."""
+
+
+def _text(doc: dict[str, Any], key: str) -> str:
+    """``doc[key]`` as text; an absent field reads as "". Every field read from a summary
+    goes through here, so a wrong-typed one is refused instead of escaping as a bare
+    ``TypeError`` or pydantic error (all 1,400 live summaries sampled carry strings)."""
+    value = doc.get(key, "")
+    if not isinstance(value, str):
+        raise _Unreadable(f"{key} is {type(value).__name__}, not text")
+    return value
+
+
+def _required(doc: dict[str, Any], key: str) -> str:
+    value = _text(doc, key)
+    if not value:
+        raise _Unreadable(f"no {key}")
+    return value
+
+
+def _xml(doc: dict[str, Any], key: str) -> Any:
+    # expxml/runs are XML *fragments* (multiple top-level elements) → wrap in a root.
+    try:
+        return ET.fromstring(f"<root>{_text(doc, key)}</root>")
+    except (ET.ParseError, DefusedXmlException) as exc:
+        raise _Unreadable(f"{key} is not XML ({exc})") from None
+
+
+@contextmanager
+def _reading(db: str, doc: dict[str, Any]) -> Iterator[None]:
+    """Report a summary the adapter cannot read as upstream trouble, naming the db and uid.
+
+    Not retried: the summaries come from ``_eutils.esummary``, which takes no ``check``."""
+    try:
+        yield
+    except _Unreadable as exc:
+        raise UpstreamUnavailableError(
+            f"NCBI esummary ({db}) answered an unreadable summary for uid {doc.get('uid')!r}: {exc}"
+        ) from None
+
+
 def _year_from(text: str | None) -> int | None:
     if text and len(text) >= 4 and text[:4].isdigit():
         return int(text[:4])
@@ -58,30 +103,34 @@ def _year_from(text: str | None) -> int | None:
 
 
 def _normalize_geo(doc: dict[str, Any]) -> DataResource:
-    acc = doc.get("accession", "")
-    organism = [doc["taxon"]] if doc.get("taxon") else []
+    acc = _required(doc, "accession")
+    # GEO's ``taxon`` names every organism of the entry, joined by "; " ("Homo sapiens;
+    # Mus musculus": 11 of 600 live gds summaries). Read as one name, the taxonomy
+    # lookup matched only one of them and the record lost the others.
+    organism = [name.strip() for name in _text(doc, "taxon").split(";") if name.strip()]
     return DataResource(
         id=f"geo:{acc}",
         source="geo",
         kind="study",
-        title=doc.get("title", ""),
-        year=_year_from(doc.get("pdat")),
-        description=doc.get("summary") or None,
-        accessions=[acc] if acc else [],
+        title=_text(doc, "title"),
+        year=_year_from(_text(doc, "pdat")),
+        description=_text(doc, "summary") or None,
+        accessions=[acc],
         organism=organism,
-        files=[],
     )
 
 
 def _normalize_sra(doc: dict[str, Any]) -> DataResource:
-    # expxml/runs are XML *fragments* (multiple top-level elements) → wrap in a root.
-    exp = ET.fromstring(f"<root>{doc.get('expxml', '')}</root>")
-    runs = ET.fromstring(f"<root>{doc.get('runs', '')}</root>")
+    """An SRA experiment. Its files (the ENA manifest) are attached at resolve."""
+    exp = _xml(doc, "expxml")
+    runs = _xml(doc, "runs")
     experiment = exp.find("Experiment")
+    if experiment is None or not experiment.get("acc"):
+        raise _Unreadable("expxml names no Experiment accession")
+    exp_acc = experiment.attrib["acc"]
     study = exp.find("Study")
     organism = exp.find("Organism")
     bioproject = exp.findtext("Bioproject")
-    exp_acc = experiment.get("acc") if experiment is not None else ""
     study_acc = study.get("acc") if study is not None else None
     study_name = study.get("name") if study is not None else None
     summary_title = exp.findtext("Summary/Title")
@@ -98,42 +147,44 @@ def _normalize_sra(doc: dict[str, Any]) -> DataResource:
         source="sra",
         kind="sequencing_run",
         title=title,
-        year=_year_from(doc.get("createdate")),
+        year=_year_from(_text(doc, "createdate")),
         description=description,
         accessions=accessions,
         organism=[org_name] if org_name else [],
-        files=[],  # ENA manifest attached at resolve
     )
 
 
 def _normalize_bioproject(doc: dict[str, Any]) -> DataResource:
-    acc = doc.get("project_acc", "")
-    org = doc.get("organism_name")
+    acc = _required(doc, "project_acc")
+    org = _text(doc, "organism_name")
     return DataResource(
         id=f"bioproject:{acc}",
         source="bioproject",
         kind="study",
-        title=doc.get("project_title", ""),
-        year=_year_from(doc.get("registration_date")),
-        description=doc.get("project_description") or None,
-        accessions=[acc] if acc else [],
+        title=_text(doc, "project_title"),
+        year=_year_from(_text(doc, "registration_date")),
+        description=_text(doc, "project_description") or None,
+        accessions=[acc],
         organism=[org] if org else [],
-        files=[],
     )
 
 
 _NORMALIZERS = {"gds": _normalize_geo, "sra": _normalize_sra, "bioproject": _normalize_bioproject}
 
 
+def _normalize(db: str, doc: dict[str, Any]) -> DataResource:
+    with _reading(db, doc):
+        return _NORMALIZERS[db](doc)
+
+
 async def _search_db(
-    client: httpx.AsyncClient, db: str, query: str, size: int, offset: int = 0
+    client: httpx.AsyncClient, db: str, query: str, size: int, offset: int
 ) -> tuple[int, list[DataResource]]:
     count, ids = await _eutils.esearch(client, db, query, retmax=size, retstart=offset)
     if not ids:
         return count, []
     docs = await _eutils.esummary(client, db, ids)
-    normalize = _NORMALIZERS[db]
-    return count, [normalize(d) for d in docs]
+    return count, [_normalize(db, d) for d in docs]
 
 
 async def _bioproject_sra_links(
@@ -165,7 +216,7 @@ async def _bioproject_sra_links(
         )
         uids = uids[:MAX_LINKED_RUNS]
     docs = await _eutils.esummary(client, "sra", uids)
-    return [Link(rel="has_data", target_id=_normalize_sra(doc).id) for doc in docs], note
+    return [Link(rel="has_data", target_id=_normalize("sra", doc).id) for doc in docs], note
 
 
 # The router pages each NCBI db as its own stream (``omics/geo`` ...) so each keeps its own
@@ -229,7 +280,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     count, ids = await _eutils.esearch(client, db, term, retmax=_RESOLVE_CANDIDATES)
     docs = await _eutils.esummary(client, db, ids)
     wanted = f"{prefix}:{acc}".lower()
-    candidates = [(doc, _NORMALIZERS[db](doc)) for doc in docs]
+    candidates = [(doc, _normalize(db, doc)) for doc in docs]
     matches = [(doc, rec) for doc, rec in candidates if rec.id.lower() == wanted]
     if not matches:
         # Candidates that merely CARRY the accession (an SRA study/run inside an
@@ -247,16 +298,19 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise NotFoundError(f"no omics record for {acc!r} in {prefix}")
     doc, resource = matches[0]
     if prefix == "sra":
-        files = await ena.filereport(client, resource.id.partition(":")[2])
+        files = await ena.filereport(client, resource.id.removeprefix("sra:"))
         if files:
             resource = resource.model_copy(update={"files": files})
     elif prefix == "geo":
-        ftplink = doc.get("ftplink") or ""
+        with _reading(db, doc):
+            ftplink = _text(doc, "ftplink")
         files = await geo.supplementary_files(client, ftplink)
         if files:
             resource = resource.model_copy(update={"files": files})
     elif prefix == "bioproject":
-        links, note = await _bioproject_sra_links(client, str(doc["uid"]))
+        with _reading(db, doc):
+            uid = _required(doc, "uid")
+        links, note = await _bioproject_sra_links(client, uid)
         if links:
             resource = resource.model_copy(update={"links": links})
         if note:

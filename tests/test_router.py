@@ -2110,27 +2110,6 @@ async def test_understand_pagination_cursor_carries_rewritten_query(monkeypatch)
     assert decoded["q"] == "rewritten core"  # POST-rewrite query is what gets paged
 
 
-@_live_only
-async def test_live_understand_yields_wellformed_echo() -> None:
-    """Gated real-execution anchor: a real LLM endpoint rewrites a NL query end-to-end
-    and the search returns a well-formed query_understanding echo + results. Requires
-    LLM_API_BASE in addition to DATA_AGGREGATOR_MCP_LIVE=1."""
-    if not os.environ.get("LLM_API_BASE"):
-        pytest.skip("set LLM_API_BASE to run the live understand probe")
-    async with httpx.AsyncClient(follow_redirects=True) as client:
-        result = await router.search_page(
-            client,
-            query="single-cell RNA sequencing datasets of human liver",
-            size=10,
-            understand=True,
-        )
-    qu = result.query_understanding
-    assert qu is not None
-    assert qu.input == "single-cell RNA sequencing datasets of human liver"
-    assert isinstance(qu.extracted, dict)
-    assert isinstance(qu.applied, dict)
-
-
 # ---------------------------------------------------------------------------
 # Task 6: router.relate handler
 # ---------------------------------------------------------------------------

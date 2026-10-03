@@ -653,9 +653,22 @@ def _dataverse_item(doi: str, client_id: str, url: str | None) -> dict:
 
 _DV_FILES = {
     "data": {
+        "id": 6,
         "latestVersion": {
-            "files": [{"dataFile": {"id": 7, "filename": "a.csv", "filesize": 1, "md5": "m"}}]
-        }
+            "files": [
+                {
+                    "label": "a.csv",
+                    "restricted": False,
+                    "dataFile": {
+                        "id": 7,
+                        "filename": "a.csv",
+                        "filesize": 1,
+                        "md5": "m",
+                        "checksum": {"type": "MD5", "value": "m"},
+                    },
+                }
+            ]
+        },
     }
 }
 
