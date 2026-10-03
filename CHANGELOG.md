@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.55.1] - 2026-10-03
+
 ### Fixed
 
 - Query understanding and semantic re-rank work with a local model server again. The
