@@ -67,6 +67,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A GBIF answer missing its result list or count is reported as a malformed answer
   instead of zero hits, and a wrong-typed field no longer escapes as a bare error or
   turns a keyword string into one-letter subjects.
+- `operate` SQL accepts a `;` inside a string (`WHERE go = 'GO:1;GO:2'`), a query that
+  ends in a `--` comment, and DuckDB's other query forms (`FROM data WHERE ...`, a
+  leading comment). It still refuses anything that is not a single query.
+- `operate` SQL always returns at most its row cap. A query ending in `) --` used to
+  switch the cap off, so the server read every row of the result into memory.
+- `operate` `peek` profiles a file that has a header and no rows. It used to fail with
+  a Python error; the null percentage is now empty for such a file.
+- An `operate` `sql`, `head` or `peek` that runs past the wall-clock limit is stopped.
+  The limit used to report the timeout while the query kept running in the server to
+  its end, using its CPU and memory. Limitation: a source file still downloading when
+  the limit is reached finishes downloading before the work stops; stopping a download
+  part-way would need a separate process.
 
 ## [0.54.14] - 2026-10-02
 
