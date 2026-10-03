@@ -72,10 +72,33 @@ def test_the_detector_sees_an_escape():
     assert _escaped(httpx.URL("https://api.example/records", params={"id": _CRAFTED})) == []
 
 
+def _crafted_ids(prefix: str) -> list[str]:
+    """The crafted id alone, and in each slot of a multi-part well-formed id: a crafted
+    id with the wrong number of parts is refused before any slot is read, so
+    `omicsdi:<crafted>` never reached the accession that goes into the path (#88)."""
+    parts = WELL_FORMED.get(prefix, "x1").split(":")
+    slotted = [[*parts[:i], _CRAFTED, *parts[i + 1 :]] for i in range(len(parts))]
+    return [f"{prefix}:{_CRAFTED}"] + [f"{prefix}:{':'.join(p)}" for p in slotted if len(p) > 1]
+
+
+def test_a_two_part_id_is_crafted_in_each_slot():
+    assert _crafted_ids("omicsdi") == [
+        f"omicsdi:{_CRAFTED}",
+        f"omicsdi:{_CRAFTED}:PXD000001",
+        f"omicsdi:pride:{_CRAFTED}",
+    ]
+    assert _crafted_ids("zenodo") == [f"zenodo:{_CRAFTED}"]
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("name", "prefix"), _CASES)
 async def test_a_crafted_resolve_id_cannot_change_the_endpoint(name: str, prefix: str):
-    escaped = [how for url in await _resolve(name, f"{prefix}:{_CRAFTED}") for how in _escaped(url)]
+    escaped = [
+        how
+        for rid in _crafted_ids(prefix)
+        for url in await _resolve(name, rid)
+        for how in _escaped(url)
+    ]
     assert escaped == []
     # positive control: a well-formed id still reaches the network
     assert await _resolve(name, f"{prefix}:{WELL_FORMED.get(prefix, 'x1')}") != []
