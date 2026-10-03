@@ -186,6 +186,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `reads.fastq.gz` as a recognised format, and no longer credits provenance to every
   record that has creators: it needs funding, a modified date or related records, as
   its gap says. A record with no licence is no longer told its licence is "free text".
+- Resolving a PubMed id that is not a number says the record is not found, before
+  any request. NCBI reads its id parameter as a list, so `pubmed:34320281,1` came back
+  as PMID 34320281 carrying PMID 1's data links and both papers' abstracts, and
+  `pubmed:abc` was reported as an NCBI outage.
+- A paper that links to more than 100 SRA, GEO or BioProject records resolves, with
+  the first 100 of each and a note in `truncated["links"]`. PMID 42544407 links to
+  7,498 SRA records, and resolving it failed with a bare `InvalidURL` error, because
+  every linked record was asked for in one request (NCBI accepts at most 500).
+- Paging a PubMed search past its 9,999th record says that PubMed stops there,
+  instead of reporting an NCBI outage on every later page. PubMed's search API serves
+  only the first 9,999 records of a query.
+- A PubMed summary with a wrong-typed field, or without a PMID or title, is reported
+  as a malformed answer instead of escaping as a bare error or coming back as
+  `pubmed:`.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
