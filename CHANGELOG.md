@@ -13,6 +13,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   RO-Crate 1.1 does not allow (the RO-Crate validator rejected every such crate), and
   the author's ORCID was left out. Each author is now its own `Person` entry,
   identified by its ORCID when the record has one; `author` lists them by id.
+- The provenance crate of `search(provenance=true)` lists only data sources under
+  `sources_queried`. It also listed every note in the search's `errors` (`semantic`,
+  `filters`, `query_syntax`, a failed ontology lookup such as `taxonomy`) as a source,
+  and named a failed sub-database or multi-query stream by its internal key
+  (`omics/sra`, `zenodo#v1`) instead of as its records do (`sra`, `zenodo`). The notes
+  are still disclosed verbatim under `errors`.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
