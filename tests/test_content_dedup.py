@@ -68,35 +68,39 @@ def test_normalize_title(raw: str, expected: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# _first_author_surname
+# _first_author_name_key
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
     "names,expected",
     [
-        (["Ada Lovelace"], "lovelace"),
-        (["Ada Lovelace", "Charles Babbage"], "lovelace"),  # first author only
+        (["Ada Lovelace"], "ada lovelace"),
+        (["Lovelace, Ada"], "ada lovelace"),  # DataCite/Zenodo "Family, Given"
+        (["Ada Lovelace", "Charles Babbage"], "ada lovelace"),  # first author only
         (["Cher"], "cher"),  # single-name author
-        (["  Grace   Hopper  "], "hopper"),
-        (["MARIE CURIE"], "curie"),
-        (["van der Berg"], "berg"),  # last token
+        (["  Grace   Hopper  "], "grace hopper"),
+        (["MARIE CURIE"], "curie marie"),
+        (["van der Berg"], "berg der van"),  # every word, not the last one
+        (["Batlle-Roca, Roser"], "batlle roca roser"),
     ],
 )
-def test_first_author_surname(names: list[str], expected: str) -> None:
+def test_first_author_name_key(names: list[str], expected: str) -> None:
     r = _res("zenodo:1", "zenodo", creators=names)
-    assert router._first_author_surname(r) == expected
+    assert router._first_author_name_key(r) == expected
 
 
-def test_first_author_surname_no_creators_is_none() -> None:
+def test_first_author_name_key_no_creators_is_none() -> None:
     r = DataResource(id="zenodo:1", source="zenodo", kind="dataset", title="t")
     assert r.creators == []
-    assert router._first_author_surname(r) is None
+    assert router._first_author_name_key(r) is None
 
 
-def test_first_author_surname_blank_name_is_none() -> None:
-    r = _res("zenodo:1", "zenodo", creators=["   "])
-    assert router._first_author_surname(r) is None
+@pytest.mark.parametrize("blank", ["   ", ", ", "-"])
+def test_first_author_name_key_name_without_words_is_none(blank: str) -> None:
+    r = _res("zenodo:1", "zenodo", creators=[blank])
+    assert router._first_author_name_key(r) is None
+    assert router._first_author_name_key(_res("zenodo:1", "zenodo", creators=["X"])) == "x"
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +110,7 @@ def test_first_author_surname_blank_name_is_none() -> None:
 
 def test_fingerprint_key_all_present() -> None:
     r = _res("zenodo:1", "zenodo", title="A Study!", creators=["Ada Lovelace"], year=2020)
-    assert router._fingerprint_key(r) == ("a study", "lovelace", 2020)
+    assert router._fingerprint_key(r) == ("a study", "ada lovelace", 2020)
 
 
 def test_fingerprint_key_none_when_year_missing() -> None:

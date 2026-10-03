@@ -1,0 +1,65 @@
+{
+ "response": {
+  "docs": [
+   {
+    "synonym": [
+     "portion of skin",
+     "region of skin",
+     "skin region",
+     "skin zone",
+     "skin"
+    ],
+    "label": "zone of skin",
+    "is_defining_ontology": true,
+    "obo_id": "UBERON:0000014"
+   },
+   {
+    "synonym": [
+     "entire integument",
+     "entire skin",
+     "integument",
+     "integumental organ",
+     "pelt",
+     "skin organ",
+     "skin"
+    ],
+    "label": "skin of body",
+    "is_defining_ontology": true,
+    "obo_id": "UBERON:0002097"
+   },
+   {
+    "synonym": [
+     "epidermis",
+     "skin",
+     "vertebrate epidermis"
+    ],
+    "label": "skin epidermis",
+    "is_defining_ontology": true,
+    "obo_id": "UBERON:0001003"
+   },
+   {
+    "synonym": [
+     "dermis plus epidermis plus hypodermis",
+     "skin and subcutaneous tissue",
+     "skin plus hypodermis",
+     "skin",
+     "vertebrate integument",
+     "dermal system",
+     "dermoid system",
+     "integumentum commune",
+     "tegument",
+     "the integument"
+    ],
+    "label": "integument",
+    "is_defining_ontology": true,
+    "obo_id": "UBERON:0002199"
+   }
+  ],
+  "numFound": 4,
+  "start": 0
+ },
+ "responseHeader": {
+  "QTime": 0,
+  "status": 0
+ }
+}

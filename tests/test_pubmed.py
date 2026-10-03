@@ -289,7 +289,7 @@ async def test_live_resolve_pubmed_has_abstract() -> None:
 async def test_resolve_attaches_oa_fulltext(httpx_mock, monkeypatch) -> None:
     # Avoid real network for elink: stub the data-link discovery to empty.
     async def _no_links(client, pmid):
-        return []
+        return [], None
 
     monkeypatch.setattr("data_aggregator_mcp.pubmed._links_via_elink", _no_links)
     # esummary for the PMID (carries the pmc/doi articleids).
@@ -405,7 +405,7 @@ async def test_resolve_records_failed_abstract_and_fulltext_lookups_and_is_not_c
         return None
 
     async def _no_links(client, pmid):
-        return []
+        return [], None
 
     monkeypatch.setattr(_http.asyncio, "sleep", _no_sleep)
     monkeypatch.setattr("data_aggregator_mcp.pubmed._links_via_elink", _no_links)
