@@ -81,6 +81,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `search(collapse_mirrors=true)` keeps the earliest of the best-ranked copies as the
   survivor and lists the folded copies in result order. When copies were linked only
   through a chain of shared file checksums, a later copy could be kept instead.
+- `rank=semantic` no longer fails the search, or reorders it on numbers that are not
+  similarities, when the embedding endpoint sends a malformed answer. A text or null
+  value in a vector raised an error out of the search, and a NaN, an infinity, a
+  vector of the wrong length or rows out of order were ranked as if they were real;
+  such an answer now leaves the results in relevance order with the usual
+  `errors["semantic"]` note, and the failure is logged on the server.
+- An `EMBEDDING_API_KEY` that is not a valid bearer token (a non-ASCII character, a
+  space or a line break, e.g. from a pasted key) is refused with a log line that
+  does not quote it, and semantic re-rank is skipped; a non-ASCII key used to fail
+  inside the HTTP library.
+- An `EMBEDDING_API_BASE` that is not an http(s) URL with a host (no scheme, another
+  scheme, an unparseable host such as `http://xn--/v1`) is refused before any request,
+  with a log line saying so, and semantic re-rank is skipped. It used to be retried as
+  a network failure or skipped without any message.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
