@@ -17,7 +17,7 @@ def _orcid(value: str | None) -> str | None:
     """
     if not value:
         return None
-    bare = value.rsplit("/", 1)[-1].strip().upper()
+    bare = value.rpartition("/")[2].strip().upper()
     return bare if _ORCID_RE.match(bare) else None
 
 
@@ -446,6 +446,6 @@ def derive_access_modes(files: list[FileEntry], *, operate: bool, fetchable: boo
     if not fetchable or not has_url:
         return []
     modes = ["fetch"]
-    if operate and any((f.name or "").lower().endswith(_TABULAR_EXTS) for f in files if f.url):
+    if operate and any(f.name.lower().endswith(_TABULAR_EXTS) for f in files if f.url):
         modes += ["schema", "preview", "head", "sql"]
     return modes
