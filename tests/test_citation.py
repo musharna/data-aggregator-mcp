@@ -33,7 +33,11 @@ def test_accept_for_known_and_style() -> None:
 
 
 async def test_render_doi_content_negotiation(httpx_mock) -> None:
-    httpx_mock.add_response(url="https://doi.org/10.1038/x", text="  @article{x} ")
+    httpx_mock.add_response(
+        url="https://doi.org/10.1038/x",
+        headers={"content-type": "application/x-bibtex"},
+        text="  @article{x} ",
+    )
     async with httpx.AsyncClient() as client:
         out = await citation.render(client, _DOI_REC, "bibtex")
     assert out == "@article{x}"  # stripped
@@ -104,7 +108,9 @@ async def test_render_percent_encodes_the_doi_path() -> None:
 
     def handler(req: httpx.Request) -> httpx.Response:
         seen.append(req.url)
-        return httpx.Response(200, text="@article{x}")
+        return httpx.Response(
+            200, headers={"content-type": "application/x-bibtex"}, text="@article{x}"
+        )
 
     rec = _DOI_REC.model_copy(update={"doi": sici})
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
