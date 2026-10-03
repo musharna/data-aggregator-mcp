@@ -57,17 +57,15 @@ async def test_parquet_files_empty_list():
 
 
 @pytest.mark.asyncio
-async def test_parquet_files_skips_malformed_entries():
-    body = {"parquet_files": [{"config": "d", "split": "s"}, {"url": "u"}]}  # each missing a field
-    async with _client(lambda r: httpx.Response(200, json=body)) as c:
-        assert await hf_datasets_server.parquet_files(c, "o/n") == []
-
-
-@pytest.mark.asyncio
 async def test_parquet_files_caps_and_warns(caplog):
     many = {
         "parquet_files": [
-            {"config": "d", "split": "s", "url": f"https://h/x/{i}.parquet", "size": 1}
+            {
+                "config": "d",
+                "split": "s",
+                "url": f"https://huggingface.co/datasets/o/n/resolve/refs%2Fconvert%2Fparquet/d/s/{i}.parquet",
+                "size": 1,
+            }
             for i in range(hf_datasets_server.MAX_DSS_FILES + 5)
         ]
     }

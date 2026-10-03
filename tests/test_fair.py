@@ -151,21 +151,22 @@ def test_a1_retrievable_predicate():
     assert "RDA-A1-01M" not in _gap_ids(on)
 
 
-def test_a11_open_protocol_predicate():
+def test_a11_free_protocol_predicate():
+    # A scheme that is not one of the free protocols, and no DOI: gap.
     off = fair.assess(
-        _bare().model_copy(update={"files": [FileEntry(name="d", url="ftp://e.org/d")]})
+        _bare().model_copy(update={"files": [FileEntry(name="d", url="s3://bucket/d")]})
     )
-    assert "RDA-A1.1-01M" in _gap_ids(off)
+    assert "RDA-A1.1-01D" in _gap_ids(off)
     on = fair.assess(_rich())  # https + doi
-    assert "RDA-A1.1-01M" not in _gap_ids(on)
+    assert "RDA-A1.1-01D" not in _gap_ids(on)
 
 
 def test_i1_file_format_predicate():
     off = fair.assess(
         _rich().model_copy(update={"files": [FileEntry(name="d", url="https://e/d")]})
     )
-    assert "RDA-I1-01M" in _gap_ids(off)
-    assert "RDA-I1-01M" not in _gap_ids(fair.assess(_rich()))
+    assert "RDA-I1-01D" in _gap_ids(off)
+    assert "RDA-I1-01D" not in _gap_ids(fair.assess(_rich()))
 
 
 def test_i2_vocab_predicate():
@@ -182,9 +183,7 @@ def test_i3_links_predicate():
 
 
 def test_r12_provenance_predicate():
-    off = fair.assess(
-        _rich().model_copy(update={"funding": [], "last_updated": None, "links": [], "source": ""})
-    )
+    off = fair.assess(_rich().model_copy(update={"funding": [], "last_updated": None, "links": []}))
     assert "RDA-R1.2-01M" in _gap_ids(off)
     assert "RDA-R1.2-01M" not in _gap_ids(fair.assess(_rich()))
 
@@ -194,13 +193,13 @@ def test_r13_community_standard_predicate():
     off = fair.assess(
         _bare().model_copy(update={"files": [FileEntry(name="d.bin", url="https://e/d")]})
     )
-    assert "RDA-R1.3-01M" in _gap_ids(off)
+    assert "RDA-R1.3-01D" in _gap_ids(off)
     on = fair.assess(_bare().model_copy(update={"accessions": ["GSE1"]}))
-    assert "RDA-R1.3-01M" not in _gap_ids(on)
+    assert "RDA-R1.3-01D" not in _gap_ids(on)
     ext = fair.assess(
         _bare().model_copy(update={"files": [FileEntry(name="d.fastq", url="https://e/d")]})
     )
-    assert "RDA-R1.3-01M" not in _gap_ids(ext)
+    assert "RDA-R1.3-01D" not in _gap_ids(ext)
 
 
 # --- R1.1a vs R1.1b are DISTINCT --------------------------------------------
@@ -247,24 +246,27 @@ def test_no_licence_fails_both():
 def test_score_math_exact_constructed_subset():
     """Construct a resource hitting a known weighted subset; assert exact ints.
 
-    Findable indicators (weights): F1=3(E), F2=3(E), F3=2(I), F4=2(I const True).
+    Weights are the priorities in Table 1 of the RDA specification v1.0
+    (Essential=3, Important=2, Useful=1).
+
+    Findable: F1-01D=3(E), F2-01M=3(E), F3-01M=3(E), F4-01M=3(E const True).
     Build a resource passing F3 + F4 only (accession, no doi, sparse metadata):
-      passed weight = 2 (F3) + 2 (F4) = 4; total = 3+3+2+2 = 10
-      findable = round(100 * 4/10) = 40.
+      passed weight = 3 (F3) + 3 (F4) = 6; total = 3+3+3+3 = 12
+      findable = round(100 * 6/12) = 50.
 
-    Accessible: A1=3(E), A1.1=2(I), A2=2(I const True). With a file url:
-      A1 pass(3), A1.1 pass(2) [https], A2 True(2) → passed=7 total=7 → 100.
+    Accessible: A1-01M=2(I), A1.1-01D=2(I), A2-01M=3(E const True). With a file url:
+      A1 pass(2), A1.1 pass(2) [https], A2 True(3) → passed=7 total=7 → 100.
 
-    Interoperable: I1=3(E format), I2=1(U vocab), I3=2(I links). file has no mime,
-      no taxa, subjects present (I2 pass weight 1), no links:
-      passed = 1 (I2); total = 3+1+2 = 6 → round(100*1/6)=17.
+    Interoperable: I1-01D=2(I format), I2-01M=2(I vocab), I3-01M=2(I links). file has
+      no mime, no taxa, subjects present (I2 pass weight 2), no links:
+      passed = 2 (I2); total = 2+2+2 = 6 → round(100*2/6)=33.
 
-    Reusable: R1.1a=3(E), R1.1b=2(I), R1.2=2(I), R1.3=1(U).
-      no licence (R1.1a fail, R1.1b fail), creators absent (R1.2 fail since needs
-      creators), accession present (R1.3 pass):
-      passed = 1 (R1.3); total = 3+2+2+1 = 8 → round(100*1/8)=12.
+    Reusable: R1.1-01M=3(E), R1.1-03M=2(I), R1.2-01M=2(I), R1.3-01D=3(E).
+      no licence (R1.1-01M fail, R1.1-03M fail), creators absent (R1.2 fail since
+      needs creators), accession present (R1.3 pass):
+      passed = 3 (R1.3); total = 3+2+2+3 = 10 → round(100*3/10)=30.
 
-    overall = round(mean(40,100,17,12)) = round(169/4)=round(42.25)=42.
+    overall = round(mean(50,100,33,30)) = round(213/4)=round(53.25)=53.
     """
     r = DataResource(
         id="x:1",
@@ -278,11 +280,11 @@ def test_score_math_exact_constructed_subset():
         files=[FileEntry(name="d", url="https://e.org/d")],  # A1/A1.1 pass, I1 fail
     )
     fa = fair.assess(r)
-    assert fa.findable == 40
+    assert fa.findable == 50
     assert fa.accessible == 100
-    assert fa.interoperable == 17
-    assert fa.reusable == 12
-    assert fa.score == 42
+    assert fa.interoperable == 33
+    assert fa.reusable == 30
+    assert fa.score == 53
 
 
 # --- purity / determinism ---------------------------------------------------
