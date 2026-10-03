@@ -192,7 +192,8 @@ def test_no_advertised_id_example_is_a_placeholder():
     """`list_sources` is the model's discovery surface: an example it cannot resolve sends
     it straight into an error. Three shipped as placeholders (`datacite:10.5061/dryad.x`,
     `cellxgene:col-lung-1`, a literal `openaire:<id>`) — the first indistinguishable from a
-    real DOI. Offline shape guard; the live counterpart actually resolves them."""
+    real DOI. Offline shape guard; the live counterpart
+    (`test_live_every_advertised_id_example_resolves_to_itself`) resolves them."""
     routable = {p for spec in sources.SOURCES for p in spec.prefixes}
     for spec in sources.SOURCES:
         for part in (p.strip() for p in spec.id_example.split("|")):
@@ -283,3 +284,33 @@ async def test_live_boolean_query_declaration_matches_the_upstream(spec) -> None
         f"{spec.name}: boolean_query={spec.boolean_query} but the expansion "
         f"{'kept' if parses else 'lost'} its hits ({total} plain)"
     )
+
+
+_EXAMPLES = [
+    (spec, part.strip()) for spec in sources.SOURCES for part in spec.id_example.split("|")
+]
+
+
+@pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+@pytest.mark.parametrize(("spec", "example"), _EXAMPLES, ids=[e for _, e in _EXAMPLES])
+async def test_live_every_advertised_id_example_resolves_to_itself(spec, example) -> None:
+    """`list_sources` hands each id_example to a model as the id to try first. Each must
+    resolve to a record with that same id, and where the source advertises
+    `fetchable: true` the example must be a record fetch would stream. `zenodo:7654321`
+    shipped for months: a concept id that redirected to `zenodo:7654322`, a restricted
+    "Incorrect upload" with no files, so `fetch` on the advertised example failed."""
+    import httpx
+
+    from data_aggregator_mcp import fetch_gate
+    from data_aggregator_mcp.errors import RateLimitError, UpstreamUnavailableError
+
+    async with httpx.AsyncClient(timeout=90, follow_redirects=True) as client:
+        try:
+            r = await router.resolve(client, example)
+        except (RateLimitError, UpstreamUnavailableError) as e:
+            pytest.skip(f"{spec.name}: upstream unavailable, example not checked: {e}")
+    assert r.id == example, f"{spec.name}: {example!r} resolves to another record, {r.id!r}"
+    prefix = example.split(":", 1)[0]
+    if spec.fetchable is True and prefix in spec.fetchable_prefixes:
+        assert r.files, f"{spec.name}: {example!r} lists no files, yet the source says fetchable"
+        assert fetch_gate.refusal(r) is None, f"{spec.name}: fetch refuses {example!r}"

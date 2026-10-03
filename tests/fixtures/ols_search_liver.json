@@ -1,0 +1,21 @@
+{
+ "response": {
+  "docs": [
+   {
+    "synonym": [
+     "iecur",
+     "jecur"
+    ],
+    "label": "liver",
+    "is_defining_ontology": true,
+    "obo_id": "UBERON:0002107"
+   }
+  ],
+  "numFound": 1,
+  "start": 0
+ },
+ "responseHeader": {
+  "QTime": 0,
+  "status": 0
+ }
+}
