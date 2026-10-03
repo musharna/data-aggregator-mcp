@@ -47,6 +47,7 @@ _NUMBER_TYPES = (int, float)
 # UnicodeEncodeError for a non-ASCII key, and h11's error for a control character
 # quotes the header value, key included.
 _BEARER_TOKEN = re.compile(r"[A-Za-z0-9\-._~+/]+=*")
+_SCHEMES = ("http", "https")
 
 
 def _config() -> tuple[str, str | None, str] | None:
@@ -64,6 +65,19 @@ def is_configured() -> bool:
     """True if an embedding endpoint is configured (``EMBEDDING_API_BASE`` set), so
     ``rank=semantic`` / semantic re-rank can actually run. Pure env read — no network."""
     return _config() is not None
+
+
+def _is_http_url(url: str) -> bool:
+    """Whether httpx can send to ``url``: an http(s) URL with a host. httpx raises
+    ``InvalidURL`` for a URL it cannot parse, and ``idna``'s ``IDNAError`` (a
+    ``ValueError``) for a malformed IDNA host (``xn--``) when it reads the host while
+    building the request; neither is a ``TransportError``, so ``_http`` does not wrap
+    them. A missing scheme or host is one, retried as if the network had failed."""
+    try:
+        parsed = httpx.URL(url)
+        return parsed.scheme in _SCHEMES and bool(parsed.host)
+    except (httpx.InvalidURL, ValueError):
+        return False
 
 
 def _is_vector(v: object) -> bool:
@@ -104,6 +118,10 @@ async def embed(client: httpx.AsyncClient, texts: list[str]) -> list[list[float]
     if cfg is None:
         return None
     base, key, model = cfg
+    url = f"{base}/embeddings"
+    if not _is_http_url(url):
+        logger.warning("semantic re-rank skipped: EMBEDDING_API_BASE is not an http(s) URL")
+        return None
     if key and not _BEARER_TOKEN.fullmatch(key):
         logger.warning("semantic re-rank skipped: EMBEDDING_API_KEY is not a bearer token")
         return None
@@ -115,15 +133,14 @@ async def embed(client: httpx.AsyncClient, texts: list[str]) -> list[list[float]
         body = await _http.request_json(
             client,
             _METHOD,
-            f"{base}/embeddings",
+            url,
             service="embeddings",
             content=payload,
             headers=headers,
             expect=dict,
             check=_checker(len(texts)),
         )
-    # InvalidURL: an EMBEDDING_API_BASE httpx cannot parse (it is not a TransportError).
-    except (DataAggregatorError, httpx.InvalidURL) as exc:
+    except DataAggregatorError as exc:
         logger.warning("semantic re-rank skipped: %s", exc)
         return None
     return [row["embedding"] for row in body["data"]]

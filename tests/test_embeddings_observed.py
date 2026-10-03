@@ -86,16 +86,38 @@ async def test_an_error_status_is_logged_naming_the_service(monkeypatch, caplog)
 
 
 @pytest.mark.asyncio
-async def test_a_base_url_httpx_cannot_parse_skips_the_rerank(monkeypatch, caplog):
+@pytest.mark.parametrize(
+    "base",
+    [
+        "http://xn--/v1",  # a malformed IDNA host: idna raised IDNAError out of the search
+        "http://[::1/v1",  # httpx cannot parse it: InvalidURL
+        "emb.test/v1",  # no scheme
+        "ftp://emb.test/v1",
+        "http:///v1",  # no host
+    ],
+)
+async def test_a_base_that_is_not_an_http_url_skips_the_rerank_before_any_request(
+    base, monkeypatch, caplog
+):
+    rs = [
+        DataResource(id="a", source="zenodo", kind="dataset", title="apple"),
+        DataResource(id="b", source="zenodo", kind="dataset", title="banana"),
+    ]
     sent, client = _recording(_vectors_for)
     async with client:
-        monkeypatch.setenv("EMBEDDING_API_BASE", "http://[::1]:8080/v1")  # positive control
+        # Positive controls: an http URL with an IPv6 host and an https URL are sent.
+        monkeypatch.setenv("EMBEDDING_API_BASE", "http://[::1]:8080/v1")
         assert await embeddings.embed(client, ["a"]) == [[1.0, 0.0]]
-        monkeypatch.setenv("EMBEDDING_API_BASE", "http://[::1/v1")
+        monkeypatch.setenv("EMBEDDING_API_BASE", "https://emb.test/v1")
+        assert await embeddings.embed(client, ["a"]) == [[1.0, 0.0]]
+        monkeypatch.setenv("EMBEDDING_API_BASE", base)
         with caplog.at_level(logging.WARNING, logger="data_aggregator_mcp.embeddings"):
-            assert await embeddings.embed(client, ["a"]) is None
-    assert len(sent) == 1
-    assert caplog.messages == ["semantic re-rank skipped: Invalid port: ':1'"]
+            assert await embeddings.rerank(client, "fruit", rs) == (rs, _REASON)
+    assert [str(r.url) for r in sent] == [
+        "http://[::1]:8080/v1/embeddings",
+        "https://emb.test/v1/embeddings",
+    ]
+    assert caplog.messages == ["semantic re-rank skipped: EMBEDDING_API_BASE is not an http(s) URL"]
 
 
 @pytest.mark.asyncio
