@@ -271,6 +271,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - MetaboLights file names that the mirror's listing escapes (a space, `#`, `%`, `:`
   or a non-ASCII letter) are reported as the file's real name and keep their published
   sha256; they came back escaped (`a%20b.txt`) and unverified.
+- Resolving a Figshare collection DOI (`10.6084/m9.figshare.c.8708104.v1`, and the
+  same `.c.` form on institutional portals) returns the collection's record. The
+  collection number was taken for an article number, Figshare answered "not found",
+  and the whole resolve failed although DataCite holds the DOI.
+- Records from Griffith University's Figshare portal (`10.57831/<number>` DOIs) list
+  their files. The article number comes straight after the slash in those DOIs and
+  was not recognised, so they came back with no files.
+- A Figshare answer missing its file list, or with a wrong-typed field, is reported
+  as a malformed answer instead of "no files" or a bare error. A Figshare article that
+  carries no DOI of its own no longer has its files attached to the DOI that was
+  asked for, since nothing shows it is the same article. An embargoed article still
+  comes back with no files.
 
 ## [0.54.14] - 2026-10-02
 
