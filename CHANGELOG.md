@@ -146,6 +146,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   datasets-server lookup. The dataset viewer answers these with HTTP 401 or 501, which
   was reported as an outage, so the record carried an error and was never cached; it
   now resolves with its repository files, like any dataset without a converted view.
+- `resolve(trust=true)` reports a withdrawn, removed or partly retracted paper as
+  retracted, with the notice as `retraction_doi`. Crossref records these as their own
+  update types (3,397 withdrawals, 702 removals and 2 partial retractions on
+  2026-10-02), and only a notice of type `retraction` was read, so such a paper, or a
+  record built on it, was reported as having no retraction on record. Update types
+  spelled `Retraction` or `expression-of-concern` are read as well.
+- A Crossref answer that holds no work, or whose list of updates cannot be read, now
+  leaves the retraction status unknown. It was reported as "not retracted".
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
