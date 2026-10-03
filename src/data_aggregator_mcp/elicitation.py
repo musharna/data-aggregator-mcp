@@ -80,20 +80,27 @@ _RESOLVERS: dict[str, tuple[Callable[[httpx.AsyncClient, str], Awaitable[Any]], 
 
 
 def supports_form_elicitation(session: Any) -> bool:
-    """True only when the client advertised **form** mode.
+    """True when the client advertised **form** mode, explicitly or by the bare form.
+
+    MCP 2025-11-25 and 2026-07-28 (client/elicitation, "Capabilities"): a client
+    declares ``elicitation: {"form": {}, "url": {}}``, must support at least one mode,
+    and "for backwards compatibility, an empty capabilities object is equivalent to
+    declaring support for ``form`` mode only". In 2025-06-18 the bare
+    ``elicitation: {}`` was the ONLY shape. So form is supported when ``form`` is
+    present, or when the capability is present with neither mode named. A URL-only
+    client is not form-capable: "Servers MUST NOT send elicitation requests with modes
+    that are not supported by the client."
 
     Deliberately not ``session.check_client_capability`` — that helper stops at
-    ``have.elicitation is None`` (mcp 2.2.0 ``server/connection.py::check_capability``,
-    which the docstring there says mirrors v1 verbatim) and never looks at the
-    sub-capability, so it returns True for a URL-only client. The spec
-    treats the two modes as independent and requires only that a client support at
-    least one (``types.py:319``), so a URL-only client is a real shape — and sending it
-    a form request would be a protocol violation we'd have talked ourselves into.
+    ``have.elicitation is None`` (mcp 2.2.0 ``server/connection.py::check_capability``)
+    and never looks at the sub-capability, so it returns True for a URL-only client.
     """
     params = getattr(session, "client_params", None)
     caps = getattr(params, "capabilities", None)
     elicitation = getattr(caps, "elicitation", None)
-    return getattr(elicitation, "form", None) is not None
+    if elicitation is None:
+        return False
+    return elicitation.form is not None or elicitation.url is None
 
 
 async def _resolves(client: httpx.AsyncClient, field: str, value: str) -> bool:
@@ -111,7 +118,11 @@ async def _resolves(client: httpx.AsyncClient, field: str, value: str) -> bool:
         return True
 
 
-def _build_schema(pending: list[tuple[str, str, str]]) -> types.ElicitRequestedSchema:
+# (field, registry label, form hint, the value that matched nothing)
+_Pending = tuple[str, str, str, str]
+
+
+def _build_schema(pending: list[_Pending]) -> types.ElicitRequestedSchema:
     """One form, one top-level string property per unresolved field (the schema subset
     forbids nesting). Every field is optional — leaving one blank means "search without
     that expansion", which must stay a first-class choice, not a dead end."""
@@ -123,13 +134,15 @@ def _build_schema(pending: list[tuple[str, str, str]]) -> types.ElicitRequestedS
                 "title": f"{field} (not found in {ontology})",
                 "description": f"Enter {hint} — or leave blank to search without it.",
             }
-            for field, ontology, hint in pending
+            for field, ontology, hint, _ in pending
         },
     }
 
 
-def _message(pending: list[tuple[str, str, str]]) -> str:
-    parts = [f"{field}={value!r} was not found in {ontology}" for field, ontology, value in pending]
+def _message(pending: list[_Pending]) -> str:
+    parts = [
+        f"{field}={value!r} was not found in {ontology}" for field, ontology, _, value in pending
+    ]
     joined = "; ".join(parts)
     return (
         f"Could not resolve {joined}. "
@@ -159,21 +172,20 @@ async def correct_unresolved(
     if session is None or not supports_form_elicitation(session):
         return {}
 
-    pending: list[tuple[str, str, str]] = []
+    pending: list[_Pending] = []
     for field, (_, ontology, hint) in _RESOLVERS.items():
         value = params.get(field)
         if not value or not value.strip():
             continue
         if await _resolves(client, field, value):
             continue
-        pending.append((field, ontology, hint))
+        pending.append((field, ontology, hint, value))
     if not pending:
         return {}
 
-    prompt_pending = [(f, o, params[f] or "") for f, o, _ in pending]
     try:
         result = await session.elicit_form(
-            _message(prompt_pending),
+            _message(pending),
             _build_schema(pending),
             related_request_id,
         )
@@ -185,7 +197,7 @@ async def correct_unresolved(
         return {}
     content = getattr(result, "content", None) or {}
     corrections: dict[str, str] = {}
-    for field, _, _ in pending:
+    for field, _, _, _ in pending:
         replacement = content.get(field)
         # Blank is a deliberate answer ("proceed without it"), not a correction. Anything
         # non-string is a malformed client response — ignore rather than trust it.
