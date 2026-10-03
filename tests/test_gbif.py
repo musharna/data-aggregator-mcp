@@ -144,13 +144,16 @@ async def test_resolve_attaches_dwca_archive_and_maps_metadata():
     assert r.subjects == ["Occurrence", "Specimen"]
 
 
+_META_KEY = "bbbb2222-0000-0000-0000-000000000000"  # dataset keys are UUIDs
+
+
 @pytest.mark.asyncio
 async def test_resolve_metadata_only_dataset_has_no_files():
-    doc = {"key": "k", "title": "meta only", "endpoints": [{"type": "EML", "url": "u"}]}
+    doc = {"key": _META_KEY, "title": "meta only", "endpoints": [{"type": "EML", "url": "u"}]}
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json=doc))
     ) as c:
-        r = await gbif.resolve(c, "gbif:k")
+        r = await gbif.resolve(c, f"gbif:{_META_KEY}")
     assert r.files == []
 
 
@@ -160,7 +163,7 @@ async def test_resolve_404_raises_not_found():
         transport=httpx.MockTransport(lambda r: httpx.Response(404, text="not found"))
     ) as c:
         with pytest.raises(NotFoundError):
-            await gbif.resolve(c, "gbif:missing")
+            await gbif.resolve(c, f"gbif:{_META_KEY}")
 
 
 # --- pure-function units ------------------------------------------------------
