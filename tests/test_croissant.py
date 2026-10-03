@@ -213,11 +213,11 @@ def test_no_odrl_permission_keys_in_b2_output() -> None:
 
 
 def test_structural_validity_against_croissant_1_1_required_keys() -> None:
-    """Real-execution check: the rendered object carries the keys an official
-    Croissant 1.1 example carries (cross-checked against
-    mlcommons/croissant datasets/1.1/zenodo-head-mri/metadata.json,
-    fetched 2026-06-10). The mlcroissant validator is not installed in this
-    env, so this is the structural fallback the plan specifies."""
+    """The rendered object carries the keys an official Croissant 1.1 example
+    carries (mlcommons/croissant datasets/1.1/zenodo-head-mri/metadata.json).
+    Key presence only: test_croissant_observed.py checks what each term means
+    against that example's context, and the #88 burn-down ran mlcroissant on
+    manifests rendered from live records."""
     m = croissant.render(_resource())
     for key in ("@context", "@type", "conformsTo", "name", "distribution"):
         assert key in m, f"missing required Croissant 1.1 key: {key}"

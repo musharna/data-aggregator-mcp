@@ -18,6 +18,7 @@ from data_aggregator_mcp.models import FileEntry
 ROW_CAP = 1000
 RESULT_BYTE_CAP = 5_000_000
 WALL_TIMEOUT_S = 30.0
+DEFAULT_ROWS = 20  # head/preview rows when the caller names none; the tool spec advertises it
 SOURCE_BYTE_CEILING = (
     100_000_000  # head/sql eager-load the whole file into RAM; refuse larger sources
 )
@@ -40,7 +41,7 @@ OPERATE_MODES = ("schema", "preview", "head", "sql", "peek")
 
 
 def _operable(f: FileEntry) -> bool:
-    return bool(f.url) and (f.name or "").lower().endswith(TABULAR_EXTS)
+    return bool(f.url) and f.name.lower().endswith(TABULAR_EXTS)
 
 
 def _select_file(files: list[FileEntry], requested: str | None) -> FileEntry:
@@ -82,21 +83,13 @@ def _cap_result_bytes(result: dict) -> dict:
     bounds total bytes (1000 wide rows can still be large)."""
     import json
 
-    rows = result.get("rows")
-    if not rows:
-        return result
-    kept: list = []
     total = 0
-    capped = False
-    for r in rows:
-        total += len(json.dumps(r, default=str).encode())
+    for i, row in enumerate(result.get("rows") or ()):
+        total += len(json.dumps(row, default=str).encode())
         if total > RESULT_BYTE_CAP:
-            capped = True
+            result["rows"] = result["rows"][:i]
+            result["truncated"] = True
             break
-        kept.append(r)
-    if capped:
-        result["rows"] = kept
-        result["truncated"] = True
     return result
 
 
@@ -107,7 +100,7 @@ async def run(
     *,
     file: str | None = None,
     query: str | None = None,
-    n: int = 20,
+    n: int = DEFAULT_ROWS,
     columns: list[str] | None = None,
 ) -> dict:
     if not OPERATE_AVAILABLE:
