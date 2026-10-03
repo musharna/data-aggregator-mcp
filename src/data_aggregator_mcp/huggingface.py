@@ -163,6 +163,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     except NotFoundError:
         raise NotFoundError(f"HuggingFace has no dataset {ds_id!r}") from None
     resource = _normalize(body)
+    # The Hub redirects a renamed dataset's old name to it; datasets-server answers the
+    # old name 404 ``RenamedDatasetError``, so it is asked for the name the Hub returned.
+    ds_id = body["id"]
     try:
         resource.files += await hf_datasets_server.parquet_files(client, ds_id)
     except NotFoundError:

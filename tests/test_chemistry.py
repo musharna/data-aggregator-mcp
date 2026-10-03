@@ -169,6 +169,7 @@ async def test_resolve_chebi_happy_path(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
         url=_OLS
         + "?q=caffeine&ontology=chebi&exact=true"
+        + "&queryFields=label%2Csynonym"
         + "&fieldList=obo_id%2Clabel%2Csynonym%2Cis_defining_ontology%2Cis_obsolete&rows=10",
         json=_envelope([_doc(label="caffeine", synonym=["theine", "guaranine"])]),
     )
@@ -216,7 +217,7 @@ async def test_resolve_chebi_http_error_propagates_and_not_cached(monkeypatch) -
         calls["n"] += 1
         raise UpstreamUnavailableError("EBI OLS down")
 
-    monkeypatch.setattr(chemistry._http, "request_json", boom)
+    monkeypatch.setattr(chemistry._ols._http, "request_json", boom)
     with pytest.raises(UpstreamUnavailableError):
         await chemistry.resolve_chebi(httpx.AsyncClient(), "caffeine")
     with pytest.raises(UpstreamUnavailableError):
