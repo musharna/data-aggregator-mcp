@@ -1,0 +1,24 @@
+{
+ "response": {
+  "docs": [
+   {
+    "synonym": [
+     "ChIP-exo",
+     "ChIP-sequencing",
+     "Chip Seq",
+     "Chip sequencing",
+     "Chip-sequencing"
+    ],
+    "label": "ChIP-seq",
+    "is_defining_ontology": true,
+    "obo_id": "EDAM:topic_3169"
+   }
+  ],
+  "numFound": 1,
+  "start": 0
+ },
+ "responseHeader": {
+  "QTime": 0,
+  "status": 0
+ }
+}
