@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import logging
 from collections.abc import Awaitable
-from typing import TypeVar
+from typing import TypeVar, cast
 
 from data_aggregator_mcp.errors import UpstreamUnavailableError
 
 T = TypeVar("T")
+_GAP = object()  # fills the shorter lists in a rank; never in the output
 
 
 def interleave(per_list: list[list[T]]) -> list[T]:
@@ -19,12 +21,8 @@ def interleave(per_list: list[list[T]]) -> list[T]:
     earlier one fills the budget; interleaving by rank position gives each a
     fair share.
     """
-    out: list[T] = []
-    for i in range(max((len(lst) for lst in per_list), default=0)):
-        for lst in per_list:
-            if i < len(lst):
-                out.append(lst[i])
-    return out
+    ranks = itertools.zip_longest(*per_list, fillvalue=_GAP)
+    return cast(list[T], [x for x in itertools.chain.from_iterable(ranks) if x is not _GAP])
 
 
 async def fan_in(
@@ -44,7 +42,8 @@ async def fan_in(
     total = 0
     pages: list[list[T]] = []
     failures: list[str] = []
-    for name, outcome in zip(names, outcomes, strict=True):
+    # gather() returns one outcome per awaitable, so strict= cannot change behaviour.
+    for name, outcome in zip(names, outcomes, strict=True):  # pragma: no mutate
         if isinstance(outcome, BaseException):
             logger.warning("%s: %s backend failed: %r", what, name, outcome)
             failures.append(f"{name}: {type(outcome).__name__}: {outcome}")
