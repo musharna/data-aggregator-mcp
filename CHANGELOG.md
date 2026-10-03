@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Query understanding and semantic re-rank work with a local model server again. The
+  private-address guard refused an `LLM_API_BASE` or `EMBEDDING_API_BASE` on this machine
+  or your network (Ollama on `127.0.0.1:11434`), so both were skipped unless
+  `DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS=1` turned the guard off for record URLs too.
+  The endpoints you configure are now exempt; a record URL pointing at the same server,
+  and a redirect away from it, are still refused.
+
 ## [0.55.0] - 2026-10-03
 
 ### Security
