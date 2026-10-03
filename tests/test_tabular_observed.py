@@ -169,7 +169,9 @@ async def test_a_header_wider_than_the_window_is_kept_and_flagged(tmp_path):
 async def test_the_sniff_reads_one_byte_past_the_window_and_no_more(tmp_path, monkeypatch):
     """Range reads only: a CSV is never read past ``N + 1`` bytes, however long it is
     (one byte more than the window tells a cut file from one that ends there)."""
-    real_open = tabular.fsspec.open
+    import fsspec  # sourceio opens a local source with it
+
+    real_open = fsspec.open
     reads: list = []
 
     class _Spy:
@@ -190,7 +192,7 @@ async def test_the_sniff_reads_one_byte_past_the_window_and_no_more(tmp_path, mo
         def __exit__(self, *exc):
             return self._cm.__exit__(*exc)
 
-    monkeypatch.setattr(tabular.fsspec, "open", lambda *a, **k: _Spy(real_open(*a, **k)))
+    monkeypatch.setattr(fsspec, "open", lambda *a, **k: _Spy(real_open(*a, **k)))
     big = tmp_path / "big.csv"
     big.write_text("id\n" + "1\n" * (3 * N))
     out = await tabular.preview(big.as_uri(), "big.csv", n=5)

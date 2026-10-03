@@ -1,6 +1,9 @@
 # src/data_aggregator_mcp/tabular.py
 """Cheap schema/preview for remote tabular files via the Parquet footer or a CSV
-sniff — range reads only, no full scan. Sync libs run in asyncio.to_thread."""
+sniff — range reads only, no full scan. Sync libs run in asyncio.to_thread.
+
+Every read goes through ``sourceio.open_source``, never fsspec's HTTP filesystem: that
+follows redirects without the egress check, so a public URL could 302 into private space."""
 
 from __future__ import annotations
 
@@ -9,8 +12,9 @@ import csv
 import io
 import itertools
 
-import fsspec
 import pyarrow.parquet as pq
+
+from data_aggregator_mcp import sourceio
 
 _PARQUET_EXTS = (".parquet", ".pq")
 _CSV_SNIFF_BYTES = 64_000
@@ -29,7 +33,7 @@ def _parquet_columns(pf: pq.ParquetFile) -> list[dict]:
 
 
 def _schema_parquet(url: str) -> dict:
-    with fsspec.open(url) as f:
+    with sourceio.open_source(url) as f:
         pf = pq.ParquetFile(f)
         # An opened ParquetFile always has its footer metadata; the row count is exact.
         return {
@@ -54,7 +58,7 @@ def _read_head_text(url: str, n: int) -> tuple[str, bool]:
     continues past them (one byte more is read to tell). A cut window ends anywhere,
     even inside a character: ``_preview_csv`` drops its last record, and a header
     with no line break in the window is reported cut by both readers."""
-    with fsspec.open(url) as f:
+    with sourceio.open_source(url) as f:
         raw = f.read(n + 1)
     return raw[:n].decode(_TEXT_ENCODING, "replace"), len(raw) > n
 
@@ -80,7 +84,7 @@ async def schema(url: str, file: str) -> dict:
 
 
 def _preview_parquet(url: str, n: int) -> dict:
-    with fsspec.open(url) as f:
+    with sourceio.open_source(url) as f:
         pf = pq.ParquetFile(f)
         # An empty Parquet (zero row groups) yields no batches; next() must not raise
         # StopIteration here — asyncio rejects it as a thread-result exception.

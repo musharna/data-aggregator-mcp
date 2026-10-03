@@ -6,6 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- `operate` checks every redirect against the private-address guard, as `fetch` already
+  did. It checked only a file's first URL, so a redirect could make the server read an
+  internal address.
+
 ### Fixed
 
 - `resolve(format="ro-crate")` produces a valid RO-Crate 1.1 crate for records with

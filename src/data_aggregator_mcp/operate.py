@@ -68,13 +68,12 @@ def _select_file(files: list[FileEntry], requested: str | None) -> FileEntry:
 
 
 def _source_size(url: str) -> int | None:
-    """Best-effort source byte size (HEAD for http, stat for file://). Returns None
-    when the server exposes no content-length. A real I/O error propagates (fail loud)."""
-    import fsspec
+    """Best-effort source byte size (HEAD for http, through the egress-guarded client;
+    stat for file://). Returns None when the server exposes no content-length. A real
+    I/O error propagates (fail loud)."""
+    from data_aggregator_mcp import sourceio
 
-    fs, _, paths = fsspec.core.get_fs_token_paths(url)
-    size = fs.info(paths[0]).get("size")
-    return int(size) if size is not None else None
+    return sourceio.size(url)
 
 
 def _cap_result_bytes(result: dict) -> dict:
