@@ -154,6 +154,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   spelled `Retraction` or `expression-of-concern` are read as well.
 - A Crossref answer that holds no work, or whose list of updates cannot be read, now
   leaves the retraction status unknown. It was reported as "not retracted".
+- Reading a resource whose URI carries a query, a fragment, a user name or a port
+  (`dataresource://record/pdb%3A1bg2?v=2`, `…#x`, `dataresource://u@record/…`) is
+  refused as not a readable resource. Those parts were ignored, so the URI read a
+  record it did not name, and an id sent without URL-encoding was cut at its first
+  `#` or `?` (some Wiley DOIs end in `#`). URL-encode the id, as the record template
+  says.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
