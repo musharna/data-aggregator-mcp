@@ -8,6 +8,204 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `resolve(format="ro-crate")` produces a valid RO-Crate 1.1 crate for records with
+  authors. Each author was written inside the dataset entry without an id, which
+  RO-Crate 1.1 does not allow (the RO-Crate validator rejected every such crate), and
+  the author's ORCID was left out. Each author is now its own `Person` entry,
+  identified by its ORCID when the record has one; `author` lists them by id.
+- The provenance crate of `search(provenance=true)` lists only data sources under
+  `sources_queried`. It also listed every note in the search's `errors` (`semantic`,
+  `filters`, `query_syntax`, a failed ontology lookup such as `taxonomy`) as a source,
+  and named a failed sub-database or multi-query stream by its internal key
+  (`omics/sra`, `zenodo#v1`) instead of as its records do (`sra`, `zenodo`). The notes
+  are still disclosed verbatim under `errors`.
+- An OpenAIRE search answer missing its result list or hit count is reported as a
+  malformed answer instead of zero hits, a record answer that is not a record (an
+  empty object or an error message) is no longer returned as an untitled record, and
+  a wrong-typed field no longer escapes as a bare error.
+- Resolving an `openaire:` id of a dataset, software or other research product
+  reports that kind. Every OpenAIRE record was called a publication, although only
+  search is limited to publications.
+- Asking for a prompt without its required argument (`find_data` with no `topic`) is
+  refused with an "invalid params" error that names the argument. The prompt was
+  rendered with a hole in it ("find datasets about: ."). An unknown prompt name and an
+  argument the prompt does not take (a misspelt `organsim`) are refused the same way;
+  the misspelt argument used to be dropped without a word.
+- The `search` tool's description names all 17 sources a search queries. It named 12,
+  leaving out GBIF, data.gov, NASA CMR, UniProt and BioStudies, which were searched
+  all along.
+- Resolving a Dataverse file DOI works. Dataverse gives each file a DOI as well as
+  each dataset (85 of 100 random Harvard DOIs registered as datasets are file DOIs),
+  and resolving one failed as "not found"; it now lists that file. A DOI the
+  Dataverse installation no longer holds gives the record with no files instead of
+  failing, as a withdrawn (deaccessioned) dataset already did.
+- Dataverse files under an embargo that has not ended, or past their retention
+  period, are no longer listed. Dataverse refuses to download them (HTTP 403), the
+  same as restricted files, which were already left out.
+- Dataverse files keep their folder in their name (`data/2026-06-24.tsv`), so a
+  fetch keeps the dataset's layout and two files with the same name in different
+  folders are no longer saved side by side with a hash added to one name.
+- Files from Dataverse installations that use SHA-1 checksums (DataverseNL) are
+  listed with their checksum, so a fetch can verify them; they were listed with none.
+- A Dataverse answer missing its dataset or file, or with a wrong-typed field, is
+  reported as a malformed answer instead of no files or a bare error.
+- A search `cursor` that no search could have produced is refused as an invalid or
+  corrupt cursor before anything is requested. A cursor listing more query variants
+  than a multi-query search makes (at most 4) sent one request per variant to every
+  source; one listing none answered with an empty page; an unknown `kind` or an
+  unexpected filter emptied every page; and a filter or `sources` value of the wrong
+  type failed with a bare Python error. Cursors returned by `search` are unaffected.
+- `fetch` with `extract=true` unpacks a `.tar` whose last member is a `.zip` as the
+  tar. It was unpacked as that inner zip: the tar's own files were missing and the
+  zip's files were written in their place. The archive's name now decides its format.
+- An archive that cannot be read (corrupt, truncated, encrypted, or compressed with a
+  method Python lacks, such as Windows' Deflate64) is reported as an
+  `UpstreamUnavailableError` naming the archive, instead of a bare `BadZipFile`,
+  `EOFError`, `NotImplementedError` or `RuntimeError`. A zip member named `.` or `a/..`
+  is refused instead of failing with `IsADirectoryError`.
+- An extraction that fails part-way (over `max_bytes`, a link or escaping member, an
+  unreadable member) removes the files it had already unpacked; until now they were
+  left in the fetch directory, up to `max_bytes` of them. A file repeated in an archive
+  is listed once in `paths`.
+- A client that declares elicitation support as a bare `elicitation: {}` is now asked
+  to correct an organism, disease, tissue, chemical or assay term that matches
+  nothing. The MCP specification treats that declaration as form support, and it was
+  the only way to declare elicitation before protocol version 2025-11-25, but the
+  server read it as no support, so the search ran without the filter and never asked.
+- `search(collapse_mirrors=true)` compares the first author's whole name. It
+  compared only the last word, which for a "Family, Given" name (most DataCite and
+  Zenodo records) is the given name, so distinct datasets with the same generic title
+  and year were folded together when their first authors shared a given name, and a
+  copy whose author was written "Given Family" in one repository and "Family, Given"
+  in another was not folded.
+- `search(collapse_mirrors=true)` keeps the earliest of the best-ranked copies as the
+  survivor and lists the folded copies in result order. When copies were linked only
+  through a chain of shared file checksums, a later copy could be kept instead.
+- `rank=semantic` no longer fails the search, or reorders it on numbers that are not
+  similarities, when the embedding endpoint sends a malformed answer. A text or null
+  value in a vector raised an error out of the search, and a NaN, an infinity, a
+  vector of the wrong length or rows out of order were ranked as if they were real;
+  such an answer now leaves the results in relevance order with the usual
+  `errors["semantic"]` note, and the failure is logged on the server.
+- An `EMBEDDING_API_KEY` that is not a valid bearer token (a non-ASCII character, a
+  space or a line break, e.g. from a pasted key) is refused with a log line that
+  does not quote it, and semantic re-rank is skipped; a non-ASCII key used to fail
+  inside the HTTP library.
+- An `EMBEDDING_API_BASE` that is not an http(s) URL with a host (no scheme, another
+  scheme, an unparseable host such as `http://xn--/v1`) is refused before any request,
+  with a log line saying so, and semantic re-rank is skipped. It used to be retried as
+  a network failure or skipped without any message.
+- `resolve(format="croissant")` manifests load in MLCommons' Croissant validator
+  (`mlcroissant`). The manifest's `@context` declared only namespace prefixes, so the
+  validator failed on every manifest before checking it, and `conformsTo`, `citeAs`
+  and `md5` were schema.org names rather than the Croissant terms. The context is now
+  the one MLCommons' Croissant 1.1 examples use. A file whose name has a space (2 of 24 live
+  records sampled) no longer fails the whole manifest; its `@id` is the
+  percent-encoded name, and `name` is unchanged. `contentSize` is text in bytes
+  (`"10 B"`), not a number. A file whose source gives no MIME type or checksum is
+  still listed without them, and the validator reports it as incomplete.
+- `list_sources` gives Zenodo an example id that can be fetched (`zenodo:1254563`).
+  The old example, `zenodo:7654321`, led to a restricted record with no files, so
+  fetching it failed.
+- A record whose file URL has a host that is not a hostname (an empty label, as in
+  `http://a..b/`, or a label over 63 characters) is refused by `fetch` and `operate`
+  as a malformed URL, naming the file and the URL. It was a bare "'idna' codec can't
+  encode character ..." naming neither.
+- `relate` no longer calls records "the same work" because they share a taxon or a
+  gene. Any two human UniProt entries were joined on taxon 9606, and a protein was
+  joined to PubMed article 9606. A shared identifier is now a DOI, PubMed id or PMC id
+  matched within its own kind, and the hint says which kind.
+- `relate` gives the same answer every time for the same records. When two records
+  shared more than one identifier, the order of those hints, and which spelling of a
+  DOI was shown, could change after a server restart.
+- `relate` finds a link given as an `ncbi.nlm.nih.gov/pubmed/<id>` address, an OpenML
+  `search?type=data&id=<id>` page, or an RCSB page for an entry cited before release
+  (`structure/unreleased/<id>`). Records that cite another record this way (an ICPSR
+  study cited by a PubMed article, a Zenodo deposit referencing an OpenML dataset) got
+  no link hint.
+- `understand=true` searches the years a query names even when the model gives them
+  high to low. Asked for "arabidopsis root datasets between 2018 and 2016", llama3.1
+  answered `year_min` 2018 and `year_max` 2016, and the search returned no results and
+  no error; the years are now applied as 2016 to 2018.
+- Resolving a renamed HuggingFace dataset by its old name (`hf:imdb`, now
+  stanfordnlp/imdb) lists its converted Parquet files. The datasets-server lookup used
+  the old name, which it answers with "not found", so the dataset looked unconvertible
+  and could not be queried with `operate`.
+- A HuggingFace datasets-server answer missing its file list is reported as a
+  malformed answer instead of "no converted files", a converted file with a missing
+  or wrong-typed field fails the answer instead of being dropped in silence, and a
+  wrong-typed field no longer escapes as a bare error.
+- A HuggingFace split that the dataset viewer converted only in part (its first 5 GB)
+  is listed as `<config>/partial-<split>/…` instead of `<config>/<split>/…`, so a
+  query on it no longer passes for one over the whole split (825 of allenai/c4's
+  1,006 converted files). The files of a split converted in several parts
+  (`<split>-part0`, `-part1`, …) now have distinct names; they shared one, and only
+  the first could be picked with `file=`.
+- Resolving a gated HuggingFace dataset, a dataset built by a loading script, or one
+  whose converted file list is too large to list no longer reports a failed
+  datasets-server lookup. The dataset viewer answers these with HTTP 401 or 501, which
+  was reported as an outage, so the record carried an error and was never cached; it
+  now resolves with its repository files, like any dataset without a converted view.
+- `resolve(trust=true)` reports a withdrawn, removed or partly retracted paper as
+  retracted, with the notice as `retraction_doi`. Crossref records these as their own
+  update types (3,397 withdrawals, 702 removals and 2 partial retractions on
+  2026-10-02), and only a notice of type `retraction` was read, so such a paper, or a
+  record built on it, was reported as having no retraction on record. Update types
+  spelled `Retraction` or `expression-of-concern` are read as well.
+- A Crossref answer that holds no work, or whose list of updates cannot be read, now
+  leaves the retraction status unknown. It was reported as "not retracted".
+- Reading a resource whose URI carries a query, a fragment, a user name or a port
+  (`dataresource://record/pdb%3A1bg2?v=2`, `…#x`, `dataresource://u@record/…`) is
+  refused as not a readable resource. Those parts were ignored, so the URI read a
+  record it did not name, and an id sent without URL-encoding was cut at its first
+  `#` or `?` (some Wiley DOIs end in `#`). URL-encode the id, as the record template
+  says.
+- `chemical=` and `tissue=` find the ChEBI or UBERON term whose name or synonym is
+  the one given even when EBI OLS ranks it low. The lookup took OLS's ten most
+  relevant terms, and for common names the match was not among them, so
+  `chemical="aspirin"`, `tissue="skin"` and `tissue="bone"` were reported as
+  unresolved and the search was not expanded. A name with spaces around it is now
+  matched too.
+- An EBI OLS answer for `chemical=` or `tissue=` that is missing its result list or
+  has a wrong-typed field is reported in `errors` as a lookup failure instead of
+  "no match", and is no longer remembered as "no match" for an hour.
+- `assay=` finds the EDAM topic whose name or synonym is the one given even when
+  EBI OLS ranks it low, the same fix as for `chemical=` and `tissue=`:
+  `assay="Genes"` (a synonym of Genetics) was reported as unresolved. An EBI OLS
+  answer for `assay=` that is missing its result list or has a wrong-typed field is
+  reported in `errors` as a lookup failure instead of "no match", and is no longer
+  remembered as "no match" for an hour.
+- The `resolve(fair=true)` score weights each indicator by the priority the RDA FAIR
+  Data Maturity Model gives it. Eight of the fourteen indicators had a different
+  weight (for example F3 and F4, which the specification calls Essential, counted as
+  Important), so every score was off. The gaps about the data's download protocol,
+  file formats and community standard now carry the specification's data ids
+  (`RDA-A1.1-01D`, `RDA-I1-01D`, `RDA-R1.3-01D`) instead of the metadata ones.
+- The FAIR score no longer marks a download over `http://` or `ftp://` as lacking a free
+  access protocol (the specification names both), counts a compressed file such as
+  `reads.fastq.gz` as a recognised format, and no longer credits provenance to every
+  record that has creators: it needs funding, a modified date or related records, as
+  its gap says. A record with no licence is no longer told its licence is "free text".
+- Resolving a PubMed id that is not a number says the record is not found, before
+  any request. NCBI reads its id parameter as a list, so `pubmed:34320281,1` came back
+  as PMID 34320281 carrying PMID 1's data links and both papers' abstracts, and
+  `pubmed:abc` was reported as an NCBI outage.
+- A paper that links to more than 100 SRA, GEO or BioProject records resolves, with
+  the first 100 of each and a note in `truncated["links"]`. PMID 42544407 links to
+  7,498 SRA records, and resolving it failed with a bare `InvalidURL` error, because
+  every linked record was asked for in one request (NCBI accepts at most 500).
+- Paging a PubMed search past its 9,999th record says that PubMed stops there,
+  instead of reporting an NCBI outage on every later page. PubMed's search API serves
+  only the first 9,999 records of a query.
+- A PubMed summary with a wrong-typed field, or without a PMID or title, is reported
+  as a malformed answer instead of escaping as a bare error or coming back as
+  `pubmed:`.
+- `list_sources(check_health=true)` reports a source as up only when its upstream
+  gives an answer the source can use. It counted any status below 400 as up, so a
+  maintenance page served with HTTP 200, an NCBI error inside a 200, or a redirect
+  showed the source as up. The literature probe asked Europe PMC, which literature
+  search does not use; it now asks PubMed. DataCite and omics are now probed at the
+  search endpoints they use, instead of DataCite's heartbeat and NCBI's database list.
 - An SRA record's FASTQ list from ENA is reported as a malformed answer when its
   size or checksum list does not line up with its file list. Each file used to take
   the size and checksum at its own position, so a list missing an entry gave the
@@ -40,6 +238,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - An OmicsDI answer missing its result list is reported as a malformed answer instead
   of zero hits, and a wrong-typed field, or a record for a different accession, no
   longer escapes as a bare error or comes back as the wrong record.
+- A malformed PRIDE file listing (for an `omicsdi:pride:` dataset) is reported as a
+  malformed answer. A file entry of the wrong shape escaped as a bare error, an entry
+  without a name was listed as a file named "", and a file count of `true` was read
+  as one file.
 - A Hugging Face search or resolve no longer fails on a dataset whose card lists its
   licences instead of naming one. A card with `license: []` (for example
   `priyank-m/SROIE_2019_text_recognition`) made the whole search return no Hugging Face
@@ -73,6 +275,51 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A GBIF answer missing its result list or count is reported as a malformed answer
   instead of zero hits, and a wrong-typed field no longer escapes as a bare error or
   turns a keyword string into one-letter subjects.
+- `operate` SQL accepts a `;` inside a string (`WHERE go = 'GO:1;GO:2'`), a query that
+  ends in a `--` comment, and DuckDB's other query forms (`FROM data WHERE ...`, a
+  leading comment). It still refuses anything that is not a single query.
+- `operate` SQL always returns at most its row cap. A query ending in `) --` used to
+  switch the cap off, so the server read every row of the result into memory.
+- `operate` `peek` profiles a file that has a header and no rows. It used to fail with
+  a Python error; the null percentage is now empty for such a file.
+- An `operate` `sql`, `head` or `peek` that runs past the wall-clock limit is stopped.
+  The limit used to report the timeout while the query kept running in the server to
+  its end, using its CPU and memory. Limitation: a source file still downloading when
+  the limit is reached finishes downloading before the work stops; stopping a download
+  part-way would need a separate process.
+- A GEO record of several organisms lists each one. GEO names them in one field
+  ("Homo sapiens; Mus musculus"), which the adapter kept as a single organism, so the
+  record's taxa held only one of them.
+- An NCBI summary the omics adapter cannot read (a field of the wrong type, no
+  accession, SRA experiment XML that does not parse) is reported as upstream trouble
+  naming the database and uid, instead of escaping as a bare error or becoming a record
+  with an empty id.
+- `resolve` with `cite=` no longer returns a web page or a different format as the
+  citation. For DOIs whose registration agency cannot produce the format asked for,
+  doi.org answers with something else: Chinese ISTIC DOIs with the publisher's HTML
+  page, Taiwanese Airiti DOIs with CSL-JSON for every format. The citation is now
+  null in that case, as for any other citation that cannot be rendered.
+- An OmicsDI MetaboLights study's file list is read only from that study's directory
+  index on the EBI mirror. Any other page answered there (an error or maintenance
+  page, another study's index) was read as the study's files, listing the page's links
+  or no files at all; now it is reported as an upstream error. A listed link that is
+  not a file of that directory is refused instead of being fetched from elsewhere on
+  the mirror, and only `MTBLS<number>` accessions are looked up.
+- MetaboLights file names that the mirror's listing escapes (a space, `#`, `%`, `:`
+  or a non-ASCII letter) are reported as the file's real name and keep their published
+  sha256; they came back escaped (`a%20b.txt`) and unverified.
+- Resolving a Figshare collection DOI (`10.6084/m9.figshare.c.8708104.v1`, and the
+  same `.c.` form on institutional portals) returns the collection's record. The
+  collection number was taken for an article number, Figshare answered "not found",
+  and the whole resolve failed although DataCite holds the DOI.
+- Records from Griffith University's Figshare portal (`10.57831/<number>` DOIs) list
+  their files. The article number comes straight after the slash in those DOIs and
+  was not recognised, so they came back with no files.
+- A Figshare answer missing its file list, or with a wrong-typed field, is reported
+  as a malformed answer instead of "no files" or a bare error. A Figshare article that
+  carries no DOI of its own no longer has its files attached to the DOI that was
+  asked for, since nothing shows it is the same article. An embargoed article still
+  comes back with no files.
 
 ## [0.54.14] - 2026-10-02
 

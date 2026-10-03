@@ -22,10 +22,14 @@ from pydantic import AnyUrl
 SCHEME = "dataresource"
 CATALOG_URI = "dataresource://catalog"
 RECORD_TEMPLATE = "dataresource://record/{id}"
+# No character is kept bare beyond the unreserved ones quote() always keeps, as in RFC 6570
+# expansion of {id}. A module constant: mutmut's "XXXX" for an inline '' is equivalent
+# (X is unreserved), and test_record_uri_encodes_the_id_as_template_expansion_does pins it.
+_ID_SAFE = ""
 
 
 def record_uri(resolve_id: str) -> str:
-    return f"{SCHEME}://record/{quote(resolve_id, safe='')}"
+    return f"{SCHEME}://record/{quote(resolve_id, safe=_ID_SAFE)}"
 
 
 def _as_url(uri: str | AnyUrl) -> AnyUrl:
@@ -34,17 +38,36 @@ def _as_url(uri: str | AnyUrl) -> AnyUrl:
     return uri if isinstance(uri, AnyUrl) else AnyUrl(uri)
 
 
+def _names_only_host_and_path(url: AnyUrl) -> bool:
+    # A resource here is named by scheme, host and path alone. A query, fragment, user,
+    # password or port makes it a different URI, which this server does not serve; reading it
+    # as the bare URI resolved a record the caller did not name, and cut an id sent unencoded
+    # at its first "#" or "?" (Wiley SICI DOIs end in "#"). An empty "?" or "#" parses as "".
+    return (
+        url.query is None
+        and url.fragment is None
+        and url.username is None
+        and url.password is None
+        and url.port is None
+    )
+
+
 def is_catalog(uri: str | AnyUrl) -> bool:
     # exactly dataresource://catalog — a trailing path (catalog/extra) is NOT the catalog.
     url = _as_url(uri)
-    return url.scheme == SCHEME and url.host == "catalog" and not url.path
+    return (
+        url.scheme == SCHEME
+        and url.host == "catalog"
+        and not url.path
+        and _names_only_host_and_path(url)
+    )
 
 
 def parse_record_id(uri: str | AnyUrl) -> str | None:
     """Return the decoded resolve-id for a ``dataresource://record/<id>`` URI,
-    else None (not a record URI / empty id)."""
+    else None (not a record URI, an empty id, or a URI with more than host and path)."""
     url = _as_url(uri)
-    if url.scheme != SCHEME or url.host != "record":
+    if url.scheme != SCHEME or url.host != "record" or not _names_only_host_and_path(url):
         return None
     raw = (url.path or "").lstrip("/")
     if not raw:
