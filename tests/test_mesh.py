@@ -54,16 +54,29 @@ def test_parse_mesh_rejects_non_descriptor() -> None:
     assert mesh._parse_mesh(docs) is None
 
 
-def test_parse_mesh_empty_terms_returns_none() -> None:
-    docs = [{"ds_recordtype": "descriptor", "ds_meshui": "D001943", "ds_meshterms": []}]
-    assert mesh._parse_mesh(docs) is None
-    docs2 = [{"ds_recordtype": "descriptor", "ds_meshui": "D001943"}]
-    assert mesh._parse_mesh(docs2) is None
+def test_parse_mesh_descriptor_without_terms_is_an_upstream_failure() -> None:
+    """A descriptor with no entry term is not a MeSH answer; it was read as "no match"
+    and cached for an hour. (Full matrix: tests/test_mesh_answers.py.)"""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    for doc in (
+        {"ds_recordtype": "descriptor", "ds_meshui": "D001943", "ds_meshterms": []},
+        {"ds_recordtype": "descriptor", "ds_meshui": "D001943"},
+    ):
+        with pytest.raises(UpstreamUnavailableError, match="without a MeSH UI or entry terms"):
+            mesh._parse_mesh([doc])
+    good = {"ds_recordtype": "descriptor", "ds_meshui": "D001943", "ds_meshterms": ["Asthma"]}
+    assert mesh._parse_mesh([good]) is not None  # positive control
 
 
-def test_parse_mesh_missing_ui_returns_none() -> None:
+def test_parse_mesh_descriptor_without_ui_is_an_upstream_failure() -> None:
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
     docs = [{"ds_recordtype": "descriptor", "ds_meshui": "", "ds_meshterms": ["Breast Neoplasms"]}]
-    assert mesh._parse_mesh(docs) is None
+    with pytest.raises(UpstreamUnavailableError, match="ds_meshui=''"):
+        mesh._parse_mesh(docs)
+    docs[0]["ds_meshui"] = "D001943"
+    assert mesh._parse_mesh(docs) is not None  # positive control
 
 
 def test_parse_mesh_empty_docs_returns_none() -> None:

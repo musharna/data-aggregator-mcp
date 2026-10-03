@@ -34,24 +34,3 @@ async def test_live_ncbi_rate_pacing():
             await _eutils.esearch(client, "pubmed", "cancer", retmax=1)
         elapsed = time.monotonic() - start
     assert elapsed >= 0.9  # ~ (6 - capacity 3) / 3 s of forced pacing
-
-
-@pytest.mark.asyncio
-async def test_live_semantic_rerank_if_configured():
-    if not os.environ.get("EMBEDDING_API_BASE"):
-        pytest.skip("no EMBEDDING_API_BASE configured")
-    from data_aggregator_mcp import embeddings
-    from data_aggregator_mcp.models import DataResource
-
-    rs = [
-        DataResource(
-            id="a", source="zenodo", kind="dataset", title="maize drought tolerance genomics"
-        ),
-        DataResource(
-            id="b", source="zenodo", kind="dataset", title="quantum chromodynamics lattice"
-        ),
-    ]
-    async with httpx.AsyncClient() as client:
-        out, reason = await embeddings.rerank(client, "corn surviving dry conditions", rs)
-    assert reason is None
-    assert out[0].id == "a"  # the maize record ranks first

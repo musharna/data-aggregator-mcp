@@ -225,7 +225,9 @@ SOURCES: tuple[SourceSpec, ...] = (
         status="live",
         fetchable=True,
         operable=True,
-        id_example="zenodo:7654321",
+        # A record id, open, with files: 7654321 was a concept id that redirected to a
+        # restricted, fileless "Incorrect upload" (test_live_every_advertised_id_example_...).
+        id_example="zenodo:1254563",
     ),
     _spec(
         "dataone",
@@ -542,7 +544,9 @@ DEFAULT_LICENSES: dict[str, tuple[str, str]] = {
 def default_license_for(source: str | None) -> tuple[str | None, str | None]:
     """The source's blanket licence and its citation, or ``(None, None)``. Unknown source
     names answer ``(None, None)`` rather than raising — this only ever adds information."""
-    lic, policy = DEFAULT_LICENSES.get(source or "", (None, None))
+    if not source:
+        return None, None
+    lic, policy = DEFAULT_LICENSES.get(source, (None, None))
     return lic, policy or None
 
 

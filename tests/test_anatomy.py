@@ -137,6 +137,7 @@ async def test_resolve_uberon_happy_path(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
         url=_OLS
         + "?q=liver&ontology=uberon&exact=true"
+        + "&queryFields=label%2Csynonym"
         + "&fieldList=obo_id%2Clabel%2Csynonym%2Cis_defining_ontology%2Cis_obsolete&rows=10",
         json=_envelope([_doc(label="liver", synonym=["iecur", "jecur"])]),
     )
@@ -184,7 +185,7 @@ async def test_resolve_uberon_http_error_propagates_and_not_cached(monkeypatch) 
         calls["n"] += 1
         raise UpstreamUnavailableError("EBI OLS down")
 
-    monkeypatch.setattr(anatomy._http, "request_json", boom)
+    monkeypatch.setattr(anatomy._ols._http, "request_json", boom)
     with pytest.raises(UpstreamUnavailableError):
         await anatomy.resolve_uberon(httpx.AsyncClient(), "liver")
     # not cached: a second call retries the lookup

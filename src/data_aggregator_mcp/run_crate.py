@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from data_aggregator_mcp import __version__, dossier, fair, ro_crate
+from data_aggregator_mcp import __version__, dossier, fair, ro_crate, sources
 from data_aggregator_mcp.models import DataResource, SearchResult
 
 
@@ -63,6 +63,28 @@ def _expansions(result: SearchResult) -> list[dict[str, Any]]:
     return out
 
 
+def _failed_source(key: str) -> str | None:
+    """The data source a ``SearchResult.errors`` key reports as failed, named as that
+    source's records name it, or None when the key is not a source.
+
+    The router keys a failed stream by the adapter (``zenodo``) or, for a composite
+    adapter, ``<adapter>/<sub>`` (``omics/sra``, whose records say ``sra``), with
+    ``#v<n>`` appended for a multi-query variant (``router._source_streams``). Every
+    other key is a note about the run (``filters``, ``semantic``, ``query_syntax``,
+    ``understand``, ``multi_query``) or a failed ontology lookup (``taxonomy``,
+    ``mesh``, ...), and naming those as data sources would be a false claim."""
+    stream, variant_mark, variant = key.partition("#v")
+    if variant_mark and not variant.isdecimal():
+        return None
+    name, sub_mark, sub = stream.partition("/")
+    adapter = sources.ADAPTERS.get(name)
+    if adapter is None:
+        return None
+    if not sub_mark:
+        return name
+    return sub if sub in getattr(adapter, "SUBSOURCES", ()) else None
+
+
 def _hit_identifier(hit: DataResource) -> str:
     """Best available stable identifier for a hit: DOI, else first file URL, else the
     canonical source-prefixed id (always present)."""
@@ -88,11 +110,13 @@ def render(result: SearchResult) -> dict[str, Any]:
 
     # The run-level provenance action. `sources_queried` is derived HONESTLY: it is the
     # union of the sources that returned at least one hit (read off each hit's `source`)
-    # and the sources that reported an error (the `errors` keys). It is NOT the full
+    # and the sources whose search failed (the `errors` keys that name a source stream;
+    # see `_failed_source` -- the run notes in `errors` are not sources). It is NOT the full
     # configured adapter set — a source that ran but returned zero hits and no error is
     # not recoverable from the SearchResult, so we do not claim it. The list means
     # "sources observed to have participated in this page", and no more.
-    sources_queried = sorted({hit.source for hit in result.results} | set(result.errors.keys()))
+    failed = {src for key in result.errors if (src := _failed_source(key)) is not None}
+    sources_queried = sorted({hit.source for hit in result.results} | failed)
 
     action: dict[str, Any] = {
         "@id": "#search-action",

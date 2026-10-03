@@ -380,7 +380,8 @@ Any HuggingFace dataset with a datasets-server converted view is operable
 (`schema` / `preview` / `head` / `sql`): `resolve` surfaces the auto-converted
 Parquet files (`source="hf-datasets-server"`) even for datasets stored as
 JSON/JSONL/arrow, so pass `file=<config>/<split>/...parquet` to pick a split when
-there are several.
+there are several. A split HF converted only in part (its first 5 GB) is named
+`<config>/partial-<split>/...`, so a query on it covers that part, not the whole split.
 
 ### `relate(ids)`
 

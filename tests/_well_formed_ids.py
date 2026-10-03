@@ -16,6 +16,7 @@ WELL_FORMED = {
     "omicsdi": "pride:PXD000001",
     "openml": "61",
     "pdb": "1ABC",
+    "pubmed": "34320281",
     "uniprot": "P12345",
     "zenodo": "77001",
 }

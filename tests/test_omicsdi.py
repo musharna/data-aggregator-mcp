@@ -139,9 +139,11 @@ async def test_resolve_enriches_pride_provenance(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_resolve_enriches_metabolights_doi_and_submitter_fallback():
+async def test_resolve_enriches_metabolights_doi_and_submitter_fallback(monkeypatch):
     """D3: a repo using `submitter_name`/`organism` keys still yields creators (the
     depositor, NOT the paper `author` list), organism, and a DOI from publication."""
+    # The mock answers every URL with the OmicsDI record, which is no FTP directory index.
+    monkeypatch.setattr("data_aggregator_mcp.metabolights.files", lambda c, a: _aempty())
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda r: httpx.Response(200, json=_RECORD_MTBLS_RICH))
     ) as c:

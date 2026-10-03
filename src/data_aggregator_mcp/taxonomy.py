@@ -28,15 +28,32 @@ class TaxonInfo:
 
 
 def _parse_taxon(xml_text: str) -> TaxonInfo | None:
-    """Parse a taxonomy efetch ``<TaxaSet>`` body; first ``<Taxon>`` or None."""
+    """Parse a taxonomy efetch ``<TaxaSet>`` body: its first ``<Taxon>``, or None when
+    the set is empty (NCBI's answer for an id with no record; live 2026-10-02, id
+    999999999).
+
+    Anything else is an off-contract answer, raised as an upstream failure (like the
+    HTTP failures resolve_taxon already propagates, and uncached), never read as "no
+    such taxon" and cached for an hour: efetch's error envelope ``<eFetchResult><ERROR>``
+    (live with HTTP 400 for id 0) inside a 200, or a ``<Taxon>`` without its TaxId or
+    ScientificName (every one of 400 live taxa has both).
+    """
     root = ET.fromstring(xml_text)
+    if root.tag != "TaxaSet":
+        error = (root.findtext("ERROR") or "").strip()
+        raise UpstreamUnavailableError(
+            f"NCBI taxonomy efetch answered <{root.tag}>, not <TaxaSet>: {error!r}"
+        )
     taxon = root.find("Taxon")
     if taxon is None:
         return None
     taxid_text = taxon.findtext("TaxId")
     canonical = taxon.findtext("ScientificName")
     if not taxid_text or not canonical:
-        return None
+        raise UpstreamUnavailableError(
+            "NCBI taxonomy answered a Taxon without a TaxId or ScientificName "
+            f"(TaxId={taxid_text!r}, ScientificName={canonical!r})"
+        )
     synonyms = tuple(s.text for s in taxon.findall("OtherNames/Synonym") if s.text)
     try:
         taxid = int(taxid_text)
@@ -47,8 +64,8 @@ def _parse_taxon(xml_text: str) -> TaxonInfo | None:
         raise UpstreamUnavailableError(
             f"NCBI taxonomy answered a non-numeric TaxId {taxid_text!r} for {canonical!r}"
         ) from None
-    lineage = taxon.findtext("Lineage") or ""
-    is_plant = "Viridiplantae" in {part.strip() for part in lineage.split(";")}
+    lineage = taxon.findtext("Lineage")
+    is_plant = lineage is not None and "Viridiplantae" in {p.strip() for p in lineage.split(";")}
     return TaxonInfo(
         taxid=taxid,
         canonical_name=canonical,
@@ -78,7 +95,7 @@ async def resolve_taxon(client: httpx.AsyncClient, name: str) -> TaxonInfo | Non
     if not ids:
         _CACHE.set(key, _NEG)
         return None
-    xml_text = await _eutils.efetch(client, "taxonomy", [ids[0]], retmode="xml")
+    xml_text = await _eutils.efetch(client, "taxonomy", [ids[0]])  # XML, efetch's default
     info = _parse_taxon(xml_text)
     _CACHE.set(key, info if info is not None else _NEG)
     return info
