@@ -7,31 +7,36 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+import itertools
 
 import fsspec
 import pyarrow.parquet as pq
 
 _PARQUET_EXTS = (".parquet", ".pq")
 _CSV_SNIFF_BYTES = 64_000
+# A leading UTF-8 byte-order mark (Excel's "CSV UTF-8" writes one) is not part of the
+# first column's name: DuckDB drops it, so head/sql and schema/preview must agree.
+_TEXT_ENCODING = "utf-8-sig"
+_CUT_MARK = "_"  # see _preview_csv; any character but a quote, delimiter or line break
 
 
 def _is_parquet(name: str) -> bool:
     return name.lower().endswith(_PARQUET_EXTS)
 
 
-def _arrow_type(t) -> str:
-    return str(t)
+def _parquet_columns(pf: pq.ParquetFile) -> list[dict]:
+    return [{"name": field.name, "type": str(field.type)} for field in pf.schema_arrow]
 
 
 def _schema_parquet(url: str) -> dict:
-    with fsspec.open(url, "rb") as f:
+    with fsspec.open(url) as f:
         pf = pq.ParquetFile(f)
-        cols = [
-            {"name": n, "type": _arrow_type(t)}
-            for n, t in zip(pf.schema_arrow.names, pf.schema_arrow.types, strict=False)
-        ]
-        nrows = pf.metadata.num_rows if pf.metadata is not None else None
-    return {"format": "parquet", "columns": cols, "row_estimate": nrows}
+        # An opened ParquetFile always has its footer metadata; the row count is exact.
+        return {
+            "format": "parquet",
+            "columns": _parquet_columns(pf),
+            "row_estimate": pf.metadata.num_rows,
+        }
 
 
 def _delimiter(name: str) -> str:
@@ -46,18 +51,12 @@ def _format(name: str) -> str:
 
 def _read_head_text(url: str, n: int) -> tuple[str, bool]:
     """Up to ``n`` bytes from the start of ``url`` as text, plus whether the file
-    continues past them. When it does, the trailing partial line is dropped so no
-    half-row is ever parsed as data; if the window holds no newline at all (a header
-    wider than ``n``) the raw window is kept and the cut is still reported."""
-    with fsspec.open(url, "rb") as f:
+    continues past them (one byte more is read to tell). A cut window ends anywhere,
+    even inside a character: ``_preview_csv`` drops its last record, and a header
+    with no line break in the window is reported cut by both readers."""
+    with fsspec.open(url) as f:
         raw = f.read(n + 1)
-    capped = len(raw) > n
-    if capped:
-        raw = raw[:n]
-        nl = raw.rfind(b"\n")
-        if nl >= 0:
-            raw = raw[: nl + 1]
-    return raw.decode("utf-8", "replace"), capped
+    return raw[:n].decode(_TEXT_ENCODING, "replace"), len(raw) > n
 
 
 def _schema_csv(url: str, file: str) -> dict:
@@ -81,38 +80,43 @@ async def schema(url: str, file: str) -> dict:
 
 
 def _preview_parquet(url: str, n: int) -> dict:
-    with fsspec.open(url, "rb") as f:
+    with fsspec.open(url) as f:
         pf = pq.ParquetFile(f)
-        cols = [
-            {"name": cn, "type": _arrow_type(t)}
-            for cn, t in zip(pf.schema_arrow.names, pf.schema_arrow.types, strict=False)
-        ]
-        nrows = pf.metadata.num_rows if pf.metadata is not None else None
         # An empty Parquet (zero row groups) yields no batches; next() must not raise
         # StopIteration here — asyncio rejects it as a thread-result exception.
         batch = next(pf.iter_batches(batch_size=n), None)
         rows = batch.to_pylist() if batch is not None else []
-    return {"format": "parquet", "columns": cols, "rows": rows[:n], "row_estimate": nrows}
+        return {
+            "format": "parquet",
+            "columns": _parquet_columns(pf),
+            "rows": rows[:n],
+            "row_estimate": pf.metadata.num_rows,
+        }
 
 
 def _preview_csv(url: str, file: str, n: int) -> dict:
     head, capped = _read_head_text(url, _CSV_SNIFF_BYTES)
-    reader = csv.DictReader(io.StringIO(head), delimiter=_delimiter(file))
-    rows = []
-    for i, row in enumerate(reader):
-        if i >= n:
-            break
-        rows.append(dict(row))
+    # A cut window's last record is half a row: cut mid-line, or at a line break inside
+    # a quoted field, which does not end a row. A mark appended after the cut becomes a
+    # record of its own when the window happens to end a row, joins the half row when
+    # it does not: either way the last record is no row. Without a line break the
+    # window is all header, and the mark would join a column name.
+    cut = capped and "\n" in head
+    text = head + _CUT_MARK if cut else head
+    reader = csv.DictReader(io.StringIO(text), delimiter=_delimiter(file))
+    rows = [dict(row) for row in itertools.islice(reader, n)]
+    if cut and next(reader, None) is None:
+        rows = rows[:-1]
     cols = [{"name": h, "type": "string"} for h in (reader.fieldnames or [])]
     out: dict = {"format": _format(file), "columns": cols, "rows": rows, "row_estimate": None}
-    if capped and (len(rows) < n or "\n" not in head):
+    if capped and len(rows) < n:
         # The sniff window ran out before `n` rows: say so rather than let a short
         # page read as "the file has only this many rows".
         out["truncated"] = True
     return out
 
 
-async def preview(url: str, file: str, *, n: int = 20) -> dict:
+async def preview(url: str, file: str, *, n: int) -> dict:
     if _is_parquet(file):
         return await asyncio.to_thread(_preview_parquet, url, n)
     return await asyncio.to_thread(_preview_csv, url, file, n)

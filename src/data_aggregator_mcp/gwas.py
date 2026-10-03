@@ -17,19 +17,22 @@ it, so a search row is titled by its trait.
 
 from __future__ import annotations
 
+import functools
 import re
 
 import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import DataAggregatorError, NotFoundError
-from data_aggregator_mcp.models import DataResource, Link, compact, local_id
+from data_aggregator_mcp.models import DataResource, Link, compact, local_id, year_from
 
 _API = "https://www.ebi.ac.uk/gwas/rest/api/v2"
 SEARCH = f"{_API}/studies"
 RECORD = f"{_API}/studies/{{acc}}"
 PUBLICATION = f"{_API}/publications/{{pmid}}"
 _LANDING = "https://www.ebi.ac.uk/gwas/studies/{acc}"
+_GET = "GET"
+_ACCEPT_JSON = {"Accept": "application/json"}
 PREFIXES = {"gwas"}
 # A study accession is GCST + digits; it goes into the URL path.
 _ACC_RE = re.compile(r"GCST[0-9]+", re.IGNORECASE)
@@ -40,29 +43,65 @@ MAX_SIZE = 50
 # 21:50 EDT). A 30 s timeout cut the late replies on every retry alike, so the timeout
 # sits above the slowest reply seen; retries are for the 500s.
 DEFAULT_TIMEOUT = 60.0
-MAX_RETRIES = 3
 
 
-def _normalize(s: dict, pub: dict | None = None) -> DataResource:
-    acc = s.get("accession_id") or ""
-    pub = pub or {}
+def _is_study(s: object) -> bool:
+    """A study accession, and every other field ``_normalize`` reads at the type it
+    reads it as (absent or null is fine). The PubMed id is an int: it goes into the
+    publication URL's path."""
+    if not isinstance(s, dict):
+        return False
+    acc, pmid, trait = s.get("accession_id"), s.get("pubmed_id"), s.get("disease_trait")
+    return (
+        isinstance(acc, str)
+        and _ACC_RE.fullmatch(acc) is not None
+        and (pmid is None or type(pmid) is int)
+        and (trait is None or isinstance(trait, str))
+    )
+
+
+def _check_study(body: dict) -> None:
+    if not _is_study(body):
+        raise _http.UpstreamEnvelopeError(f"no GWAS Catalog study in {body!r:.200}")
+
+
+def _check_page(body: dict, *, first: int) -> None:
+    """An int ``page.totalElements`` and a list of studies. The Catalog leaves out
+    ``_embedded`` on a page that holds no rows (no hits, or a page past the end), so
+    it may be absent only when the total does not reach ``first``, the page's first
+    row."""
+    page = body.get("page")
+    total = page.get("totalElements") if isinstance(page, dict) else None
+    if "_embedded" in body:
+        embedded = body["_embedded"]
+        studies = embedded.get("studies") if isinstance(embedded, dict) else None
+    else:
+        studies = [] if type(total) is int and total <= first else None
+    if not (
+        type(total) is int and isinstance(studies, list) and all(_is_study(s) for s in studies)
+    ):
+        raise _http.UpstreamEnvelopeError(f"no GWAS Catalog study list in {body!r:.200}")
+
+
+def _check_publication(body: dict) -> None:
+    if not all(isinstance(body.get(k), str | None) for k in ("title", "publication_date")):
+        raise _http.UpstreamEnvelopeError(f"no GWAS Catalog publication in {body!r:.200}")
+
+
+def _normalize(s: dict, pub: dict) -> DataResource:
+    acc = s["accession_id"]
     pubmed = s.get("pubmed_id")
-    identifiers: dict[str, str] = {}
-    if pubmed:
-        identifiers["pmid"] = str(pubmed)
-    trait = s.get("disease_trait") or None
-    pubdate = pub.get("publication_date") or ""
-    year = int(pubdate[:4]) if pubdate[:4].isdigit() else None
+    trait = s.get("disease_trait")
+    pubdate = pub.get("publication_date")
     return DataResource(
         id=f"gwas:{acc}",
         source="gwas",
         kind="study",
         title=pub.get("title") or trait or acc,
-        year=year,
-        identifiers=identifiers,
+        year=year_from(pubdate),
+        identifiers={"pmid": str(pubmed)} if pubmed else {},
         subjects=[trait] if trait else [],
-        last_updated=pub.get("publication_date") or None,
-        files=[],
+        last_updated=pubdate or None,
         links=[Link(rel="landing_page", target_id=_LANDING.format(acc=acc))],
     )
 
@@ -71,32 +110,28 @@ async def search(
     client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
 ) -> tuple[int, list[DataResource]]:
     capped = min(size, MAX_SIZE)
-    page = offset // capped if capped else 0
+    page = offset // capped  # size >= 1: the search tool's schema refuses less
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         SEARCH,
         service="GWAS Catalog search",
         # disease_trait is the v2 form of v1's findByDiseaseTrait: case-insensitive exact
         # match on the trait (efo_trait is a broader ontology match; not used).
         params={"disease_trait": query, "size": capped, "page": page},
-        headers={"Accept": "application/json"},
+        headers=_ACCEPT_JSON,
         timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         # No not_found_returns: a 404 on the SEARCH endpoint means it moved (an outage),
-        # not "no studies" — an empty result is a 200 with an empty `studies` list.
+        # not "no studies" — an empty result is a 200 with no `_embedded` and a total.
         expect=dict,
+        check=functools.partial(_check_page, first=page * capped),
     )
-    studies = ((body or {}).get("_embedded") or {}).get("studies") or []
-    # `.get(k, default)` only falls back on an ABSENT key, not an explicit null —
-    # coerce a None totalElements to the page length so total stays an int.
-    reported = ((body or {}).get("page") or {}).get("totalElements")
-    total = reported if isinstance(reported, int) else len(studies)
+    studies = body["_embedded"]["studies"] if "_embedded" in body else []
     # Page-boundary slice (see pagination spec): the page holding `offset` starts at
     # `page * capped`, so drop the first `offset % capped` rows — otherwise a mid-page
     # offset replays rows the router already consumed.
-    sliced = studies[offset % capped :] if capped else studies
-    return total, [compact(_normalize(s)) for s in sliced]
+    sliced = studies[offset % capped :]
+    return body["page"]["totalElements"], [compact(_normalize(s, {})) for s in sliced]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
@@ -105,27 +140,25 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise NotFoundError(f"malformed GWAS id {resource_id!r}")
     body = await _http.request_json(
         client,
-        "GET",
+        _GET,
         RECORD.format(acc=acc),
         service="GWAS Catalog resolve",
-        headers={"Accept": "application/json"},
+        headers=_ACCEPT_JSON,
         timeout=DEFAULT_TIMEOUT,
-        max_retries=MAX_RETRIES,
         not_found_returns=None,
         expect=dict,
+        check=_check_study,
     )
-    if not body or not body.get("accession_id"):
+    if body is None:
         raise NotFoundError(f"GWAS Catalog has no study {acc}")
     pub, pub_error = await _publication(client, body.get("pubmed_id"))
     resource = _normalize(body, pub)
     if pub_error:  # recorded, so the router does not cache a study missing its paper
-        resource = resource.model_copy(
-            update={"errors": {**resource.errors, "publication": pub_error}}
-        )
+        resource = resource.model_copy(update={"errors": {"publication": pub_error}})
     return resource
 
 
-async def _publication(client: httpx.AsyncClient, pmid: object) -> tuple[dict, str | None]:
+async def _publication(client: httpx.AsyncClient, pmid: int | None) -> tuple[dict, str | None]:
     """The study's paper (title, publication_date), and why it is missing (None when the
     Catalog answered). No PMID, or a PMID the Catalog has no publication for → ``({},
     None)``; a failed lookup → ``({}, reason)``."""
@@ -134,14 +167,15 @@ async def _publication(client: httpx.AsyncClient, pmid: object) -> tuple[dict, s
     try:
         body = await _http.request_json(
             client,
-            "GET",
+            _GET,
             PUBLICATION.format(pmid=pmid),
             service="GWAS Catalog publication",
-            headers={"Accept": "application/json"},
+            headers=_ACCEPT_JSON,
             timeout=DEFAULT_TIMEOUT,
-            max_retries=MAX_RETRIES,
             not_found_returns=None,
-            expect=dict,  # a wrong-shape body is a failed lookup, not "no publication"
+            # a wrong-shape body is a failed lookup, not "no publication"
+            expect=dict,
+            check=_check_publication,
         )
     except DataAggregatorError as exc:
         return {}, f"{type(exc).__name__}: {exc}"

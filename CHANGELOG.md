@@ -8,6 +8,77 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
+  lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
+  such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
+- A NASA CMR answer missing its hit count or collection list is reported as a
+  malformed answer instead of zero hits, a collection without a concept id is no
+  longer returned as `nasacmr:`, and a wrong-typed field no longer escapes as a bare
+  error.
+- data.gov datasets keep every theme as a subject. Some publishers give a theme as a
+  labelled concept instead of plain text (70 of 3,472 datasets sampled), and those
+  themes were dropped.
+- A data.gov answer missing its result list is reported as a malformed answer instead
+  of zero hits or "no such dataset", and a wrong-typed field no longer escapes as a
+  bare error.
+- An OmicsDI record's `doi` is the dataset's own DOI, not the DOI of the paper that
+  describes it. Every OmicsDI record with a publication reported the paper's DOI as
+  its own, so a dataset and its paper could be taken for the same record; the paper's
+  DOI is now a `described_in` link, and a PRIDE dataset's own DOI is filled in.
+- OmicsDI MetaboLights records keep their paper's DOI and PubMed id when the
+  publication is written "title. DOI. PMID:n"; the DOI was dropped (3 of 4 records
+  sampled) and the PubMed id never read.
+- An OmicsDI id whose repository or accession contains `/`, `..`, `?`, `#` or `%` is
+  refused before any request; `omicsdi:pride:../../evil?injected=1` reached another
+  OmicsDI endpoint.
+- An OmicsDI answer missing its result list is reported as a malformed answer instead
+  of zero hits, and a wrong-typed field, or a record for a different accession, no
+  longer escapes as a bare error or comes back as the wrong record.
+- A Hugging Face search or resolve no longer fails on a dataset whose card lists its
+  licences instead of naming one. A card with `license: []` (for example
+  `priyank-m/SROIE_2019_text_recognition`) made the whole search return no Hugging Face
+  results, and the dataset could not be resolved. The first listed licence is used,
+  or none.
+- A malformed Hugging Face answer (a dataset without an id, or a field of the wrong
+  type) is reported as a malformed answer instead of escaping as a bare error or
+  becoming a record with the id `hf:`.
+- `operate` `schema` and `preview` name the first column of a CSV that starts with a
+  UTF-8 byte-order mark (as Excel's "CSV UTF-8" writes it) without the mark, as `head`
+  and `sql` already did. A column name copied from `preview` into a query now matches.
+- `operate` `preview` of a CSV no longer returns half a row when its 64 KB read ends
+  inside a quoted field that holds line breaks (a poem, an address, a long comment).
+  The half row came back as data, its later columns empty; it is now left out and the
+  page is marked `truncated`.
+- An NCBI failure is reported as an error instead of an empty answer. When NCBI's
+  summary service failed, PubMed reported a real PMID as "no record"; when its link
+  service failed, a PubMed record or BioProject came back with no data links; and a
+  search answer without its result read as zero hits. A wrong-typed field in an NCBI
+  answer no longer escapes as a bare error.
+- A GWAS Catalog answer missing its study list or total is reported as a malformed
+  answer instead of zero hits, a study answer without an accession is no longer
+  reported as "no such study", and a wrong-typed field no longer escapes as a bare
+  error. A trait with no studies, and a page past the last one, still come back empty.
+- Resolving a GBIF dataset that GBIF has deleted reports it as not found, with the
+  date it was deleted. GBIF still answers with the deleted dataset's record, so it came
+  back as a live dataset whose archive link no longer works (GBIF lists 25,205 deleted
+  datasets).
+- A GBIF id that is not a dataset key (GBIF keys are UUIDs) is reported as not found
+  instead of as a GBIF outage.
+- A GBIF answer missing its result list or count is reported as a malformed answer
+  instead of zero hits, and a wrong-typed field no longer escapes as a bare error or
+  turns a keyword string into one-letter subjects.
+- `operate` SQL accepts a `;` inside a string (`WHERE go = 'GO:1;GO:2'`), a query that
+  ends in a `--` comment, and DuckDB's other query forms (`FROM data WHERE ...`, a
+  leading comment). It still refuses anything that is not a single query.
+- `operate` SQL always returns at most its row cap. A query ending in `) --` used to
+  switch the cap off, so the server read every row of the result into memory.
+- `operate` `peek` profiles a file that has a header and no rows. It used to fail with
+  a Python error; the null percentage is now empty for such a file.
+- An `operate` `sql`, `head` or `peek` that runs past the wall-clock limit is stopped.
+  The limit used to report the timeout while the query kept running in the server to
+  its end, using its CPU and memory. Limitation: a source file still downloading when
+  the limit is reached finishes downloading before the work stops; stopping a download
+  part-way would need a separate process.
 - A GEO record of several organisms lists each one. GEO names them in one field
   ("Homo sapiens; Mus musculus"), which the adapter kept as a single organism, so the
   record's taxa held only one of them.
