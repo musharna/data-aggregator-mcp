@@ -402,7 +402,11 @@ async def test_dispatch_resolve_renders_citation_when_cite_given(httpx_mock, mon
         )
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
-    httpx_mock.add_response(url="https://doi.org/10.1038/x", text="@article{x}")
+    httpx_mock.add_response(
+        url="https://doi.org/10.1038/x",
+        headers={"content-type": "application/x-bibtex"},
+        text="@article{x}",
+    )
     out = await server._dispatch("resolve", {"id": "datacite:10.1038/x", "cite": "bibtex"})
     assert out["citation"] == "@article{x}"
 
