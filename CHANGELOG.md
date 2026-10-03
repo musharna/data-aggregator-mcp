@@ -206,6 +206,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   showed the source as up. The literature probe asked Europe PMC, which literature
   search does not use; it now asks PubMed. DataCite and omics are now probed at the
   search endpoints they use, instead of DataCite's heartbeat and NCBI's database list.
+- An SRA record's FASTQ list from ENA is reported as a malformed answer when its
+  size or checksum list does not line up with its file list. Each file used to take
+  the size and checksum at its own position, so a list missing an entry gave the
+  files after it the wrong size or checksum. A listed file path that is not on
+  ftp.sra.ebi.ac.uk is refused instead of becoming a download URL, and a malformed
+  record no longer escapes as a bare error.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
