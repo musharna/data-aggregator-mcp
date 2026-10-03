@@ -175,6 +175,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   answer for `assay=` that is missing its result list or has a wrong-typed field is
   reported in `errors` as a lookup failure instead of "no match", and is no longer
   remembered as "no match" for an hour.
+- The `resolve(fair=true)` score weights each indicator by the priority the RDA FAIR
+  Data Maturity Model gives it. Eight of the fourteen indicators had a different
+  weight (for example F3 and F4, which the specification calls Essential, counted as
+  Important), so every score was off. The gaps about the data's download protocol,
+  file formats and community standard now carry the specification's data ids
+  (`RDA-A1.1-01D`, `RDA-I1-01D`, `RDA-R1.3-01D`) instead of the metadata ones.
+- The FAIR score no longer marks a download over `http://` or `ftp://` as lacking a free
+  access protocol (the specification names both), counts a compressed file such as
+  `reads.fastq.gz` as a recognised format, and no longer credits provenance to every
+  record that has creators: it needs funding, a modified date or related records, as
+  its gap says. A record with no licence is no longer told its licence is "free text".
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
