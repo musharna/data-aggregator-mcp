@@ -256,6 +256,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   doi.org answers with something else: Chinese ISTIC DOIs with the publisher's HTML
   page, Taiwanese Airiti DOIs with CSL-JSON for every format. The citation is now
   null in that case, as for any other citation that cannot be rendered.
+- An OmicsDI MetaboLights study's file list is read only from that study's directory
+  index on the EBI mirror. Any other page answered there (an error or maintenance
+  page, another study's index) was read as the study's files, listing the page's links
+  or no files at all; now it is reported as an upstream error. A listed link that is
+  not a file of that directory is refused instead of being fetched from elsewhere on
+  the mirror, and only `MTBLS<number>` accessions are looked up.
+- MetaboLights file names that the mirror's listing escapes (a space, `#`, `%`, `:`
+  or a non-ASCII letter) are reported as the file's real name and keep their published
+  sha256; they came back escaped (`a%20b.txt`) and unverified.
 
 ## [0.54.14] - 2026-10-02
 
