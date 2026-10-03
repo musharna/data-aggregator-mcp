@@ -34,6 +34,21 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The `search` tool's description names all 17 sources a search queries. It named 12,
   leaving out GBIF, data.gov, NASA CMR, UniProt and BioStudies, which were searched
   all along.
+- Resolving a Dataverse file DOI works. Dataverse gives each file a DOI as well as
+  each dataset (85 of 100 random Harvard DOIs registered as datasets are file DOIs),
+  and resolving one failed as "not found"; it now lists that file. A DOI the
+  Dataverse installation no longer holds gives the record with no files instead of
+  failing, as a withdrawn (deaccessioned) dataset already did.
+- Dataverse files under an embargo that has not ended, or past their retention
+  period, are no longer listed. Dataverse refuses to download them (HTTP 403), the
+  same as restricted files, which were already left out.
+- Dataverse files keep their folder in their name (`data/2026-06-24.tsv`), so a
+  fetch keeps the dataset's layout and two files with the same name in different
+  folders are no longer saved side by side with a hash added to one name.
+- Files from Dataverse installations that use SHA-1 checksums (DataverseNL) are
+  listed with their checksum, so a fetch can verify them; they were listed with none.
+- A Dataverse answer missing its dataset or file, or with a wrong-typed field, is
+  reported as a malformed answer instead of no files or a bare error.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
