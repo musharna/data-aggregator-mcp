@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Resolving an embargoed or confidential Figshare record, directly or through its
+  DataCite DOI, failed with a bare `KeyError: 'files'`. Figshare now leaves the file list
+  out of such an article instead of sending it as null; the record resolves again, with
+  no files, as before.
+
 ## [0.55.1] - 2026-10-03
 
 ### Fixed
