@@ -4,11 +4,16 @@ import pytest
 from data_aggregator_mcp import health, sources
 
 
+def _target(url: str) -> health._Target:
+    """A probe target whose check accepts any JSON object."""
+    return health._Target(url, dict, lambda body: None)
+
+
 @pytest.mark.asyncio
 async def test_probe_one_up(httpx_mock):
-    httpx_mock.add_response(url="https://up.test/", status_code=200)
+    httpx_mock.add_response(url="https://up.test/", status_code=200, json={})
     async with httpx.AsyncClient() as client:
-        r = await health._probe_one(client, "zenodo", "https://up.test/")
+        r = await health._probe_one(client, "zenodo", _target("https://up.test/"))
     assert r["name"] == "zenodo"
     assert r["status"] == "up"
     assert isinstance(r["latency_ms"], int)
@@ -19,7 +24,7 @@ async def test_probe_one_up(httpx_mock):
 async def test_probe_one_down_on_5xx(httpx_mock):
     httpx_mock.add_response(url="https://down.test/", status_code=503)
     async with httpx.AsyncClient() as client:
-        r = await health._probe_one(client, "datacite", "https://down.test/")
+        r = await health._probe_one(client, "datacite", _target("https://down.test/"))
     assert r["status"] == "down"
     assert "503" in r["detail"]
 
@@ -28,7 +33,7 @@ async def test_probe_one_down_on_5xx(httpx_mock):
 async def test_probe_one_down_on_transport_error_never_raises(httpx_mock):
     httpx_mock.add_exception(httpx.ConnectError("boom"))
     async with httpx.AsyncClient() as client:
-        r = await health._probe_one(client, "omics", "https://err.test/")
+        r = await health._probe_one(client, "omics", _target("https://err.test/"))
     assert r["status"] == "down"
     assert r["latency_ms"] is None
     assert r["detail"]
