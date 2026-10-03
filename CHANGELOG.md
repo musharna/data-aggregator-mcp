@@ -8,6 +8,32 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `resolve(format="ro-crate")` produces a valid RO-Crate 1.1 crate for records with
+  authors. Each author was written inside the dataset entry without an id, which
+  RO-Crate 1.1 does not allow (the RO-Crate validator rejected every such crate), and
+  the author's ORCID was left out. Each author is now its own `Person` entry,
+  identified by its ORCID when the record has one; `author` lists them by id.
+- The provenance crate of `search(provenance=true)` lists only data sources under
+  `sources_queried`. It also listed every note in the search's `errors` (`semantic`,
+  `filters`, `query_syntax`, a failed ontology lookup such as `taxonomy`) as a source,
+  and named a failed sub-database or multi-query stream by its internal key
+  (`omics/sra`, `zenodo#v1`) instead of as its records do (`sra`, `zenodo`). The notes
+  are still disclosed verbatim under `errors`.
+- An OpenAIRE search answer missing its result list or hit count is reported as a
+  malformed answer instead of zero hits, a record answer that is not a record (an
+  empty object or an error message) is no longer returned as an untitled record, and
+  a wrong-typed field no longer escapes as a bare error.
+- Resolving an `openaire:` id of a dataset, software or other research product
+  reports that kind. Every OpenAIRE record was called a publication, although only
+  search is limited to publications.
+- Asking for a prompt without its required argument (`find_data` with no `topic`) is
+  refused with an "invalid params" error that names the argument. The prompt was
+  rendered with a hole in it ("find datasets about: ."). An unknown prompt name and an
+  argument the prompt does not take (a misspelt `organsim`) are refused the same way;
+  the misspelt argument used to be dropped without a word.
+- The `search` tool's description names all 17 sources a search queries. It named 12,
+  leaving out GBIF, data.gov, NASA CMR, UniProt and BioStudies, which were searched
+  all along.
 - Resolving a Dataverse file DOI works. Dataverse gives each file a DOI as well as
   each dataset (85 of 100 random Harvard DOIs registered as datasets are file DOIs),
   and resolving one failed as "not found"; it now lists that file. A DOI the
@@ -49,6 +75,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - An OmicsDI answer missing its result list is reported as a malformed answer instead
   of zero hits, and a wrong-typed field, or a record for a different accession, no
   longer escapes as a bare error or comes back as the wrong record.
+- A malformed PRIDE file listing (for an `omicsdi:pride:` dataset) is reported as a
+  malformed answer. A file entry of the wrong shape escaped as a bare error, an entry
+  without a name was listed as a file named "", and a file count of `true` was read
+  as one file.
 - A Hugging Face search or resolve no longer fails on a dataset whose card lists its
   licences instead of naming one. A card with `license: []` (for example
   `priyank-m/SROIE_2019_text_recognition`) made the whole search return no Hugging Face
@@ -82,6 +112,30 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A GBIF answer missing its result list or count is reported as a malformed answer
   instead of zero hits, and a wrong-typed field no longer escapes as a bare error or
   turns a keyword string into one-letter subjects.
+- `operate` SQL accepts a `;` inside a string (`WHERE go = 'GO:1;GO:2'`), a query that
+  ends in a `--` comment, and DuckDB's other query forms (`FROM data WHERE ...`, a
+  leading comment). It still refuses anything that is not a single query.
+- `operate` SQL always returns at most its row cap. A query ending in `) --` used to
+  switch the cap off, so the server read every row of the result into memory.
+- `operate` `peek` profiles a file that has a header and no rows. It used to fail with
+  a Python error; the null percentage is now empty for such a file.
+- An `operate` `sql`, `head` or `peek` that runs past the wall-clock limit is stopped.
+  The limit used to report the timeout while the query kept running in the server to
+  its end, using its CPU and memory. Limitation: a source file still downloading when
+  the limit is reached finishes downloading before the work stops; stopping a download
+  part-way would need a separate process.
+- A GEO record of several organisms lists each one. GEO names them in one field
+  ("Homo sapiens; Mus musculus"), which the adapter kept as a single organism, so the
+  record's taxa held only one of them.
+- An NCBI summary the omics adapter cannot read (a field of the wrong type, no
+  accession, SRA experiment XML that does not parse) is reported as upstream trouble
+  naming the database and uid, instead of escaping as a bare error or becoming a record
+  with an empty id.
+- `resolve` with `cite=` no longer returns a web page or a different format as the
+  citation. For DOIs whose registration agency cannot produce the format asked for,
+  doi.org answers with something else: Chinese ISTIC DOIs with the publisher's HTML
+  page, Taiwanese Airiti DOIs with CSL-JSON for every format. The citation is now
+  null in that case, as for any other citation that cannot be rendered.
 
 ## [0.54.14] - 2026-10-02
 
