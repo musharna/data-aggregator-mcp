@@ -19,12 +19,9 @@ def interleave(per_list: list[list[T]]) -> list[T]:
     earlier one fills the budget; interleaving by rank position gives each a
     fair share.
     """
-    out: list[T] = []
-    for i in range(max((len(lst) for lst in per_list), default=0)):
-        for lst in per_list:
-            if i < len(lst):
-                out.append(lst[i])
-    return out
+    # Every (rank, list) position, in rank order and then list order.
+    positions = sorted((rank, n) for n, lst in enumerate(per_list) for rank in range(len(lst)))
+    return [per_list[n][rank] for rank, n in positions]
 
 
 async def fan_in(
@@ -44,7 +41,8 @@ async def fan_in(
     total = 0
     pages: list[list[T]] = []
     failures: list[str] = []
-    for name, outcome in zip(names, outcomes, strict=True):
+    # gather() returns one outcome per awaitable, so strict= cannot change behaviour.
+    for name, outcome in zip(names, outcomes, strict=True):  # pragma: no mutate
         if isinstance(outcome, BaseException):
             logger.warning("%s: %s backend failed: %r", what, name, outcome)
             failures.append(f"{name}: {type(outcome).__name__}: {outcome}")

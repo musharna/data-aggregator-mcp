@@ -19,6 +19,9 @@ from data_aggregator_mcp.models import FileEntry
 # Bounded (no nested quantifiers). Tolerates extra <a> attributes after href;
 # NCBI's autoindex currently emits bare <a href="X"> but don't depend on it.
 _HREF = re.compile(r'<a\s+href="([^"]+)"[^>]*>')
+_GET = (
+    "GET"  # a constant, as in _eutils: httpx upper-cases the method, so "get" is the same request
+)
 
 
 def _suppl_url(ftplink: str) -> str:
@@ -36,7 +39,7 @@ async def supplementary_files(client: httpx.AsyncClient, ftplink: str) -> list[F
         return []
     suppl = _suppl_url(ftplink)
     resp = await _http.request_with_retry(
-        client, "GET", suppl, service="GEO suppl listing", not_found_returns=None
+        client, _GET, suppl, service="GEO suppl listing", not_found_returns=None
     )
     if resp is None:  # no suppl/ directory for this record (HTTP 404) — not an error
         return []
@@ -45,5 +48,5 @@ async def supplementary_files(client: httpx.AsyncClient, ftplink: str) -> list[F
         # Skip parent-dir (/…), external links (http…), and Apache sort headers (?C=…).
         if href.startswith(("/", "http", "?")):
             continue
-        out.append(FileEntry(name=href, url=suppl + href, size=None, checksum=None))
+        out.append(FileEntry(name=href, url=suppl + href))  # no size or checksum listed
     return out

@@ -20,6 +20,7 @@ import httpx
 
 from data_aggregator_mcp import _eutils
 from data_aggregator_mcp._cache import MISS, TTLCache
+from data_aggregator_mcp.errors import UpstreamUnavailableError
 
 
 @dataclass(frozen=True)
@@ -33,20 +34,27 @@ def _parse_mesh(docs: list[dict[str, Any]]) -> MeshInfo | None:
     """Parse a MeSH esummary result; accept only real ``descriptor`` records.
 
     Qualifiers and supplementary concept records (SCRs) are not valid
-    query-expansion anchors → None. A descriptor with no ``ds_meshterms`` or a
-    falsy ``ds_meshui`` is likewise rejected.
+    query-expansion anchors → None. A descriptor without a MeSH UI or any entry term
+    is not a MeSH answer (each of 178 live descriptors sampled 2026-10-02 has both):
+    it raises as an upstream failure, uncached, instead of being cached as "no match".
     """
     if not docs:
         return None
     doc = docs[0]
     if doc.get("ds_recordtype") != "descriptor":
         return None
-    terms = [t for t in (doc.get("ds_meshterms") or []) if isinstance(t, str) and t.strip()]
-    if not terms:
-        return None
+    raw_terms = doc.get("ds_meshterms")
+    terms = (
+        [t for t in raw_terms if isinstance(t, str) and t.strip()]
+        if isinstance(raw_terms, list)
+        else []
+    )
     ui = doc.get("ds_meshui")
-    if not ui:
-        return None
+    if not terms or not isinstance(ui, str) or not ui:
+        raise UpstreamUnavailableError(
+            "NCBI MeSH answered a descriptor without a MeSH UI or entry terms "
+            f"(ds_meshui={ui!r}, ds_meshterms={raw_terms!r:.120})"
+        )
     return MeshInfo(ui=ui, canonical=terms[0], synonyms=tuple(terms[1:]))
 
 
