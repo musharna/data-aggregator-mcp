@@ -98,9 +98,18 @@ async def test_complete_json_none_when_content_is_not_object(
 
 async def test_complete_json_none_on_missing_choices(httpx_mock: HTTPXMock, monkeypatch) -> None:
     monkeypatch.setenv("LLM_API_BASE", "https://llm.test/v1")
-    httpx_mock.add_response(url="https://llm.test/v1/chat/completions", json={"unexpected": True})
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(llm._http.asyncio, "sleep", _no_sleep)
+    # An answer without a message is malformed: retried like any other, then None.
+    httpx_mock.add_response(
+        url="https://llm.test/v1/chat/completions", json={"unexpected": True}, is_reusable=True
+    )
     async with httpx.AsyncClient() as client:
         assert await llm.complete_json(client, system="s", user="u") is None
+    assert len(httpx_mock.get_requests()) == 3
 
 
 async def test_complete_json_none_on_transport_error(httpx_mock: HTTPXMock, monkeypatch) -> None:
