@@ -26,7 +26,7 @@ from typing import Any
 
 import httpx
 
-from data_aggregator_mcp import _http
+from data_aggregator_mcp import _http, egress
 from data_aggregator_mcp.errors import DataAggregatorError
 
 logger = logging.getLogger(__name__)
@@ -148,6 +148,9 @@ async def complete_json(
             service="llm",
             content=payload,
             headers=headers,
+            # Operator configuration, often a local server: exempt from the egress guard
+            # that record URLs on this client are held to (egress.operator_configured).
+            extensions=egress.operator_configured(url),
             expect=dict,
             check=_check_answer,
         )
