@@ -28,6 +28,14 @@ those two lookups still wins. Closing that requires pinning the checked address 
 connection itself. This raises the bar from "trivially exploitable by anyone who can upload
 a record" to "needs a rebinding-capable resolver", which is worth having while being honest
 that it is not total.
+
+What it does not judge: the model endpoints the operator configures (``LLM_API_BASE``,
+``EMBEDDING_API_BASE``). Those are trusted configuration, often a local server on
+127.0.0.1, yet they share the server's client with record URLs. ``llm`` and ``embeddings``
+mark their requests with ``operator_configured``, and the hook passes a marked request only
+while it is still addressed to the origin the mark names. A record URL is never marked, so
+a record pointing at that same local server is still refused, and so is a redirect that
+leaves the configured origin.
 """
 
 from __future__ import annotations
@@ -45,6 +53,12 @@ from data_aggregator_mcp.errors import ValidationError
 #: dev fixture — set this to "1". Named for what it permits, so it cannot be mistaken for a
 #: performance knob.
 ALLOW_PRIVATE_ENV = "DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS"
+
+#: httpx request extension carrying the origin of an operator-configured endpoint. httpx
+#: copies extensions onto a redirect, which is why the hook compares the origin, not only
+#: the presence of the mark.
+_OPERATOR_CONFIGURED = "data_aggregator_mcp.operator_configured"
+_DEFAULT_PORTS = {"http": 80, "https": 443}
 
 #: Seconds an approved host stays approved. Files in one record almost always share
 #: a host, so without this a 4-file fetch pays four resolutions of the same name — enough to
@@ -81,6 +95,21 @@ def _is_public(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
         ip = ip.ipv4_mapped
     return ip.is_global and not (ip.is_reserved or ip.is_multicast)
+
+
+def _origin(url: str) -> tuple[str, str | None, int | None]:
+    """Scheme, host and port, the port filled in when the URL leaves it implicit: httpx
+    drops a default port when it prints a request URL. ``urlsplit`` lower-cases the
+    scheme and ``hostname`` the host."""
+    parts = urlsplit(url)
+    return parts.scheme, parts.hostname, parts.port or _DEFAULT_PORTS.get(parts.scheme)
+
+
+def operator_configured(url: str) -> dict[str, Any]:
+    """Request extensions marking a request to ``url`` as one the operator configured, so
+    ``enforce_on_request`` passes it while it stays on ``url``'s origin. For the model
+    endpoints only, never for a URL that came from a record or a caller."""
+    return {_OPERATOR_CONFIGURED: _origin(url)}
 
 
 def split_url(url: str, *, what: str) -> SplitResult:
@@ -199,8 +228,14 @@ async def enforce_on_request(request: Any) -> None:
 
     Typed ``Any`` rather than ``httpx.Request`` so this module does not import httpx purely
     for an annotation; httpx passes the request object positionally.
+
+    A request marked ``operator_configured`` is passed while it is addressed to the origin
+    the mark names; on any other origin, a redirect target included, it is checked.
     """
-    await assert_public_url(str(request.url), what="request")
+    url = str(request.url)
+    if request.extensions.get(_OPERATOR_CONFIGURED) == _origin(url):
+        return
+    await assert_public_url(url, what="request")
 
 
 def enforce_on_request_sync(request: Any) -> None:

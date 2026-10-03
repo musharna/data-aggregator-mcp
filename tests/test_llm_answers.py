@@ -30,7 +30,7 @@ from collections.abc import Iterator
 import httpx
 import pytest
 
-from data_aggregator_mcp import _http, llm, server
+from data_aggregator_mcp import _http, llm
 
 # Verbatim from Ollama (llama3.1) for the probe prompt above.
 _LLAMA = {
@@ -417,24 +417,6 @@ async def test_an_upper_case_scheme_is_an_http_url(monkeypatch):
     out, sent = await _ask(_ok(_LLAMA))
     assert out == _LLAMA_OBJECT
     assert str(sent[0].url) == "https://llm.test/v1/chat/completions"
-
-
-async def test_the_egress_guard_refusing_a_local_endpoint_is_logged(
-    local_chat_server, monkeypatch, caplog
-):
-    """The server's own client refuses private addresses, a local LLM server included;
-    that used to read as "no LLM endpoint configured or rewrite failed" with no trace."""
-    monkeypatch.setenv("LLM_API_BASE", local_chat_server)
-    monkeypatch.delenv("DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS")
-    with caplog.at_level(logging.WARNING, logger="data_aggregator_mcp.llm"):
-        async with server._http_client() as client:
-            assert await llm.complete_json(client, system="s", user="u") is None
-    [message] = caplog.messages
-    assert message.startswith(f"{_SKIPPED}[ValidationError] request: '127.0.0.1' resolves to ")
-    # Positive control: with private egress allowed, the same client reads the answer.
-    monkeypatch.setenv("DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS", "1")
-    async with server._http_client() as client:
-        assert await llm.complete_json(client, system="s", user="u") == _LLAMA_OBJECT
 
 
 def _paths(node, prefix=()):

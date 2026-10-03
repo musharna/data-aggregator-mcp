@@ -87,6 +87,7 @@ async def _retrying(
     follow_redirects: bool = True,
     no_content_returns: Any = _RAISE,
     empty_answer: Callable[[httpx.Response], bool] | None = None,
+    extensions: Mapping[str, Any] | None = None,
 ) -> Any:
     """Issue ``method url`` with retry + classification. Transport errors and
     (when ``parse`` is given) a malformed 2xx body are retried like a 5xx, then
@@ -123,6 +124,7 @@ async def _retrying(
                 headers=headers,
                 timeout=timeout,
                 follow_redirects=follow_redirects,
+                extensions=extensions,
             )
         except _TRANSPORT_ERRORS as exc:
             if retry:
@@ -287,6 +289,7 @@ async def request_json(
     no_content_returns: Any = _RAISE,
     empty_answer: Callable[[httpx.Response], bool] | None = None,
     check: Callable[[Any], None] | None = None,
+    extensions: Mapping[str, Any] | None = None,
 ) -> Any:
     """Return the parsed JSON body. A malformed 200 body (NCBI throttle envelope)
     is retried, then raises ``UpstreamUnavailableError``.
@@ -302,6 +305,9 @@ async def request_json(
     ``check(body)`` inspects the parsed body for an error the upstream smuggles inside
     a 200 (NCBI's ``esearchresult.ERROR``). It raises ``UpstreamEnvelopeError`` (a
     ``ValueError``) to have the body treated as malformed: retried, then raised.
+
+    ``extensions`` go on the request as httpx request extensions; the model endpoints pass
+    ``egress.operator_configured`` this way.
     """
     parse = _json_parser(expect, check)
     return await _retrying(
@@ -319,6 +325,7 @@ async def request_json(
         parse=parse,
         no_content_returns=no_content_returns,
         empty_answer=empty_answer,
+        extensions=extensions,
     )
 
 
