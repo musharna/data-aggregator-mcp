@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 import contextlib
+import json
+import os
+import subprocess
+import sys
+import threading
 from typing import Any
 
 import anyio
@@ -64,6 +69,36 @@ def test_url_only_client_is_not_treated_as_form_capable() -> None:
     a form request to a URL-only client is a protocol violation."""
     session = _Session(_caps(url=True))
     assert elicitation.supports_form_elicitation(session) is False
+
+
+@pytest.mark.parametrize(
+    ("declared", "form_capable"),
+    [
+        ({"elicitation": {}}, True),
+        ({"elicitation": {"form": {}}}, True),
+        ({"elicitation": {"form": {}, "url": {}}}, True),
+        ({"elicitation": {"url": {}}}, False),
+        ({}, False),
+    ],
+)
+def test_bare_elicitation_capability_means_form_mode(declared, form_capable) -> None:
+    """MCP 2025-11-25 and 2026-07-28, client/elicitation "Capabilities": "an empty
+    capabilities object is equivalent to declaring support for ``form`` mode only".
+    In 2025-06-18 the bare ``elicitation: {}`` was the only shape, so reading it as
+    "no form" left every such client unprompted. Parsed from the wire JSON, as the
+    server receives it; the url-only and undeclared rows are the negative controls."""
+    caps = types.ClientCapabilities.model_validate(declared)
+    assert elicitation.supports_form_elicitation(_Session(caps)) is form_capable
+
+
+async def test_a_client_declaring_bare_elicitation_is_prompted(monkeypatch) -> None:
+    monkeypatch.setattr(elicitation, "_resolves", _make_resolver(False))
+    bare = types.ClientCapabilities.model_validate({"elicitation": {}})
+    session = _Session(bare, _accept(organism="Saccharomyces cerevisiae"))
+    async with httpx.AsyncClient() as client:
+        out = await elicitation.correct_unresolved(client, session, {"organism": "yeast"})
+    assert len(session.calls) == 1
+    assert out == {"organism": "Saccharomyces cerevisiae"}
 
 
 def test_client_without_elicitation_is_not_capable() -> None:
@@ -313,3 +348,149 @@ async def test_end_to_end_a_client_without_elicitation_still_searches(monkeypatc
 
     assert result.is_error is not True
     assert seen["organism"] == "yeast", "uncorrected param passes through untouched"
+
+
+# --- live: the real server over stdio ------------------------------------------
+# The in-memory tests above patch the registry. These spawn ``python -m
+# data_aggregator_mcp`` and look the term up in the real NCBI Taxonomy, so they run
+# only with DATA_AGGREGATOR_MCP_LIVE=1. The unresolvable term is made up rather than
+# a common name ("yeast"), so the premise does not depend on what NCBI indexes; the
+# replacement is the canonical name of a taxon NCBI has held for decades (taxid 4932).
+
+LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
+live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+
+_NO_SUCH_TAXON = "zzqxv nonexistent organism"
+_SEARCH_ARGS = {
+    "query": "fermentation",
+    "organism": _NO_SUCH_TAXON,
+    "sources": ["zenodo"],
+    "size": 1,
+}
+
+
+@live_only
+async def test_live_accept_decline_and_cancel_over_stdio() -> None:
+    """A real ClientSession with an elicitation callback, against the real stdio server.
+    Accept applies the correction (the taxon is expanded, nothing is unresolved);
+    decline and cancel run the search without the filter and report it unresolved."""
+    from mcp import ClientSession
+    from mcp.client.stdio import StdioServerParameters, stdio_client
+
+    answers = {
+        "accept": types.ElicitResult(
+            action="accept", content={"organism": "Saccharomyces cerevisiae"}
+        ),
+        "decline": types.ElicitResult(action="decline"),
+        "cancel": types.ElicitResult(action="cancel"),
+    }
+    params = StdioServerParameters(command=sys.executable, args=["-m", "data_aggregator_mcp"])
+    for action, answer in answers.items():
+        asked: list[types.ElicitRequestParams] = []
+
+        async def callback(context, request, answer=answer, asked=asked):
+            asked.append(request)
+            return answer
+
+        with anyio.fail_after(120):
+            async with (
+                stdio_client(params) as (read, write),
+                ClientSession(read, write, elicitation_callback=callback) as session,
+            ):
+                await session.initialize()
+                result = await session.call_tool("search", _SEARCH_ARGS)
+        assert result.is_error is False, (action, result.content)
+        out = result.structured_content
+        assert len(asked) == 1, action
+        assert asked[0].mode == "form"
+        assert set(asked[0].requested_schema["properties"]) == {"organism"}
+        if action == "accept":
+            assert out["unresolved"] == []
+            assert out["taxon_expansion"]["taxid"] == 4932
+        else:
+            assert out["taxon_expansion"] is None, action
+            assert [(u["field"], u["input"]) for u in out["unresolved"]] == [
+                ("organism", _NO_SUCH_TAXON)
+            ], action
+
+
+def _raw_stdio_search(capabilities: dict[str, Any]) -> tuple[list[dict], dict]:
+    """Drive the stdio server with hand-written JSON-RPC, so the client can declare
+    capabilities exactly as a 2025-06-18 client does (the SDK client always declares
+    both modes). Answers any elicitation/create with an accept. Returns the
+    elicitation requests seen and the search's structured content."""
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "data_aggregator_mcp"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    killer = threading.Timer(120, proc.kill)  # a hang ends as a closed pipe, not a stall
+    killer.start()
+    try:
+        assert proc.stdin is not None and proc.stdout is not None
+
+        def send(message: dict) -> None:
+            proc.stdin.write(json.dumps({"jsonrpc": "2.0", **message}) + "\n")
+            proc.stdin.flush()
+
+        def receive() -> dict:
+            while line := proc.stdout.readline():
+                message = json.loads(line)
+                if "id" in message:
+                    return message
+            raise AssertionError("the server closed stdout (or the 120 s guard fired)")
+
+        send(
+            {
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": capabilities,
+                    "clientInfo": {"name": "raw", "version": "0"},
+                },
+            }
+        )
+        assert receive()["result"]["protocolVersion"] == "2025-06-18"
+        send({"method": "notifications/initialized"})
+        send(
+            {
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": "search", "arguments": _SEARCH_ARGS},
+            }
+        )
+        asked: list[dict] = []
+        while (message := receive()).get("method") == "elicitation/create":
+            asked.append(message["params"])
+            send(
+                {
+                    "id": message["id"],
+                    "result": {
+                        "action": "accept",
+                        "content": {"organism": "Saccharomyces cerevisiae"},
+                    },
+                }
+            )
+        assert message["id"] == 2
+        return asked, message["result"]["structuredContent"]
+    finally:
+        killer.cancel()
+        proc.kill()
+        proc.wait()
+
+
+@live_only
+def test_live_a_bare_elicitation_capability_is_prompted_over_stdio() -> None:
+    """A 2025-06-18 client declares ``elicitation: {}``; it is form mode and is asked.
+    Negative control in the same test: a url-only client is never sent a form."""
+    asked, out = _raw_stdio_search({"elicitation": {}})
+    assert [set(a["requestedSchema"]["properties"]) for a in asked] == [{"organism"}]
+    assert out["unresolved"] == []
+    assert out["taxon_expansion"]["taxid"] == 4932
+
+    asked, out = _raw_stdio_search({"elicitation": {"url": {}}})
+    assert asked == []
+    assert [u["field"] for u in out["unresolved"]] == ["organism"]

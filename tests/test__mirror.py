@@ -22,7 +22,7 @@ def test_router_reexports_are_the_extracted_objects():
     assert router._fingerprint_key is _mirror.fingerprint_key
     assert router._checksums is _mirror.checksums
     assert router._normalize_title is _mirror.normalize_title
-    assert router._first_author_surname is _mirror.first_author_surname
+    assert router._first_author_name_key is _mirror.first_author_name_key
     assert router._survivor_rank is _mirror.survivor_rank
     assert router._DISCOVERY_ONLY_SOURCES is _mirror.DISCOVERY_ONLY_SOURCES
 
