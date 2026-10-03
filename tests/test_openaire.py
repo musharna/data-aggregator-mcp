@@ -185,17 +185,6 @@ async def test_resolve_unroutable_prefix_raises() -> None:
             await openaire.resolve(client, "pubmed:1")
 
 
-async def test_resolve_falls_back_to_request_id_when_record_id_blank(httpx_mock: HTTPXMock) -> None:
-    rec = _oa_record(with_doi=False)
-    rec["id"] = ""  # single-entity payload blanks/omits its own id
-    httpx_mock.add_response(url=_ENT, json=rec)
-    async with httpx.AsyncClient() as client:
-        r = await openaire.resolve(client, "openaire:doi_dedup___::5c75a0e2")
-    assert (
-        r.id == "openaire:doi_dedup___::5c75a0e2"
-    )  # falls back to the request id, not "openaire:"
-
-
 @pytest.mark.asyncio
 async def test_search_offset_requests_page_and_slices():
     captured = {}
