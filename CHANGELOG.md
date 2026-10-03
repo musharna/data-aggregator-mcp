@@ -49,6 +49,48 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   inside a quoted field that holds line breaks (a poem, an address, a long comment).
   The half row came back as data, its later columns empty; it is now left out and the
   page is marked `truncated`.
+- An NCBI failure is reported as an error instead of an empty answer. When NCBI's
+  summary service failed, PubMed reported a real PMID as "no record"; when its link
+  service failed, a PubMed record or BioProject came back with no data links; and a
+  search answer without its result read as zero hits. A wrong-typed field in an NCBI
+  answer no longer escapes as a bare error.
+- A GWAS Catalog answer missing its study list or total is reported as a malformed
+  answer instead of zero hits, a study answer without an accession is no longer
+  reported as "no such study", and a wrong-typed field no longer escapes as a bare
+  error. A trait with no studies, and a page past the last one, still come back empty.
+- Resolving a GBIF dataset that GBIF has deleted reports it as not found, with the
+  date it was deleted. GBIF still answers with the deleted dataset's record, so it came
+  back as a live dataset whose archive link no longer works (GBIF lists 25,205 deleted
+  datasets).
+- A GBIF id that is not a dataset key (GBIF keys are UUIDs) is reported as not found
+  instead of as a GBIF outage.
+- A GBIF answer missing its result list or count is reported as a malformed answer
+  instead of zero hits, and a wrong-typed field no longer escapes as a bare error or
+  turns a keyword string into one-letter subjects.
+- `operate` SQL accepts a `;` inside a string (`WHERE go = 'GO:1;GO:2'`), a query that
+  ends in a `--` comment, and DuckDB's other query forms (`FROM data WHERE ...`, a
+  leading comment). It still refuses anything that is not a single query.
+- `operate` SQL always returns at most its row cap. A query ending in `) --` used to
+  switch the cap off, so the server read every row of the result into memory.
+- `operate` `peek` profiles a file that has a header and no rows. It used to fail with
+  a Python error; the null percentage is now empty for such a file.
+- An `operate` `sql`, `head` or `peek` that runs past the wall-clock limit is stopped.
+  The limit used to report the timeout while the query kept running in the server to
+  its end, using its CPU and memory. Limitation: a source file still downloading when
+  the limit is reached finishes downloading before the work stops; stopping a download
+  part-way would need a separate process.
+- A GEO record of several organisms lists each one. GEO names them in one field
+  ("Homo sapiens; Mus musculus"), which the adapter kept as a single organism, so the
+  record's taxa held only one of them.
+- An NCBI summary the omics adapter cannot read (a field of the wrong type, no
+  accession, SRA experiment XML that does not parse) is reported as upstream trouble
+  naming the database and uid, instead of escaping as a bare error or becoming a record
+  with an empty id.
+- `resolve` with `cite=` no longer returns a web page or a different format as the
+  citation. For DOIs whose registration agency cannot produce the format asked for,
+  doi.org answers with something else: Chinese ISTIC DOIs with the publisher's HTML
+  page, Taiwanese Airiti DOIs with CSL-JSON for every format. The citation is now
+  null in that case, as for any other citation that cannot be rendered.
 
 ## [0.54.14] - 2026-10-02
 
