@@ -79,6 +79,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its end, using its CPU and memory. Limitation: a source file still downloading when
   the limit is reached finishes downloading before the work stops; stopping a download
   part-way would need a separate process.
+- A GEO record of several organisms lists each one. GEO names them in one field
+  ("Homo sapiens; Mus musculus"), which the adapter kept as a single organism, so the
+  record's taxa held only one of them.
+- An NCBI summary the omics adapter cannot read (a field of the wrong type, no
+  accession, SRA experiment XML that does not parse) is reported as upstream trouble
+  naming the database and uid, instead of escaping as a bare error or becoming a record
+  with an empty id.
 
 ## [0.54.14] - 2026-10-02
 
