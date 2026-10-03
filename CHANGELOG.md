@@ -107,6 +107,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `list_sources` gives Zenodo an example id that can be fetched (`zenodo:1254563`).
   The old example, `zenodo:7654321`, led to a restricted record with no files, so
   fetching it failed.
+- A record whose file URL has a host that is not a hostname (an empty label, as in
+  `http://a..b/`, or a label over 63 characters) is refused by `fetch` and `operate`
+  as a malformed URL, naming the file and the URL. It was a bare "'idna' codec can't
+  encode character ..." naming neither.
 - Resolving a NASA CMR id that is not a collection concept id (`nasacmr:foo`, a
   lower-case `c…` id, a trailing space) says the collection is not found. CMR refuses
   such an id with HTTP 400, and the adapter reported it as a NASA CMR outage.
