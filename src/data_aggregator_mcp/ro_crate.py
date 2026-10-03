@@ -1,6 +1,7 @@
 """RO-Crate export — minimal RO-Crate 1.1 metadata for a resolved resource.
 
-Renders the root data entity + its files as an RO-Crate @graph. Pure transform.
+Renders the root data entity, its authors and its files as a flattened RO-Crate
+@graph. Pure transform.
 Complements the Croissant export: RO-Crate is the research-output packaging
 standard (general datasets, software, papers), Croissant the ML-dataset one.
 """
@@ -9,10 +10,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from data_aggregator_mcp.models import DataResource
+from data_aggregator_mcp.models import Creator, DataResource
 
 CONTEXT = "https://w3id.org/ro/crate/1.1/context"
 CONFORMS_TO = "https://w3id.org/ro/crate/1.1"
+ORCID_BASE = "https://orcid.org/"
+
+
+def _person_id(c: Creator, i: int) -> str:
+    """A creator's ``@id``: its ORCID iD, which RO-Crate 1.1 recommends for a Person,
+    else a crate-local ``#author-<n>``. An id is not optional: RO-Crate 1.1 requires a
+    flattened ``@graph``, where a nested object may hold nothing but ``@id``."""
+    return f"{ORCID_BASE}{c.orcid}" if c.orcid else f"#author-{i}"
 
 
 def render(r: DataResource) -> dict[str, Any]:
@@ -25,8 +34,14 @@ def render(r: DataResource) -> dict[str, Any]:
         root["license"] = r.license
     if r.year:
         root["datePublished"] = str(r.year)
-    if r.creators:
-        root["author"] = [{"@type": "Person", "name": c.name} for c in r.creators]
+    # Each author is its own Person entity, referenced by @id; a creator listed twice
+    # under one ORCID is one person, so one entity.
+    persons: dict[str, dict[str, Any]] = {}
+    for i, c in enumerate(r.creators):
+        pid = _person_id(c, i)
+        persons.setdefault(pid, {"@id": pid, "@type": "Person", "name": c.name})
+    if persons:
+        root["author"] = [{"@id": pid} for pid in persons]
 
     file_entities: list[dict[str, Any]] = []
     has_part: list[dict[str, str]] = []
@@ -51,6 +66,7 @@ def render(r: DataResource) -> dict[str, Any]:
                 "about": {"@id": "./"},
             },
             root,
+            *persons.values(),
             *file_entities,
         ],
     }
