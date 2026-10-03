@@ -68,8 +68,8 @@ def _is_file(f: object) -> bool:
 
 
 def _check_article(body: dict) -> None:
-    """A DOI string and a file list. The list is null while the files are embargoed
-    (which is also how a confidential article answers)."""
+    """A DOI string and a file list. The list is absent (null before 2026-10-03) while
+    the files are embargoed, which is also how a confidential article answers."""
     files = body.get("files")
     listed = isinstance(files, list) and all(_is_file(f) for f in files)
     embargoed = files is None and body.get("is_embargoed") is True
@@ -101,7 +101,7 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
         )
         return []
     out: list[FileEntry] = []
-    for f in data["files"] or []:  # null while embargoed
+    for f in data.get("files") or []:  # absent or null while embargoed, as checked
         if f["is_link_only"]:
             continue
         md5 = f.get("computed_md5") or f.get("supplied_md5")
