@@ -134,10 +134,27 @@ async def test_operate_refuses_a_source_url_in_private_space(guard_on, monkeypat
         return _poisoned("http://127.0.0.1:9/anything.csv")
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    _stop_operate_at_the_source(monkeypatch)
     async with httpx.AsyncClient() as client:
         with pytest.raises(ValidationError) as exc:
             await operate.run(client, "zenodo:999999", op="head", n=5)
     assert "non-public" in str(exc.value)
+
+
+def _stop_operate_at_the_source(monkeypatch) -> None:
+    """Fail at the first step that would leave the process (the size probe, then the
+    engine), so a guard that let a URL past fails the test at once instead of connecting.
+    Unreachable hosts here (127.0.0.1:9, 8.8.8.8:80) hang ~60 s on some hosts, and with
+    the size probe skipped the engine connected and held the test to operate's 30 s limit."""
+
+    def probe(url: str):
+        raise AssertionError(f"operate went on to probe the size of {url}")
+
+    async def engine(url: str, *args, **kwargs):
+        raise AssertionError(f"operate went on to read {url} without probing its size")
+
+    monkeypatch.setattr("data_aggregator_mcp.operate._source_size", probe)
+    monkeypatch.setattr("data_aggregator_mcp.duckquery.run_head", engine)
 
 
 async def test_fetch_refuses_a_url_in_private_space(guard_on, tmp_path) -> None:
@@ -169,6 +186,7 @@ async def test_operate_still_accepts_a_public_source(guard_on, monkeypatch) -> N
         raise _ReachedTheNextStep(url)
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    _stop_operate_at_the_source(monkeypatch)
     monkeypatch.setattr("data_aggregator_mcp.operate._source_size", boom)
 
     async with httpx.AsyncClient() as client:
@@ -283,6 +301,7 @@ async def test_operate_refuses_a_malformed_source_url_by_name(guard_on, monkeypa
         raise _ReachedTheNextStep(u)
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    _stop_operate_at_the_source(monkeypatch)
     monkeypatch.setattr("data_aggregator_mcp.operate._source_size", boom)
     async with httpx.AsyncClient() as client:
         with pytest.raises(ValidationError) as exc:
