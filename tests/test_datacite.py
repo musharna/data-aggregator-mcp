@@ -31,6 +31,15 @@ def _item() -> dict:
     }
 
 
+# Dryad's answer for a dataset it will not show (dryad-app StashApi::Dataset#simple_identifier).
+_DRYAD_NOT_SHOWN = {
+    "identifier": "doi:10.5061/dryad.98sf7m0wt",
+    "id": 1,
+    "message": "Identifier cannot be viewed. Either you lack permission to view it, "
+    "or it is missing required elements.",
+}
+
+
 def test_normalize_maps_core_fields() -> None:
     r = datacite._normalize(_item())
     assert r.id == "datacite:10.5061/dryad.98sf7m0wt"
@@ -89,11 +98,12 @@ async def test_resolve_strips_prefix_and_returns_full_record(httpx_mock: HTTPXMo
         url="https://api.datacite.org/dois/10.5061/dryad.98sf7m0wt",
         json={"data": _item()},
     )
-    # resolve now fans out to the Dryad manifest resolver; an empty version link
-    # means dryad.files returns [] (no second call) and leaves files=[].
+    # resolve now fans out to the Dryad manifest resolver; Dryad's answer for a dataset
+    # it will not show (no links) means dryad.files returns [] (no second call) and
+    # leaves files=[]. An empty `_links` is not an answer Dryad gives: it is malformed.
     httpx_mock.add_response(
         url="https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.98sf7m0wt",
-        json={"_links": {}},
+        json=_DRYAD_NOT_SHOWN,
     )
     async with httpx.AsyncClient() as client:
         r = await datacite.resolve(client, "datacite:10.5061/dryad.98sf7m0wt")
@@ -643,9 +653,22 @@ def _dataverse_item(doi: str, client_id: str, url: str | None) -> dict:
 
 _DV_FILES = {
     "data": {
+        "id": 6,
         "latestVersion": {
-            "files": [{"dataFile": {"id": 7, "filename": "a.csv", "filesize": 1, "md5": "m"}}]
-        }
+            "files": [
+                {
+                    "label": "a.csv",
+                    "restricted": False,
+                    "dataFile": {
+                        "id": 7,
+                        "filename": "a.csv",
+                        "filesize": 1,
+                        "md5": "m",
+                        "checksum": {"type": "MD5", "value": "m"},
+                    },
+                }
+            ]
+        },
     }
 }
 

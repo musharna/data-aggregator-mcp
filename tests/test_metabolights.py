@@ -1,25 +1,17 @@
 import os
+from pathlib import Path
 
 import httpx
 import pytest
 
 from data_aggregator_mcp import metabolights
+from data_aggregator_mcp.errors import NotFoundError
 
-# Apache autoindex listing as the EBI FTP mirror actually serves it: a sort link,
-# an absolute parent link, subdirectories, and the real (FTP) filenames — note the
-# assay file is `a_MTBLS1_metabolite_profiling…`, NOT the WS API's `…_NMR_…`
-# variant that 404s. Sourcing names from this listing is the whole point of the fix.
-_LISTING = """<html><head><title>Index</title></head><body>
-<h1>Index of /pub/databases/metabolights/studies/public/MTBLS1</h1>
-<table>
-<tr><td><a href="?C=N;O=D">Name</a></td></tr>
-<tr><td><a href="/pub/databases/metabolights/studies/public/">Parent Directory</a></td></tr>
-<tr><td><a href="FILES/">FILES/</a></td></tr>
-<tr><td><a href="HASHES/">HASHES/</a></td></tr>
-<tr><td><a href="a_MTBLS1_metabolite_profiling_NMR_spectroscopy.txt">a_</a></td></tr>
-<tr><td><a href="i_Investigation.txt">i_Investigation.txt</a></td></tr>
-<tr><td><a href="s_MTBLS1.txt">s_MTBLS1.txt</a></td></tr>
-</table></body></html>"""
+# The Apache autoindex page the EBI FTP mirror serves for MTBLS1, verbatim (captured
+# 2026-10-02): sort links, the absolute parent link, three subdirectories and the real
+# (FTP) filenames — the assay file is `a_MTBLS1_metabolite_profiling…`, NOT the WS API's
+# `…_NMR_…` variant that 404s. Sourcing names from this listing is the whole point.
+_LISTING = (Path(__file__).parent / "fixtures" / "metabolights_MTBLS1_index.html").read_text()
 
 
 @pytest.mark.asyncio
@@ -32,11 +24,13 @@ async def test_files_from_ftp_listing_real_names_skip_subdirs():
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
         files = await metabolights.files(c, "MTBLS1")
-    # Subdirs (FILES/, HASHES/), the sort link (?C=…) and the absolute parent link
-    # are all excluded; only real top-level files survive, with their FTP names.
+    # Subdirs (FILES/, HASHES/, METADATA_REVISIONS/), the sort links (?C=…) and the
+    # absolute parent link are all excluded; only top-level files survive, with their
+    # FTP names.
     assert [f.name for f in files] == [
         "a_MTBLS1_metabolite_profiling_NMR_spectroscopy.txt",
         "i_Investigation.txt",
+        "m_MTBLS1_metabolite_profiling_NMR_spectroscopy_v2_maf.tsv",
         "s_MTBLS1.txt",
     ]
     assert files[0].url == (
@@ -57,7 +51,7 @@ async def test_files_carry_the_sha256_metabolights_publishes():
     (verified live: MTBLS1's entries equal the sha256 of the served bytes), but the
     manifest set checksum=None, so fetch could not verify a download. A file the hash
     list omits stays unverified rather than getting a made-up checksum."""
-    hashes = {  # s_MTBLS1.txt deliberately absent
+    hashes = {  # m_ and s_MTBLS1.txt deliberately absent
         "a_MTBLS1_metabolite_profiling_NMR_spectroscopy.txt": _A_SHA,
         "i_Investigation.txt": _I_SHA,
     }
@@ -72,16 +66,18 @@ async def test_files_carry_the_sha256_metabolights_publishes():
     assert {f.name: f.checksum for f in files} == {
         "a_MTBLS1_metabolite_profiling_NMR_spectroscopy.txt": f"sha256:{_A_SHA}",
         "i_Investigation.txt": f"sha256:{_I_SHA}",
+        "m_MTBLS1_metabolite_profiling_NMR_spectroscopy_v2_maf.tsv": None,
         "s_MTBLS1.txt": None,
     }
 
 
 def test_listing_files_filters_sort_links_parent_and_dirs():
     html = (
+        "<title>Index of /pub/databases/metabolights/studies/public/MTBLS9</title>"
         '<a href="?C=N;O=D">x</a><a href="/parent/">p</a>'
         '<a href="SUBDIR/">d</a><a href="real_file.tsv">f</a>'
     )
-    assert metabolights._listing_files(html) == ["real_file.tsv"]
+    assert metabolights._listing_files(html, "MTBLS9") == ["real_file.tsv"]
 
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
@@ -109,3 +105,35 @@ async def test_live_metabolights_checksum_matches_the_served_bytes():
         inv = next(f for f in files if f.name == "i_Investigation.txt")
         body = (await c.get(inv.url)).content
     assert inv.checksum == f"sha256:{hashlib.sha256(body).hexdigest()}"
+
+
+@_live_only
+@pytest.mark.asyncio
+@pytest.mark.parametrize("acc", ["MTBLS1", "MTBLS8", "MTBLS16"])
+async def test_live_a_study_index_is_read_and_its_names_are_served(acc):
+    """The index check accepts the live page (25 of 25 sampled 2026-10-02 pass it) and
+    every name read from it is a file the mirror serves under the URL built for it."""
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        files = await metabolights.files(c, acc)
+        names = {f.name for f in files}
+        assert {"i_Investigation.txt", f"s_{acc}.txt"} <= names
+        study = next(f for f in files if f.name == f"s_{acc}.txt")
+        assert study.checksum is not None and study.checksum.startswith("sha256:")
+        assert (await c.head(study.url)).status_code == 200
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_an_unknown_study_is_not_found_and_a_malformed_one_is_not_asked():
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
+        with pytest.raises(
+            NotFoundError, match=r"^\[NotFoundError\] MetaboLights files → HTTP 404"
+        ):
+            await metabolights.files(c, "MTBLS999999999")
+        # On the old code this listed the files of MTBLS1's HASHES/ directory as a study's.
+        with pytest.raises(
+            NotFoundError,
+            match=r"^\[NotFoundError\] not a MetaboLights study accession: 'MTBLS1/HASHES'$",
+        ):
+            await metabolights.files(c, "MTBLS1/HASHES")
+        assert await metabolights.files(c, "MTBLS1")  # positive control

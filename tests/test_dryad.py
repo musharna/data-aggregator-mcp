@@ -12,6 +12,9 @@ live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 
 
 _DATASET = {"_links": {"stash:version": {"href": "/api/v2/versions/444628"}}}
 _FILES = {
+    "_links": {"self": {"href": "/api/v2/versions/444628/files?per_page=100"}},
+    "count": 1,
+    "total": 1,
     "_embedded": {
         "stash:files": [
             {
@@ -19,10 +22,10 @@ _FILES = {
                 "size": 4795,
                 "digest": "deadbeef",
                 "digestType": "sha-256",
-                "_links": {"self": {"href": "/api/v2/files/3517groups"}},
+                "_links": {"self": {"href": "/api/v2/files/3517"}},
             },
         ]
-    }
+    },
 }
 
 
@@ -43,7 +46,7 @@ async def test_files_two_step_sha256(httpx_mock) -> None:
     assert f.name == "tree.tre"
     assert f.size == 4795
     assert f.checksum == "sha256:deadbeef"  # "sha-256" normalized
-    assert f.url == "https://datadryad.org/downloads/file_stream/3517groups"
+    assert f.url == "https://datadryad.org/downloads/file_stream/3517"
 
 
 def _file(path):
@@ -52,7 +55,7 @@ def _file(path):
         "size": len(path),
         "digest": f"d-{path}",
         "digestType": "sha-256",
-        "_links": {"self": {"href": f"/api/v2/files/{path}"}},
+        "_links": {"self": {"href": f"/api/v2/files/{ord(path)}"}},
     }
 
 
@@ -88,7 +91,7 @@ async def test_files_follows_next_to_the_last_page(httpx_mock) -> None:
         files = await dryad.files(client, "10.5061/dryad.b5mkkwhrk")
     names = [f.name for f in files]
     assert names == ["a", "b", "c", "d", "e"]
-    assert files[4].url == "https://datadryad.org/downloads/file_stream/e"
+    assert files[4].url == "https://datadryad.org/downloads/file_stream/101"  # ord("e")
     assert files[4].checksum == "sha256:d-e"
 
 
