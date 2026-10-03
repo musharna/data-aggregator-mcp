@@ -139,6 +139,11 @@ async def rewrite(client: httpx.AsyncClient, query: str) -> ParsedRewrite | None
     # Drop an invalid kind rather than pass it downstream (the router would reject it).
     if parsed.kind not in _VALID_KINDS:
         parsed.kind = None
+    # The router applies both years as filters. A model can answer "between 2018 and 2016"
+    # as year_min=2018, year_max=2016 (llama3.1 does), a range no record falls in, so the
+    # search came back empty with no error. The two years are the bounds the user stated.
+    if parsed.year_min is not None and parsed.year_max is not None:
+        parsed.year_min, parsed.year_max = sorted((parsed.year_min, parsed.year_max))
 
     # Nothing usable → no-op rewrite; nothing to echo.
     if all(

@@ -25,14 +25,45 @@ _PAGE_SIZE = 100  # PRIDE's ceiling: a larger pageSize still returns 100 rows
 _MAX_PAGES = 2000
 _FTP_HOST = "ftp://ftp.pride.ebi.ac.uk/"
 _HTTPS_HOST = "https://ftp.pride.ebi.ac.uk/"
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+_GET = "GET"
+_ACCEPT_JSON = {"Accept": "application/json"}
+
+
+def _is_row(row: object) -> bool:
+    """A file row with every field ``files`` reads, at the type it reads it as: a
+    non-empty name, an int size (or none), and a list (or none) of locations whose
+    values are strings (or null)."""
+    if not isinstance(row, dict):
+        return False
+    name, size = row.get("fileName"), row.get("fileSizeBytes")
+    if not (isinstance(name, str) and name and (size is None or type(size) is int)):
+        return False
+    locations = row.get("publicFileLocations")
+    if locations is None:
+        return True
+    return isinstance(locations, list) and all(
+        isinstance(loc, dict) and (loc.get("value") is None or isinstance(loc.get("value"), str))
+        for loc in locations
+    )
+
+
+def _check_rows(body: list) -> None:
+    if not all(_is_row(row) for row in body):
+        raise _http.UpstreamEnvelopeError(f"no PRIDE file list in {body!r:.200}")
+
+
+def _check_count(body: int) -> None:
+    if type(body) is not int or body < 0:  # a JSON true is an int to isinstance
+        raise _http.UpstreamEnvelopeError(f"no PRIDE file count in {body!r:.200}")
 
 
 def _https_url(locations: list[dict] | None) -> str | None:
     """Pick a public location and return an httpx-streamable HTTPS url, or None."""
     for loc in locations or []:
-        val = loc.get("value") or ""
+        val = loc.get("value")
+        if val is None:
+            continue
         if val.startswith(_FTP_HOST):
             return _HTTPS_HOST + val[len(_FTP_HOST) :]
         if val.startswith("https://"):
@@ -43,13 +74,13 @@ def _https_url(locations: list[dict] | None) -> str | None:
 async def files(client: httpx.AsyncClient, accession: str) -> list[FileEntry]:
     total = await _http.request_json(
         client,
-        "GET",
+        _GET,
         V3_COUNT.format(acc=accession),
         service="PRIDE file count",
-        headers={"Accept": "application/json"},
-        timeout=DEFAULT_TIMEOUT,
+        headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         expect=int,
+        check=_check_count,
     )
     n_pages = -(-total // _PAGE_SIZE)
     if n_pages > _MAX_PAGES:
@@ -61,14 +92,14 @@ async def files(client: httpx.AsyncClient, accession: str) -> list[FileEntry]:
     for page in range(n_pages):
         rows = await _http.request_json(
             client,
-            "GET",
+            _GET,
             V3_FILES.format(acc=accession),
             service="PRIDE files",
             params={"pageSize": _PAGE_SIZE, "page": page},
-            headers={"Accept": "application/json"},
-            timeout=DEFAULT_TIMEOUT,
+            headers=_ACCEPT_JSON,
             max_retries=MAX_RETRIES,
             expect=list,
+            check=_check_rows,
         )
         if not rows:
             break
@@ -77,18 +108,17 @@ async def files(client: httpx.AsyncClient, accession: str) -> list[FileEntry]:
         raise UpstreamUnavailableError(
             f"PRIDE files for {accession}: paging returned {len(entries)} of {total} files"
         )
-    out: list[FileEntry] = []
-    for e in entries:
-        url = _https_url(e.get("publicFileLocations"))
-        if not url:
-            continue
-        out.append(
-            FileEntry(
-                name=e.get("fileName", ""),
-                url=url,
-                size=e.get("fileSizeBytes"),
-                checksum=None,
-                source="pride",
-            )
-        )
-    return out
+    return [f for f in map(_entry, entries) if f is not None]
+
+
+def _entry(row: dict) -> FileEntry | None:
+    """The file a checked row lists, or None when it has no public FTP/HTTPS location."""
+    url = _https_url(row.get("publicFileLocations"))
+    if not url:
+        return None
+    return FileEntry(
+        name=row["fileName"],
+        url=url,
+        size=row.get("fileSizeBytes"),
+        source="pride",  # no checksum: PRIDE's is empty (module docstring)
+    )

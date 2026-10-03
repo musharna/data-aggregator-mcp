@@ -62,7 +62,13 @@ def _norm(value: str | None) -> str | None:
 # here — ``_norm`` already canonicalizes those.
 _URL_ID_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"^(?:https?://)?(?:www\.)?zenodo\.org/records?/(\d+)"), "zenodo:{0}"),
-    (re.compile(r"^(?:https?://)?pubmed\.ncbi\.nlm\.nih\.gov/(\d+)"), "pubmed:{0}"),
+    # PubMed's own form, and the NCBI form it still answers with a redirect.
+    (
+        re.compile(
+            r"^(?:https?://)?(?:pubmed\.ncbi\.nlm\.nih\.gov|(?:www\.)?ncbi\.nlm\.nih\.gov/pubmed)/(\d+)"
+        ),
+        "pubmed:{0}",
+    ),
     (
         re.compile(
             r"^(?:https?://)?(?:www\.)?ncbi\.nlm\.nih\.gov/geo/query/acc\.cgi\?acc=([A-Za-z0-9]+)"
@@ -76,7 +82,22 @@ _URL_ID_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"^(?:https?://)?(?:www\.)?ncbi\.nlm\.nih\.gov/sra/([A-Za-z0-9]+)"), "sra:{0}"),
     (re.compile(r"^(?:https?://)?(?:www\.)?ebi\.ac\.uk/gwas/studies/([A-Za-z0-9]+)"), "gwas:{0}"),
     (re.compile(r"^(?:https?://)?(?:www\.)?openml\.org/d/(\d+)"), "openml:{0}"),
-    (re.compile(r"^(?:https?://)?(?:www\.)?rcsb\.org/structure/([A-Za-z0-9]+)"), "pdb:{0}"),
+    # Where /d/<id> redirects: a search page whose `type=data` and `id` parameters may come
+    # in any order (`type=task&id=…` is a task, not a dataset, so `type=data` is required).
+    (
+        re.compile(
+            r"^(?:https?://)?(?:www\.)?openml\.org/search\?(?=(?:[^#&]*&)*type=data(?:[&#]|$))"
+            r"(?:[^#&]*&)*id=(\d+)(?:[&#]|$)"
+        ),
+        "openml:{0}",
+    ),
+    # A four-character PDB id; an entry cited before release is under `unreleased/`.
+    (
+        re.compile(
+            r"^(?:https?://)?(?:www\.)?rcsb\.org/structure/(?:unreleased/)?(\d[A-Za-z0-9]{3})(?![A-Za-z0-9])"
+        ),
+        "pdb:{0}",
+    ),
     (re.compile(r"^(?:https?://)?(?:www\.)?dandiarchive\.org/dandiset/(\d+)"), "dandi:{0}"),
     (re.compile(r"^(?:https?://)?huggingface\.co/datasets/([^/\s?#]+)/([^/\s?#]+)"), "hf:{0}/{1}"),
 )
@@ -105,34 +126,42 @@ def detect(resources: list[DataResource]) -> list[JoinHint]:
     return hints
 
 
+# The `identifiers` schemes that name a work (a paper or a deposit), so that two
+# resources sharing one are the same work or a paper-data pair. Values are compared
+# within a scheme only: PubMed 9606 and NCBI taxon 9606 are different things. Other
+# `identifiers` entries are not work ids: UniProt's `taxid` and `gene` are shared by
+# every protein of a species or gene, and BioStudies' cross-reference accessions are
+# also in `accessions`, which the accession detector joins on.
+_WORK_ID_SCHEMES = ("doi", "pmid", "pmcid")
+
+
 def _shared_identifier(resources: list[DataResource]) -> list[JoinHint]:
-    by_id: dict[str, list[str]] = {}
-    display: dict[str, str] = {}
+    by_id: dict[tuple[str, str], list[str]] = {}
+    display: dict[tuple[str, str], str] = {}
     for r in resources:
-        values: set[str] = set()
-        if r.doi:
-            values.add(r.doi)
-        for v in r.identifiers.values():
-            if v:
-                values.add(v)
-        for v in values:
+        # A list in a fixed order (the `doi` field, then each scheme), not a set: the
+        # order of the hints and the form each key is shown in must not depend on
+        # PYTHONHASHSEED. A value given twice is counted once by the `ids` check below.
+        given = [("doi", r.doi), *((s, r.identifiers.get(s)) for s in _WORK_ID_SCHEMES)]
+        for scheme, v in [(s, v) for s, v in given if v]:
             n = _norm(v)
             if not n:
                 continue
-            display.setdefault(n, v)
-            ids = by_id.setdefault(n, [])
+            display.setdefault((scheme, n), v)
+            ids = by_id.setdefault((scheme, n), [])
             if r.id not in ids:  # one resource counts once per value -> no self-hint
                 ids.append(r.id)
     hints: list[JoinHint] = []
-    for n, ids in by_id.items():
+    for (scheme, n), ids in by_id.items():
         if len(ids) >= 2:
+            shown = display[(scheme, n)]
             hints.append(
                 JoinHint(
                     kind="shared_identifier",
                     resources=ids,
-                    key=display[n],
-                    evidence=f"identifier {display[n]!r} shared by {len(ids)} resources",
-                    suggestion=f"same work or paper-data link via {display[n]}",
+                    key=shown,
+                    evidence=f"{scheme} {shown!r} shared by {len(ids)} resources",
+                    suggestion=f"same work or paper-data link via {scheme} {shown}",
                 )
             )
     return hints
@@ -165,24 +194,21 @@ def _shared_accession(resources: list[DataResource]) -> list[JoinHint]:
     return hints
 
 
-def _address_map(resources: list[DataResource], *, include_accessions: bool) -> dict[str, str]:
-    """Map each resource's addressable ids (id, doi, optionally accessions), normalized,
-    to the OWNING resource id. First writer wins on a collision (shared doi is handled by
-    the identifier detector, not here)."""
+def _address_map(addresses: list[tuple[str, str | None]]) -> dict[str, str]:
+    """Map each ``(owner id, address)`` pair's address, normalized, to the OWNING resource
+    id. First writer wins on a collision (shared doi is handled by the identifier
+    detector, not here)."""
     addr: dict[str, str] = {}
-    for r in resources:
-        candidates = [r.id, r.doi]
-        if include_accessions:
-            candidates += list(r.accessions)
-        for c in candidates:
-            n = _norm(c)
-            if n:
-                addr.setdefault(n, r.id)
+    for owner, a in addresses:
+        n = _norm(a)
+        if n:
+            addr.setdefault(n, owner)
     return addr
 
 
 def _explicit_link(resources: list[DataResource]) -> list[JoinHint]:
-    addr = _address_map(resources, include_accessions=True)
+    # A link may name its target by id, DOI or accession.
+    addr = _address_map([(r.id, a) for r in resources for a in (r.id, r.doi, *r.accessions)])
     hints: list[JoinHint] = []
     seen: set[tuple[str, str, str]] = set()
     for r in resources:
@@ -210,13 +236,14 @@ def _explicit_link(resources: list[DataResource]) -> list[JoinHint]:
 
 
 def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
-    addr = _address_map(resources, include_accessions=False)
+    # A newer version is named by id or DOI, never by an accession it shares with others.
+    addr = _address_map([(r.id, a) for r in resources for a in (r.id, r.doi)])
     # Collect resolved directed edges older -> newer (newer is claimed newer than older,
     # via older.superseded_by). A well-formed version graph is a DAG; a cycle means
     # contradictory upstream metadata, which we report as such rather than inventing a
     # direction.
     edges: list[tuple[str, str, str]] = []  # (older, newer, raw_key)
-    succ: dict[str, set[str]] = {}
+    succ: dict[str, str] = {}  # older -> newer; superseded_by names one resource
     for r in resources:
         raw = r.superseded_by
         if not raw:
@@ -228,33 +255,30 @@ def _version_lineage(resources: list[DataResource]) -> list[JoinHint]:
         if not newer or newer == r.id:
             continue
         edges.append((r.id, newer, raw))
-        succ.setdefault(newer, set())
-        succ.setdefault(r.id, set()).add(newer)
+        succ[r.id] = newer
 
     def _reaches(start: str, target: str) -> bool:
         """True if `target` is reachable from `start` following superseded_by edges —
-        i.e. start's lineage loops back to target, so the pair sits on a cycle."""
-        stack = [start]
-        visited: set[str] = set()
-        while stack:
-            node = stack.pop()
+        i.e. start's lineage loops back to target, so the pair sits on a cycle. Each
+        resource has one successor, so the walk is a chain; a chain that has not met
+        `target` within len(succ) steps never will (it ended, or loops elsewhere)."""
+        node = start
+        for _ in succ:
+            if node not in succ:
+                return False
+            node = succ[node]
             if node == target:
                 return True
-            if node in visited:
-                continue
-            visited.add(node)
-            stack.extend(succ.get(node, ()))
         return False
 
     hints: list[JoinHint] = []
     seen: set[tuple[str, str]] = set()
     for older, newer, raw in edges:
-        pair = (older, newer) if older <= newer else (newer, older)
-        if pair in seen:
+        a, b = sorted((older, newer))
+        if (a, b) in seen:
             continue
-        seen.add(pair)
+        seen.add((a, b))
         if _reaches(newer, older):  # newer transitively claims older is newer -> cycle
-            a, b = pair
             hints.append(
                 JoinHint(
                     kind="version_lineage",

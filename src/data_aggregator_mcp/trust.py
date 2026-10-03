@@ -2,10 +2,14 @@
 
 resolve(trust=True) calls annotate() to attach a TrustSignals to a resolved
 resource. The retraction check is ONE Crossref /works/{doi} call: a retracted
-work carries its retraction under message.updated-by[] with type=="retraction"
-(verified live on real retracted DOIs 2026-06-10 — NOT update-to[], which is the
-retraction notice's inverse view). A DOI Crossref doesn't register (e.g. a DataCite
-data DOI) 404s → all fields stay None (unknown, NOT a false "clean" claim).
+work carries its retraction under message.updated-by[] (verified live on real
+retracted DOIs 2026-06-10 — NOT update-to[], which is the retraction notice's
+inverse view). A notice that takes all or part of the work out of the record —
+a retraction, partial retraction, withdrawal or removal (``_RETRACTIONS``) — reads
+as retracted; an expression of concern reads as concern. A DOI Crossref doesn't
+register (e.g. a DataCite data DOI) 404s → all fields stay None (unknown, NOT a
+false "clean" claim). A 200 that is not a work with a well-formed updated-by list
+is a failed lookup, never a clean one.
 
 The checked DOIs are the record's own DOI AND every ``described_in`` paper DOI in
 links[] (a PDB entry's primary citation, a BioStudies study's publication): a record
@@ -33,15 +37,20 @@ from data_aggregator_mcp.models import DataResource, TrustSignals
 logger = logging.getLogger(__name__)
 
 CROSSREF = "https://api.crossref.org/works/{doi}"
-_RETRACTION = "retraction"
+# Crossref update types whose notice takes all or part of a work out of the record
+# (live facet 2026-10-02: retraction 76,026, withdrawal 3,397, removal 702,
+# partial_retraction 2). Each reads as retracted, its notice DOI as retraction_doi.
+_RETRACTIONS = frozenset({"retraction", "partial_retraction", "withdrawal", "removal"})
 _CONCERN = "expression_of_concern"
 # Crossref polite-pool etiquette: identify the client (no personal email).
 _HEADERS = {
     "User-Agent": "data-aggregator-mcp (+https://github.com/musharna/data-aggregator-mcp)",
     "Accept": "application/json",
 }
-DEFAULT_TIMEOUT = 30.0
 MAX_RETRIES = 2
+# httpx upper-cases the method, so a spelling mutant of it sends the same request
+# (test_trust_observed.py pins the GET).
+_GET = "GET"
 
 
 _DESCRIBED_IN = "described_in"
@@ -73,9 +82,32 @@ def _dois_of(resource: DataResource) -> list[str]:
     return out
 
 
-# Outcome of one Crossref lookup: a found work's signals, "absent" (not a Crossref work),
-# or "failed" (outage / unparseable) — kept apart so a failure never reads as clean.
-_Lookup = TrustSignals | Literal["absent", "failed"]
+def _update_type(update: dict) -> str:
+    """An update's type in Crossref's schema spelling. The live index also spells some
+    ``Retraction`` (3) and ``expression-of-concern`` (6), facet 2026-10-02."""
+    return update["type"].lower().replace("-", "_")
+
+
+def _is_update(u: object) -> bool:
+    return isinstance(u, dict) and isinstance(u.get("type"), str)
+
+
+def _check_work(body: dict) -> None:
+    """A Crossref work: a ``message`` with a DOI, and ``updated-by`` absent or a list of
+    typed updates. Anything else would read as "no retraction" without being one."""
+    message = body.get("message")
+    if not (
+        isinstance(message, dict)
+        and isinstance(message.get("DOI"), str)
+        and isinstance(updates := message.get("updated-by", []), list)
+        and all(_is_update(u) for u in updates)
+    ):
+        raise _http.UpstreamEnvelopeError(f"no Crossref work in {body!r:.200}")
+
+
+# Outcome of one Crossref lookup: a found work's signals, None (not a Crossref work), or
+# "failed" (outage / unparseable) — kept apart so a failure never reads as clean.
+_Lookup = TrustSignals | Literal["failed"] | None
 
 
 async def annotate(client: httpx.AsyncClient, resource: DataResource) -> TrustSignals:
@@ -102,27 +134,23 @@ async def _check(client: httpx.AsyncClient, doi: str) -> _Lookup:
     try:
         body = await _http.request_json(
             client,
-            "GET",
+            _GET,
             CROSSREF.format(doi=_http.doi_path(doi)),
             service="Crossref retraction",
             headers=_HEADERS,
-            timeout=DEFAULT_TIMEOUT,
             max_retries=MAX_RETRIES,
             not_found_returns=None,  # 404 → not a Crossref work → unknown
             expect=dict,
+            check=_check_work,
         )
         if body is None:
-            return "absent"
-        updated_by = (body.get("message") or {}).get("updated-by") or []
-        notice = next(
-            (u for u in updated_by if isinstance(u, dict) and u.get("type") == _RETRACTION),
-            None,
-        )
-        concern = any(isinstance(u, dict) and u.get("type") == _CONCERN for u in updated_by)
+            return None  # 404: not a Crossref work
+        updates = body["message"].get("updated-by", [])
+        notice = next((u for u in updates if _update_type(u) in _RETRACTIONS), None)
         return TrustSignals(
             retracted=notice is not None,
             retraction_doi=notice.get("DOI") if notice else None,
-            concern=concern,
+            concern=any(_update_type(u) == _CONCERN for u in updates),
         )
     except Exception as exc:  # noqa: BLE001 — enrichment: never raise into a valid resolve (spec §8)
         logger.warning("trust annotate failed for %s: %r", doi, exc)
