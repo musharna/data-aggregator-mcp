@@ -205,9 +205,9 @@ async def test_head_quotes_a_column_name_that_holds_a_double_quote(tmp_path) -> 
 
 
 async def test_a_source_url_with_a_quote_is_read_as_one_string() -> None:
-    """The source URL comes from the record, and its read runs before the lockdown, so a
-    ``'`` in it must stay inside the string literal: the server is asked for exactly
-    that path and nothing else is read."""
+    """The source URL comes from the record: the server is asked for exactly that path
+    and nothing else is read. DuckDB reads the downloaded copy, whose path has no quote,
+    so this does not reach the SQL literal (the next test does)."""
     from tests.test_duckquery import _listener
 
     with _listener() as (port, hits):
@@ -215,6 +215,20 @@ async def test_a_source_url_with_a_quote_is_read_as_one_string() -> None:
         out = await duckquery.run_sql(url, "source.csv", "SELECT * FROM data")
     assert out["rows"] == [{"col": "legit"}]
     assert set(hits) == {"/o'brien/source.csv"}
+
+
+async def test_a_local_source_path_with_a_quote_stays_inside_the_sql_string(tmp_path) -> None:
+    """A local source is handed to DuckDB as given, inside a ``'...'`` literal that is
+    read before the lockdown. A ``'`` in the path must be doubled, not end the string:
+    each quoted path reads its own file and nothing else."""
+    rows = {}
+    for name in ("o'brien", "it''s"):
+        p = tmp_path / name / "q.csv"
+        p.parent.mkdir()
+        p.write_text(f"id,dir\n1,{len(name)}\n")
+        out = await duckquery.run_sql(str(p), "q.csv", "SELECT * FROM data")
+        rows[name] = out["rows"]
+    assert rows == {"o'brien": [{"id": 1, "dir": 7}], "it''s": [{"id": 1, "dir": 5}]}
 
 
 async def test_peek_profile_is_mapped_field_by_field() -> None:
