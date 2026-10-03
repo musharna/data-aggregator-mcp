@@ -12,6 +12,7 @@ live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 
 
 _DATASET = {
     "data": {
+        "id": 3035124,
         "latestVersion": {
             "versionState": "RELEASED",
             "files": [
@@ -23,6 +24,7 @@ _DATASET = {
                         "filename": "language.py",
                         "filesize": 590,
                         "md5": "d0763edaa9d9bd2a9516280e9044d885",
+                        "checksum": {"type": "MD5", "value": "d0763edaa9d9bd2a9516280e9044d885"},
                     },
                 },
                 {
@@ -31,7 +33,7 @@ _DATASET = {
                     "dataFile": {"id": 999, "filename": "secret.csv", "filesize": 10, "md5": "x"},
                 },
             ],
-        }
+        },
     }
 }
 
@@ -54,7 +56,7 @@ async def test_base_url_env_override(httpx_mock, monkeypatch) -> None:
     monkeypatch.setenv("DATAVERSE_BASE_URL", "https://darus.uni-stuttgart.de")
     httpx_mock.add_response(
         url="https://darus.uni-stuttgart.de/api/datasets/:persistentId/?persistentId=doi:10.18419/X",
-        json={"data": {"latestVersion": {"files": []}}},
+        json={"data": {"id": 1, "latestVersion": {"files": []}}},
     )
     async with httpx.AsyncClient() as client:
         files = await dataverse.files(client, "10.18419/X")
@@ -123,6 +125,7 @@ async def test_ingested_tabular_file_is_listed_as_the_original_its_md5_describes
             "originalFileSize": 19234,
             "originalFileName": "Soil properties.xlsx",
             "md5": "0935c3bdfa3a1048ac8dc4ca586b5c86",
+            "checksum": {"type": "MD5", "value": "0935c3bdfa3a1048ac8dc4ca586b5c86"},
             "tabularData": True,
         },
     }
@@ -134,12 +137,13 @@ async def test_ingested_tabular_file_is_listed_as_the_original_its_md5_describes
             "filename": "Dataset Description.docx",
             "filesize": 20608,
             "md5": "38f01a6a36a2e8e376c959a1e1d4b74a",
+            "checksum": {"type": "MD5", "value": "38f01a6a36a2e8e376c959a1e1d4b74a"},
             "tabularData": False,
         },
     }
     httpx_mock.add_response(
         url="https://dataverse.harvard.edu/api/datasets/:persistentId/?persistentId=doi:10.7910/DVN/GSRD3R",
-        json={"data": {"latestVersion": {"files": [tab, plain]}}},
+        json={"data": {"id": 3087283, "latestVersion": {"files": [tab, plain]}}},
     )
     async with httpx.AsyncClient() as client:
         files = await dataverse.files(client, "10.7910/DVN/GSRD3R")

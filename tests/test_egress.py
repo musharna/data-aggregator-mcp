@@ -134,10 +134,27 @@ async def test_operate_refuses_a_source_url_in_private_space(guard_on, monkeypat
         return _poisoned("http://127.0.0.1:9/anything.csv")
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    _stop_operate_at_the_source(monkeypatch)
     async with httpx.AsyncClient() as client:
         with pytest.raises(ValidationError) as exc:
             await operate.run(client, "zenodo:999999", op="head", n=5)
     assert "non-public" in str(exc.value)
+
+
+def _stop_operate_at_the_source(monkeypatch) -> None:
+    """Fail at the first step that would leave the process (the size probe, then the
+    engine), so a guard that let a URL past fails the test at once instead of connecting.
+    Unreachable hosts here (127.0.0.1:9, 8.8.8.8:80) hang ~60 s on some hosts, and with
+    the size probe skipped the engine connected and held the test to operate's 30 s limit."""
+
+    def probe(url: str):
+        raise AssertionError(f"operate went on to probe the size of {url}")
+
+    async def engine(url: str, *args, **kwargs):
+        raise AssertionError(f"operate went on to read {url} without probing its size")
+
+    monkeypatch.setattr("data_aggregator_mcp.operate._source_size", probe)
+    monkeypatch.setattr("data_aggregator_mcp.duckquery.run_head", engine)
 
 
 async def test_fetch_refuses_a_url_in_private_space(guard_on, tmp_path) -> None:
@@ -169,6 +186,7 @@ async def test_operate_still_accepts_a_public_source(guard_on, monkeypatch) -> N
         raise _ReachedTheNextStep(url)
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    _stop_operate_at_the_source(monkeypatch)
     monkeypatch.setattr("data_aggregator_mcp.operate._source_size", boom)
 
     async with httpx.AsyncClient() as client:
@@ -283,6 +301,7 @@ async def test_operate_refuses_a_malformed_source_url_by_name(guard_on, monkeypa
         raise _ReachedTheNextStep(u)
 
     monkeypatch.setattr("data_aggregator_mcp.router.resolve", fake_resolve)
+    _stop_operate_at_the_source(monkeypatch)
     monkeypatch.setattr("data_aggregator_mcp.operate._source_size", boom)
     async with httpx.AsyncClient() as client:
         with pytest.raises(ValidationError) as exc:
@@ -307,3 +326,31 @@ async def test_fetch_refuses_a_malformed_url_by_name(guard_on, tmp_path) -> None
                 client, _poisoned("http://127.0.0.1:9/data.csv"), dest=str(tmp_path)
             )
     assert "non-public" in str(exc2.value)
+
+
+@pytest.mark.parametrize(
+    ("url", "why"),
+    [
+        ("http://a..b/data.csv", "empty label inside the name"),
+        ("http://.example.org/data.csv", "empty first label"),
+        ("http://" + "a" * 64 + ".example.org/data.csv", "label over 63 octets"),
+    ],
+)
+async def test_a_host_that_is_not_a_hostname_is_refused_by_name(
+    guard_on, tmp_path, url, why
+) -> None:
+    """The resolver IDNA-encodes the name before any query, and these names cannot be
+    encoded, so getaddrinfo raised a bare UnicodeEncodeError ("'idna' codec can't encode
+    character '\\x2e' in position 2: label empty") out of fetch and operate, naming
+    neither the file nor the URL: the #85 class, reached one step later. Real resolver,
+    no mock: the failure is in the encoding the stdlib does on the way to DNS."""
+    with pytest.raises(ValidationError) as exc:
+        await egress.assert_public_url(url, what="probe")
+    assert str(exc.value).startswith("[ValidationError] probe: malformed URL ("), why
+    assert str(exc.value).endswith(f"); refusing to fetch {url}"), why
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(ValidationError) as exc2:
+            await fetch_mod.fetch_files(client, _poisoned(url), dest=str(tmp_path))
+    assert "fetch data.csv: malformed URL" in str(exc2.value) and url in str(exc2.value), why
+    # positive control: a well-formed name through the same call is not refused
+    await egress.assert_public_url("http://8.8.8.8/data.csv", what="probe")
