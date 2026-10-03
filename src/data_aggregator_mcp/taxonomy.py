@@ -64,8 +64,8 @@ def _parse_taxon(xml_text: str) -> TaxonInfo | None:
         raise UpstreamUnavailableError(
             f"NCBI taxonomy answered a non-numeric TaxId {taxid_text!r} for {canonical!r}"
         ) from None
-    lineage = taxon.findtext("Lineage") or ""
-    is_plant = "Viridiplantae" in {part.strip() for part in lineage.split(";")}
+    lineage = taxon.findtext("Lineage")
+    is_plant = lineage is not None and "Viridiplantae" in {p.strip() for p in lineage.split(";")}
     return TaxonInfo(
         taxid=taxid,
         canonical_name=canonical,
@@ -95,7 +95,7 @@ async def resolve_taxon(client: httpx.AsyncClient, name: str) -> TaxonInfo | Non
     if not ids:
         _CACHE.set(key, _NEG)
         return None
-    xml_text = await _eutils.efetch(client, "taxonomy", [ids[0]], retmode="xml")
+    xml_text = await _eutils.efetch(client, "taxonomy", [ids[0]])  # XML, efetch's default
     info = _parse_taxon(xml_text)
     _CACHE.set(key, info if info is not None else _NEG)
     return info

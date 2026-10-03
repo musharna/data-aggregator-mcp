@@ -69,6 +69,16 @@ def test_an_efetch_error_envelope_is_an_upstream_failure_not_a_missing_taxon() -
     assert info is not None and info.taxid == 3701
 
 
+def test_a_body_that_is_not_a_taxon_set_names_its_root_and_any_error() -> None:
+    with pytest.raises(
+        UpstreamUnavailableError,
+        match=r"^\[UpstreamUnavailableError\] NCBI taxonomy efetch answered <html>, "
+        r"not <TaxaSet>: ''$",
+    ):
+        taxonomy._parse_taxon("<html><body>Service unavailable</body></html>")
+    assert taxonomy._parse_taxon(_EMPTY_TAXASET) is None  # positive control
+
+
 @pytest.mark.parametrize(
     ("taxon", "named"),
     [
@@ -82,7 +92,11 @@ def test_an_efetch_error_envelope_is_an_upstream_failure_not_a_missing_taxon() -
     ],
 )
 def test_a_taxon_without_its_id_or_name_is_an_upstream_failure(taxon: str, named: str) -> None:
-    with pytest.raises(UpstreamUnavailableError, match="without a TaxId or ScientificName") as exc:
+    with pytest.raises(
+        UpstreamUnavailableError,
+        match=r"^\[UpstreamUnavailableError\] NCBI taxonomy answered a Taxon without a "
+        r"TaxId or ScientificName \(TaxId=",
+    ) as exc:
         taxonomy._parse_taxon(f"<TaxaSet><Taxon>{taxon}</Taxon></TaxaSet>")
     assert named in str(exc.value)
     assert taxonomy._parse_taxon(_ARABIDOPSIS) is not None  # positive control
