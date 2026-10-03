@@ -11,6 +11,9 @@ Probed live 2026-10-02 (api.figshare.com/v2 and api.datacite.org, anonymous):
 - An embargoed article answers ``"files": null`` with ``is_embargoed: true`` (3 of 3); a
   confidential one is also ``is_embargoed: true`` with null files. A metadata-only record
   is ``"files": []``. An article with no DOI answers ``"doi": ""`` (MMU 33549700).
+  Re-probed 2026-10-03: the same embargoed and confidential articles (and 31046215,
+  embargoed to 2050) now leave the ``files`` key out entirely, so ``resolve`` of every
+  embargoed article raised a bare ``KeyError`` (nightly live run 37127895878).
 - An md5 Figshare has not computed yet is ``"computed_md5": ""`` beside a supplied one
   (4 of 528 files; one is Griffith's video below).
 - 52 article records and one version record (two pages of /articles, the shapes
@@ -166,9 +169,13 @@ async def test_an_article_that_carries_no_doi_is_not_attached(caplog):
 @pytest.mark.parametrize(
     "body",
     [
-        # 34003890 (embargo_type "file") and 33834859 (confidential), live
+        # 34003890 (embargo_type "file") and 33834859 (confidential), live 2026-10-02
         {"doi": "10.6084/m9.figshare.34003890.v1", "files": None, "is_embargoed": True},
         {"doi": "10.82444/warw.33834859.v1", "files": None, "is_embargoed": True},
+        # the same two and 31046215, live 2026-10-03: no "files" key at all
+        {"doi": "10.6084/m9.figshare.34003890.v1", "is_embargoed": True},
+        {"doi": "10.82444/warw.33834859.v1", "is_embargoed": True},
+        {"doi": "10.6084/m9.figshare.31046215.v1", "is_embargoed": True},
         # 33820546, a metadata-only record, live
         {"doi": "10.82444/warw.33820546.v1", "files": [], "is_embargoed": False},
     ],
@@ -243,6 +250,23 @@ async def test_a_malformed_article_is_upstream_trouble_not_no_files(body):
     async with _serving({f"{_API}/22306426": (200, bare)}, seen) as c:
         [entry] = await figshare.files(c, "10.57831/22306426")
     assert (entry.size, entry.checksum) == (None, None)
+
+
+@live_only
+@pytest.mark.asyncio
+async def test_live_an_embargoed_article_resolves_without_files():
+    async with httpx.AsyncClient(timeout=60) as client:
+        record = await datacite.resolve(client, "10.6084/m9.figshare.31046215.v1")
+        # control: Figshare still answers this article, embargoed, with no file list
+        body = await _http.request_json(
+            client, "GET", f"{_API}/31046215/versions/1", service="Figshare article", expect=dict
+        )
+        # control: an article with files still lists them through the same resolve
+        listed = await datacite.resolve(client, "10.57831/22306426")
+    assert (body["is_embargoed"], "files" in body) == (True, False)
+    assert record.source == "figshare"
+    assert record.files == []
+    assert len(listed.files) >= 2
 
 
 @live_only
