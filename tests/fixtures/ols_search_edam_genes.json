@@ -1,0 +1,21 @@
+{
+ "response": {
+  "docs": [
+   {
+    "synonym": [
+     "Genes",
+     "Heredity"
+    ],
+    "label": "Genetics",
+    "is_defining_ontology": true,
+    "obo_id": "EDAM:topic_3053"
+   }
+  ],
+  "numFound": 1,
+  "start": 0
+ },
+ "responseHeader": {
+  "QTime": 0,
+  "status": 0
+ }
+}

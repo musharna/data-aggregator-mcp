@@ -1,0 +1,29 @@
+{
+ "response": {
+  "docs": [
+   {
+    "synonym": [
+     "Protein structures"
+    ],
+    "label": "Protein structure",
+    "is_defining_ontology": true,
+    "obo_id": "EDAM:data_1460"
+   },
+   {
+    "synonym": [
+     "Protein structure",
+     "Protein tertiary structure"
+    ],
+    "label": "Protein structure analysis",
+    "is_defining_ontology": true,
+    "obo_id": "EDAM:topic_2814"
+   }
+  ],
+  "numFound": 2,
+  "start": 0
+ },
+ "responseHeader": {
+  "QTime": 0,
+  "status": 0
+ }
+}
