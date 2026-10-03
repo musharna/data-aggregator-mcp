@@ -1,0 +1,40 @@
+{
+ "response": {
+  "docs": [
+   {
+    "synonym": [
+     "2-(ACETYLOXY)BENZOIC ACID",
+     "2-(ACETYLOXY)BENZOIC ACID",
+     "2-(acetyloxy)benzoic acid",
+     "2-(acetyloxy)benzoic acid",
+     "2-Acetoxybenzenecarboxylic acid",
+     "2-acetoxybenzoic acid",
+     "ASA",
+     "Acetylsalicylate",
+     "Acetylsalicylic acid",
+     "Acetylsalicylsaeure",
+     "Aspirin",
+     "Azetylsalizylsaeure",
+     "Easprin",
+     "O-acetylsalicylic acid",
+     "acide 2-(acetyloxy)benzoique",
+     "acide acetylsalicylique",
+     "acido acetilsalicilico",
+     "acidum acetylsalicylicum",
+     "o-acetoxybenzoic acid",
+     "o-carboxyphenyl acetate",
+     "salicylic acid acetate"
+    ],
+    "label": "acetylsalicylic acid",
+    "is_defining_ontology": true,
+    "obo_id": "CHEBI:15365"
+   }
+  ],
+  "numFound": 1,
+  "start": 0
+ },
+ "responseHeader": {
+  "QTime": 0,
+  "status": 0
+ }
+}
