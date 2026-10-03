@@ -6,11 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-10-03
+
 ### Security
 
 - `operate` checks every redirect against the private-address guard, as `fetch` already
   did. It checked only a file's first URL, so a redirect could make the server read an
-  internal address.
+  internal address
+  ([GHSA-9q96-qp9g-h7cv](https://github.com/musharna/data-aggregator-mcp/security/advisories/GHSA-9q96-qp9g-h7cv)).
 
 ### Fixed
 
