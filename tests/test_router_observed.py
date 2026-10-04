@@ -290,8 +290,11 @@ async def test_a_multi_query_cursor_carries_every_setting_to_the_page_after_next
     sources, both variant lists, filters, re-rank skips ("ahead"), folding, pushdown."""
     _resolve_every_facet(monkeypatch)
     monkeypatch.setattr(router.query_understanding_mod, "expand", AsyncMock(return_value=["alt"]))
-    zen = _serve(monkeypatch, "zenodo")
-    dandi = _serve(monkeypatch, "dandi")  # keyword-only: sent the variant before expansion
+    # Titles that name nothing of the search, so the match tiers tie and the re-rank
+    # below sees the round-robin order it reverses.
+    zen = _serve(monkeypatch, "zenodo", make=lambda q, i: _rec(f"zenodo:{q}:{i}", title="t"))
+    # keyword-only: sent the variant before expansion
+    dandi = _serve(monkeypatch, "dandi", make=lambda q, i: _rec(f"dandi:{q}:{i}", title="t"))
 
     async def rerank(client, query, resources):
         return list(reversed(resources)), None  # emits a window's tail first → "ahead"
@@ -614,11 +617,14 @@ async def test_a_record_two_variants_both_return_is_emitted_once_and_advances_bo
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(router.query_understanding_mod, "expand", AsyncMock(return_value=["alt"]))
-    monkeypatch.delenv("EMBEDDING_API_BASE", raising=False)  # no re-rank: interleaved order
+    monkeypatch.delenv("EMBEDDING_API_BASE", raising=False)  # no re-rank
+    # Titles that name nothing of the search: the match tiers tie, so round-robin order.
     _serve(
         monkeypatch,
         "zenodo",
-        make=lambda q, i: _rec("zenodo:shared") if i == 0 else _rec(f"zenodo:{q}:{i}"),
+        make=lambda q, i: (
+            _rec("zenodo:shared", title="t") if i == 0 else _rec(f"zenodo:{q}:{i}", title="t")
+        ),
     )
     async with _client() as client:
         page = await router.search_page(

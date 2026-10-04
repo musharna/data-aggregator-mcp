@@ -46,6 +46,7 @@ from data_aggregator_mcp import query_understanding as query_understanding_mod
 from data_aggregator_mcp import relate as relate_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
+from data_aggregator_mcp._relevance import MatchTiers
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import (
     AssayExpansion,
@@ -422,10 +423,12 @@ async def _fetch_page(
     filters: dict[str, Any],
     rank_query: str | None,
     errors: dict[str, str],
+    tiers: MatchTiers,
 ) -> _Page:
     """Fan out every stream at its offset, dedup, (re-)rank, emit up to ``size`` records
-    that pass ``filters``, and account for what was handled per stream. ``rank_query``
-    None = upstream relevance order (interleaved); else an embedding re-rank anchor."""
+    that pass ``filters``, and account for what was handled per stream. The candidates are
+    ordered by ``tiers`` (hits naming more of the search first, round-robin within equal
+    hits); a ``rank_query`` then re-ranks them by embedding similarity to it."""
     base = {s.key: _stored_offset(offsets, s.key) for s in streams}
     outcomes = await asyncio.gather(
         *(s.call(size=size, offset=base[s.key]) for s in streams), return_exceptions=True
@@ -465,6 +468,8 @@ async def _fetch_page(
     kept: list[tuple[str, int, DataResource]] = []
     for c in unique:
         (kept if id(c[2]) in winners else dropped).append(c)
+    # Stable: hits that name as much of the search keep the round-robin order.
+    kept.sort(key=lambda c: tiers.score(c[2]), reverse=True)
 
     if rank_query is not None:
         reordered, reason = await embeddings.rerank(client, rank_query, [c[2] for c in kept])
@@ -660,7 +665,7 @@ async def _multi_query_page(
         errors["operator_limit"] = note
     # Window-rank ALWAYS for multi-query: the union has no single coherent upstream order,
     # so re-rank against the ORIGINAL pre-expansion query. No embedding endpoint →
-    # interleaved order + errors["semantic"] (still a recall win, just unranked).
+    # match-tier order + errors["semantic"] (still a recall win, just not re-ranked).
     page = await _fetch_page(
         client,
         streams,
@@ -670,6 +675,7 @@ async def _multi_query_page(
         filters=filters,
         rank_query=original_query,
         errors=errors,
+        tiers=MatchTiers(original_query, groups),
     )
     emitted, total = page.emitted, page.total
     next_cursor = (
@@ -986,7 +992,8 @@ async def search_page(
         errors["operator_limit"] = note
     # rank=semantic re-ranks the fetched window against the raw `query`, not the
     # organism-expanded `effective_query`: the boolean-expanded string is a poor embedding
-    # anchor, and the window is already organism-filtered by the fan-out.
+    # anchor. The window is NOT always on-facet: keyword-only sources never see the facets
+    # and some upstreams match loosely, so the match tiers check each hit for them.
     page = await _fetch_page(
         client,
         streams,
@@ -996,6 +1003,7 @@ async def search_page(
         filters=filters,
         rank_query=query if rank == "semantic" else None,
         errors=errors,
+        tiers=MatchTiers(query, groups),
     )
     emitted, total = page.emitted, page.total
     next_cursor = (
