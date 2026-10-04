@@ -6,6 +6,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- `list_sources`' `filters_supported` is now derived from each adapter rather than
+  written by hand, and it says what each value means. The hand-written lists had drifted
+  from the code, so several sources now report different values:
+  - **huggingface:** no longer lists `cursor`, `published_after`, `published_before` or
+    `kind`. It serves page 1 only and filters nothing upstream.
+  - **omics, literature:** no longer list the year and kind filters, which they apply
+    only after fetch.
+  - **dandi, pdb, gwas, biostudies, cellxgene:** now list `cursor`, because they page.
+  - **DataCite:** now lists `size`.
+  - **biostudies:** drops `offset`, which `search` does not take.
+  - **Ontology facets:** every source that is sent the synonym-expanded query now lists
+    `organism`, `disease`, `tissue`, `chemical` and `assay`, not only omics and literature.
+
+  The meaning of each value:
+  - `cursor`: the source pages past page 1.
+  - the year and kind filters: the source applies them upstream, so its `total` is
+    filtered; any other source applies them after fetch.
+  - the ontology facets: the source gets the synonym-expanded query.
+
 ## [0.56.0] - 2026-10-04
 
 ### Changed
