@@ -1,124 +1,43 @@
-# 🔎 data-aggregator-mcp
+# data-aggregator-mcp
 
-**One MCP server to find and fetch research data across archives, omics
-registries, and literature — behind a single normalized model.**
+Search 17 research-data sources at once (data archives, omics repositories and
+papers) and get one list back. Organism, disease and tissue names are expanded
+with their synonyms in the 11 sources that accept them, records that share a DOI are collapsed to one, and downloads
+are checked against the source's checksum where it publishes one.
 
 [![PyPI](https://img.shields.io/pypi/v/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
 [![Python](https://img.shields.io/pypi/pyversions/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
-[![Downloads](https://img.shields.io/pypi/dm/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/musharna/data-aggregator-mcp/blob/main/LICENSE)
 [![CI](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml)
 [![Glama](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp/badges/score.svg)](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21636332.svg)](https://doi.org/10.5281/zenodo.21636332)
 
-`search` one query across **17 sources** — **Zenodo, DataCite** (Dryad /
-Figshare / Dataverse / OSF / OpenNeuro / Mendeley), **NCBI omics**
-(GEO / SRA / BioProject), **BioStudies** (EBI, incl. ArrayExpress),
-**literature** (PubMed / OpenAIRE), **HuggingFace** datasets, **DataONE**
-(eco / environmental), **OmicsDI** (proteomics / metabolomics), **DANDI**
-(neurophysiology), **CZ CELLxGENE** (single-cell), **OpenML** (ML datasets),
-**RCSB PDB** (structures), **UniProtKB** (proteins), the **GWAS Catalog**,
-**GBIF** (biodiversity), **data.gov** (US federal open data), and **NASA CMR**
-(Earth science) — deduplicated, normalized, and cross-linked. `resolve` any hit to its file
-manifest, citation, trust signals, and the data it points at. `fetch` it to
-disk, checksum-verified where the source publishes a checksum.
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install-0098FF?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=data-aggregator&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22data-aggregator-mcp%22%5D%7D)
+[![Install in Cursor](https://img.shields.io/badge/Cursor-Install-000000?logo=cursor&logoColor=white)](https://cursor.com/install-mcp?name=data-aggregator&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJkYXRhLWFnZ3JlZ2F0b3ItbWNwIl19)
 
 mcp-name: io.github.musharna/data-aggregator-mcp
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/musharna/data-aggregator-mcp/main/examples/assets/demo.svg"
-       alt="data-aggregator-mcp stdio demo — initialize, tools/list (search, resolve, fetch, operate, relate, list_sources), and a live list_sources call showing the wired sources across archives, omics, and literature"
+       alt="Live calls over stdio: a search for transcriptome data on Orobanche aegyptiaca that NCBI Taxonomy expands to Phelipanche aegyptiaca and that returns hits from SRA, BioProject, PubMed, OpenAIRE and DataCite; resolving one SRA hit to two FASTQ files with sizes and md5 checksums; fetching an OpenML ARFF file with its md5 verified; and SQL over a remote CSV on Hugging Face without downloading it"
        width="820">
 </p>
 
-## ✨ Why this
+## Install
 
-Many research-data MCP servers wrap one source each. This one **unifies** many
-behind six tools and one `DataResource` model, so an agent searches once and gets
-back comparable records:
-
-- **Multi-domain, one model** — generalist archives + raw omics + literature,
-  deduplicated by DOI (the fetchable record wins over bare metadata).
-- **Taxonomy synonym expansion** — `organism="Orobanche aegyptiaca"` also matches
-  `Phelipanche aegyptiaca` (NCBI Taxonomy), so a species rename doesn't cost you
-  results.
-- **Paper → data bridge** — resolve a paper and get links to the GEO / SRA /
-  BioProject / DataCite records it produced.
-- **Checked fetch** — streams to disk with md5 / sha-256 verification where the
-  source publishes a checksum (a mismatch raises), and optional archive
-  unpacking. Many sources publish no checksum (see the Checksum column below);
-  those downloads are not verified, and the only content check is an HTML sniff
-  on files declared as PDF or XML, which rejects a paywall page served as a
-  "PDF".
-- **Citations, access & full text** — render a citation in any CSL style, get
-  normalized access/license, and pull open-access full text — all in one
-  `resolve`.
-- **Trust signals** — usage `metrics` (citations / views / downloads / likes),
-  version status (`is_latest` / `superseded_by`), and `last_updated` freshness,
-  surfaced wherever the source exposes them.
-- **Interop exports** — `resolve(format="croissant")` or `"ro-crate"` hands a
-  dataset to an ML or research-packaging pipeline as standard JSON-LD.
-- **Operate on data in place** — `operate` reads the schema, previews rows, or
-  runs a read-only SQL `SELECT` against a remote Parquet/CSV/TSV **without
-  downloading it** (Parquet footer + DuckDB httpfs range reads). Optional
-  `[operate]` extra; base install is unchanged.
-- **Relate across records** — `relate` takes a handful of resolved ids and
-  reports how they connect — shared accession, shared cross-identifier, an
-  explicit link, or version lineage — naming the literal shared value as
-  evidence. Metadata hints only: it never reads files or executes a join.
-
-→ Full rationale and a comparison vs. single-source servers, breadth gateways, and
-ML-dataset tools: **[docs/POSITIONING.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/POSITIONING.md)**.
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/musharna/data-aggregator-mcp/main/docs/assets/architecture.svg"
-       alt="Architecture: an MCP client speaks stdio to data-aggregator-mcp's six tools, which fan out through one router (DOI dedup, ontology expansion, ranking) to archives (Zenodo, DataCite, HuggingFace, DataONE, OpenML, RCSB PDB, UniProtKB, GBIF, data.gov, NASA CMR), omics (GEO, SRA, BioProject, OmicsDI, BioStudies, DANDI, CELLxGENE, GWAS Catalog), and literature (PubMed, OpenAIRE, EuropePMC, Unpaywall)"
-       width="760">
-</p>
-
-## ⚡ Quickstart
-
-Run with no install:
-
-```bash
-uvx data-aggregator-mcp
-```
-
-Register with Claude Code:
+Claude Code:
 
 ```bash
 claude mcp add data-aggregator -- uvx data-aggregator-mcp
 ```
 
-A typical agent flow:
-
-```text
-search("drought stress RNA-seq", organism="Sorghum bicolor")
-  → [ geo:GSE..., sra:SRX..., zenodo:..., pubmed:... ]   # deduped, taxa-normalized
-
-resolve("sra:SRX079566")
-  → DataResource{ files: [ENA FASTQ urls…], access: "open", taxa: [...] }
-
-fetch("sra:SRX079566", dest="./data")
-  → ["./data/SRX079566_1.fastq.gz", …]                   # md5-verified
-```
+VS Code and Cursor: the buttons above. Any other MCP client: run
+`uvx data-aggregator-mcp` as a stdio server.
 
 <details>
-<summary>Other ways to run (pip, python -m, raw client config)</summary>
+<summary>Claude Desktop, pip, and the <code>operate</code> extra</summary>
 
-```bash
-pip install data-aggregator-mcp
-data-aggregator-mcp        # or: python -m data_aggregator_mcp
-```
-
-To use the `operate` tool (query remote tabular files in place), install the
-optional extra:
-
-```bash
-pip install "data-aggregator-mcp[operate]"
-```
-
-Add to a client's MCP config (e.g. Claude Desktop `claude_desktop_config.json`):
+Claude Desktop (`claude_desktop_config.json`) and most other clients:
 
 ```json
 {
@@ -132,57 +51,74 @@ Add to a client's MCP config (e.g. Claude Desktop `claude_desktop_config.json`):
 }
 ```
 
+With pip:
+
+```bash
+pip install data-aggregator-mcp
+data-aggregator-mcp        # or: python -m data_aggregator_mcp
+```
+
+`operate` (SQL and previews over remote files) needs an optional extra:
+`pip install "data-aggregator-mcp[operate]"`.
+
 </details>
 
-## 🌐 Transports
+## What you can ask
 
-**stdio (default)** — the server runs as a child of the client, so `fetch()`
-writes to your own disk. Nothing to configure; every command above uses it.
+**"Find transcriptomes for Orobanche aegyptiaca."** The species has been renamed.
+NCBI Taxonomy maps it to *Phelipanche aegyptiaca*, and the sources that accept
+synonyms match both names (the demo above).
 
-**Streamable HTTP** — the same six tools, prompts, and resources over HTTP:
+**"What data came out of this paper?"**
 
-```bash
-data-aggregator-mcp --transport http     # → http://127.0.0.1:8000/mcp/
+```text
+resolve("pubmed:40098680")
+  links  geo:GSE284240, bioproject:PRJNA1198054, and 18 sra: experiments
+  files  PMC11910882.xml   (open-access full text)
 ```
 
-| flag                       | default          | notes                                                             |
-| -------------------------- | ---------------- | ----------------------------------------------------------------- |
-| `--transport {stdio,http}` | `stdio`          |                                                                   |
-| `--host`                   | `127.0.0.1`      | this machine only; any non-loopback value requires `--allow-host` |
-| `--port`                   | `8000`           |                                                                   |
-| `--allow-host HOST:PORT`   | auto on loopback | permitted `Host` header, repeatable — **required off loopback**   |
-| `--allow-origin ORIGIN`    | derived          | permitted browser `Origin` header, repeatable                     |
-| `--stateless`              | off              | fresh transport per request, no session affinity                  |
-| `--json-response`          | off              | plain JSON responses instead of SSE streams                       |
+**"Can I train a model on this dataset?"**
 
-The endpoint is served at **`/mcp/`** — with the trailing slash. `/mcp` answers
-`307` redirecting there, which is fine for any client that follows redirects (a
-`307` preserves the POST body); point one that doesn't straight at `/mcp/`. In
-stateful mode, sessions idle for 30 minutes are reaped.
-
-**DNS-rebinding protection is always on.** A loopback bind derives its own
-host/origin allowlist, so the default needs no configuration. A non-loopback bind
-(`--host 0.0.0.0`, a LAN address, a container interface) **refuses to start**
-without at least one explicit `--allow-host` — guessing an allowlist there is
-precisely the hole the protection exists to close, so it fails loud instead of
-open:
-
-```bash
-data-aggregator-mcp --transport http --host 0.0.0.0 \
-  --allow-host data.example.org:8000
+```text
+resolve("hf:scikit-learn/iris", use="ml-training")
+  license_compat  ALLOW: "CC0-1.0 grants the permission(s) required for
+                  ml-training: commercial-use, modifications"
 ```
 
-Once running, a request whose `Host` header is outside the allowlist is refused
-with `421 Invalid Host header`.
+The verdict is read from the record's licence metadata. It is advice, not a legal
+opinion.
 
-> ⚠️ **`fetch(dest=…)` writes to the _server's_ filesystem, not the client's.**
-> Over stdio those are the same disk; over HTTP they may be different machines,
-> and the caller gets back paths it cannot read. Treat `dest` on an HTTP
-> deployment as server-side staging, or use stdio when you need the bytes
-> locally. `search`, `resolve`, `operate`, `relate`, and `list_sources` are
-> unaffected — they return data, not paths.
+`resolve` also renders citations in any CSL style, checks Crossref for
+retractions, scores FAIRness, and exports Croissant or RO-Crate. `relate` reports
+how a set of records connect (a shared accession, DOI or explicit link).
 
-## 🗂️ Sources
+## How a search runs
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/musharna/data-aggregator-mcp/main/docs/assets/architecture.svg"
+       alt="How one search runs: NCBI Taxonomy maps Orobanche aegyptiaca to its current name, Phelipanche aegyptiaca, and the sources that accept synonyms search both names; the query goes to 17 sources in parallel (10 archives, 6 omics, 1 literature); records that share a DOI become one, keeping the copy that can be downloaded; a record can then be resolved to files and checksums, fetched with the checksum verified where the source publishes one, or queried with SQL without downloading it"
+       width="820">
+</p>
+
+A source that fails is named in the result's `errors`, never dropped silently.
+
+## Compared with other servers
+
+| Server | Searches | One search | Checksum | Remote SQL | Licence check |
+| --- | --- | :---: | :---: | :---: | :---: |
+| **data-aggregator-mcp** | 17 sources: data archives, omics, papers | yes, DOI dedup | where published | yes | yes |
+| [Mobus](https://github.com/mobus-ai/Mobus) | 20 general and ML data platforms | yes | — | row preview | yes |
+| [paper-search-mcp](https://github.com/openags/paper-search-mcp) | papers: arXiv, PubMed, OpenAlex, Crossref and more | yes, deduplicated | — | — | — |
+| [ToolUniverse](https://github.com/mims-harvard/ToolUniverse) | 1000+ tools: models, datasets, APIs, packages | papers | — | — | — |
+| [BioMCP](https://github.com/genomoncology/biomcp) | genes, variants, trials, drugs, proteins, papers | yes (`search all`) | — | — | — |
+
+— means the project's README doesn't describe it (READMEs read 2026-10-04).
+Where they are ahead: BioMCP reaches clinical trials, ChEMBL and AlphaFold, which
+this server doesn't; ToolUniverse covers far more ground overall; paper-search-mcp
+covers far more literature sources; Mobus also compares datasets and checks schema
+compatibility. More detail: [docs/POSITIONING.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/POSITIONING.md).
+
+## Sources
 
 | Source                       | Discover |       Fetch       |     Checksum     |
 | ---------------------------- | :------: | :---------------: | :--------------: |
@@ -196,7 +132,7 @@ with `421 Invalid Host header`.
 | NCBI GEO                     |    ✅    |   ✅ (`suppl/`)   |      none²       |
 | NCBI BioProject              |    ✅    |    → SRA links    |        —         |
 | PubMed / OpenAIRE            |    ✅    | ✅ (OA full text) |      none³       |
-| HuggingFace datasets         |    ✅    | ✅ (resolve URL)  |      none²       |
+| Hugging Face datasets        |    ✅    | ✅ (resolve URL)  |      none²       |
 | DataONE (eco/env)            |    ✅    | ✅ (Member Node)  |  md5 / sha-256   |
 | OmicsDI → PRIDE              |    ✅    |  ✅ (HTTPS FTP)   |      none²       |
 | OmicsDI → MetaboLights       |    ✅    |  ✅ (HTTPS FTP)   |     sha-256      |
@@ -213,246 +149,28 @@ with `421 Invalid Host header`.
 | NASA CMR (Earth science)     |    ✅    |        —⁵         |        —         |
 | GWAS Catalog                 |    ✅    |   → PMID bridge   |        —         |
 
-¹ Dryad downloads are token / bot-challenge gated, so `fetch` fails loud;
+¹ Dryad downloads are token / bot-challenge gated, so `fetch` returns an error;
 `resolve` still lists the files.
-² No upstream checksum, so `fetch` does not verify these bytes. It still fails
-loud on an HTTP error or when the download exceeds `max_bytes`.
+
+² No upstream checksum, so `fetch` does not verify these bytes. It still returns
+an error on an HTTP error or when the download exceeds `max_bytes`.
+
 ³ No upstream checksum. Files declared as PDF or XML (literature full text, and
 data.gov distributions with that mediaType) get an HTML sniff: an HTML login or
-paywall page served in their place fails loud. Other files are not checked.
+paywall page served in their place returns an error. Other files are not checked.
+
 ⁴ Only records that carry a downloadable file (a GBIF Darwin Core Archive, a
 data.gov distribution URL); metadata-only records are discovery-only.
+
 ⁵ Discovery-only: granule downloads need an Earthdata login, which is not wired.
 `resolve` returns the DOI and a data-access portal link.
 
-## 🛠️ Tools
+## Reference
 
-### `search(query?, size?, sources?, organism?, disease?, tissue?, chemical?, assay?, kind?, published_after?, published_before?, rank?, cursor?, collapse_mirrors?, understand?, multi_query?, provenance?)`
+Every tool and parameter, the HTTP transport (`--transport http`), and the
+environment variables: **[docs/reference.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/reference.md)**.
 
-Fan out across all wired sources in parallel and return compact `DataResource`
-records, deduped by DOI. Per-source failures land in `errors{}` — never silently
-dropped.
-
-- `organism` — expand the query with NCBI-Taxonomy synonyms; the expansion is
-  echoed in `taxon_expansion`, and results carry normalized `taxa[]`
-  (`{taxid, name}`) plus a `described_in` link to plant-genomics-mcp for plant
-  taxa.
-- `sources` — restrict the fan-out, e.g. `["omics"]`.
-- `size` — max results (1–50).
-- `kind` — keep only `dataset` / `sequencing_run` / `study` / `publication` /
-  `software`. A record whose upstream type none of these covers (a Zenodo image, a
-  DataCite `Audiovisual`, an untyped record) is kind `other` and matches no filter.
-- `published_after` / `published_before` — filter by publication year.
-- `rank` — `relevance` (default) or `semantic` (re-rank the fetched page by
-  embedding similarity to the query; needs `EMBEDDING_API_BASE`, degrades to
-  relevance order otherwise).
-- `understand` — opt into LLM query understanding (default false). A free-text
-  query is **normalized** into a focused keyword query: conversational fluff
-  (`"I'm looking for…"`, `"where can I find…"`) is stripped while the scientific
-  and entity terms are kept so they still match by text. The LLM also detects
-  structured entities (organism/disease/tissue/chemical/assay, kind) — these are
-  **echoed in `query_understanding.extracted` for transparency but not
-  auto-applied**, because ANDing LLM-_inferred_ facets across free-text keyword
-  upstreams over-constrains and hurts recall. Only the cleaned `keyword_core` and
-  explicit `year` scopes are applied; the ontology resolvers still run on the
-  facets **you** pass (the LLM proposes, you dispose). Needs an LLM endpoint
-  (`LLM_API_BASE`); with none configured the search runs unchanged and notes it in
-  `errors['understand']`. **Effectiveness is query- and model-dependent — opt-in /
-  default-off; validate the recall lift on your own corpus and LLM (see the eval
-  harness below).** `understand=` was measured once (v0.38.0, 2026-06-11) on a
-  5-query verified gold set: mean recall@20 lift −0.10 against the plain query,
-  with 4 of the 5 queries neutral or better. `multi_query=` has not been measured.
-- `multi_query` — opt into diverse multi-query recall expansion (default false).
-  An LLM generates up to a few deliberately-diverse reformulations of your query
-  (different facets/synonyms/framings, not paraphrases), each is fanned out across
-  every source, and the deduped union is re-ranked against your **original** query,
-  aiming to reach records a single keyword query would miss. Bounded at
-  `MAX_QUERY_VARIANTS` (4, incl. the original), so it costs at most N× the upstream
-  calls. The original query's results are always among the candidates, but only the
-  top `size` of the re-ranked union are returned, so a result the plain query would
-  have returned can be displaced by one from a variant. Composes with
-  `understand=` (which structures variant 0). The variants used are echoed in
-  `query_expansion`. Needs an LLM endpoint (`LLM_API_BASE`); with none configured
-  the search runs as a normal single query and notes it in `errors['multi_query']`.
-- `cursor` — opaque token from a prior result's `next_cursor`; pages forward
-  across every source. In `cursor` mode the other params are read from the
-  token, so `query` is optional.
-
-### `resolve(id, cite?, format?, trust?, fair?, use?)`
-
-Full record + files manifest. Routes by id shape — `zenodo:7654321`, a bare DOI,
-`datacite:10.5061/dryad.x`, an omics id (`sra:SRX079566`, `geo:GSE332789`,
-`bioproject:PRJNA1468572`), a literature id (`pubmed:34320281`, `openaire:<id>`),
-a HuggingFace id (`hf:owner/name`), a DataONE id (`dataone:doi:10.5063/F1HT2M7Q`),
-or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
-
-- **`files[]`** — ENA FASTQ manifest (SRA), GEO `suppl/`, or the host repo's
-  native manifest (Figshare / Dataverse / OSF / Dryad).
-- **`links[]`** — paper → data: `pubmed:` → `sra:` / `geo:` / `bioproject:` (NCBI
-  elink); `openaire:` → `datacite:` (ScholeXplorer Scholix).
-- **`access` / `license`** — normalized status
-  (`open` / `embargoed` / `restricted` / `closed` / `unknown`) and license where
-  the source exposes it.
-- **`identifiers`** — normalized `{pmid, pmcid, doi}`, plus an open-access
-  full-text `FileEntry` (EuropePMC XML, or an Unpaywall PDF fallback) for papers.
-- **`citation`** — pass `cite=<format>`: `bibtex`, `ris`, `csl-json`, or any CSL
-  style name (`apa`, `mla`, `vancouver`, …). DOI records use content
-  negotiation; others render CSL-JSON from metadata. Off by default; failures
-  degrade quietly.
-- **trust signals** — `metrics` (citations / views / downloads / likes),
-  `is_latest` / `superseded_by` (derived from version links), and `last_updated`
-  freshness, where the source provides them.
-- **`errors`** — `{step: message}` when an enrichment step failed on this record
-  (e.g. `taxonomy` during an NCBI rate limit); the rest of the record stands. Such a
-  record is not cached, so the next resolve retries the step.
-- **`truncated`** — `{field: note}` when a list on this record is deliberately partial,
-  e.g. a BioProject's `links` past 100 SRA runs: `first 100 of 891 SRA runs; …`. Empty
-  when every list is complete.
-- **`trust=true`** — attach retraction status (via Crossref) under `trust{}`.
-  One extra Crossref call; meaningful for DOI-bearing records only.
-- **`fair=true`** — attach an RDA-grounded FAIRness score (0–100 + F/A/I/R
-  sub-scores + actionable gaps) computed from the record metadata under `fair{}`.
-  Pure/local — no extra network call.
-- **`use=<intent>`** — attach a licence-compatibility advisory under
-  `license_compat{}` for the intended use (`commercial` / `redistribute` /
-  `modify` / `ml-training`). Returns ALLOW/REVIEW/DENY with the governing clause.
-  Metadata-derived advisory, **not legal advice**; an absent/unrecognized licence
-  yields REVIEW.
-- **`format`** — pass `format="croissant"` (file-level Croissant JSON-LD),
-  `"ro-crate"` (minimal RO-Crate 1.1), or `"provenance"` (one-call RO-Crate 1.1
-  data-availability dossier bundling version-currency, licence+SPDX, FAIR score,
-  and retraction status) to attach a standard manifest under the matching field.
-  The crates pass rocrate-validator's RO-Crate 1.1 profile; the assessment fields
-  schema.org lacks are defined in [docs/vocab.md](docs/vocab.md).
-
-### `fetch(id, dest?, files?, max_bytes?, force?, extract?)`
-
-Download files to disk and return their paths. Streams under a `max_bytes` guard
-(`force` to override) with md5 / sha-256 verification wherever the source
-publishes a checksum.
-
-- `files` — restrict to a subset of the resolved manifest.
-- `extract` — unpack downloaded zip / tar archives in place, guarded against
-  path traversal and runaway extracted size. Off by default.
-- Sources without a checksum are downloaded unverified. The one content check
-  there is an HTML sniff on files declared as PDF or XML (literature full text,
-  some data.gov distributions): it fails loud if the body is actually an HTML page.
-- Checksum-verified: **Zenodo**, **SRA** (ENA FASTQ), **DataONE** (Member-Node
-  objects), DataCite-hosted **Figshare** / **Dataverse** / **OSF**, **OpenML**
-  (ARFF), **MetaboLights** (via OmicsDI; sha-256 from the study's `HASHES/`) and
-  **DANDI** (sha-256; an asset whose hash DANDI has not computed yet is unverified).
-- Fetchable but unverified: **GEO** `suppl/`, **HuggingFace** datasets,
-  **PRIDE** (via OmicsDI), DataCite-hosted **OpenNeuro**,
-  **CZ CELLxGENE**, **RCSB PDB**, **UniProtKB**, **BioStudies**,
-  **GBIF** (Darwin Core Archives), **data.gov** distributions, and **literature**
-  open-access full text.
-- **Dryad**, other DataCite repos, other OmicsDI repos (MassIVE / GNPS / ...),
-  **BioProject**, **NASA CMR**, and the **GWAS Catalog** are discovery-only and
-  raise `FetchNotSupportedError`.
-
-### `list_sources()`
-
-Wired sources with their capabilities — layer, kinds, supported filters,
-fetchability, `operable` flag, id examples, auth, and rate limits.
-
-### `operate(op, id, file?, query?, n?, columns?)`
-
-Inspect or query a remote tabular file (Parquet / CSV / TSV) **without
-downloading it**. Addresses a file by catalog `id` + `file` name (defaults to the
-first tabular file on the resolved record). Ops:
-
-- `schema` — column names + types (reads the Parquet footer / sniffs the CSV
-  header; no full load).
-- `preview` — a small sample of rows.
-- `head` — the first `n` rows (default 20), optionally restricted to `columns`.
-- `sql` — a read-only `SELECT` (the file is the view `data`), e.g.
-  `SELECT col, count(*) FROM data GROUP BY 1`.
-- `peek` — per-column profile via DuckDB `SUMMARIZE` (type, null-rate,
-  approximate distinct count, min/max, numeric quartiles) **without
-  downloading** the file. Like `head`/`sql`, reads the whole file and honors
-  the source-size ceiling.
-
-Backed by the Parquet footer reader + DuckDB `httpfs` range reads. `sql` runs in
-a locked-down DuckDB (read-only, local filesystem disabled, single-SELECT
-validation, row / wall-clock caps). Requires the optional `[operate]` extra
-(`pip install data-aggregator-mcp[operate]`); without it, `operate` returns a
-clear install-the-extra message and the other five tools are unaffected.
-
-Any HuggingFace dataset with a datasets-server converted view is operable
-(`schema` / `preview` / `head` / `sql`): `resolve` surfaces the auto-converted
-Parquet files (`source="hf-datasets-server"`) even for datasets stored as
-JSON/JSONL/arrow, so pass `file=<config>/<split>/...parquet` to pick a split when
-there are several. A split HF converted only in part (its first 5 GB) is named
-`<config>/partial-<split>/...`, so a query on it covers that part, not the whole split.
-
-### `relate(ids)`
-
-Cross-resource join/harmonization **hints**. Given 2–10 resource ids, `relate` resolves
-each (TTL-cached) and reports how they relate and on what key they could be joined:
-
-- **`shared_accession`** — same BioProject/SRA/GEO accession on ≥2 records → joinable key.
-- **`shared_identifier`** — same doi/pmid/pmcid across records → same work / paper↔data link.
-- **`explicit_link`** — one record's `links[]` points at another input record.
-- **`version_lineage`** — one record supersedes another (dedupe, don't join, those).
-
-**Hints only.** `relate` never reads file columns, fetches files, or executes a
-join/merge/conversion — every hint names the shared value as evidence. Per-id resolve
-failures are reported in `errors`, not fatal; an empty result carries an explanatory
-`note`.
-
-### Prompts
-
-Three workflow prompts surface in clients (e.g. `/mcp__data_aggregator__*` in
-Claude Code):
-
-- **`find_data`** — find datasets for a topic, optionally scoped to an organism.
-- **`data_behind_paper`** — find the datasets / accessions behind a paper.
-- **`search_resolve_fetch`** — walk the end-to-end search → resolve → fetch flow.
-
-## ⚙️ Configuration
-
-All optional, set via environment variables:
-
-- `NCBI_API_KEY` — raises the NCBI E-utilities rate limit (3 → 10 req/s) used by
-  the omics, literature, and taxonomy lookups.
-- `DATA_GOV_API_KEY` — optional; data.gov works without it through the keyless
-  catalog API (`catalog.data.gov`). With a free
-  [api.data.gov](https://api.data.gov/signup/) key set, data.gov requests go
-  through the api.data.gov gateway instead (1,000 requests/hour per key).
-- `UNPAYWALL_EMAIL` — enables the Unpaywall fallback leg of literature full-text
-  retrieval (the EuropePMC leg works without it).
-- `NCBI_EMAIL` — contact address sent to NCBI's ID converter; falls back to
-  `UNPAYWALL_EMAIL` when unset.
-- `DATAVERSE_BASE_URL` — resolve Dataverse DOIs against a different installation
-  (default `https://dataverse.harvard.edu`).
-- `CACHE_TTL_SECONDS` — resolve-cache lifetime in seconds (default `3600`; an
-  unparseable value falls back to that default).
-- `EMBEDDING_API_BASE` / `EMBEDDING_API_KEY` / `EMBEDDING_MODEL` — an
-  OpenAI-compatible embeddings endpoint enabling `rank=semantic`. Absent ⇒
-  semantic re-rank degrades to relevance order. Key is optional (keyless local
-  servers supported); model defaults to `text-embedding-3-small`.
-- `LLM_API_BASE` / `LLM_API_KEY` / `LLM_MODEL` — an OpenAI-compatible
-  `/chat/completions` endpoint enabling `search(understand=true)` (NL→structured
-  query rewriting) **and** `search(multi_query=true)` (diverse multi-query recall
-  expansion). Absent ⇒ both run the raw query unchanged and note it in
-  `errors['understand']` / `errors['multi_query']`. Key is optional (keyless local
-  servers supported); model defaults to `gpt-4o-mini` (a passthrough string — set
-  it to whatever your endpoint serves). `multi_query` fans out at most
-  `MAX_QUERY_VARIANTS` (4, incl. the original) variants, bounding the N× cost.
-
-To measure the recall lift of `understand=true` / `multi_query=true` on a small
-labeled set, run the gated eval harnesses (need a live LLM endpoint):
-
-```bash
-DATA_AGGREGATOR_MCP_LIVE=1 LLM_API_BASE=... python scripts/eval_understand.py
-DATA_AGGREGATOR_MCP_LIVE=1 LLM_API_BASE=... python scripts/eval_multi_query.py
-```
-
-They print per-query and mean recall@20 (understand / multi-query off vs. on). See
-the fixtures at `scripts/eval_understand_fixture.json` and
-`scripts/eval_multi_query_fixture.json`.
-
-## 🧪 Develop
+## Develop
 
 ```bash
 uv venv && uv pip install -e ".[dev]"
@@ -461,8 +179,8 @@ uv run ruff check src tests
 DATA_AGGREGATOR_MCP_LIVE=1 uv run pytest -k live -q   # real-API probes
 ```
 
-The README demo (`examples/assets/demo.svg`) is recorded network-free from
-`examples/_demo_stdio.py` — see the header of that file to re-record.
+The README demo (`examples/assets/demo.svg`) is recorded from live calls by
+`examples/_demo_search.py`; its header has the commands to re-record it.
 
 ## License
 
