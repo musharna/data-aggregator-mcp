@@ -68,6 +68,44 @@ async def test_figshare_malformed_body_raises_upstream(httpx_mock, monkeypatch) 
             await figshare.files(client, "10.6084/m9.figshare.31375579.v2")
 
 
+async def test_a_withdrawn_article_is_not_found_and_an_outage_is_not(
+    httpx_mock, monkeypatch
+) -> None:
+    """A withdrawn article answers 404 for every version (32732757, live 2026-10-04): the
+    lister says so by name, as NotFoundError, so DataCite resolve can keep the record. A
+    503 past its retries is an outage and must not read as withdrawn."""
+    from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    monkeypatch.setattr("data_aggregator_mcp._http.asyncio.sleep", _no_sleep)
+    base = "https://api.figshare.com/v2/articles"
+    httpx_mock.add_response(
+        url=f"{base}/32732757/versions/1",
+        status_code=404,
+        json={"message": "Entity not found: ArticleVersion", "code": "EntityNotFound"},
+    )
+    httpx_mock.add_response(url=f"{base}/32732757", status_code=404)
+    for _ in range(3):
+        httpx_mock.add_response(url=f"{base}/1234", status_code=503)
+    httpx_mock.add_response(url=f"{base}/31375579/versions/2", json=_ARTICLE)
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(
+            NotFoundError,
+            match=r"^\[NotFoundError\] Figshare answers 404 for article 32732757 version 1: "
+            r"withdrawn or removed upstream$",
+        ):
+            await figshare.files(client, "10.6084/m9.figshare.32732757.v1")
+        with pytest.raises(NotFoundError, match=r"article 32732757: withdrawn"):
+            await figshare.files(client, "10.6084/m9.figshare.32732757")
+        with pytest.raises(UpstreamUnavailableError, match=r"last HTTP 503"):
+            await figshare.files(client, "10.6084/m9.figshare.1234")
+        # positive control: a served article still lists its files
+        listed = await figshare.files(client, "10.6084/m9.figshare.31375579.v2")
+    assert [f.name for f in listed] == ["small.csv"]
+
+
 @live_only
 async def test_live_figshare_manifest_has_md5(monkeypatch) -> None:
     # Figshare's smallest sample file is ~123 MB → manifest-only check, no download.
