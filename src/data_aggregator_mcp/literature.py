@@ -27,6 +27,11 @@ MAX_SIZE = 50
 # The router pages each backend as its own stream (``literature/pubmed`` ...) with its own
 # offset; see omics.SUBSOURCES for why one shared offset lost records.
 SUBSOURCES = PREFIXES
+# Per backend, the most AND/OR/NOT words its search accepts (absent = no limit). The
+# router shortens the ontology expansion it sends a backend listed here.
+OPERATOR_LIMITS: dict[str, int] = {
+    name: mod.MAX_OPERATORS for name, mod in _BACKENDS.items() if hasattr(mod, "MAX_OPERATORS")
+}
 
 
 async def search_subsource(

@@ -156,6 +156,19 @@ _expand_disease = _ontology.expand_disease
 _expand_tissue = _ontology.expand_tissue
 _expand_chemical = _ontology.expand_chemical
 _expand_assay = _ontology.expand_assay
+FacetGroup = _ontology.FacetGroup
+
+
+def _encode_groups(groups: Sequence[FacetGroup]) -> list[list[Any]]:
+    """Cursor form of the facet groups: ``[[input, [terms...]], ...]``."""
+    return [[g.input, list(g.terms)] for g in groups]
+
+
+def _decode_groups(state: dict[str, Any]) -> list[FacetGroup]:
+    """The facet groups a cursor carries (``_cursor.decode`` validated their shape). A
+    cursor minted before they were stored has none: its operator-limited backends are
+    sent the full expansion, as before."""
+    return [FacetGroup(input=i, terms=tuple(t)) for i, t in state.get("fg") or []]
 
 
 async def _enrich_resource(client: httpx.AsyncClient, r: DataResource) -> DataResource:
@@ -292,11 +305,18 @@ def _source_streams(
     filters: dict[str, Any],
     pushdown: bool,
     vi: int | None = None,
+    groups: Sequence[FacetGroup] = (),
+    notes: list[str] | None = None,
 ) -> list[_Stream]:
     """One stream per adapter, or per sub-source for composite adapters (``SUBSOURCES``
     + ``search_subsource``). Keyword-only sources are sent ``plain`` (the query before
     ontology expansion), the rest ``expanded``. ``vi`` namespaces the keys for a
     multi-query variant.
+
+    A sub-source listed in its adapter's ``OPERATOR_LIMITS`` rejects queries with more
+    AND/OR/NOT words than its limit, so it is sent the same expansion rebuilt from
+    ``groups`` to fit (``_ontology.within_operator_limit``); what that left out, or that
+    it fell back to ``plain``, is appended to ``notes``.
 
     An adapter implementing ``_pushdown.FilterPushdown`` is sent the active filters it
     can evaluate upstream (unless ``pushdown`` is off: a cursor minted before pushdown
@@ -310,8 +330,17 @@ def _source_streams(
         parts: list[tuple[str, Callable[..., Awaitable[tuple[int, list[DataResource]]]]]]
         pushed: dict[str, Any] = {}
         if subs:
+            limits: dict[str, int] = getattr(adapter, "OPERATOR_LIMITS", {})
             parts = [
-                (f"{name}/{sub}", functools.partial(adapter.search_subsource, client, sub, q))  # type: ignore[attr-defined]
+                (
+                    f"{name}/{sub}",
+                    functools.partial(
+                        adapter.search_subsource,  # type: ignore[attr-defined]
+                        client,
+                        sub,
+                        _within_limit(f"{name}/{sub}", q, plain, groups, limits.get(sub), notes),
+                    ),
+                )
                 for sub in subs
             ]
         else:
@@ -326,6 +355,43 @@ def _source_streams(
             key, label = (skey, skey) if vi is None else (_comp_key(vi, skey), f"{skey}#v{vi}")
             out.append(_Stream(key=key, label=label, call=fn, source=skey, post_filtered=residual))
     return out
+
+
+def _within_limit(
+    label: str,
+    q: str,
+    plain: str,
+    groups: Sequence[FacetGroup],
+    limit: int | None,
+    notes: list[str] | None,
+) -> str:
+    """``q`` for a stream whose upstream allows at most ``limit`` operators: unchanged
+    when there is no limit, no expansion to shorten, or it already fits; otherwise the
+    expansion rebuilt from ``groups`` to fit, or ``plain`` when not even one name per
+    facet fits. Each change is described in ``notes``."""
+    if limit is None or not groups or _ontology.count_operators(q) <= limit:
+        return q
+    fitted = _ontology.within_operator_limit(plain, groups, limit)
+    if fitted is None:
+        if notes is not None:
+            notes.append(
+                f"{label} accepts at most {limit} AND/OR/NOT operators, too few for one "
+                "name per facet, so it was searched with the plain query"
+            )
+        return plain
+    shortened, left_out = fitted
+    if notes is not None:
+        notes.append(
+            f"{label} accepts at most {limit} AND/OR/NOT operators, so it was searched "
+            f"with a shorter expansion that left out {', '.join(map(repr, left_out))}"
+        )
+    return shortened
+
+
+def _operator_limit_note(notes: list[str]) -> str | None:
+    """One ``errors['operator_limit']`` entry; a multi-query search repeats the same
+    note per variant."""
+    return "; ".join(dict.fromkeys(notes)) or None
 
 
 def _stored_offset(offsets: dict[str, int], key: str) -> int:
@@ -561,6 +627,7 @@ async def _multi_query_page(
     assay_expansion: AssayExpansion | None = None,
     unresolved: Sequence[UnresolvedEntity] = (),
     query_understanding: QueryUnderstanding | None = None,
+    groups: Sequence[FacetGroup] = (),
 ) -> SearchResult:
     """A2.P2 parallel multi-query fan-out keyed by a composite ``(variant_index, source)``
     label. ``variants`` are the ALREADY-EXPANDED effective query strings (variant 0 is the
@@ -574,6 +641,7 @@ async def _multi_query_page(
     # Keyword-only sources get the variant BEFORE ontology expansion (see _query_syntax_note).
     plain = raw_variants if raw_variants is not None else variants
     streams: list[_Stream] = []
+    notes: list[str] = []
     for vi in range(len(variants)):
         streams += _source_streams(
             client,
@@ -583,9 +651,13 @@ async def _multi_query_page(
             filters=filters,
             pushdown=pushdown,
             vi=vi,
+            groups=groups,
+            notes=notes,
         )
     if note := _query_syntax_note(names, list(plain), variants):
         errors["query_syntax"] = note
+    if note := _operator_limit_note(notes):
+        errors["operator_limit"] = note
     # Window-rank ALWAYS for multi-query: the union has no single coherent upstream order,
     # so re-rank against the ORIGINAL pre-expansion query. No embedding endpoint →
     # interleaved order + errors["semantic"] (still a recall win, just unranked).
@@ -614,6 +686,7 @@ async def _multi_query_page(
                 "collapse_mirrors": collapse_mirrors,
                 "pd": pushdown,
             }
+            | ({"fg": _encode_groups(groups)} if groups else {})
         )
         if page.more
         else None
@@ -692,6 +765,7 @@ async def search_page(
                 errors={},
                 query_expansion=None,  # echo is page-1 only; frozen None on continuation
                 pushdown=bool(st.get("pd")),
+                groups=_decode_groups(st),
             )
         query = st["q"]
         sources = st.get("sources")
@@ -721,6 +795,7 @@ async def search_page(
         # the ontology restriction from page 2 on — the offsets then indexed a different,
         # wider result set. (A pre-fix cursor has no `eq`; it keeps the old behaviour.)
         effective_query = st.get("eq", query)
+        groups = _decode_groups(st)
         # Offsets count positions in the order the stream was searched in. A cursor
         # minted before filter pushdown (no `pd`) indexes the UNFILTERED upstream order,
         # so it keeps being continued without pushdown.
@@ -799,18 +874,20 @@ async def search_page(
             "published_before": published_before,
             "kind": kind,
         }
-        effective_query, expansion = await _expand_organism(client, query, organism, errors)
+        # The facets as the expanders ANDed them, for upstreams that cap their operators.
+        groups = []
+        effective_query, expansion = await _expand_organism(client, query, organism, errors, groups)
         effective_query, disease_expansion = await _expand_disease(
-            client, effective_query, disease, errors
+            client, effective_query, disease, errors, groups
         )
         effective_query, tissue_expansion = await _expand_tissue(
-            client, effective_query, tissue, errors
+            client, effective_query, tissue, errors, groups
         )
         effective_query, chemical_expansion = await _expand_chemical(
-            client, effective_query, chemical, errors
+            client, effective_query, chemical, errors, groups
         )
         effective_query, assay_expansion = await _expand_assay(
-            client, effective_query, assay, errors
+            client, effective_query, assay, errors, groups
         )
         # Computed once, here, where all five echoes are in scope — NOT inside the
         # variant loop below, which re-runs the same (cached) expansions and drops
@@ -884,6 +961,7 @@ async def search_page(
                     assay_expansion=assay_expansion,
                     unresolved=unresolved,
                     query_understanding=query_understanding,
+                    groups=groups,
                 )
         offsets = {}
         ahead = {}
@@ -891,6 +969,7 @@ async def search_page(
 
     adapters = _select(sources)
     names = list(adapters)
+    notes: list[str] = []
     streams = _source_streams(
         client,
         adapters,
@@ -898,9 +977,13 @@ async def search_page(
         plain=query,
         filters=filters,
         pushdown=pushdown,
+        groups=groups,
+        notes=notes,
     )
     if note := _query_syntax_note(names, [query], [effective_query]):
         errors["query_syntax"] = note
+    if note := _operator_limit_note(notes):
+        errors["operator_limit"] = note
     # rank=semantic re-ranks the fetched window against the raw `query`, not the
     # organism-expanded `effective_query`: the boolean-expanded string is a poor embedding
     # anchor, and the window is already organism-filtered by the fan-out.
@@ -934,6 +1017,7 @@ async def search_page(
                 "collapse_mirrors": collapse_mirrors,
                 "pd": pushdown,
             }
+            | ({"fg": _encode_groups(groups)} if groups else {})
         )
         if page.more
         else None

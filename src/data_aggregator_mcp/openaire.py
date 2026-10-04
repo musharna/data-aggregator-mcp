@@ -22,6 +22,10 @@ from data_aggregator_mcp.models import Creator, DataResource, normalize_access
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 BASE_URL = "https://api.openaire.eu/graph/v1/researchProducts"
+# The search answers HTTP 400 "Too many logical operators found. Max allowed is 4" past
+# four upper-case AND/OR/NOT words outside quotes (probed live 2026-10-04). The router
+# sends this backend a shortened ontology expansion that fits (_ontology.within_operator_limit).
+MAX_OPERATORS = 4
 _GET = "GET"
 _ESCAPE_ALL = ""  # quote(safe=...): an id is one path segment, so even "/" is escaped
 
