@@ -22,6 +22,7 @@ match", which the lookups cache.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -37,6 +38,25 @@ _QUERY = {
     "fieldList": "obo_id,label,synonym,is_defining_ontology,is_obsolete",
     "rows": "10",
 }
+
+
+@dataclass(frozen=True)
+class Alternative:
+    """Another term the name matched, not chosen."""
+
+    id: str  # e.g. "UBERON:0002097"
+    label: str
+
+
+def choose(matches: list[tuple[bool, bool]]) -> int:
+    """Index of the match to expand into, given ``(label_is_the_name, is_defining)`` per
+    match in OLS's order: a term whose label is the name, then one the ontology defines,
+    then OLS's order. A name can be several terms' synonym ("skin" is a synonym of
+    "zone of skin", "skin of body", "skin epidermis" and "integument"); OLS ranks the
+    label match, then the exact synonym, first (live 2026-10-04, 40 common names, 15 of
+    them ambiguous), so the label rule is stated here rather than left to its ranking.
+    Synonym scope is not in this search's answer; OLS's order stands for it."""
+    return min(range(len(matches)), key=lambda i: (not matches[i][0], not matches[i][1], i))
 
 
 def _is_doc(doc: Any) -> bool:

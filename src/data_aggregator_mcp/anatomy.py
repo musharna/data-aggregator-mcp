@@ -23,7 +23,7 @@ failures propagate (the caller surfaces them in ``errors``); they are NOT cached
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import httpx
@@ -37,6 +37,8 @@ class UberonInfo:
     uberon_id: str  # e.g. "UBERON:0002107"
     canonical: str  # OLS label
     synonyms: tuple[str, ...]  # OLS ``synonym`` entries (exact and related alike)
+    # the other terms the name matched, in OLS's order (``_ols.choose`` says which wins)
+    alternatives: tuple[_ols.Alternative, ...] = ()
 
 
 _NEG = object()  # cached "no match" (distinct from a missing key)
@@ -46,11 +48,12 @@ _CACHE = TTLCache(maxsize=4096, ttl=3600.0)
 def _pick_uberon(docs: list[dict[str, Any]], key: str) -> UberonInfo | None:
     """Pure matcher: select the canonical UBERON doc whose label OR a synonym
     matches ``key`` (lowercased input) exactly. Both hard filters from the module
-    docstring are applied; ``is_defining_ontology is True`` breaks ties (else the
-    first candidate). Returns None when no candidate matches (conservative — no
+    docstring are applied; ``_ols.choose`` picks among several (label match, then
+    the defining ontology, then OLS's order) and the rest are kept as
+    ``alternatives``. Returns None when no candidate matches (conservative — no
     expansion is preferred over a wrong term).
     """
-    candidates: list[tuple[bool, UberonInfo]] = []
+    candidates: list[tuple[bool, bool, UberonInfo]] = []
     for doc in docs:
         if not isinstance(doc, dict):
             continue
@@ -75,10 +78,16 @@ def _pick_uberon(docs: list[dict[str, Any]], key: str) -> UberonInfo | None:
         if label.lower() != key and key not in synset:
             continue
         info = UberonInfo(uberon_id=obo_id, canonical=label, synonyms=synonyms)
-        candidates.append((doc.get("is_defining_ontology") is True, info))
+        candidates.append((label.lower() == key, doc.get("is_defining_ontology") is True, info))
     if not candidates:
         return None
-    return next((info for is_defining, info in candidates if is_defining), candidates[0][1])
+    chosen = _ols.choose([(is_label, is_defining) for is_label, is_defining, _info in candidates])
+    others = tuple(
+        _ols.Alternative(info.uberon_id, info.canonical)
+        for i, (_is_label, _is_defining, info) in enumerate(candidates)
+        if i != chosen
+    )
+    return replace(candidates[chosen][2], alternatives=others)
 
 
 async def resolve_uberon(client: httpx.AsyncClient, name: str) -> UberonInfo | None:

@@ -17,7 +17,7 @@ from typing import Any
 import httpx
 import pytest
 
-from data_aggregator_mcp import _http, anatomy, chemistry
+from data_aggregator_mcp import _http, _ols, anatomy, chemistry
 from data_aggregator_mcp.errors import UpstreamUnavailableError
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
@@ -74,11 +74,17 @@ async def test_real_answers_are_read_whole():
     async with _serving(sent, EMPTY) as c:
         nothing = await chemistry.resolve_chebi(c, "zzznotachemical")
     assert liver == anatomy.UberonInfo("UBERON:0002107", "liver", ("iecur", "jecur"))
-    # No label match: the first doc carrying "skin" as a synonym, in OLS's order.
+    # No label match: the first doc carrying "skin" as a synonym, in OLS's order (UBERON
+    # makes it the exact synonym of "zone of skin"); the other three are alternatives.
     assert skin == anatomy.UberonInfo(
         "UBERON:0000014",
         "zone of skin",
         ("portion of skin", "region of skin", "skin region", "skin zone", "skin"),
+        (
+            _ols.Alternative("UBERON:0002097", "skin of body"),
+            _ols.Alternative("UBERON:0001003", "skin epidermis"),
+            _ols.Alternative("UBERON:0002199", "integument"),
+        ),
     )
     assert aspirin is not None
     assert (aspirin.chebi_id, aspirin.canonical) == ("CHEBI:15365", "acetylsalicylic acid")

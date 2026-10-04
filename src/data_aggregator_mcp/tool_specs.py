@@ -114,7 +114,10 @@ TOOLS: list[types.Tool] = [
                     "description": "Optional tissue/anatomy name. Resolved via UBERON (EBI OLS); "
                     "the query is expanded with the canonical term + exact synonyms (e.g. "
                     "'liver' also matches 'iecur'/'jecur'). "
-                    "The expansion is echoed in tissue_expansion.",
+                    "The expansion is echoed in tissue_expansion. A name several terms carry "
+                    "resolves to the one it is the label of, else the one OLS ranks first "
+                    "('skin' → 'zone of skin', whose exact synonym it is); the others are "
+                    "listed in tissue_expansion.alternatives.",
                 },
                 "chemical": {
                     "type": "string",
@@ -122,7 +125,9 @@ TOOLS: list[types.Tool] = [
                     "the query is expanded with the canonical name + exact synonyms (e.g. "
                     "'caffeine' also matches '1,3,7-trimethylxanthine'), capped to a bounded "
                     "number of synonyms. An unknown term yields no expansion; an OLS failure "
-                    "surfaces in errors. The expansion is echoed in chemical_expansion.",
+                    "surfaces in errors. The expansion is echoed in chemical_expansion. A name "
+                    "several terms carry resolves to the one it is the label of, else the one "
+                    "OLS ranks first; the others are listed in chemical_expansion.alternatives.",
                 },
                 "assay": {
                     "type": "string",

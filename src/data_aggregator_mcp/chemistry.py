@@ -28,7 +28,7 @@ failures propagate (the caller surfaces them in ``errors``); they are NOT cached
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import httpx
@@ -42,6 +42,8 @@ class ChebiInfo:
     chebi_id: str  # e.g. "CHEBI:27732"
     canonical: str  # OLS label
     synonyms: tuple[str, ...]  # OLS ``synonym`` entries, any scope; canonical excluded; capped
+    # the other terms the name matched, in OLS's order (``_ols.choose`` says which wins)
+    alternatives: tuple[_ols.Alternative, ...] = ()
 
 
 _MAX_SYNONYMS = 12  # ChEBI synonym lists are large; cap the OR-group to a sane size.
@@ -53,12 +55,13 @@ _CACHE = TTLCache(maxsize=4096, ttl=3600.0)
 def _pick_chebi(docs: list[dict[str, Any]], key: str) -> ChebiInfo | None:
     """Pure matcher: select the canonical ChEBI doc whose label OR a synonym
     matches ``key`` (lowercased input) exactly. Both hard filters from the module
-    docstring are applied; ``is_defining_ontology is True`` breaks ties (else the
-    first candidate). The matched doc's synonyms are capped to ``_MAX_SYNONYMS``
+    docstring are applied; ``_ols.choose`` picks among several (label match, then
+    the defining ontology, then OLS's order) and the rest are kept as
+    ``alternatives``. The matched doc's synonyms are capped to ``_MAX_SYNONYMS``
     (canonical always kept). Returns None when no candidate matches (conservative —
     no expansion is preferred over a wrong term).
     """
-    candidates: list[tuple[bool, ChebiInfo]] = []
+    candidates: list[tuple[bool, bool, ChebiInfo]] = []
     for doc in docs:
         if not isinstance(doc, dict):
             continue
@@ -95,10 +98,16 @@ def _pick_chebi(docs: list[dict[str, Any]], key: str) -> ChebiInfo | None:
             seen.add(low)
             distinct.append(s)
         info = ChebiInfo(chebi_id=obo_id, canonical=label, synonyms=tuple(distinct[:_MAX_SYNONYMS]))
-        candidates.append((doc.get("is_defining_ontology") is True, info))
+        candidates.append((label.lower() == key, doc.get("is_defining_ontology") is True, info))
     if not candidates:
         return None
-    return next((info for is_defining, info in candidates if is_defining), candidates[0][1])
+    chosen = _ols.choose([(is_label, is_defining) for is_label, is_defining, _info in candidates])
+    others = tuple(
+        _ols.Alternative(info.chebi_id, info.canonical)
+        for i, (_is_label, _is_defining, info) in enumerate(candidates)
+        if i != chosen
+    )
+    return replace(candidates[chosen][2], alternatives=others)
 
 
 async def resolve_chebi(client: httpx.AsyncClient, name: str) -> ChebiInfo | None:

@@ -28,6 +28,7 @@ from data_aggregator_mcp.models import (
     MeshExpansion,
     TaxonAlternative,
     TaxonExpansion,
+    TermAlternative,
     TissueExpansion,
     UnresolvedEntity,
 )
@@ -182,6 +183,7 @@ async def expand_tissue(
         uberon_id=info.uberon_id,
         canonical_name=info.canonical,
         synonyms=list(info.synonyms),
+        alternatives=[TermAlternative(id=a.id, label=a.label) for a in info.alternatives],
     )
     return effective, expansion
 
@@ -214,6 +216,7 @@ async def expand_chemical(
         chebi_id=info.chebi_id,
         canonical_name=info.canonical,
         synonyms=list(info.synonyms),
+        alternatives=[TermAlternative(id=a.id, label=a.label) for a in info.alternatives],
     )
     return effective, expansion
 
