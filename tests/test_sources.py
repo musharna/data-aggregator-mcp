@@ -420,3 +420,24 @@ def test_every_listed_filter_is_a_search_parameter() -> None:
     for spec in sources.SOURCES:
         assert set(spec.filters_supported) <= params, (spec.name, set(spec.filters_supported))
         assert spec.filters_supported[:2] == ("query", "size"), spec.name
+
+
+@pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+@pytest.mark.parametrize("spec", sources.SOURCES, ids=lambda s: s.name)
+async def test_live_a_source_listing_cursor_serves_new_records_on_page_2(spec) -> None:
+    """The offline drift test proves a page-2 search sends a request; this proves the
+    upstream answers it with records page 1 did not have."""
+    from data_aggregator_mcp.errors import RateLimitError, UpstreamUnavailableError
+
+    q = BOOLEAN_PROBE_QUERY[spec.name]
+    async with httpx.AsyncClient(timeout=90, follow_redirects=True) as client:
+        for call in _search_calls(spec):
+            try:
+                total, first = await call(client, q, size=3, offset=0)
+                _, second = await call(client, q, size=3, offset=3)
+            except (RateLimitError, UpstreamUnavailableError) as e:
+                pytest.skip(f"{spec.name}: upstream unavailable, paging not checked: {e}")
+            if total <= 3:
+                continue  # a sub-source with one page of hits cannot show paging
+            new = {r.id for r in second} - {r.id for r in first}
+            assert bool(new) == ("cursor" in spec.filters_supported), (spec.name, total)
