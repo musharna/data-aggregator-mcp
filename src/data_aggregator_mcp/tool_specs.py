@@ -369,7 +369,11 @@ TOOLS: list[types.Tool] = [
         name="list_sources",
         description=(
             "List wired data sources and their capabilities (layer, kinds, supported "
-            "filters, auth requirement, rate limit, status)."
+            "filters, auth requirement, rate limit, status). filters_supported names the "
+            "search parameters a source applies itself: cursor = it pages past page 1; "
+            "published_after/published_before/kind = filtered upstream, so its total is "
+            "filtered (any other source is filtered after fetch); organism/disease/tissue/"
+            "chemical/assay = the synonym expansion reaches its query."
         ),
         input_schema={
             "type": "object",

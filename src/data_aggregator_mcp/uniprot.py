@@ -28,6 +28,8 @@ PREFIXES = {"uniprot"}
 _ACC_RE = re.compile(r"^[A-Za-z0-9_]{1,15}$")
 DEFAULT_SIZE = 10
 MAX_SIZE = 25
+# search serves page 1 only (``if offset`` below), so list_sources omits ``cursor``.
+PAGINATES = False
 MAX_RETRIES = 2
 # httpx upper-cases the method and reads header names case-insensitively, so neither
 # spelling is behaviour.

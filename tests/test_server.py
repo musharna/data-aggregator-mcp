@@ -428,14 +428,14 @@ def test_resolve_tool_exposes_cite_param() -> None:
 
 def test_list_sources_advertises_filters_and_cursor() -> None:
     # Sources that support the full temporal+kind+cursor filter set.
-    # DataONE and OmicsDI are discovery-limited sources with fewer filters.
-    _FULL_FILTER_SOURCES = {"zenodo", "datacite", "omics", "literature", "huggingface"}
-    for s in server._SOURCES:
-        if s["name"] not in _FULL_FILTER_SOURCES:
-            continue
-        assert {"published_after", "published_before", "kind", "cursor"} <= set(
-            s["filters_supported"]
-        )
+    # Only zenodo and datacite filter years and kind upstream (derived from the adapters,
+    # checked in test_sources). huggingface listed them and cursor by hand while serving
+    # page 1 unfiltered; omics/literature page but filter after fetch.
+    full = {"published_after", "published_before", "kind", "cursor"}
+    by_name = {s["name"]: set(s["filters_supported"]) for s in server._SOURCES}
+    assert {n for n, f in by_name.items() if full <= f} == {"zenodo", "datacite"}
+    assert by_name["huggingface"].isdisjoint(full)
+    assert "cursor" in by_name["omics"] and "cursor" in by_name["literature"]
 
 
 def test_search_schema_exposes_pagination_and_filters() -> None:

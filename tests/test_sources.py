@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import functools
 import os
 from types import SimpleNamespace
 from typing import Any
 
+import httpx
 import pytest
 
 from data_aggregator_mcp import router, server, sources
@@ -119,7 +121,6 @@ def _stub_spec(**kw: Any) -> sources.SourceSpec:
         SimpleNamespace(PREFIXES=frozenset({"stub"})),
         layer="archives",
         kinds=("dataset",),
-        filters_supported=("query",),
         rate_limit="none",
         status="live",
         id_example="stub:1",
@@ -314,3 +315,108 @@ async def test_live_every_advertised_id_example_resolves_to_itself(spec, example
     if spec.fetchable is True and prefix in spec.fetchable_prefixes:
         assert r.files, f"{spec.name}: {example!r} lists no files, yet the source says fetchable"
         assert fetch_gate.refusal(r) is None, f"{spec.name}: fetch refuses {example!r}"
+
+
+# --- filters_supported is derived from the adapters; these check it against behaviour ---
+
+
+class _Asked(Exception):
+    """Raised by the refusing transport: the adapter sent a request."""
+
+
+def _search_calls(spec: sources.SourceSpec) -> list[Any]:
+    """Every search entry point the router calls for ``spec``: one per sub-source for a
+    composite adapter, else ``search``."""
+    subs = getattr(spec.module, "SUBSOURCES", None)
+    if not subs:
+        return [spec.module.search]
+    mod: Any = spec.module
+    return [
+        functools.partial(
+            lambda sub, client, q, **kw: mod.search_subsource(client, sub, q, **kw), sub
+        )
+        for sub in sorted(subs)
+    ]
+
+
+async def _asks(call: Any, *, offset: int) -> bool:
+    """Whether a search at ``offset`` sends a request (a page-1-only adapter answers
+    ``offset > 0`` from nothing)."""
+
+    def refuse(request: httpx.Request) -> httpx.Response:
+        raise _Asked(str(request.url))
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(refuse)) as client:
+        try:
+            await call(client, "filters drift probe", size=5, offset=offset)
+        except _Asked:
+            return True
+    return False
+
+
+@pytest.mark.parametrize("spec", sources.SOURCES, ids=lambda s: s.name)
+async def test_cursor_is_listed_exactly_when_the_adapter_pages(spec) -> None:
+    """``cursor`` is derived from ``PAGINATES``; this drives each adapter past page 1 to
+    check the declaration. Hand-written, huggingface listed ``cursor`` while serving page
+    1 only, and dandi/pdb/gwas/biostudies/cellxgene paged without listing it."""
+    for call in _search_calls(spec):
+        # control: page 1 always asks, so the probe can see a request
+        assert await _asks(call, offset=0), f"{spec.name}: page 1 sent no request"
+        pages = await _asks(call, offset=5)
+        assert pages == ("cursor" in spec.filters_supported), (
+            f"{spec.name}: {'pages' if pages else 'serves page 1 only'} but lists "
+            f"{spec.filters_supported}"
+        )
+
+
+def _streams(spec: sources.SourceSpec, filters: dict[str, Any], **queries: str) -> list[Any]:
+    return router._source_streams(
+        None,  # streams are built here, never called
+        {spec.name: spec.module},
+        expanded=queries.get("expanded", "q"),
+        plain=queries.get("plain", "q"),
+        filters=filters,
+        pushdown=True,
+    )
+
+
+def test_year_and_kind_are_listed_exactly_when_the_router_pushes_them_upstream() -> None:
+    """A listed year or kind filter is one the router sends upstream, so that source's
+    total is filtered; any other source has it applied after fetch (``errors["filters"]``).
+    Hand-written, huggingface, omics and literature listed all three and pushed none."""
+
+    def pushed(spec: sources.SourceSpec, filters: dict[str, Any]) -> bool:
+        return not any(s.post_filtered for s in _streams(spec, filters))
+
+    seen = set()
+    for spec in sources.SOURCES:
+        for key in ("published_after", "published_before"):
+            seen.add(pushed(spec, {key: 2000}))
+            assert pushed(spec, {key: 2000}) == (key in spec.filters_supported), (spec.name, key)
+        own = [k for k in spec.kinds if k != "other"]
+        every_kind = all(pushed(spec, {"kind": k}) for k in own)
+        assert every_kind == ("kind" in spec.filters_supported), spec.name
+        assert pushed(spec, {})  # control: with no filter nothing is post-filtered
+    assert seen == {True, False}  # control: both answers occur, so the check can fail
+
+
+def test_ontology_facets_are_listed_exactly_when_the_source_gets_the_expanded_query() -> None:
+    expanded_seen = set()
+    for spec in sources.SOURCES:
+        streams = _streams(spec, {}, expanded="EXPANDED", plain="PLAIN")
+        sent = {s.call.args[-1] for s in streams}
+        listed = {f for f in sources.ONTOLOGY_FACETS if f in spec.filters_supported}
+        assert sent in ({"EXPANDED"}, {"PLAIN"}), (spec.name, sent)
+        expanded = sent == {"EXPANDED"}
+        assert listed == (set(sources.ONTOLOGY_FACETS) if expanded else set()), spec.name
+        expanded_seen.add(expanded)
+    assert expanded_seen == {True, False}  # control: both kinds of source exist
+
+
+def test_every_listed_filter_is_a_search_parameter() -> None:
+    """biostudies listed ``offset``, which ``search`` does not take."""
+    tool = next(t for t in server.TOOLS if t.name == "search")
+    params = set(tool.input_schema["properties"])
+    for spec in sources.SOURCES:
+        assert set(spec.filters_supported) <= params, (spec.name, set(spec.filters_supported))
+        assert spec.filters_supported[:2] == ("query", "size"), spec.name
