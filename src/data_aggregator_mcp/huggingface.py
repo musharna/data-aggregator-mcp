@@ -21,6 +21,8 @@ PREFIXES = {"hf"}
 _DATASET_ID_RE = re.compile(r"[A-Za-z0-9][\w.-]*(?:/[A-Za-z0-9][\w.-]*)?", re.ASCII)
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
+# search serves page 1 only (``if offset`` below), so list_sources omits ``cursor``.
+PAGINATES = False
 MAX_RETRIES = 2
 # httpx upper-cases the method and reads header names case-insensitively, so a
 # spelling mutant of either sends the same request.

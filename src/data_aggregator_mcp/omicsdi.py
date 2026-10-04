@@ -27,6 +27,8 @@ _LANDING = "https://www.omicsdi.org/dataset/{source}/{acc}"
 PREFIXES = {"omicsdi"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
+# search serves page 1 only (``if offset`` below), so list_sources omits ``cursor``.
+PAGINATES = False
 MAX_RETRIES = 2
 _ACCEPT_JSON = {"Accept": "application/json"}
 # A module constant: mutmut does not mutate those, and a lower-cased method is the same

@@ -23,7 +23,7 @@ from collections import deque
 import httpx
 
 from data_aggregator_mcp import _http
-from data_aggregator_mcp.errors import UpstreamUnavailableError
+from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import FileEntry
 
 API = "https://api.osf.io/v2"
@@ -71,6 +71,12 @@ def _is_entry(item: object) -> bool:
     )
 
 
+def _refused(resp: httpx.Response) -> bool:
+    # A withdrawn registration (pq28s, ybdw4; live 2026-10-04) or a private node answers
+    # its file listing with 401 to an anonymous caller: OSF is up, the files are withheld.
+    return resp.status_code == 401
+
+
 def _check_page(body: dict) -> None:
     links, data = body.get("links"), body.get("data")
     nxt = _dig(links, "next")
@@ -107,8 +113,20 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
                 )
             requested.add(url)
             body = await _http.request_json(
-                client, _GET, url, service="OSF files", expect=dict, check=_check_page
+                client,
+                _GET,
+                url,
+                service="OSF files",
+                expect=dict,
+                check=_check_page,
+                empty_answer=_refused,
+                no_content_returns=None,
             )
+            if body is None:
+                raise NotFoundError(
+                    f"OSF withholds the files of {guid} from anonymous callers (HTTP 401): "
+                    "the record is withdrawn or private"
+                )
             for item in body["data"]:
                 attrs = item["attributes"]
                 name = f"{prefix}{attrs['name']}"

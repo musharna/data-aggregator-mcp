@@ -35,6 +35,8 @@ PREFIXES = {"openml"}
 _DID_RE = re.compile(r"0*[1-9][0-9]*")
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
+# search serves page 1 only (``if offset`` below), so list_sources omits ``cursor``.
+PAGINATES = False
 MAX_RETRIES = 2
 _GET = "GET"
 _ACCEPT_JSON = {"Accept": "application/json"}
