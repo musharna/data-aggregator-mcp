@@ -322,6 +322,8 @@ or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
   `"ro-crate"` (minimal RO-Crate 1.1), or `"provenance"` (one-call RO-Crate 1.1
   data-availability dossier bundling version-currency, licence+SPDX, FAIR score,
   and retraction status) to attach a standard manifest under the matching field.
+  The crates pass rocrate-validator's RO-Crate 1.1 profile; the assessment fields
+  schema.org lacks are defined in [docs/vocab.md](docs/vocab.md).
 
 ### `fetch(id, dest?, files?, max_bytes?, force?, extract?)`
 

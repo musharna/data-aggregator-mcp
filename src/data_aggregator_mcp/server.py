@@ -24,6 +24,7 @@ import json
 import logging
 import sys
 from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -247,7 +248,7 @@ async def _dispatch(
                 )
                 if args.get("provenance"):
                     result = result.model_copy(
-                        update={"provenance_crate": run_crate.render(result)}
+                        update={"provenance_crate": run_crate.render(result, now=datetime.now(UTC))}
                     )
                 return result.model_dump()
             case "resolve":
@@ -263,7 +264,9 @@ async def _dispatch(
                     )
                 elif fmt == "ro-crate":
                     resource = resource.model_copy(
-                        update={"ro_crate": ro_crate_mod.render(resource)}
+                        update={
+                            "ro_crate": ro_crate_mod.render(resource, created=datetime.now(UTC))
+                        }
                     )
                 if args.get("trust"):
                     signals = await trust_mod.annotate(client, resource)
@@ -290,7 +293,7 @@ async def _dispatch(
                             update={"trust": await trust_mod.annotate(client, resource)}
                         )
                     resource = resource.model_copy(
-                        update={"provenance": dossier_mod.render(resource)}
+                        update={"provenance": dossier_mod.render(resource, now=datetime.now(UTC))}
                     )
                 return resource.model_dump()
             case "fetch":

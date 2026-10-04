@@ -1006,7 +1006,7 @@ async def test_dispatch_resolve_provenance_attaches_dossier_and_enrichers(monkey
     out = await server._dispatch("resolve", {"id": "zenodo:1", "format": "provenance"})
     # Dossier attached and well-formed.
     assert out["provenance"] is not None
-    assert out["provenance"]["@context"] == "https://w3id.org/ro/crate/1.1/context"
+    assert out["provenance"]["@context"][0] == "https://w3id.org/ro/crate/1.1/context"
     graph = {e["@id"]: e for e in out["provenance"]["@graph"]}
     assert graph["#provenance-assessment"]["@type"] == "CreateAction"
     # format=provenance AUTO-attaches fair + trust.

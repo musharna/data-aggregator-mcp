@@ -16,6 +16,22 @@ import pytest
 
 from data_aggregator_mcp import ro_crate
 from data_aggregator_mcp.models import Creator, DataResource, FileEntry
+from tests.test_ro_crate import NOW
+
+# What RO-Crate 1.1 requires of the root that a bare zenodo:1 lacks: a description, a
+# licence and a datePublished. The stand-ins say what is missing; the date is the
+# crate's (NOW), the record having no year.
+_BARE_ROOT = {
+    "description": "zenodo record zenodo:1; the source gives no description.",
+    "datePublished": "2026-10-03",
+    "license": {"@id": "#license"},
+}
+_UNSTATED_LICENSE = {
+    "@id": "#license",
+    "@type": "CreativeWork",
+    "name": "No licence stated",
+    "description": "zenodo states no licence for this record; ask the source before reuse.",
+}
 
 _DESCRIPTOR = {
     "@id": "ro-crate-metadata.json",
@@ -59,7 +75,7 @@ def test_authors_are_flattened_person_entities_with_orcid_ids() -> None:
             Creator(name="Wang, Guanyu"),
         ],
     )
-    crate = ro_crate.render(r)
+    crate = ro_crate.render(r, created=NOW)
 
     assert _flattening_violations(crate) == []
     assert crate["@graph"] == [
@@ -68,6 +84,7 @@ def test_authors_are_flattened_person_entities_with_orcid_ids() -> None:
             "@id": "./",
             "@type": "Dataset",
             "name": "t",
+            **_BARE_ROOT,
             "author": [
                 {"@id": "https://orcid.org/0000-0001-8499-824X"},
                 {"@id": "#author-1"},
@@ -75,6 +92,7 @@ def test_authors_are_flattened_person_entities_with_orcid_ids() -> None:
             ],
             "hasPart": [],
         },
+        _UNSTATED_LICENSE,
         # One ORCID is one person: the second listing under it adds no entity.
         {
             "@id": "https://orcid.org/0000-0001-8499-824X",
@@ -96,7 +114,7 @@ def test_every_reference_in_a_full_crate_resolves_to_an_entity() -> None:
         creators=[Creator(name="A", orcid="0000-0002-1825-0097"), Creator(name="B")],
         files=[FileEntry(name="a.csv", url="https://x/a.csv", mime="text/csv", size=1)],
     )
-    crate = ro_crate.render(r)
+    crate = ro_crate.render(r, created=NOW)
     assert _flattening_violations(crate) == []
 
     ids = {e["@id"] for e in crate["@graph"]}
@@ -107,7 +125,13 @@ def test_every_reference_in_a_full_crate_resolves_to_an_entity() -> None:
         if key != "conformsTo"  # names the RO-Crate spec, outside the crate
         for o in _nested_objects(value)
     }
-    assert refs == {"./", "https://orcid.org/0000-0002-1825-0097", "#author-1", "https://x/a.csv"}
+    assert refs == {
+        "./",
+        "#license",
+        "https://orcid.org/0000-0002-1825-0097",
+        "#author-1",
+        "https://x/a.csv",
+    }
     assert refs <= ids
 
 
@@ -175,7 +199,7 @@ def test_full_record_renders_exactly() -> None:
             FileEntry(name="b.bin"),
         ],
     )
-    assert ro_crate.render(r) == {
+    assert ro_crate.render(r, created=NOW) == {
         "@context": "https://w3id.org/ro/crate/1.1/context",
         "@graph": [
             _DESCRIPTOR,
@@ -185,7 +209,7 @@ def test_full_record_renders_exactly() -> None:
                 "name": "Rice genomes",
                 "description": "d",
                 "identifier": "https://doi.org/10.5281/zenodo.1",
-                "license": "cc-by-4.0",
+                "license": {"@id": "https://spdx.org/licenses/CC-BY-4.0"},
                 "datePublished": "2024",
                 "author": [{"@id": "https://orcid.org/0000-0002-1825-0097"}],
                 "hasPart": [
@@ -193,6 +217,12 @@ def test_full_record_renders_exactly() -> None:
                     {"@id": "https://x/empty.txt"},
                     {"@id": "b.bin"},
                 ],
+            },
+            # a licence SPDX recognises is that licence's SPDX page
+            {
+                "@id": "https://spdx.org/licenses/CC-BY-4.0",
+                "@type": "CreativeWork",
+                "name": "CC-BY-4.0",
             },
             {
                 "@id": "https://orcid.org/0000-0002-1825-0097",
@@ -215,11 +245,36 @@ def test_full_record_renders_exactly() -> None:
 
 
 def test_bare_record_renders_only_what_it_has() -> None:
-    """Absent optional fields are omitted, not written as null or empty."""
+    """Absent optional fields are omitted, not written as null or empty; the three the
+    root must have say they are missing (and the date is the crate's)."""
     r = DataResource(
-        id="x:1", source="x", kind="dataset", title="t", description="", license="", year=None
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        description="",
+        license="",
+        year=None,
     )
-    assert ro_crate.render(r) == {
+    assert ro_crate.render(r, created=NOW) == {
         "@context": "https://w3id.org/ro/crate/1.1/context",
-        "@graph": [_DESCRIPTOR, {"@id": "./", "@type": "Dataset", "name": "t", "hasPart": []}],
+        "@graph": [
+            _DESCRIPTOR,
+            {"@id": "./", "@type": "Dataset", "name": "t", **_BARE_ROOT, "hasPart": []},
+            _UNSTATED_LICENSE,
+        ],
+    }
+
+
+def test_a_licence_spdx_does_not_know_is_kept_as_stated() -> None:
+    r = DataResource(
+        id="zenodo:1", source="zenodo", kind="dataset", title="t", license="Custom terms v2"
+    )
+    graph = ro_crate.render(r, created=NOW)["@graph"]
+    assert graph[1]["license"] == {"@id": "#license"}
+    assert graph[2] == {
+        "@id": "#license",
+        "@type": "CreativeWork",
+        "name": "Custom terms v2",
+        "description": "Licence as zenodo states it; not a recognised SPDX licence.",
     }

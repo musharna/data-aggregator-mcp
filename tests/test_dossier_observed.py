@@ -15,11 +15,11 @@ import pytest
 
 from data_aggregator_mcp import dossier
 from data_aggregator_mcp.models import FairAssessment, Link, TrustSignals
-from tests.test_dossier import _graph, _resource
+from tests.test_dossier import NOW, _graph, _resource
 
 
 def _entity(eid: str, **over: Any) -> dict[str, Any]:
-    return _graph(dossier.render(_resource(**over)))[eid]
+    return _graph(dossier.render(_resource(**over), now=NOW))[eid]
 
 
 # --- version-currency -------------------------------------------------------
@@ -195,9 +195,9 @@ def test_identifier_chain_entity_is_exact_with_and_without_optional_ids() -> Non
         "source": "zenodo",
         "canonical_id": "zenodo:1",
         "doi": "10.5281/zenodo.1",
-        "identifiers": {"pmid": "12345"},
+        "identifiers": [{"@id": "#identifier-0"}],
         "accessions": ["GSE1"],
-        "links": [{"rel": "is_supplement_to", "target_id": "pmid:12345"}],
+        "links": [{"@id": "#link-0"}],
     }
 
 
@@ -218,7 +218,8 @@ def test_the_action_lists_every_present_signal_in_fixed_order() -> None:
                     assessed=1,
                 ),
                 trust=TrustSignals(),
-            )
+            ),
+            now=NOW,
         )
     )
     assert full["#provenance-assessment"]["result"] == [
@@ -228,7 +229,7 @@ def test_the_action_lists_every_present_signal_in_fixed_order() -> None:
         {"@id": "#retraction"},
         {"@id": "#identifier-chain"},
     ]
-    bare = _graph(dossier.render(_resource(license=None)))
+    bare = _graph(dossier.render(_resource(license=None), now=NOW))
     assert bare["#provenance-assessment"]["result"] == [{"@id": "#identifier-chain"}]
 
 

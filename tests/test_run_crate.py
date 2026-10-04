@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import inspect
 import os
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -21,6 +22,9 @@ from data_aggregator_mcp.models import (
     SearchResult,
     TrustSignals,
 )
+
+# The clock a crate is rendered at (render takes it; the handler reads datetime.now).
+NOW = datetime(2026, 10, 3, 21, 30, tzinfo=UTC)
 
 
 def _resource(**over: Any) -> DataResource:
@@ -72,20 +76,20 @@ def _search_result(**over: Any) -> SearchResult:
 def test_assessment_entities_matches_render_embedding() -> None:
     """assessment_entities(r, "") returns the SAME entities render embeds in its action."""
     r = _resource()
-    entities = dossier.assessment_entities(r, "")
-    crate = dossier.render(r)
+    entities, pieces = dossier.assessment_entities(r, "")
+    crate = dossier.render(r, now=NOW)
     g = _graph(crate)
     action = g["#provenance-assessment"]
     ref_ids = [ref["@id"] for ref in action["result"]]
     assert ref_ids == [e["@id"] for e in entities]
     # And the embedded entities are byte-equal to what the seam produces.
-    for e in entities:
+    for e in entities + pieces:
         assert g[e["@id"]] == e
 
 
 def test_dossier_render_ids_unchanged_default_prefix() -> None:
     """B10a @ids stay literal — the id_prefix="" default keeps render byte-identical."""
-    g = _graph(dossier.render(_resource(trust=TrustSignals())))
+    g = _graph(dossier.render(_resource(trust=TrustSignals()), now=NOW))
     for eid in (
         "#version-currency",
         "#licence",
@@ -96,7 +100,8 @@ def test_dossier_render_ids_unchanged_default_prefix() -> None:
 
 
 def test_assessment_entities_prefix_applied() -> None:
-    entities = dossier.assessment_entities(_resource(trust=TrustSignals()), "hit-3-")
+    entities, pieces = dossier.assessment_entities(_resource(trust=TrustSignals()), "hit-3-")
+    assert pieces == []  # _resource has no cross-identifiers or links
     ids = {e["@id"] for e in entities}
     assert "#hit-3-version-currency" in ids
     assert "#hit-3-licence" in ids
@@ -109,14 +114,15 @@ def test_assessment_entities_prefix_applied() -> None:
 # --- purity / determinism --------------------------------------------------
 
 
-def test_render_signature_takes_only_result() -> None:
-    params = list(inspect.signature(run_crate.render).parameters)
-    assert params == ["result"]
+def test_render_signature_takes_the_result_and_the_clock() -> None:
+    params = inspect.signature(run_crate.render).parameters
+    assert list(params) == ["result", "now"]
+    assert params["now"].kind is inspect.Parameter.KEYWORD_ONLY
 
 
 def test_render_is_deterministic() -> None:
     sr = _search_result()
-    assert run_crate.render(sr) == run_crate.render(sr)
+    assert run_crate.render(sr, now=NOW) == run_crate.render(sr, now=NOW)
 
 
 def test_render_does_not_import_httpx() -> None:
@@ -132,13 +138,16 @@ def test_render_does_not_import_httpx() -> None:
 
 
 def test_structure_context_and_graph() -> None:
-    crate = run_crate.render(_search_result())
-    assert crate["@context"] == "https://w3id.org/ro/crate/1.1/context"
+    crate = run_crate.render(_search_result(), now=NOW)
+    assert crate["@context"][0] == "https://w3id.org/ro/crate/1.1/context"
+    assert crate["@context"][1]["sources_queried"] == (
+        "https://github.com/musharna/data-aggregator-mcp/blob/main/docs/vocab.md#sources_queried"
+    )
     assert isinstance(crate["@graph"], list)
 
 
 def test_conforms_to_only_on_descriptor() -> None:
-    crate = run_crate.render(_search_result())
+    crate = run_crate.render(_search_result(), now=NOW)
     carriers = [e["@id"] for e in crate["@graph"] if "conformsTo" in e]
     assert carriers == ["ro-crate-metadata.json"]
     g = _graph(crate)
@@ -147,7 +156,7 @@ def test_conforms_to_only_on_descriptor() -> None:
 
 
 def test_root_names_query_and_haspart_hits() -> None:
-    crate = run_crate.render(_search_result())
+    crate = run_crate.render(_search_result(), now=NOW)
     g = _graph(crate)
     root = g["./"]
     assert root["@type"] == "Dataset"
@@ -157,7 +166,7 @@ def test_root_names_query_and_haspart_hits() -> None:
 
 
 def test_search_action_has_instrument_object() -> None:
-    crate = run_crate.render(_search_result())
+    crate = run_crate.render(_search_result(), now=NOW)
     g = _graph(crate)
     action = g["#search-action"]
     assert action["@type"] == "CreateAction"
@@ -167,7 +176,7 @@ def test_search_action_has_instrument_object() -> None:
 
 
 def test_agent_carries_version() -> None:
-    crate = run_crate.render(_search_result())
+    crate = run_crate.render(_search_result(), now=NOW)
     g = _graph(crate)
     agent = g[dossier.AGENT_ID]
     assert agent["@type"] == "SoftwareApplication"
@@ -178,20 +187,26 @@ def test_agent_carries_version() -> None:
 
 
 def test_action_encodes_query() -> None:
-    g = _graph(run_crate.render(_search_result(query="oryza sativa")))
+    g = _graph(run_crate.render(_search_result(query="oryza sativa"), now=NOW))
     assert g["#search-action"]["query"] == "oryza sativa"
 
 
 def test_action_discloses_errors() -> None:
-    g = _graph(run_crate.render(_search_result(errors={"zenodo": "503 upstream"})))
+    g = _graph(run_crate.render(_search_result(errors={"zenodo": "503 upstream"}), now=NOW))
     action = g["#search-action"]
-    assert action["errors"] == {"zenodo": "503 upstream"}
+    assert action["error"] == [{"@id": "#error-0"}]
+    assert g["#error-0"] == {
+        "@id": "#error-0",
+        "@type": "PropertyValue",
+        "name": "zenodo",
+        "value": "503 upstream",
+    }
     # The errored source is reflected in sources_queried.
     assert "zenodo" in action["sources_queried"]
 
 
 def test_action_no_errors_block_when_clean() -> None:
-    g = _graph(run_crate.render(_search_result(errors={})))
+    g = _graph(run_crate.render(_search_result(errors={}), now=NOW))
     assert "errors" not in g["#search-action"]
 
 
@@ -202,17 +217,21 @@ def test_action_shows_expansion_that_fired() -> None:
         canonical_name="Breast Neoplasms",
         synonyms=["Breast Tumor"],
     )
-    g = _graph(run_crate.render(_search_result(mesh_expansion=mesh)))
-    exps = g["#search-action"]["ontology_expansions"]
-    assert len(exps) == 1
-    assert exps[0]["axis"] == "mesh"
-    assert exps[0]["ontology_id"] == "D001943"
-    assert exps[0]["input"] == "breast cancer"
-    assert exps[0]["synonyms"] == ["Breast Tumor"]
+    g = _graph(run_crate.render(_search_result(mesh_expansion=mesh), now=NOW))
+    assert g["#search-action"]["ontology_expansions"] == [{"@id": "#expansion-mesh"}]
+    assert g["#expansion-mesh"] == {
+        "@id": "#expansion-mesh",
+        "@type": "DefinedTerm",
+        "name": "Breast Neoplasms",
+        "termCode": "D001943",
+        "alternateName": ["Breast Tumor"],
+        "axis": "mesh",
+        "matched_input": "breast cancer",
+    }
 
 
 def test_action_no_expansion_block_when_none_fired() -> None:
-    g = _graph(run_crate.render(_search_result()))
+    g = _graph(run_crate.render(_search_result(), now=NOW))
     assert "ontology_expansions" not in g["#search-action"]
 
 
@@ -220,7 +239,7 @@ def test_action_no_expansion_block_when_none_fired() -> None:
 
 
 def test_n_hits_yield_n_hit_entities() -> None:
-    crate = run_crate.render(_search_result())
+    crate = run_crate.render(_search_result(), now=NOW)
     g = _graph(crate)
     assert g["#hit-0"]["@type"] == "Dataset"
     assert g["#hit-1"]["@type"] == "Dataset"
@@ -229,7 +248,7 @@ def test_n_hits_yield_n_hit_entities() -> None:
 
 
 def test_hit_carries_version_licence_fair_assessments() -> None:
-    crate = run_crate.render(_search_result())
+    crate = run_crate.render(_search_result(), now=NOW)
     g = _graph(crate)
     # hit-0 has license + is_latest=True → version, licence, fair, identifier present.
     assert g["#hit-0-version-currency"]["is_latest"] is True
@@ -243,7 +262,7 @@ def test_hit_carries_version_licence_fair_assessments() -> None:
 
 def test_per_hit_retraction_absent() -> None:
     """Search hits carry trust=None → NO retraction entity, NO negative claim."""
-    crate = run_crate.render(_search_result())
+    crate = run_crate.render(_search_result(), now=NOW)
     g = _graph(crate)
     assert "#hit-0-retraction" not in g
     assert "#hit-1-retraction" not in g
@@ -256,7 +275,7 @@ def test_per_hit_retraction_absent() -> None:
 
 
 def test_empty_result_set_valid_zero_hit_crate() -> None:
-    crate = run_crate.render(_search_result(results=[], total=0, count=0))
+    crate = run_crate.render(_search_result(results=[], total=0, count=0), now=NOW)
     g = _graph(crate)
     assert g["./"]["hasPart"] == []
     assert g["#search-action"]["result"] == []
@@ -267,13 +286,13 @@ def test_empty_result_set_valid_zero_hit_crate() -> None:
 
 
 def test_hit_no_version_entity_when_is_latest_none() -> None:
-    g = _graph(run_crate.render(_search_result()))
+    g = _graph(run_crate.render(_search_result(), now=NOW))
     # hit-1 has is_latest=None → no version entity.
     assert "#hit-1-version-currency" not in g
 
 
 def test_hit_no_licence_entity_when_licence_absent() -> None:
-    g = _graph(run_crate.render(_search_result()))
+    g = _graph(run_crate.render(_search_result(), now=NOW))
     # hit-1 has license=None → no licence entity.
     assert "#hit-1-licence" not in g
 
@@ -284,7 +303,7 @@ def test_hit_unrecognized_licence_never_invented() -> None:
         total=1,
         count=1,
     )
-    g = _graph(run_crate.render(sr))
+    g = _graph(run_crate.render(sr, now=NOW))
     lic = g["#hit-0-licence"]
     assert lic["normalized_spdx"] is None
     assert "unrecognized" in lic["value"]
@@ -299,7 +318,7 @@ def test_hit_identifier_falls_back_to_url_then_id() -> None:
         total=2,
         count=2,
     )
-    g = _graph(run_crate.render(sr))
+    g = _graph(run_crate.render(sr, now=NOW))
     assert g["#hit-0"]["identifier"] == "https://u/x"
     assert g["#hit-1"]["identifier"] == "zenodo:10"
 
@@ -322,7 +341,7 @@ async def test_dispatch_search_attaches_crate_when_true(monkeypatch) -> None:
     monkeypatch.setattr("data_aggregator_mcp.router.search_page", fake_search_page)
     out = await server._dispatch("search", {"query": "rice", "provenance": True})
     assert out["provenance_crate"] is not None
-    assert out["provenance_crate"]["@context"] == "https://w3id.org/ro/crate/1.1/context"
+    assert out["provenance_crate"]["@context"][0] == "https://w3id.org/ro/crate/1.1/context"
     g = {e["@id"]: e for e in out["provenance_crate"]["@graph"]}
     assert g["#search-action"]["query"] == "rice"
 
@@ -357,7 +376,7 @@ async def test_live_run_crate_for_real_search() -> None:
 
     async with httpx.AsyncClient(timeout=60, follow_redirects=True) as c:
         result = await router.search_page(c, query="rice genome", size=5)
-    crate = run_crate.render(result)
+    crate = run_crate.render(result, now=NOW)
     g = _graph(crate)
 
     assert g["ro-crate-metadata.json"]["conformsTo"]["@id"] == "https://w3id.org/ro/crate/1.1"

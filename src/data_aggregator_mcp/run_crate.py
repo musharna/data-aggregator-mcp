@@ -18,26 +18,39 @@ HONESTY (inherited + extended from B10a):
   expansion block, never a fabricated one.
 - Per-source ``errors`` are disclosed verbatim — a partial search is shown, not hidden.
 - ``conformsTo`` stays ONLY on the metadata descriptor (RO-Crate 1.1) — no profile URI.
+- The crate licenses nothing: its root ``license`` says each hit keeps its own licence
+  (each hit's licence assessment names it), rather than naming one for the page.
+
+CONFORMANCE: RO-Crate 1.1 as rocrate-validator reads it. The root carries the
+description, licence and ``datePublished`` (the run time) the spec requires; the run's
+own fields (``result_count``, ``sources_queried``, ...) are declared ad hoc terms
+(``ro_crate.TERMS``) so a JSON-LD processor keeps them; and the graph is flat: each
+ontology expansion is a ``DefinedTerm`` entity and each per-source error a
+``PropertyValue`` entity under schema.org ``error``.
 
 SCOPE: intra-page only. The crate documents the search page just returned; a paginated
 search yields one crate per page (stateless, mirroring B7). A cross-page crate is out of
 scope (needs state the server lacks).
 
-PURE: no network, no file I/O, deterministic. ``fair.assess`` (called per hit) is itself
-pure, so ``render`` stays pure — no Crossref/trust per hit.
+PURE: no network, no file I/O, deterministic for a given ``now`` (the handler reads the
+clock). ``fair.assess`` (called per hit) is itself pure, so ``render`` stays pure — no
+Crossref/trust per hit.
 """
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from data_aggregator_mcp import __version__, dossier, fair, ro_crate, sources
 from data_aggregator_mcp.models import DataResource, SearchResult
 
+_LICENSE_ID = "#license"
+
 
 def _expansions(result: SearchResult) -> list[dict[str, Any]]:
-    """One small object per ontology-expansion axis that ACTUALLY FIRED, naming the
-    input, the ontology id, the canonical name, and the synonyms added. Axes that did
+    """One ``DefinedTerm`` entity per ontology-expansion axis that ACTUALLY FIRED, naming
+    the input, the ontology id, the canonical name, and the synonyms added. Axes that did
     not fire (field is None) emit nothing — no fabricated expansion block."""
     out: list[dict[str, Any]] = []
     # (axis label, the *_expansion attribute, the id-field name on that model)
@@ -53,14 +66,25 @@ def _expansions(result: SearchResult) -> list[dict[str, Any]]:
             continue
         out.append(
             {
+                "@id": f"#expansion-{label}",
+                "@type": "DefinedTerm",
+                "name": exp.canonical_name,
+                "termCode": getattr(exp, id_field),
+                "alternateName": list(exp.synonyms),
                 "axis": label,
-                "input": exp.input,
-                "ontology_id": getattr(exp, id_field),
-                "canonical_name": exp.canonical_name,
-                "synonyms": list(exp.synonyms),
+                "matched_input": exp.input,
             }
         )
     return out
+
+
+def _errors(result: SearchResult) -> list[dict[str, Any]]:
+    """One ``PropertyValue`` entity per ``errors`` entry, in key order: the key (a source
+    stream or a run note) as ``name``, the message as ``value``."""
+    return [
+        {"@id": f"#error-{n}", "@type": "PropertyValue", "name": key, "value": message}
+        for n, (key, message) in enumerate(sorted(result.errors.items()))
+    ]
 
 
 def _failed_source(key: str) -> str | None:
@@ -96,9 +120,11 @@ def _hit_identifier(hit: DataResource) -> str:
     return hit.id
 
 
-def render(result: SearchResult) -> dict[str, Any]:
-    """Render an RO-Crate 1.1 Run Crate for a whole search page. PURE, deterministic,
-    no I/O. See the module docstring for the honesty contract and scope boundaries."""
+def render(result: SearchResult, *, now: datetime) -> dict[str, Any]:
+    """Render an RO-Crate 1.1 Run Crate for a whole search page run at ``now``. PURE,
+    deterministic for a given ``now``, no I/O. See the module docstring for the honesty
+    contract and scope boundaries."""
+    ran = ro_crate.timestamp(now)
     agent = {
         "@id": dossier.AGENT_ID,
         "@type": "SoftwareApplication",
@@ -129,19 +155,34 @@ def render(result: SearchResult) -> dict[str, Any]:
         "total": result.total,
         "sources_queried": sources_queried,
         "result": hit_refs,
+        "endTime": ran,
     }
     expansions = _expansions(result)
     if expansions:
-        action["ontology_expansions"] = expansions
-    if result.errors:
-        action["errors"] = dict(result.errors)
+        action["ontology_expansions"] = [{"@id": ent["@id"]} for ent in expansions]
+    errors = _errors(result)
+    if errors:
+        action["error"] = [{"@id": ent["@id"]} for ent in errors]
 
     root: dict[str, Any] = {
         "@id": "./",
         "@type": "Dataset",
         "name": f"Search run: {result.query}",
+        "description": (
+            f"Provenance of a data-aggregator-mcp search for {result.query!r}: "
+            f"{result.count} hits on this page, {result.total} reported in all."
+        ),
+        "datePublished": ran,
+        "license": {"@id": _LICENSE_ID},
         "mentions": {"@id": "#search-action"},
         "hasPart": hit_refs,
+    }
+    license_entity = {
+        "@id": _LICENSE_ID,
+        "@type": "CreativeWork",
+        "name": "Each hit keeps its own licence",
+        "description": "This crate describes records it does not license; each hit's "
+        "licence assessment names the licence its source states.",
     }
 
     descriptor = {
@@ -151,12 +192,14 @@ def render(result: SearchResult) -> dict[str, Any]:
         "about": {"@id": "./"},
     }
 
-    graph: list[dict[str, Any]] = [descriptor, root, agent, action]
+    graph: list[dict[str, Any]] = [descriptor, root, license_entity, agent, action]
+    graph.extend(expansions)
+    graph.extend(errors)
 
     for i, hit in enumerate(result.results):
         # Compute FAIR per hit (pure); NO per-hit trust/Crossref → retraction omitted.
         hit_with_fair = hit.model_copy(update={"fair": fair.assess(hit)})
-        assessments = dossier.assessment_entities(hit_with_fair, id_prefix=f"hit-{i}-")
+        assessments, pieces = dossier.assessment_entities(hit_with_fair, id_prefix=f"hit-{i}-")
         hit_entity: dict[str, Any] = {
             "@id": f"#hit-{i}",
             "@type": "Dataset",
@@ -168,5 +211,7 @@ def render(result: SearchResult) -> dict[str, Any]:
             hit_entity["license"] = hit.license
         graph.append(hit_entity)
         graph.extend(assessments)
+        graph.extend(pieces)
 
-    return {"@context": ro_crate.CONTEXT, "@graph": graph}
+    graph.extend(ro_crate.term_definitions(graph))
+    return {"@context": ro_crate.context(), "@graph": graph}
