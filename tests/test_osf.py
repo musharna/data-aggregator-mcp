@@ -115,6 +115,43 @@ async def test_osf_malformed_body_raises_upstream(httpx_mock, monkeypatch) -> No
             await osf.files(client, "10.17605/osf.io/5pfej")
 
 
+async def test_a_withheld_listing_is_not_found_and_an_outage_is_not(
+    httpx_mock, monkeypatch
+) -> None:
+    """OSF answers a withdrawn registration's file listing (pq28s, live 2026-10-04) with 401:
+    OSF is up and withholds the files, so the lister raises NotFoundError naming the guid,
+    not an outage. A 503 past its retries is still an outage."""
+    from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    monkeypatch.setattr("data_aggregator_mcp._http.asyncio.sleep", _no_sleep)
+    nodes = "https://api.osf.io/v2/nodes"
+    httpx_mock.add_response(
+        url=f"{nodes}/pq28s/files/osfstorage/",
+        status_code=401,
+        json={"errors": [{"detail": "Authentication credentials were not provided."}]},
+    )
+    for _ in range(3):
+        httpx_mock.add_response(url=f"{nodes}/abcde/files/osfstorage/", status_code=503)
+    httpx_mock.add_response(
+        url=f"{nodes}/5pfej/files/osfstorage/", json=_page([_file("a.csv", 1, "f1")])
+    )
+    async with httpx.AsyncClient() as client:
+        with pytest.raises(
+            NotFoundError,
+            match=r"^\[NotFoundError\] OSF withholds the files of pq28s from anonymous callers "
+            r"\(HTTP 401\): the record is withdrawn or private$",
+        ):
+            await osf.files(client, "10.17605/osf.io/pq28s")
+        with pytest.raises(UpstreamUnavailableError, match=r"last HTTP 503"):
+            await osf.files(client, "10.17605/osf.io/abcde")
+        # positive control: a public node still lists its files
+        listed = await osf.files(client, "10.17605/osf.io/5pfej")
+    assert [f.name for f in listed] == ["a.csv"]
+
+
 # ---------------------------------------------------------------------------
 # Runaway guard: raise, never a silent cap
 # ---------------------------------------------------------------------------

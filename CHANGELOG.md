@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Resolving the DOI of a withdrawn Figshare article or OSF registration returns the
+  record again. DataCite still lists these DOIs, but the host no longer serves their
+  files (Figshare answers 404, OSF 401), and that answer used to fail the whole
+  `resolve`; for OSF it was reported as an outage. The record now comes back with its
+  DataCite metadata, `files=[]`, and the reason in `truncated["files"]`. An outage at the
+  host still fails the resolve.
+
 ## [0.56.0] - 2026-10-04
 
 ### Changed

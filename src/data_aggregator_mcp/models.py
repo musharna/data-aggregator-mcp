@@ -166,8 +166,9 @@ class DataResource(BaseModel):
     # {stage: message} for an enrichment step that failed on this record (e.g. taxonomy
     # during an NCBI rate limit); the rest of the record is complete. Empty = none failed.
     errors: dict[str, str] = Field(default_factory=dict)
-    # {field: note} for a list field this record holds only part of, by design (a cap, not
-    # a failure — so unlike errors it does not keep the record out of the cache), e.g.
+    # {field: note} for a list field this record holds only part of, or none of, for a
+    # stated reason that is not a failure (a cap, a host that withdrew the files — so
+    # unlike errors it does not keep the record out of the cache), e.g.
     # {"links": "first 100 of 891 SRA runs; ..."}. Empty = every list is complete.
     truncated: dict[str, str] = Field(default_factory=dict)
 

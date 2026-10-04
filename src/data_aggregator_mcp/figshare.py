@@ -17,6 +17,7 @@ import re
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import FileEntry
 
 BASE_URL = "https://api.figshare.com/v2"
@@ -86,8 +87,22 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
     version = _version(doi)
     url = f"{BASE_URL}/articles/{aid}" + (f"/versions/{version}" if version else "")
     data = await _http.request_json(
-        client, _GET, url, service="Figshare article", expect=dict, check=_check_article
+        client,
+        _GET,
+        url,
+        service="Figshare article",
+        expect=dict,
+        check=_check_article,
+        not_found_returns=None,
     )
+    if data is None:
+        # A withdrawn article answers 404 for every version (32732757, 2026-09-28) while
+        # DataCite still lists its DOI: the record stands, its files are gone.
+        raise NotFoundError(
+            f"Figshare answers 404 for article {aid}"
+            + (f" version {version}" if version else "")
+            + ": withdrawn or removed upstream"
+        )
     got = data["doi"]
     if _doi_key(got, bool(version)) != _doi_key(doi, bool(version)):
         # The id was parsed from the DOI's shape; the article it names is someone else's
