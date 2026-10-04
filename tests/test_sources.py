@@ -426,10 +426,14 @@ def test_every_listed_filter_is_a_search_parameter() -> None:
 @pytest.mark.parametrize("spec", sources.SOURCES, ids=lambda s: s.name)
 async def test_live_a_source_listing_cursor_serves_new_records_on_page_2(spec) -> None:
     """The offline drift test proves a page-2 search sends a request; this proves the
-    upstream answers it with records page 1 did not have."""
+    upstream answers it with records page 1 did not have. (A page-1-only source sends no
+    page-2 request at all, which the offline test already shows.)"""
     from data_aggregator_mcp.errors import RateLimitError, UpstreamUnavailableError
 
+    if "cursor" not in spec.filters_supported:
+        pytest.skip(f"{spec.name}: page 1 only (see the offline drift test)")
     q = BOOLEAN_PROBE_QUERY[spec.name]
+    checked = 0
     async with httpx.AsyncClient(timeout=90, follow_redirects=True) as client:
         for call in _search_calls(spec):
             try:
@@ -439,5 +443,7 @@ async def test_live_a_source_listing_cursor_serves_new_records_on_page_2(spec) -
                 pytest.skip(f"{spec.name}: upstream unavailable, paging not checked: {e}")
             if total <= 3:
                 continue  # a sub-source with one page of hits cannot show paging
+            checked += 1
             new = {r.id for r in second} - {r.id for r in first}
-            assert bool(new) == ("cursor" in spec.filters_supported), (spec.name, total)
+            assert new, f"{spec.name}: lists cursor, but page 2 of {total} hits brought nothing new"
+    assert checked, f"{spec.name}: lists cursor, but no search reported more than one page"
