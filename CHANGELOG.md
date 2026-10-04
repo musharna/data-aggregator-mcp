@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.59.0] - 2026-10-04
+
 ### Added
 
 - `tissue_expansion.alternatives` and `chemical_expansion.alternatives` list the other
