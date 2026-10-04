@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-10-04
+
 ### Changed
 
 - `list_sources`' `filters_supported` is now derived from each adapter rather than
