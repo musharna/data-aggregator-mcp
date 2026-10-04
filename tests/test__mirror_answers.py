@@ -36,6 +36,8 @@ def _rec(id_: str, source: str, title: str, author: str, year: int) -> DataResou
 
 SYNAPSE = "Synapse Open Dataset: A dataset for warehouse robots"
 RG = "datacite:10.13140/rg.2.2.12804.54408"
+# The Zenodo deposit's concept DOI, which DataCite lists beside the version DOI.
+CONCEPT = "datacite:10.5281/zenodo.11459538"
 # The same deposit on Zenodo ("Family, Given") and ResearchGate ("Given Family").
 SAME_DATASET = [
     (
@@ -120,17 +122,22 @@ async def test_live_a_reordered_author_folds_and_a_shared_given_name_does_not() 
 @_live_only
 async def test_live_search_folds_the_researchgate_copy_of_a_zenodo_deposit() -> None:
     """A real multi-source search page that holds both copies: with collapse on, the
-    ResearchGate copy (DataCite) is a mirror of the Zenodo record, not a second hit."""
+    ResearchGate copy (DataCite) is a mirror of the Zenodo record, not a second hit.
+    The page also holds the deposit's concept DOI through DataCite (source zenodo),
+    which matches both: it is another record of the same deposit, not a mirror, so it
+    stays a hit of its own (user decision 2026-10-04)."""
     query = "Synapse Open Dataset warehouse robots"
     async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
         raw = await router.search_page(
             client, query=query, size=10, sources=["zenodo", "datacite"], collapse_mirrors=False
         )
         assert raw.errors == {}
-        assert {"zenodo:11459539", RG} <= {r.id for r in raw.results}, [r.id for r in raw.results]
+        ids = {r.id for r in raw.results}
+        assert {"zenodo:11459539", RG, CONCEPT} <= ids, sorted(ids)
         page = await router.search_page(
             client, query=query, size=10, sources=["zenodo", "datacite"], collapse_mirrors=True
         )
     by_id = {r.id: r for r in page.results}
     assert RG not in by_id
-    assert RG in [m.id for m in by_id["zenodo:11459539"].mirrors]
+    assert [m.id for m in by_id["zenodo:11459539"].mirrors] == [RG]
+    assert by_id[CONCEPT].source == "zenodo" and by_id[CONCEPT].mirrors == []

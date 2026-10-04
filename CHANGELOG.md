@@ -35,6 +35,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `resolve`; for OSF it was reported as an outage. The record now comes back with its
   DataCite metadata, `files=[]`, and the reason in `truncated["files"]`. An outage at the
   host still fails the resolve.
+- `search(collapse_mirrors=true)` no longer folds two records from one repository into
+  each other. An older Zenodo version, or a deposit's concept DOI listed through
+  DataCite, used to come back as a "mirror" of its own successor and drop off the page.
+  It folded on a shared file checksum, or once a copy elsewhere linked the two records.
+  Versions now stay separate hits. When a copy in another repository matches several
+  records of one deposit, it folds with the latest of them. Which records fold no longer
+  depends on the order the sources answered.
 
 ## [0.56.0] - 2026-10-04
 
