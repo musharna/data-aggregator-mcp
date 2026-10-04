@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import os
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -17,6 +18,9 @@ from data_aggregator_mcp.models import (
     Link,
     TrustSignals,
 )
+
+# The clock a crate is rendered at (render takes it; the handler reads datetime.now).
+NOW = datetime(2026, 10, 3, 21, 30, tzinfo=UTC)
 
 
 def _resource(**over: Any) -> DataResource:
@@ -43,20 +47,21 @@ def _graph(crate: dict[str, Any]) -> dict[str, dict[str, Any]]:
 # --- purity / determinism ---------------------------------------------------
 
 
-def test_render_signature_takes_only_resource() -> None:
-    params = list(inspect.signature(dossier.render).parameters)
-    assert params == ["resource"]
+def test_render_signature_takes_the_resource_and_the_clock() -> None:
+    params = inspect.signature(dossier.render).parameters
+    assert list(params) == ["resource", "now"]
+    assert params["now"].kind is inspect.Parameter.KEYWORD_ONLY
 
 
 def test_render_is_deterministic() -> None:
     r = _resource()
-    assert dossier.render(r) == dossier.render(r)
+    assert dossier.render(r, now=NOW) == dossier.render(r, now=NOW)
 
 
 def test_render_does_not_mutate_resource() -> None:
     r = _resource()
     before = r.model_dump()
-    dossier.render(r)
+    dossier.render(r, now=NOW)
     assert r.model_dump() == before
 
 
@@ -64,8 +69,12 @@ def test_render_does_not_mutate_resource() -> None:
 
 
 def test_reuses_ro_crate_base() -> None:
-    crate = dossier.render(_resource())
-    assert crate["@context"] == "https://w3id.org/ro/crate/1.1/context"
+    crate = dossier.render(_resource(), now=NOW)
+    # RO-Crate 1.1's context first, then the ad hoc assessment terms (array form)
+    assert crate["@context"][0] == "https://w3id.org/ro/crate/1.1/context"
+    assert crate["@context"][1]["score"] == (
+        "https://github.com/musharna/data-aggregator-mcp/blob/main/docs/vocab.md#score"
+    )
     g = _graph(crate)
     assert g["ro-crate-metadata.json"]["conformsTo"]["@id"] == "https://w3id.org/ro/crate/1.1"
     assert g["./"]["@type"] == "Dataset"
@@ -75,13 +84,13 @@ def test_reuses_ro_crate_base() -> None:
 
 def test_conforms_to_only_on_metadata_descriptor() -> None:
     """No fabricated profile URI: conformsTo appears only on ro-crate-metadata.json."""
-    crate = dossier.render(_resource())
+    crate = dossier.render(_resource(), now=NOW)
     carriers = [e["@id"] for e in crate["@graph"] if "conformsTo" in e]
     assert carriers == ["ro-crate-metadata.json"]
 
 
 def test_create_action_present_with_instrument_object_result() -> None:
-    crate = dossier.render(_resource())
+    crate = dossier.render(_resource(), now=NOW)
     g = _graph(crate)
     action = g["#provenance-assessment"]
     assert action["@type"] == "CreateAction"
@@ -95,7 +104,7 @@ def test_create_action_present_with_instrument_object_result() -> None:
 
 
 def test_agent_carries_version() -> None:
-    crate = dossier.render(_resource())
+    crate = dossier.render(_resource(), now=NOW)
     g = _graph(crate)
     agent = g[dossier.AGENT_ID]
     assert agent["@type"] == "SoftwareApplication"
@@ -104,23 +113,27 @@ def test_agent_carries_version() -> None:
 
 
 def test_root_mentions_assessment() -> None:
-    crate = dossier.render(_resource())
+    crate = dossier.render(_resource(), now=NOW)
     g = _graph(crate)
     assert g["./"]["mentions"] == {"@id": "#provenance-assessment"}
 
 
-def test_end_time_present_only_with_last_updated() -> None:
-    with_ts = _graph(dossier.render(_resource(last_updated="2024-01-02T00:00:00Z")))
-    assert with_ts["#provenance-assessment"]["endTime"] == "2024-01-02T00:00:00Z"
-    without = _graph(dossier.render(_resource(last_updated=None)))
-    assert "endTime" not in without["#provenance-assessment"]
+def test_end_time_is_when_the_assessment_ran_and_last_updated_is_date_modified() -> None:
+    """endTime is the assessment's own end (PROV), never the record's last change;
+    that change is the root's dateModified, present only when the source gives it."""
+    with_ts = _graph(dossier.render(_resource(last_updated="2024-01-02T00:00:00Z"), now=NOW))
+    assert with_ts["#provenance-assessment"]["endTime"] == "2026-10-03T21:30:00Z"
+    assert with_ts["./"]["dateModified"] == "2024-01-02T00:00:00Z"
+    without = _graph(dossier.render(_resource(last_updated=None), now=NOW))
+    assert without["#provenance-assessment"]["endTime"] == "2026-10-03T21:30:00Z"
+    assert "dateModified" not in without["./"]
 
 
 # --- composition: each signal present only when present --------------------
 
 
 def test_version_currency_names_superseding_id() -> None:
-    g = _graph(dossier.render(_resource(is_latest=False, superseded_by="zenodo:9")))
+    g = _graph(dossier.render(_resource(is_latest=False, superseded_by="zenodo:9"), now=NOW))
     ver = g["#version-currency"]
     assert ver["is_latest"] is False
     assert ver["superseded_by"] == "zenodo:9"
@@ -128,33 +141,33 @@ def test_version_currency_names_superseding_id() -> None:
 
 
 def test_version_currency_latest() -> None:
-    g = _graph(dossier.render(_resource(is_latest=True)))
+    g = _graph(dossier.render(_resource(is_latest=True), now=NOW))
     ver = g["#version-currency"]
     assert ver["is_latest"] is True
     assert "latest" in ver["value"].lower()
 
 
 def test_version_currency_omitted_when_unknown() -> None:
-    g = _graph(dossier.render(_resource(is_latest=None)))
+    g = _graph(dossier.render(_resource(is_latest=None), now=NOW))
     assert "#version-currency" not in g
 
 
 def test_licence_normalized_spdx() -> None:
-    g = _graph(dossier.render(_resource(license="cc-by-4.0")))
+    g = _graph(dossier.render(_resource(license="cc-by-4.0"), now=NOW))
     lic = g["#licence"]
     assert lic["normalized_spdx"] == "CC-BY-4.0"
     assert lic["license_raw"] == "cc-by-4.0"
 
 
 def test_licence_unrecognized_never_invented() -> None:
-    g = _graph(dossier.render(_resource(license="see paper")))
+    g = _graph(dossier.render(_resource(license="see paper"), now=NOW))
     lic = g["#licence"]
     assert lic["normalized_spdx"] is None
     assert "unrecognized" in lic["value"]
 
 
 def test_licence_omitted_when_absent() -> None:
-    g = _graph(dossier.render(_resource(license=None)))
+    g = _graph(dossier.render(_resource(license=None), now=NOW))
     assert "#licence" not in g
 
 
@@ -168,7 +181,7 @@ def test_fair_result_carries_scores_and_gaps() -> None:
         assessed=12,
         gaps=["metadata does not expose X (RDA-F1-01D)"],
     )
-    g = _graph(dossier.render(_resource(fair=fa)))
+    g = _graph(dossier.render(_resource(fair=fa), now=NOW))
     res = g["#fair"]
     assert res["score"] == 72
     assert res["findable"] == 80
@@ -179,7 +192,7 @@ def test_fair_result_carries_scores_and_gaps() -> None:
 
 
 def test_fair_omitted_when_absent() -> None:
-    g = _graph(dossier.render(_resource(fair=None)))
+    g = _graph(dossier.render(_resource(fair=None), now=NOW))
     assert "#fair" not in g
 
 
@@ -187,7 +200,7 @@ def test_fair_omitted_when_absent() -> None:
 
 
 def test_retraction_unknown_makes_no_negative_claim() -> None:
-    g = _graph(dossier.render(_resource(trust=TrustSignals())))
+    g = _graph(dossier.render(_resource(trust=TrustSignals()), now=NOW))
     res = g["#retraction"]
     assert res["retracted"] is None
     text = res["value"].lower()
@@ -200,7 +213,7 @@ def test_retraction_unknown_makes_no_negative_claim() -> None:
 def test_retraction_true_names_the_doi() -> None:
     g = _graph(
         dossier.render(
-            _resource(trust=TrustSignals(retracted=True, retraction_doi="10.1/retraction"))
+            _resource(trust=TrustSignals(retracted=True, retraction_doi="10.1/retraction")), now=NOW
         )
     )
     res = g["#retraction"]
@@ -211,14 +224,16 @@ def test_retraction_true_names_the_doi() -> None:
 
 
 def test_retraction_false_may_state_no_retraction() -> None:
-    g = _graph(dossier.render(_resource(trust=TrustSignals(retracted=False, concern=False))))
+    g = _graph(
+        dossier.render(_resource(trust=TrustSignals(retracted=False, concern=False)), now=NOW)
+    )
     res = g["#retraction"]
     assert res["retracted"] is False
     assert "no retraction on record" in res["value"].lower()
 
 
 def test_concern_unknown_makes_no_negative_claim() -> None:
-    g = _graph(dossier.render(_resource(trust=TrustSignals(retracted=False))))
+    g = _graph(dossier.render(_resource(trust=TrustSignals(retracted=False)), now=NOW))
     res = g["#retraction"]
     # concern defaults to None → must read unknown, never "no expression of concern".
     assert res["concern"] is None
@@ -226,7 +241,7 @@ def test_concern_unknown_makes_no_negative_claim() -> None:
 
 
 def test_retraction_omitted_when_trust_absent() -> None:
-    g = _graph(dossier.render(_resource(trust=None)))
+    g = _graph(dossier.render(_resource(trust=None), now=NOW))
     assert "#retraction" not in g
 
 
@@ -240,20 +255,34 @@ def test_identifier_chain_carries_source_doi_links() -> None:
                 identifiers={"pmid": "12345"},
                 accessions=["GSE1"],
                 links=[Link(rel="is_supplement_to", target_id="pmid:12345")],
-            )
+            ),
+            now=NOW,
         )
     )
     res = g["#identifier-chain"]
     assert res["source"] == "zenodo"
     assert res["canonical_id"] == "zenodo:1"
     assert res["doi"] == "10.5281/zenodo.1"
-    assert res["identifiers"] == {"pmid": "12345"}
     assert res["accessions"] == ["GSE1"]
-    assert res["links"] == [{"rel": "is_supplement_to", "target_id": "pmid:12345"}]
+    # cross-identifiers and links are entities of their own, referenced by @id
+    assert res["identifiers"] == [{"@id": "#identifier-0"}]
+    assert g["#identifier-0"] == {
+        "@id": "#identifier-0",
+        "@type": "PropertyValue",
+        "propertyID": "pmid",
+        "value": "12345",
+    }
+    assert res["links"] == [{"@id": "#link-0"}]
+    assert g["#link-0"] == {
+        "@id": "#link-0",
+        "@type": "PropertyValue",
+        "name": "is_supplement_to",
+        "value": "pmid:12345",
+    }
 
 
 def test_identifier_chain_referenced_from_action() -> None:
-    crate = dossier.render(_resource())
+    crate = dossier.render(_resource(), now=NOW)
     g = _graph(crate)
     refs = {ref["@id"] for ref in g["#provenance-assessment"]["result"]}
     assert "#identifier-chain" in refs
@@ -281,7 +310,7 @@ async def test_live_dossier_for_real_record() -> None:
         resource = await router.resolve(c, "10.5281/zenodo.3242074")
         resource = resource.model_copy(update={"fair": fair_mod.assess(resource)})
         resource = resource.model_copy(update={"trust": await trust_mod.annotate(c, resource)})
-    crate = dossier.render(resource)
+    crate = dossier.render(resource, now=NOW)
     g = _graph(crate)
 
     assert g["ro-crate-metadata.json"]["conformsTo"]["@id"] == "https://w3id.org/ro/crate/1.1"

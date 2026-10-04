@@ -1,5 +1,10 @@
+from datetime import UTC, datetime
+
 from data_aggregator_mcp import ro_crate
 from data_aggregator_mcp.models import Creator, DataResource, FileEntry
+
+# The clock a crate is rendered at (render takes it; the handler reads datetime.now).
+NOW = datetime(2026, 10, 3, 21, 30, tzinfo=UTC)
 
 
 def _resource() -> DataResource:
@@ -18,7 +23,7 @@ def _resource() -> DataResource:
 
 
 def test_render_produces_ro_crate_graph() -> None:
-    c = ro_crate.render(_resource())
+    c = ro_crate.render(_resource(), created=NOW)
     assert c["@context"] == "https://w3id.org/ro/crate/1.1/context"
     graph = {e["@id"]: e for e in c["@graph"]}
     assert graph["ro-crate-metadata.json"]["conformsTo"]["@id"] == "https://w3id.org/ro/crate/1.1"

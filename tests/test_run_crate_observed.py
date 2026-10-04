@@ -25,7 +25,7 @@ from data_aggregator_mcp.models import (
     TaxonExpansion,
     TissueExpansion,
 )
-from tests.test_run_crate import _graph, _resource, _search_result
+from tests.test_run_crate import NOW, _graph, _resource, _search_result
 
 # --- the whole crate --------------------------------------------------------
 
@@ -85,8 +85,8 @@ def _rich(**over: Any) -> SearchResult:
 
 
 def test_run_level_entities_pinned_whole() -> None:
-    crate = run_crate.render(_rich())
-    assert crate["@context"] == "https://w3id.org/ro/crate/1.1/context"
+    crate = run_crate.render(_rich(), now=NOW)
+    assert crate["@context"][0] == "https://w3id.org/ro/crate/1.1/context"
     graph = crate["@graph"]
     assert graph[0] == {
         "@id": "ro-crate-metadata.json",
@@ -94,20 +94,34 @@ def test_run_level_entities_pinned_whole() -> None:
         "conformsTo": {"@id": "https://w3id.org/ro/crate/1.1"},
         "about": {"@id": "./"},
     }
+    # RO-Crate 1.1 requires the root's description, licence and datePublished (the run)
     assert graph[1] == {
         "@id": "./",
         "@type": "Dataset",
         "name": "Search run: rice leaf",
+        "description": "Provenance of a data-aggregator-mcp search for 'rice leaf': "
+        "2 hits on this page, 7 reported in all.",
+        "datePublished": "2026-10-03T21:30:00Z",
+        "license": {"@id": "#license"},
         "mentions": {"@id": "#search-action"},
         "hasPart": [{"@id": "#hit-0"}, {"@id": "#hit-1"}],
     }
+    # the crate licenses none of the records it lists
     assert graph[2] == {
+        "@id": "#license",
+        "@type": "CreativeWork",
+        "name": "Each hit keeps its own licence",
+        "description": "This crate describes records it does not license; each hit's "
+        "licence assessment names the licence its source states.",
+    }
+    assert graph[3] == {
         "@id": "https://github.com/musharna/data-aggregator-mcp",
         "@type": "SoftwareApplication",
         "name": "data-aggregator-mcp",
         "version": __version__,
     }
-    assert graph[3] == {
+    axes = ["taxon", "mesh", "tissue", "chemical", "assay"]
+    assert graph[4] == {
         "@id": "#search-action",
         "@type": "CreateAction",
         "name": "data-aggregator-mcp search",
@@ -120,56 +134,75 @@ def test_run_level_entities_pinned_whole() -> None:
         # records are (`omics/sra#v1` -> `sra`); the run notes are not sources.
         "sources_queried": ["datacite", "geo", "sra", "zenodo"],
         "result": [{"@id": "#hit-0"}, {"@id": "#hit-1"}],
-        "ontology_expansions": [
-            {
-                "axis": "taxon",
-                "input": "rice",
-                "ontology_id": 4530,
-                "canonical_name": "Oryza sativa",
-                "synonyms": ["Asian rice"],
-            },
-            {
-                "axis": "mesh",
-                "input": "blast",
-                "ontology_id": "D000001",
-                "canonical_name": "Blast Disease",
-                "synonyms": [],
-            },
-            {
-                "axis": "tissue",
-                "input": "leaf",
-                "ontology_id": "PO:0025034",
-                "canonical_name": "leaf",
-                "synonyms": ["foliage", "blade"],
-            },
-            {
-                "axis": "chemical",
-                "input": "auxin",
-                "ontology_id": "CHEBI:22676",
-                "canonical_name": "auxin",
-                "synonyms": ["IAA"],
-            },
-            {
-                "axis": "assay",
-                "input": "rna-seq",
-                "ontology_id": "EDAM:topic_3170",
-                "canonical_name": "RNA-Seq",
-                "synonyms": ["RNA sequencing"],
-            },
-        ],
-        "errors": {
-            "datacite": "ReadTimeout: slow",
-            "omics/sra#v1": "HTTPStatusError: 503",
-            "filters": "2 records removed by the kind filter",
-            "semantic": "no embedding endpoint configured",
-        },
+        "endTime": "2026-10-03T21:30:00Z",
+        "ontology_expansions": [{"@id": f"#expansion-{axis}"} for axis in axes],
+        "error": [{"@id": f"#error-{n}"} for n in range(4)],
     }
+    # each expansion and each error is an entity of its own (the graph is flat)
+    assert graph[5:10] == [
+        {
+            "@id": "#expansion-taxon",
+            "@type": "DefinedTerm",
+            "name": "Oryza sativa",
+            "termCode": 4530,
+            "alternateName": ["Asian rice"],
+            "axis": "taxon",
+            "matched_input": "rice",
+        },
+        {
+            "@id": "#expansion-mesh",
+            "@type": "DefinedTerm",
+            "name": "Blast Disease",
+            "termCode": "D000001",
+            "alternateName": [],
+            "axis": "mesh",
+            "matched_input": "blast",
+        },
+        {
+            "@id": "#expansion-tissue",
+            "@type": "DefinedTerm",
+            "name": "leaf",
+            "termCode": "PO:0025034",
+            "alternateName": ["foliage", "blade"],
+            "axis": "tissue",
+            "matched_input": "leaf",
+        },
+        {
+            "@id": "#expansion-chemical",
+            "@type": "DefinedTerm",
+            "name": "auxin",
+            "termCode": "CHEBI:22676",
+            "alternateName": ["IAA"],
+            "axis": "chemical",
+            "matched_input": "auxin",
+        },
+        {
+            "@id": "#expansion-assay",
+            "@type": "DefinedTerm",
+            "name": "RNA-Seq",
+            "termCode": "EDAM:topic_3170",
+            "alternateName": ["RNA sequencing"],
+            "axis": "assay",
+            "matched_input": "rna-seq",
+        },
+    ]
+    # every errors key is disclosed verbatim, in key order
+    errors = [
+        ("datacite", "ReadTimeout: slow"),
+        ("filters", "2 records removed by the kind filter"),
+        ("omics/sra#v1", "HTTPStatusError: 503"),
+        ("semantic", "no embedding endpoint configured"),
+    ]
+    assert graph[10:14] == [
+        {"@id": f"#error-{n}", "@type": "PropertyValue", "name": key, "value": message}
+        for n, (key, message) in enumerate(errors)
+    ]
 
 
 def test_hit_entities_and_their_assessments_in_order() -> None:
     sr = _rich()
-    crate = run_crate.render(sr)
-    ids = [e["@id"] for e in crate["@graph"][4:]]
+    crate = run_crate.render(sr, now=NOW)
+    ids = [e["@id"] for e in crate["@graph"] if e["@id"].startswith("#hit-")]
     assert ids == [
         "#hit-0",
         "#hit-0-version-currency",
@@ -218,13 +251,19 @@ def test_hit_entities_and_their_assessments_in_order() -> None:
 
 def test_hit_identifier_is_the_canonical_id_when_no_file_has_a_url() -> None:
     sr = _rich(results=[_resource(id="geo:GSE2", doi=None, files=[FileEntry(name="a")])], count=1)
-    assert _graph(run_crate.render(sr))["#hit-0"]["identifier"] == "geo:GSE2"
+    assert _graph(run_crate.render(sr, now=NOW))["#hit-0"]["identifier"] == "geo:GSE2"
 
 
 def test_only_the_axes_that_fired_are_echoed_in_order() -> None:
     sr = _rich(taxon_expansion=None, tissue_expansion=None, assay_expansion=None)
-    exps = _graph(run_crate.render(sr))["#search-action"]["ontology_expansions"]
-    assert [e["axis"] for e in exps] == ["mesh", "chemical"]
+    g = _graph(run_crate.render(sr, now=NOW))
+    exps = g["#search-action"]["ontology_expansions"]
+    assert [g[e["@id"]]["axis"] for e in exps] == ["mesh", "chemical"]
+    assert not any(
+        key.startswith("#expansion-")
+        for key in g
+        if key not in {"#expansion-mesh", "#expansion-chemical"}
+    )
 
 
 # --- sources_queried --------------------------------------------------------
@@ -294,16 +333,18 @@ def test_sources_queried_lists_sources_not_run_notes() -> None:
             "datacite": "HTTPStatusError: 502",
         }
     )
-    action = _graph(run_crate.render(sr))["#search-action"]
+    action = _graph(run_crate.render(sr, now=NOW))["#search-action"]
     # the two hit sources, plus the two failed streams named as their records name them
     assert action["sources_queried"] == ["datacite", "sra", "zenodo"]
-    # every key is still disclosed, verbatim, under errors
-    assert action["errors"] == sr.errors
+    # every key is still disclosed, verbatim, as an error entity
+    g = _graph(run_crate.render(sr, now=NOW))
+    disclosed = {g[ref["@id"]]["name"]: g[ref["@id"]]["value"] for ref in action["error"]}
+    assert disclosed == sr.errors
 
 
 def test_sources_queried_from_failures_alone() -> None:
     sr = _search_result(results=[], count=0, total=0, errors={"semantic": "x", "omics/geo": "y"})
-    assert _graph(run_crate.render(sr))["#search-action"]["sources_queried"] == ["geo"]
+    assert _graph(run_crate.render(sr, now=NOW))["#search-action"]["sources_queried"] == ["geo"]
 
 
 # --- live real-execution check ---------------------------------------------
@@ -328,7 +369,7 @@ async def test_live_run_note_is_not_a_source_queried(monkeypatch: pytest.MonkeyP
     hit_sources = {h.source for h in result.results}
     assert hit_sources, "the live search returned no hits to name"
 
-    action = _graph(run_crate.render(result))["#search-action"]
+    action = _graph(run_crate.render(result, now=NOW))["#search-action"]
     assert action["errors"]["semantic"] == result.errors["semantic"]
     assert "semantic" not in action["sources_queried"]
     assert hit_sources <= set(action["sources_queried"])

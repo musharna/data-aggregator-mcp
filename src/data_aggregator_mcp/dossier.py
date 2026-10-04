@@ -10,18 +10,27 @@ plus one assessment ``PropertyValue`` per PRESENT signal — RO-Crate 1.1
 "Provenance of entities" (a CreateAction whose ``instrument`` is the software agent
 that performed the assessment, attached to the root data entity).
 
+CONFORMANCE: the crate is RO-Crate 1.1 as rocrate-validator reads it. The assessment
+fields schema.org lacks (``score``, ``is_latest``, ...) are declared ad hoc terms
+(``ro_crate.TERMS``), so a JSON-LD processor keeps them, and every nested object is an
+entity of its own in the flattened ``@graph`` (identifiers and links are
+``PropertyValue`` entities). The assessment's ``endTime`` is when it ran; the record's
+own last change is the root's ``dateModified``.
+
 HONESTY (the heart of this wave): only signals actually present are represented. An
 unknown retraction (``trust.retracted is None``) is reported as "unknown / not checked",
 NEVER "not retracted". An unrecognized licence gets SPDX "unrecognized", never an
 invented id. A missing version/FAIR/trust signal is OMITTED, not fabricated. We keep
 ``conformsTo`` ONLY on the metadata descriptor (RO-Crate 1.1) — no custom profile URI.
 
-PURE: no network, no file I/O, deterministic — the handler (not this renderer) does
-the FAIR/trust enrichment before calling ``render``.
+PURE: no network, no file I/O, deterministic for a given ``now`` — the handler (not
+this renderer) does the FAIR/trust enrichment and reads the clock before calling
+``render``.
 """
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from data_aggregator_mcp import __version__, ro_crate
@@ -138,10 +147,14 @@ def _retraction_result(r: DataResource, id_prefix: str) -> dict[str, Any] | None
     )
 
 
-def _identifier_result(r: DataResource, id_prefix: str) -> dict[str, Any]:
+def _identifier_result(
+    r: DataResource, id_prefix: str
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Source/DOI/ID-chain assessment — always present (every record has a source +
     canonical id). Records the source repo, canonical id, DOI, cross-identifiers,
-    accessions, and the qualified version/relation links (rel -> target)."""
+    accessions, and the qualified version/relation links (rel -> target). Each
+    cross-identifier and link is a ``PropertyValue`` entity of its own (a flattened graph
+    nests nothing but ``@id``), returned beside the assessment."""
     parts = [f"source repository {r.source}", f"canonical id {r.id}"]
     if r.doi:
         parts.append(f"DOI {r.doi}")
@@ -149,44 +162,71 @@ def _identifier_result(r: DataResource, id_prefix: str) -> dict[str, Any]:
     extra: dict[str, Any] = {"source": r.source, "canonical_id": r.id}
     if r.doi:
         extra["doi"] = r.doi
+    pieces: list[dict[str, Any]] = []
     if r.identifiers:
-        extra["identifiers"] = dict(r.identifiers)
+        ids = [
+            {
+                "@id": f"#{id_prefix}identifier-{n}",
+                "@type": "PropertyValue",
+                "propertyID": scheme,
+                "value": ident,
+            }
+            for n, (scheme, ident) in enumerate(r.identifiers.items())
+        ]
+        extra["identifiers"] = [{"@id": ent["@id"]} for ent in ids]
+        pieces.extend(ids)
     if r.accessions:
         extra["accessions"] = list(r.accessions)
     if r.links:
-        extra["links"] = [{"rel": lnk.rel, "target_id": lnk.target_id} for lnk in r.links]
-    return _property_value(
+        links = [
+            {
+                "@id": f"#{id_prefix}link-{n}",
+                "@type": "PropertyValue",
+                "name": lnk.rel,
+                "value": lnk.target_id,
+            }
+            for n, lnk in enumerate(r.links)
+        ]
+        extra["links"] = [{"@id": ent["@id"]} for ent in links]
+        pieces.extend(links)
+    chain = _property_value(
         f"#{id_prefix}identifier-chain", "source-identifier-chain", value, **extra
     )
+    return chain, pieces
 
 
-def assessment_entities(resource: DataResource, id_prefix: str) -> list[dict[str, Any]]:
+def assessment_entities(
+    resource: DataResource, id_prefix: str
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """The non-None per-signal assessment entities, in fixed order (version, licence,
-    FAIR, retraction, identifier-chain). The single reuse seam: ``dossier.render`` builds
-    the per-record crate with ``id_prefix=""`` (so the @ids stay ``#version-currency`` etc.,
-    B10a byte-identical), while the whole-search Run Crate (``run_crate.render``) calls it
-    per hit with ``id_prefix=f"hit-{i}-"`` for unique @ids. HONESTY is inherited: each
-    helper omits its entity when the underlying signal is absent (e.g. ``trust is None`` →
-    no retraction entity — never a negative claim)."""
+    FAIR, retraction, identifier-chain), and the entities they reference (the
+    identifier chain's cross-identifiers and links). The single reuse seam:
+    ``dossier.render`` builds the per-record crate with ``id_prefix=""`` (so the @ids stay
+    ``#version-currency`` etc.), while the whole-search Run Crate (``run_crate.render``)
+    calls it per hit with ``id_prefix=f"hit-{i}-"`` for unique @ids. HONESTY is
+    inherited: each helper omits its entity when the underlying signal is absent (e.g.
+    ``trust is None`` → no retraction entity — never a negative claim)."""
     results: list[dict[str, Any]] = []
     for ent in (
         _version_result(resource, id_prefix),
         _license_result(resource, id_prefix),
         _fair_result(resource, id_prefix),
         _retraction_result(resource, id_prefix),
-        _identifier_result(resource, id_prefix),
     ):
         if ent is not None:
             results.append(ent)
-    return results
+    chain, pieces = _identifier_result(resource, id_prefix)
+    results.append(chain)
+    return results, pieces
 
 
-def render(resource: DataResource) -> dict[str, Any]:
-    """Render an RO-Crate 1.1 data-availability dossier for ``resource``. PURE,
-    deterministic, no I/O. Reuses ``ro_crate.render`` as the base graph, then extends
-    ``@graph`` with the provenance CreateAction + one assessment entity per present
-    signal. ``conformsTo`` stays only on the metadata descriptor (RO-Crate 1.1)."""
-    crate = ro_crate.render(resource)
+def render(resource: DataResource, *, now: datetime) -> dict[str, Any]:
+    """Render an RO-Crate 1.1 data-availability dossier for ``resource``, assessed at
+    ``now``. PURE, deterministic for a given ``now``, no I/O. Reuses ``ro_crate.render``
+    as the base graph, then extends ``@graph`` with the provenance CreateAction, one
+    assessment entity per present signal, the entities those reference, and a definition
+    of each ad hoc term used. ``conformsTo`` stays only on the metadata descriptor."""
+    crate = ro_crate.render(resource, created=now)
     graph: list[dict[str, Any]] = crate["@graph"]
 
     agent = {
@@ -196,7 +236,7 @@ def render(resource: DataResource) -> dict[str, Any]:
         "version": __version__,
     }
 
-    results = assessment_entities(resource, "")
+    results, pieces = assessment_entities(resource, "")
 
     action: dict[str, Any] = {
         "@id": ASSESSMENT_ID,
@@ -205,15 +245,18 @@ def render(resource: DataResource) -> dict[str, Any]:
         "instrument": {"@id": AGENT_ID},
         "object": {"@id": "./"},
         "result": [{"@id": ent["@id"]} for ent in results],
+        "endTime": ro_crate.timestamp(now),
     }
-    if resource.last_updated:
-        action["endTime"] = resource.last_updated
 
     # Link the assessment from the root data entity (keeps the crate navigable).
     for ent in graph:
         if ent.get("@id") == "./":
             ent["mentions"] = {"@id": ASSESSMENT_ID}
+            if resource.last_updated:
+                ent["dateModified"] = resource.last_updated
             break
 
-    graph.extend([agent, action, *results])
+    graph.extend([agent, action, *results, *pieces])
+    graph.extend(ro_crate.term_definitions(graph))
+    crate["@context"] = ro_crate.context()
     return crate
