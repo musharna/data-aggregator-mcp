@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The README is now a short front page: install (with one-click VS Code and Cursor
+  links), three example questions with real output, a pipeline diagram, a comparison
+  with other servers, and the sources table. The per-tool reference, the HTTP transport
+  and the environment variables moved to `docs/reference.md`. The demo is recorded from
+  live calls (`examples/_demo_search.py`) instead of a network-free tools listing.
+
 ## [0.59.0] - 2026-10-04
 
 ### Added
