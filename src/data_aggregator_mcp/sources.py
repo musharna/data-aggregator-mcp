@@ -25,6 +25,7 @@ from typing import Any, Protocol, runtime_checkable
 import httpx
 
 from data_aggregator_mcp import (
+    _pushdown,
     biostudies,
     cellxgene,
     dandi,
@@ -98,6 +99,7 @@ class SourceSpec:
     # Human-facing catalog metadata — the list_sources tool payload.
     layer: str
     kinds: tuple[str, ...]
+    # Derived from the adapter, never written by hand (``_filters_supported``).
     filters_supported: tuple[str, ...]
     rate_limit: str
     status: str
@@ -143,13 +145,51 @@ class SourceSpec:
         return entry
 
 
+# The router's ontology facets: each expands the query with the term's synonyms, so a
+# source sees them exactly when it is sent the expanded query (``boolean_query``).
+ONTOLOGY_FACETS = ("organism", "disease", "tissue", "chemical", "assay")
+# One bound per year filter, to ask an adapter's ``pushable`` which filters it takes.
+_YEAR_PROBE = dict.fromkeys(_pushdown.YEAR_FILTERS, 2000)
+
+
+def _filters_supported(
+    module: SourceAdapter, kinds: tuple[str, ...], *, boolean_query: bool
+) -> tuple[str, ...]:
+    """The ``search`` parameters this source applies itself, read off its adapter. Written
+    by hand, the list drifted from the code in both directions (#200 triage, 2026-09-30):
+    huggingface listed ``cursor`` and the year/kind filters but serves page 1 only and
+    filters nothing upstream; omics and literature listed year/kind they filter only after
+    fetch; DataCite omitted ``size``; five paging sources omitted ``cursor``; biostudies
+    listed ``offset``, which ``search`` does not take; only omics and literature listed
+    ``organism``, which every boolean-query source gets.
+
+    - ``query``, ``size``: every source.
+    - ``cursor``: the source returns records past its first page (``PAGINATES``, default
+      True; a page-1-only adapter sets it False beside its ``if offset`` guard).
+    - ``published_after`` / ``published_before`` / ``kind``: the source filters upstream
+      (``_pushdown.FilterPushdown``), so its total is the filtered one; ``kind`` only when
+      every kind the source carries can be pushed. Any other source is filtered after fetch.
+    - the ontology facets: the source is sent the expanded query (``boolean_query``).
+    """
+    out = ["query", "size"]
+    if getattr(module, "PAGINATES", True):
+        out.append("cursor")
+    if isinstance(module, _pushdown.FilterPushdown):
+        out += [k for k in _pushdown.YEAR_FILTERS if k in module.pushable(_YEAR_PROBE)]
+        own = [k for k in kinds if k != _pushdown.OTHER_KIND]
+        if own and all("kind" in module.pushable({"kind": k}) for k in own):
+            out.append("kind")
+    if boolean_query:
+        out += ONTOLOGY_FACETS
+    return tuple(out)
+
+
 def _spec(
     name: str,
     module: SourceAdapter,
     *,
     layer: str,
     kinds: tuple[str, ...],
-    filters_supported: tuple[str, ...],
     rate_limit: str,
     status: str,
     id_example: str,
@@ -189,7 +229,7 @@ def _spec(
         fetchable_prefixes=fp,
         layer=layer,
         kinds=kinds,
-        filters_supported=filters_supported,
+        filters_supported=_filters_supported(module, kinds, boolean_query=boolean_query),
         rate_limit=rate_limit,
         status=status,
         id_example=id_example,
@@ -213,14 +253,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         zenodo,
         layer="archives",
         kinds=("dataset", "publication", "software", "other"),
-        filters_supported=(
-            "query",
-            "size",
-            "published_after",
-            "published_before",
-            "kind",
-            "cursor",
-        ),
         rate_limit="~60/min anonymous",
         status="live",
         fetchable=True,
@@ -234,7 +266,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         dataone,
         layer="archives",
         kinds=("dataset",),
-        filters_supported=("query", "size", "cursor"),
         rate_limit="public CN; courtesy only",
         status="live (eco/environmental federation; verified fetch via Member Nodes)",
         fetchable=True,
@@ -254,7 +285,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         gbif,
         layer="archives",
         kinds=("dataset",),
-        filters_supported=("query", "size", "cursor"),
         rate_limit="public API; courtesy only",
         status="live (biodiversity dataset registry; DOI-normalized, non-bio-omics)",
         fetchable="per-dataset",
@@ -268,7 +298,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         datagov,
         layer="archives",
         kinds=("dataset",),
-        filters_supported=("query", "size", "cursor"),
         rate_limit="keyless catalog API by default; with DATA_GOV_API_KEY, the api.data.gov gateway (1,000/hour per key)",
         status="live (US government open-data catalog; DCAT-US Catalog API, cursor-paged; search total is a lower bound - the API reports no hit count)",
         fetchable="per-dataset",
@@ -283,7 +312,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         boolean_query=False,
         layer="omics",
         kinds=("dataset",),
-        filters_supported=("query", "size"),
         rate_limit="public; courtesy only",
         status="live (CZ CELLxGENE Discover collections search/resolve; asset manifest on resolve)",
         fetchable=True,
@@ -308,7 +336,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         datacite,
         layer="archives",
         kinds=("dataset", "publication", "software", "other"),
-        filters_supported=("query", "published_after", "published_before", "kind", "cursor"),
         rate_limit="respects 429/Retry-After",
         status="live (discovery; fetch on resolve for Figshare/Dataverse/OSF/Zenodo, manifest-only for Dryad)",
         fetchable="per-repo",
@@ -324,7 +351,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         boolean_query=False,
         layer="omics",
         kinds=("dataset",),
-        filters_supported=("query", "size"),
         rate_limit="public; courtesy only",
         status="live (DANDI Archive search/resolve; asset-manifest fetch on resolve)",
         fetchable=True,
@@ -338,14 +364,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         omics,
         layer="omics",
         kinds=("study", "sequencing_run"),
-        filters_supported=(
-            "query",
-            "organism",
-            "published_after",
-            "published_before",
-            "kind",
-            "cursor",
-        ),
         # Deliberately NO default_license, and this is the clearest case of the four. NCBI
         # does not merely stay silent, it disclaims the ability to grant: it "places no
         # restrictions on the use or distribution of the data", but "some submitters of the
@@ -365,14 +383,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         literature,
         layer="literature",
         kinds=("publication",),
-        filters_supported=(
-            "query",
-            "organism",
-            "published_after",
-            "published_before",
-            "kind",
-            "cursor",
-        ),
         rate_limit="NCBI 3/s (10/s with NCBI_API_KEY); OpenAIRE + ScholeXplorer unmetered",
         status="live (discovery + resolve-time data links + identifiers; fetch retrieves open-access full text via EuropePMC/Unpaywall)",
         fetchable="open-access only",
@@ -385,14 +395,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         boolean_query=False,
         layer="archives",
         kinds=("dataset",),
-        filters_supported=(
-            "query",
-            "size",
-            "published_after",
-            "published_before",
-            "kind",
-            "cursor",
-        ),
         rate_limit="HuggingFace Hub anonymous (generous)",
         status="live (discovery + resolve + fetch; contributes to page 1 only — HF paginates by cursor, not offset)",
         fetchable=True,
@@ -406,7 +408,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         omicsdi,
         layer="omics",
         kinds=("study",),
-        filters_supported=("query", "size"),
         rate_limit="public; courtesy only",
         status="live (proteomics/metabolomics discovery; first page only)",
         fetchable="per-repo",
@@ -424,7 +425,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         boolean_query=False,
         layer="archives",
         kinds=("dataset",),
-        filters_supported=("query", "size"),
         rate_limit="public; courtesy only",
         status="live (name-substring discovery, first page only; ARFF + Parquet fetch on resolve)",
         fetchable=True,
@@ -438,7 +438,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         pdb,
         layer="archives",
         kinds=("dataset",),
-        filters_supported=("query", "size"),
         rate_limit="public; courtesy only",
         status="live (full-text discovery; .cif/.pdb structure fetch on resolve)",
         fetchable=True,
@@ -457,7 +456,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         uniprot,
         layer="archives",
         kinds=("dataset",),
-        filters_supported=("query", "size"),
         rate_limit="public; courtesy only",
         status="live (entry discovery; FASTA sequence fetch on resolve)",
         fetchable=True,
@@ -480,7 +478,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         boolean_query=False,
         layer="omics",
         kinds=("study",),
-        filters_supported=("query", "size"),
         rate_limit="public; courtesy only",
         status="live (disease-trait discovery; PubMed cross-link). Fetch not supported.",
         fetchable=False,
@@ -498,7 +495,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         boolean_query=False,
         layer="archives",
         kinds=("dataset",),
-        filters_supported=("query", "size", "cursor"),
         rate_limit="public Earthdata CMR; courtesy only",
         status="live (NASA Earthdata collection discovery; keyless)",
         fetchable=False,
@@ -512,7 +508,6 @@ SOURCES: tuple[SourceSpec, ...] = (
         biostudies,
         layer="omics",
         kinds=("study",),
-        filters_supported=("query", "size", "offset"),
         rate_limit="public; courtesy only",
         status="live (free-text search across collections; file manifest + DOI/xref on resolve)",
         fetchable=True,
