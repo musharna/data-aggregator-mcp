@@ -402,6 +402,84 @@ async def test_live_search_returns_datacite_relevance_order_not_recent_edits() -
     assert len(set(ids) & {i for i, _ in recent}) < 5, (ids, recent)
 
 
+def _hosted(doi: str, client_id: str) -> dict:
+    return {
+        "data": {
+            "id": doi,
+            "attributes": {
+                "doi": doi,
+                "titles": [{"title": "t"}],
+                "types": {"resourceTypeGeneral": "Dataset"},
+            },
+            "relationships": {"client": {"data": {"id": client_id}}},
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    ("doi", "client_id", "files_url", "status", "why"),
+    [
+        (
+            "10.6084/m9.figshare.32732757.v1",
+            "figshare.ars",
+            "https://api.figshare.com/v2/articles/32732757/versions/1",
+            404,
+            "Figshare answers 404 for article 32732757 version 1: withdrawn or removed upstream",
+        ),
+        (
+            "10.17605/osf.io/pq28s",
+            "cos.osf",
+            "https://api.osf.io/v2/nodes/pq28s/files/osfstorage/",
+            401,
+            "OSF withholds the files of pq28s from anonymous callers (HTTP 401): "
+            "the record is withdrawn or private",
+        ),
+    ],
+)
+async def test_resolve_keeps_a_withdrawn_record_without_files_and_says_why(
+    httpx_mock: HTTPXMock, monkeypatch, doi, client_id, files_url, status, why
+) -> None:
+    """User decision 2026-10-04: a record whose host withdrew it (Figshare 404, OSF 401)
+    while DataCite still lists it resolves with its metadata, files=[] and a note — it
+    failed the whole resolve before, the OSF one as an outage. An outage on the host
+    still fails it: only the host's own "not served" answer is read as withdrawn."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    monkeypatch.setattr("data_aggregator_mcp._http.asyncio.sleep", _no_sleep)
+    datacite_url = f"https://api.datacite.org/dois/{doi}"
+    httpx_mock.add_response(url=datacite_url, json=_hosted(doi, client_id))
+    httpx_mock.add_response(url=files_url, status_code=status)
+    async with httpx.AsyncClient() as client:
+        r = await datacite.resolve(client, doi)
+        assert (r.title, r.doi, r.files, r.errors) == ("t", doi, [], {})
+        assert r.truncated == {"files": f"none listed: {why}; DataCite still holds the record"}
+        # control: the same record during a host outage still fails the resolve
+        httpx_mock.add_response(url=datacite_url, json=_hosted(doi, client_id))
+        for _ in range(3):
+            httpx_mock.add_response(url=files_url, status_code=503)
+        with pytest.raises(UpstreamUnavailableError, match=r"last HTTP 503"):
+            await datacite.resolve(client, doi)
+
+
+@live_only
+@pytest.mark.parametrize(
+    "doi", ["10.6084/m9.figshare.32732757.v1", "10.17605/osf.io/pq28s", "10.17605/osf.io/ybdw4"]
+)
+async def test_live_withdrawn_records_resolve_without_files(doi) -> None:
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await datacite.resolve(client, doi)
+        # positive control: a served record on the same host still lists its files
+        served = "10.6084/m9.figshare.28283042.v1" if "figshare" in doi else "10.17605/osf.io/5pfej"
+        ok = await datacite.resolve(client, served)
+    assert (r.doi, r.files) == (doi, [])
+    assert r.truncated["files"].startswith("none listed: ")
+    assert ("withdrawn" in r.truncated["files"]) and r.title
+    assert ok.files and "files" not in ok.truncated
+
+
 @live_only
 async def test_live_resolve_dryad_doi() -> None:
     async with httpx.AsyncClient() as client:

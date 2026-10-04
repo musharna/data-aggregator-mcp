@@ -431,13 +431,20 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         return await zenodo.resolve(client, f"zenodo:{recid.group(1)}")
     resolver = _FILE_RESOLVERS.get(resource.source)
     if resolver is not None:
-        if resource.source in _LANDING_AWARE:
-            # The host repo is a federation (Dataverse): the record's own landing URL
-            # names the installation that holds it. Any other server cannot resolve it.
-            landing = data["attributes"].get("url")
-            file_list = await resolver(client, record_doi, landing_url=landing)
-        else:
-            file_list = await resolver(client, record_doi)
+        try:
+            if resource.source in _LANDING_AWARE:
+                # The host repo is a federation (Dataverse): the record's own landing URL
+                # names the installation that holds it. Any other server cannot resolve it.
+                landing = data["attributes"].get("url")
+                file_list = await resolver(client, record_doi, landing_url=landing)
+            else:
+                file_list = await resolver(client, record_doi)
+        except NotFoundError as exc:
+            # The host no longer serves the record (a withdrawn Figshare article or OSF
+            # registration) though DataCite still lists it: keep the record, say why it
+            # has no files. An outage is not this, and still raises.
+            note = f"none listed: {exc.args[0]}; DataCite still holds the record"
+            return resource.model_copy(update={"truncated": {**resource.truncated, "files": note}})
         if file_list:
             resource = resource.model_copy(update={"files": file_list})
     return resource
