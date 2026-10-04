@@ -62,7 +62,7 @@ def _clear_taxonomy_cache():
 async def test_resolve_taxon_hits_esearch_then_efetch(httpx_mock: HTTPXMock, monkeypatch) -> None:
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
-        url=f"{_EUT}/esearch.fcgi?db=taxonomy&term=Arabidopsis&retmax=1&retmode=json",
+        url=f"{_EUT}/esearch.fcgi?db=taxonomy&term=Arabidopsis&retmax=10&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["3701"]}},
     )
     httpx_mock.add_response(
@@ -86,7 +86,7 @@ async def test_resolve_taxon_no_match_returns_none_and_caches(
 ) -> None:
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
-        url=f"{_EUT}/esearch.fcgi?db=taxonomy&term=notaspecies&retmax=1&retmode=json",
+        url=f"{_EUT}/esearch.fcgi?db=taxonomy&term=notaspecies&retmax=10&retmode=json",
         json={"esearchresult": {"count": "0", "idlist": []}},
     )
     async with httpx.AsyncClient() as client:
@@ -107,7 +107,7 @@ async def test_resolve_taxon_caches_positive_hit(httpx_mock: HTTPXMock, monkeypa
     # (neither esearch nor efetch) — total requests stays at 2.
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
-        url=f"{_EUT}/esearch.fcgi?db=taxonomy&term=Arabidopsis&retmax=1&retmode=json",
+        url=f"{_EUT}/esearch.fcgi?db=taxonomy&term=Arabidopsis&retmax=10&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["3701"]}},
     )
     httpx_mock.add_response(
@@ -203,11 +203,11 @@ async def test_ncbi_error_envelope_is_not_negative_cached(
     base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
     for _ in range(3):
         httpx_mock.add_response(
-            url=f"{base}/esearch.fcgi?db=taxonomy&term=Arabidopsis+thaliana&retmax=1&retmode=json",
+            url=f"{base}/esearch.fcgi?db=taxonomy&term=Arabidopsis+thaliana&retmax=10&retmode=json",
             json={"esearchresult": {"ERROR": "Search Backend failed"}},
         )
     httpx_mock.add_response(
-        url=f"{base}/esearch.fcgi?db=taxonomy&term=Arabidopsis+thaliana&retmax=1&retmode=json",
+        url=f"{base}/esearch.fcgi?db=taxonomy&term=Arabidopsis+thaliana&retmax=10&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["3702"]}},
     )
     httpx_mock.add_response(

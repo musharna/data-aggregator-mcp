@@ -23,7 +23,7 @@ LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 live_only = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
 _EUT = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-_ESEARCH = f"{_EUT}/esearch.fcgi?db=taxonomy&term=Arabidopsis&retmax=1&retmode=json"
+_ESEARCH = f"{_EUT}/esearch.fcgi?db=taxonomy&term=Arabidopsis&retmax=10&retmode=json"
 _EFETCH = f"{_EUT}/efetch.fcgi?db=taxonomy&id=3701&retmode=xml"
 
 # Verbatim live answers (2026-10-02).
@@ -138,7 +138,7 @@ async def test_no_esearch_hit_is_cached_as_no_match_under_the_folded_name(
 ) -> None:
     """Live: esearch for ``yeast`` answers count 0 (NCBI Taxonomy has no such name)."""
     httpx_mock.add_response(
-        url=f"{_EUT}/esearch.fcgi?db=taxonomy&term=+Yeast+&retmax=1&retmode=json",
+        url=f"{_EUT}/esearch.fcgi?db=taxonomy&term=+Yeast+&retmax=10&retmode=json",
         json={"esearchresult": {"count": "0", "retmax": "0", "idlist": []}},
     )
     async with httpx.AsyncClient() as client:

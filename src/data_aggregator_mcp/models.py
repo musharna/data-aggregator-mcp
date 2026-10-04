@@ -173,6 +173,13 @@ class DataResource(BaseModel):
     truncated: dict[str, str] = Field(default_factory=dict)
 
 
+class TaxonAlternative(BaseModel):
+    """Another taxon the organism name matched, not chosen."""
+
+    taxid: int
+    name: str  # its scientific name
+
+
 class TaxonExpansion(BaseModel):
     """Echo of taxon-synonym expansion that fired for a search (transparency)."""
 
@@ -180,6 +187,10 @@ class TaxonExpansion(BaseModel):
     taxid: int
     canonical_name: str
     synonyms: list[str]  # names added to the query (excludes the canonical name)
+    # The other taxa the name matched ("Drosophila" is also a fungus genus). The chosen
+    # one is the taxon whose scientific name the input is, else the one with the most
+    # nucleotide records; pass one of these taxa's names instead to search for it.
+    alternatives: list[TaxonAlternative] = Field(default_factory=list)
 
 
 class MeshExpansion(BaseModel):

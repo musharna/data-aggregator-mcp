@@ -26,6 +26,7 @@ from data_aggregator_mcp.models import (
     AssayExpansion,
     ChemicalExpansion,
     MeshExpansion,
+    TaxonAlternative,
     TaxonExpansion,
     TissueExpansion,
     UnresolvedEntity,
@@ -118,6 +119,7 @@ async def expand_organism(
         taxid=info.taxid,
         canonical_name=info.canonical_name,
         synonyms=list(info.synonyms),
+        alternatives=[TaxonAlternative(taxid=a.taxid, name=a.name) for a in info.alternatives],
     )
     return effective, expansion
 
