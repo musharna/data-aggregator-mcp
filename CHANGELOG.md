@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `tissue_expansion.alternatives` and `chemical_expansion.alternatives` list the other
+  UBERON/ChEBI terms the name is the label or a synonym of (id + label). For example,
+  `skin` is also a synonym of "skin of body", and `glucose` also of "D-glucopyranose".
+  The chosen term is unchanged: the one the name is the label of, else the one OLS ranks
+  first (`skin` → "zone of skin", whose exact synonym it is in UBERON).
+
 ## [0.58.0] - 2026-10-04
 
 ### Fixed

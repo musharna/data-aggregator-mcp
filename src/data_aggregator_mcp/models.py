@@ -202,6 +202,13 @@ class MeshExpansion(BaseModel):
     synonyms: list[str]  # entry terms added to the query (excludes the canonical name)
 
 
+class TermAlternative(BaseModel):
+    """Another ontology term the param matched, not chosen."""
+
+    id: str  # e.g. "UBERON:0002097"
+    label: str
+
+
 class TissueExpansion(BaseModel):
     """Echo of UBERON tissue-synonym expansion that fired for a search (transparency)."""
 
@@ -209,6 +216,10 @@ class TissueExpansion(BaseModel):
     uberon_id: str  # e.g. "UBERON:0002107"
     canonical_name: str
     synonyms: list[str]  # entry synonyms added to the query (excludes the canonical label)
+    # The other terms the param is the label or a synonym of ("skin" is also a synonym
+    # of "skin of body"); the chosen one's label is the param if any is, else it is
+    # the term OLS ranks first. Pass one of these labels instead to search for it.
+    alternatives: list[TermAlternative] = Field(default_factory=list)
 
 
 class ChemicalExpansion(BaseModel):
@@ -218,6 +229,10 @@ class ChemicalExpansion(BaseModel):
     chebi_id: str  # e.g. "CHEBI:27732"
     canonical_name: str
     synonyms: list[str]  # entry synonyms added to the query (excludes the canonical label)
+    # The other terms the param is the label or a synonym of ("skin" is also a synonym
+    # of "skin of body"); the chosen one's label is the param if any is, else it is
+    # the term OLS ranks first. Pass one of these labels instead to search for it.
+    alternatives: list[TermAlternative] = Field(default_factory=list)
 
 
 class AssayExpansion(BaseModel):
