@@ -14,6 +14,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and the environment variables moved to `docs/reference.md`. The demo is recorded from
   live calls (`examples/_demo_search.py`) instead of a network-free tools listing.
 
+### Fixed
+
+- A literature search with a long ontology expansion no longer loses OpenAIRE. Its
+  search rejects more than four AND/OR/NOT words with HTTP 400, so `tissue="skin"`
+  (six UBERON names) dropped every OpenAIRE hit. OpenAIRE is now sent a shorter
+  expansion that keeps every facet, the name you typed first, and as many other names
+  as fit; `errors["operator_limit"]` lists the names it left out. Other sources still
+  get the full expansion, and a query that already fits is sent unchanged.
+
 ## [0.59.0] - 2026-10-04
 
 ### Added
