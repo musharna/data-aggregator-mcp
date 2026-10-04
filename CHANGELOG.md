@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- An `organism` name that matches several NCBI taxa no longer resolves to whichever one
+  NCBI lists first. NCBI lists them by descending taxid, so `Drosophila` resolved to a
+  fungus genus, `fruit fly` to *Drosophila gunungcola* and `bacteria` to a stick-insect
+  genus. The name now resolves to the taxon it is the scientific name of, if exactly one;
+  otherwise to the taxon with the most nucleotide records of its own. So `Drosophila` →
+  the fly genus, `fruit fly` → *D. melanogaster*, `bacteria` → Bacteria. The other
+  candidates are listed in the new `taxon_expansion.alternatives` (taxid + name).
+
 ## [0.57.0] - 2026-10-04
 
 ### Changed
