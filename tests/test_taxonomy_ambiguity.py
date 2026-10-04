@@ -46,10 +46,11 @@ _NAMES = {
 
 
 class _NCBI:
-    """esearch/efetch answering from the tables above; records each nuccore count asked."""
+    """esearch/efetch answering from copies of the tables above (a test may edit its own);
+    records each nuccore count asked."""
 
-    def __init__(self, taxa=_TAXA, names=_NAMES) -> None:
-        self.taxa, self.names = taxa, names
+    def __init__(self) -> None:
+        self.taxa, self.names = dict(_TAXA), {k: list(v) for k, v in _NAMES.items()}
         self.counted: list[str] = []
 
     async def esearch(self, client, db, term, *, retmax, retstart=0):
