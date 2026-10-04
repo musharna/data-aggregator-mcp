@@ -47,13 +47,15 @@ _NAMES = {
 
 class _NCBI:
     """esearch/efetch answering from copies of the tables above (a test may edit its own);
-    records each nuccore count asked."""
+    records each nuccore count asked, and that every call carries the caller's client."""
 
     def __init__(self) -> None:
         self.taxa, self.names = dict(_TAXA), {k: list(v) for k, v in _NAMES.items()}
         self.counted: list[str] = []
+        self.client = object()  # stands for the caller's httpx client
 
     async def esearch(self, client, db, term, *, retmax, retstart=0):
+        assert client is self.client, (db, term)
         if db == "taxonomy":
             ids = self.names.get(term.strip().lower(), [])
             return len(ids), [str(i) for i in ids[:retmax]]
@@ -65,7 +67,7 @@ class _NCBI:
         return (own if m[2] == "noexp" else wide), []
 
     async def efetch(self, client, db, ids, retmode="xml"):
-        assert db == "taxonomy"
+        assert client is self.client and db == "taxonomy"
         body = "".join(
             f"<Taxon><TaxId>{i}</TaxId><ScientificName>{self.taxa[int(i)][0]}</ScientificName>"
             "<Lineage>cellular organisms; Eukaryota</Lineage></Taxon>"
@@ -96,13 +98,13 @@ def ncbi(monkeypatch) -> _NCBI:
 async def test_an_ambiguous_name_resolves_to_the_best_known_taxon(
     ncbi: _NCBI, name: str, taxid: int, why: str
 ) -> None:
-    info = await taxonomy.resolve_taxon(None, name)
+    info = await taxonomy.resolve_taxon(ncbi.client, name)
     assert info is not None and info.taxid == taxid, why
     assert info.canonical_name == _TAXA[taxid][0]
 
 
 async def test_the_other_candidates_are_reported_in_ncbi_order(ncbi: _NCBI) -> None:
-    info = await taxonomy.resolve_taxon(None, "fruit fly")
+    info = await taxonomy.resolve_taxon(ncbi.client, "fruit fly")
     assert info is not None and info.taxid == 7227
     assert [(a.taxid, a.name) for a in info.alternatives] == [
         (103775, "Drosophila gunungcola"),
@@ -110,7 +112,7 @@ async def test_the_other_candidates_are_reported_in_ncbi_order(ncbi: _NCBI) -> N
         (7211, "Tephritidae"),
     ]
     # positive control: a name matching one taxon has none, and costs no record counts
-    only = await taxonomy.resolve_taxon(None, "Arabidopsis thaliana")
+    only = await taxonomy.resolve_taxon(ncbi.client, "Arabidopsis thaliana")
     assert only is not None and only.taxid == 3702 and only.alternatives == ()
     assert not any("3702" in term for term in ncbi.counted)
 
@@ -120,12 +122,12 @@ async def test_an_exact_scientific_name_wins_without_counting_records(ncbi: _NCB
     even if it had more records, and no records are counted."""
     ncbi.names["zea mays"] = [381124, 4577]
     ncbi.taxa[381124] = ("Zea mays subsp. mays", 9_999_999_999, 9_999_999_999)
-    info = await taxonomy.resolve_taxon(None, "zea mays")
+    info = await taxonomy.resolve_taxon(ncbi.client, "zea mays")
     assert info is not None and info.taxid == 4577
     assert [a.taxid for a in info.alternatives] == [381124]
     assert ncbi.counted == []
     # positive control: without an exact match the counts decide, and the subspecies wins
-    info = await taxonomy.resolve_taxon(None, "maize")
+    info = await taxonomy.resolve_taxon(ncbi.client, "maize")
     assert info is not None and info.taxid == 381124
     assert ncbi.counted == ["txid381124[Organism:noexp]", "txid4577[Organism:noexp]"]
 
@@ -133,7 +135,7 @@ async def test_an_exact_scientific_name_wins_without_counting_records(ncbi: _NCB
 async def test_homonyms_are_ranked_by_their_own_records(ncbi: _NCBI) -> None:
     """All three "Drosophila" taxa match the name exactly, so the counts rank them; the
     taxon's own records decide (45 vs 0 vs 0), and no descendant count is needed."""
-    info = await taxonomy.resolve_taxon(None, "Drosophila")
+    info = await taxonomy.resolve_taxon(ncbi.client, "Drosophila")
     assert info is not None and info.taxid == 7215
     assert all(term.endswith("[Organism:noexp]") for term in ncbi.counted)
     assert len(ncbi.counted) == 3
@@ -143,28 +145,28 @@ async def test_a_tie_on_own_records_goes_to_descendants_then_the_smaller_taxid(
     ncbi: _NCBI,
 ) -> None:
     ncbi.names["tied"] = [32281, 2081351]  # both "Drosophila", 0 own records each
-    info = await taxonomy.resolve_taxon(None, "tied")
+    info = await taxonomy.resolve_taxon(ncbi.client, "tied")
     assert info is not None and info.taxid == 32281  # 409,797 with descendants vs 4
     ncbi.taxa[32281] = ("Drosophila", 0, 4)
     ncbi.names["tied again"] = [32281, 2081351]
-    info = await taxonomy.resolve_taxon(None, "tied again")
+    info = await taxonomy.resolve_taxon(ncbi.client, "tied again")
     assert info is not None and info.taxid == 32281  # 4 vs 4: the smaller taxid
     ncbi.names["tied once more"] = [2081351, 32281]  # the order NCBI lists does not decide
-    info = await taxonomy.resolve_taxon(None, "tied once more")
+    info = await taxonomy.resolve_taxon(ncbi.client, "tied once more")
     assert info is not None and info.taxid == 32281
 
 
 async def test_the_chosen_taxon_is_cached_with_its_alternatives(ncbi: _NCBI) -> None:
-    first = await taxonomy.resolve_taxon(None, "mouse")
+    first = await taxonomy.resolve_taxon(ncbi.client, "mouse")
     asked = len(ncbi.counted)
-    again = await taxonomy.resolve_taxon(None, " MOUSE ")
+    again = await taxonomy.resolve_taxon(ncbi.client, " MOUSE ")
     assert again is first and len(ncbi.counted) == asked == 2
     assert [a.taxid for a in again.alternatives] == [10088]
 
 
 async def test_the_search_echo_shows_the_alternatives(ncbi: _NCBI) -> None:
     errors: dict[str, str] = {}
-    query, echo = await _ontology.expand_organism(None, "rnaseq", "Drosophila", errors)
+    query, echo = await _ontology.expand_organism(ncbi.client, "rnaseq", "Drosophila", errors)
     assert errors == {}
     assert echo is not None and echo.taxid == 7215
     assert [(a.taxid, a.name) for a in echo.alternatives] == [
@@ -173,7 +175,9 @@ async def test_the_search_echo_shows_the_alternatives(ncbi: _NCBI) -> None:
     ]
     assert query == '(rnaseq) AND ("Drosophila")'
     # positive control: an unambiguous name echoes no alternatives
-    _query, echo = await _ontology.expand_organism(None, "rnaseq", "Arabidopsis thaliana", errors)
+    _query, echo = await _ontology.expand_organism(
+        ncbi.client, "rnaseq", "Arabidopsis thaliana", errors
+    )
     assert echo is not None and echo.alternatives == []
 
 
