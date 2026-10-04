@@ -13,6 +13,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   with other servers, and the sources table. The per-tool reference, the HTTP transport
   and the environment variables moved to `docs/reference.md`. The demo is recorded from
   live calls (`examples/_demo_search.py`) instead of a network-free tools listing.
+- The default `rank="relevance"` order puts hits that name more of the search first:
+  each facet you set (any of its expanded names), then each query word, found in the
+  title, description, subjects or organism. It used to take each source's hits in turn,
+  so every source's first hit reached the top, named the organism or not: for
+  "transcriptome" in *Orobanche aegyptiaca*, a crustacean and a cobra outranked the
+  *Phelipanche* transcriptomes. Hits that name as much keep the old order, and nothing
+  is dropped.
 
 ### Fixed
 
