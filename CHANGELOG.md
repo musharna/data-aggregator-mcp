@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.58.0] - 2026-10-04
+
 ### Fixed
 
 - An `organism` name that matches several NCBI taxa no longer resolves to whichever one
