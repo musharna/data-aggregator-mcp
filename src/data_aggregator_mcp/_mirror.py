@@ -178,16 +178,16 @@ def collapse_mirrors(records: list[DataResource]) -> list[DataResource]:
         members.setdefault(root(i), []).append(i)
     groups: list[list[int]] = []
     for g in members.values():
-        rep: dict[str, int] = {}
+        by_source: dict[str, list[int]] = {}
         for i in g:
-            s = records[i].source
-            if s not in rep or _representative_rank(records[i]) < _representative_rank(
-                records[rep[s]]
-            ):
-                rep[s] = i
-        groups.append(sorted(rep.values()))
-        groups.extend([i] for i in g if i not in rep.values())
-    groups.sort(key=min)
+            by_source.setdefault(records[i].source, []).append(i)
+        reps = sorted(
+            min(ids, key=lambda i: _representative_rank(records[i])) for ids in by_source.values()
+        )
+        groups.append(reps)
+        groups.extend([i] for i in g if i not in reps)
+    # Each group is ascending and no two share a record, so this is earliest-record order.
+    groups.sort()
 
     out: list[DataResource] = []
     for g in groups:
