@@ -6,6 +6,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The provenance crates now conform to RO-Crate 1.1: the dossier
+  (`resolve(format="provenance")`), the search run crate (`search(provenance=true)`) and the
+  plain `format="ro-crate"` export all pass rocrate-validator's RO-Crate 1.1 profile. Before,
+  a JSON-LD reader dropped every assessment field (FAIR scores, `is_latest`, normalized SPDX,
+  retraction status, the run's errors and sources) because the crate's context did not
+  define them, and the validator failed run crates, and dossiers of records without a
+  description or licence. What changes in the output:
+  - `@context` is a list: RO-Crate's context, then our own terms, which are defined in
+    each crate and documented in [docs/vocab.md](docs/vocab.md).
+  - The root always has a `description`, a `license` and a `datePublished`. A record that
+    lacks one gets a stand-in that says so (for example "No licence stated"); it never
+    gets a licence the source did not give. `license` is now a reference to a licence
+    entity (its SPDX page when the licence is recognised), not a string.
+  - Nested objects are entities of their own: a run's `errors` become schema.org `error`
+    entries, ontology expansions `DefinedTerm`s, and a record's cross-identifiers and
+    links `PropertyValue`s.
+  - The dossier's `endTime` is when the assessment ran, not the record's last change; that
+    change is now the root's `dateModified`.
+
 ## [0.55.2] - 2026-10-03
 
 ### Fixed
