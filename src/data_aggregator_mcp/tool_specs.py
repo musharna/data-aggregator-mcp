@@ -97,7 +97,10 @@ TOOLS: list[types.Tool] = [
                     "description": "Optional organism name. Resolved via NCBI Taxonomy; "
                     "the query is expanded with the canonical name + synonyms (e.g. "
                     "'Orobanche aegyptiaca' also matches 'Phelipanche aegyptiaca'). The "
-                    "expansion is echoed in taxon_expansion.",
+                    "expansion is echoed in taxon_expansion. A name matching several "
+                    "taxa resolves to the one it is the scientific name of, else the one "
+                    "with the most nucleotide records ('Drosophila' → the fly genus, not "
+                    "the fungus); the others are listed in taxon_expansion.alternatives.",
                 },
                 "disease": {
                     "type": "string",
