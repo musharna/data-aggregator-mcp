@@ -19,6 +19,7 @@ element type and shared with multi-db adapters; everything here is specific to
 
 from __future__ import annotations
 
+import itertools
 import re
 
 from data_aggregator_mcp import sources
@@ -123,59 +124,70 @@ def survivor_rank(r: DataResource) -> tuple[bool, bool]:
     return (not r.doi, r.id.startswith("datacite:"))
 
 
+def _representative_rank(r: DataResource) -> tuple[bool, bool, bool, str]:
+    """Which of one source's records in a group stands for the deposit (lower first):
+    the better ``survivor_rank``, then the latest version, then the smaller id, so the
+    choice does not depend on the order the records arrive in."""
+    return (*survivor_rank(r), r.is_latest is not True, r.id)
+
+
 def collapse_mirrors(records: list[DataResource]) -> list[DataResource]:
     """Conservative, PURE content-dedup ON TOP OF exact-DOI dedup. Groups records
     that are the SAME dataset under different/no DOIs (a cross-repo mirror), folds
     each group to one survivor, and annotates the survivor's ``mirrors[]`` with the
     other members.
 
-    Two groups are one dataset if a record of each shares ANY full ``algo:hex`` file
-    checksum (byte-identical → definitional identity, source-agnostic) OR the same
-    ``fingerprint_key`` (normalized-title + first-author name + year, all present),
-    and groups are merged until no two are. Title-only or partial matches never merge.
+    A mirror is a copy in ANOTHER repository, so only records of different sources
+    match: two share ANY full ``algo:hex`` file checksum (byte-identical → the same
+    data) OR the same ``fingerprint_key`` (normalized-title + first-author name +
+    year, all present). Title-only or partial matches never match. Matches chain
+    (A~B, B~C puts A, B, C in one group).
 
-    A fingerprint match never merges two groups whose records ALL come from one
-    source: two same-source records that share title+author+year are almost always
-    VERSION SIBLINGS (e.g. Zenodo record v1/v2), a relationship already modeled by
-    ``is_latest``/``superseded_by`` (B1). Once a group spans two sources, a matching
-    record from either joins it: through DataCite a deposit is listed under its
-    concept DOI and each version DOI, and those fold with the copy in the other
-    repository into one result. (Byte-identical checksums fold regardless of source:
-    identical bytes are the same data, and version siblings differ in bytes.)
+    Records of one source never fold into each other, whatever they share (user
+    decision 2026-10-04): they are versions of one deposit (Zenodo v1/v2, or through
+    DataCite a concept DOI and its version DOIs), which ``is_latest``/``superseded_by``
+    describe, and they can share unchanged files byte for byte. A copy in another
+    repository mirrors the deposit, so when a group holds several records of one
+    source, only that source's representative (``_representative_rank``) folds; the
+    deposit's other records stay separate hits. (Zenodo 11459539, its concept DOI
+    through DataCite and its ResearchGate copy: the copy folds under 11459539, the
+    concept DOI stays a hit.)
 
     The survivor is the member with the best ``survivor_rank``, ties going to the
     earliest in ``records``; its ``mirrors`` lists every OTHER member, in ``records``
     order, as ``Mirror(source,id,doi)``. Survivors come out in the order of each
-    group's earliest record. Deterministic, no I/O.
+    group's earliest record, and the groups do not depend on that order.
+    Deterministic, no I/O.
     """
     keys = [fingerprint_key(r) for r in records]
     sums = [checksums(r) for r in records]
+    parent = list(range(len(records)))
 
-    def same_dataset(a: list[int], b: list[int]) -> bool:
-        """Whether two groups (indices into ``records``) hold one dataset."""
-        if any(sums[i] & sums[j] for i in a for j in b):
-            return True
-        if not any(keys[i] is not None and keys[i] == keys[j] for i in a for j in b):
-            return False
-        return len({records[i].source for i in a + b}) > 1
+    def root(i: int) -> int:
+        while parent[i] != i:
+            i = parent[i]
+        return i
 
-    # Merge to a fixpoint: a group can match an earlier one only through a record a
-    # later merge brings in (A~D, B~E, C~D and C~E: C joins A, then B matches A+C), so
-    # one pass is not enough. A pass that merges leaves fewer groups, so one pass per
-    # record always reaches the fixpoint.
-    groups = [[i] for i in range(len(records))]
-    for _ in records:
-        merged: list[list[int]] = []
-        for g in groups:
-            for mg in merged:
-                if same_dataset(g, mg):
-                    mg.extend(g)
-                    break
-            else:
-                merged.append(g)
-        if len(merged) == len(groups):
-            break
-        groups = merged
+    for i, j in itertools.combinations(range(len(records)), 2):
+        if records[i].source == records[j].source:
+            continue
+        if sums[i] & sums[j] or (keys[i] is not None and keys[i] == keys[j]):
+            parent[max(root(i), root(j))] = min(root(i), root(j))
+    members: dict[int, list[int]] = {}
+    for i in range(len(records)):
+        members.setdefault(root(i), []).append(i)
+    groups: list[list[int]] = []
+    for g in members.values():
+        rep: dict[str, int] = {}
+        for i in g:
+            s = records[i].source
+            if s not in rep or _representative_rank(records[i]) < _representative_rank(
+                records[rep[s]]
+            ):
+                rep[s] = i
+        groups.append(sorted(rep.values()))
+        groups.extend([i] for i in g if i not in rep.values())
+    groups.sort(key=min)
 
     out: list[DataResource] = []
     for g in groups:

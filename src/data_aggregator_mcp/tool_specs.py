@@ -170,7 +170,9 @@ TOOLS: list[types.Tool] = [
                         "annotating the survivor with the folded copies under mirrors[]. "
                         "Conservative: a merge needs a shared file checksum OR identical "
                         "(normalized-title, first-author name, year); title-only or partial "
-                        "matches never merge. Intra-page / best-effort only (a mirror on a "
+                        "matches never merge. Records of one repository never fold into each "
+                        "other: versions and a concept DOI stay separate hits, and a copy "
+                        "elsewhere folds with the latest one. Intra-page / best-effort only (a mirror on a "
                         "different page is not collapsed), so a page may return fewer than size "
                         "items; pagination is unaffected."
                     ),

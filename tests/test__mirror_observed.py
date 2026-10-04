@@ -32,45 +32,52 @@ def _r(
 
 
 def _chain() -> list[DataResource]:
-    """Five records joined only through a chain of shared checksums that one merge pass
-    cannot close: c meets a only through d and b only through e."""
+    """Five records of five sources joined only through a chain of shared checksums: c
+    meets a only through d and b only through e."""
     return [
         _r("zenodo:a", sums=("md5:x",)),
-        _r("zenodo:b", doi="10.1/b", sums=("md5:y",)),
-        _r("zenodo:c", doi="10.1/c", sums=("md5:z", "md5:w")),
-        _r("zenodo:d", doi="10.1/d", sums=("md5:x", "md5:z")),
-        _r("zenodo:e", doi="10.1/e", sums=("md5:y", "md5:w")),
+        _r("figshare:b", source="figshare", doi="10.1/b", sums=("md5:y",)),
+        _r("dryad:c", source="dryad", doi="10.1/c", sums=("md5:z", "md5:w")),
+        _r("osf:d", source="osf", doi="10.1/d", sums=("md5:x", "md5:z")),
+        _r("dataone:e", source="dataone", doi="10.1/e", sums=("md5:y", "md5:w")),
     ]
 
 
 def test_the_survivor_is_the_earliest_best_ranked_record_and_mirrors_keep_input_order() -> None:
-    """a has no DOI, so the survivor is the first DOI-bearing record, b. Merging in
-    passes put d ahead of b in the group, and d was chosen."""
+    """a has no DOI, so the survivor is the first DOI-bearing record, b; the mirrors are
+    every other member, in input order."""
     out = _mirror.collapse_mirrors(_chain())
-    assert [r.id for r in out] == ["zenodo:b"]
+    assert [r.id for r in out] == ["figshare:b"]
     assert out[0].mirrors == [
-        Mirror(source="zenodo", id=i, doi=d)
+        Mirror(source=i.partition(":")[0], id=i, doi=d)
         for i, d in [
             ("zenodo:a", None),
-            ("zenodo:c", "10.1/c"),
-            ("zenodo:d", "10.1/d"),
-            ("zenodo:e", "10.1/e"),
+            ("dryad:c", "10.1/c"),
+            ("osf:d", "10.1/d"),
+            ("dataone:e", "10.1/e"),
         ]
     ]
 
 
 def test_the_groups_do_not_depend_on_the_order_records_arrive_in() -> None:
+    """f and h are two Zenodo records of one deposit and g a Dryad copy matching both:
+    g folds with the deposit's representative (neither is latest or has a DOI, so the
+    smaller id, f) and h stays a hit, in every order. j and k fold."""
     recs = [
         *_chain(),
         _r("zenodo:f", title="Atlas", author="Ada Lovelace", year=2020),
         _r("dryad:g", source="dryad", title="Atlas", author="Lovelace, Ada", year=2020),
         _r("zenodo:h", title="Atlas", author="Ada Lovelace", year=2020),
         _r("zenodo:i", title="Atlas", author="Ada Lovelace", year=2021),
+        _r("figshare:j", source="figshare", title="Map", author="Mary Somerville", year=2019),
+        _r("osf:k", source="osf", title="Map", author="Somerville, Mary", year=2019),
     ]
     expected = {
-        frozenset({"zenodo:a", "zenodo:b", "zenodo:c", "zenodo:d", "zenodo:e"}),
-        frozenset({"zenodo:f", "dryad:g", "zenodo:h"}),
+        frozenset({"zenodo:a", "figshare:b", "dryad:c", "osf:d", "dataone:e"}),
+        frozenset({"zenodo:f", "dryad:g"}),
+        frozenset({"zenodo:h"}),
         frozenset({"zenodo:i"}),
+        frozenset({"figshare:j", "osf:k"}),
     }
     for perm in itertools.islice(itertools.permutations(recs), 0, None, 997):
         out = _mirror.collapse_mirrors(list(perm))

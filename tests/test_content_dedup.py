@@ -205,13 +205,34 @@ def test_no_merge_same_source_version_siblings() -> None:
     assert all(r.mirrors == [] for r in out)
 
 
-def test_same_source_byte_identical_still_folds_on_checksum() -> None:
-    # The CROSS-source rule applies only to the fingerprint path. Byte-identical
-    # files (shared checksum) are the same data and fold regardless of source.
+def test_same_source_never_folds_even_on_a_shared_checksum() -> None:
+    # User decision 2026-10-04: records of one source never fold. Two versions of one
+    # Zenodo deposit keep unchanged files byte for byte, so a shared checksum folded v1
+    # under v2 as its "mirror".
     a = _res("zenodo:1", "zenodo", title="One", year=2020, checksums=["sha256:beef"])
     b = _res("zenodo:2", "zenodo", title="Two", year=2021, checksums=["sha256:beef"])
     out = router._collapse_mirrors([a, b])
-    assert len(out) == 1
+    assert [(r.id, r.mirrors) for r in out] == [("zenodo:1", []), ("zenodo:2", [])]
+    # control: the same bytes in another repository fold
+    c = _res("dryad:3", "dryad", title="Three", year=2022, checksums=["sha256:beef"])
+    assert [m.id for r in router._collapse_mirrors([a, c]) for m in r.mirrors] == ["dryad:3"]
+
+
+def test_a_copy_matching_two_versions_folds_with_the_latest_and_the_other_stays_a_hit() -> None:
+    # A Dryad copy matching both Zenodo versions mirrors the deposit: it folds with the
+    # deposit's latest version, and the older version stays a separate hit (it folded
+    # in too, as a "mirror" of its own successor, before 2026-10-04).
+    v1 = _res("zenodo:1", "zenodo", title="Atlas", year=2020, doi="10.5281/zenodo.1")
+    v2 = _res("zenodo:2", "zenodo", title="Atlas", year=2020, doi="10.5281/zenodo.2")
+    v1, v2 = v1.model_copy(update={"is_latest": False}), v2.model_copy(update={"is_latest": True})
+    copy = _res("dryad:3", "dryad", title="Atlas", year=2020, doi="10.5061/dryad.3")
+    for page in ([v1, copy, v2], [v2, copy, v1], [copy, v1, v2]):
+        out = router._collapse_mirrors(page)
+        groups = {frozenset([r.id, *(m.id for m in r.mirrors)]) for r in out}
+        assert groups == {frozenset({"zenodo:1"}), frozenset({"zenodo:2", "dryad:3"})}, page
+    # control: the older version alone on the page is the deposit's representative
+    folded = router._collapse_mirrors([v1, copy])
+    assert [(r.id, [m.id for m in r.mirrors]) for r in folded] == [("zenodo:1", ["dryad:3"])]
 
 
 def test_no_merge_title_only_no_creators() -> None:
@@ -230,8 +251,8 @@ def test_no_creators_still_merges_on_checksum() -> None:
         files=[FileEntry(name="a", checksum="md5:zz")],
     )
     b = DataResource(
-        id="zenodo:2",
-        source="zenodo",
+        id="dryad:2",
+        source="dryad",
         kind="dataset",
         title="Y",
         files=[FileEntry(name="b", checksum="md5:zz")],
@@ -305,10 +326,10 @@ def test_survivor_order_preserved() -> None:
 
 def test_record_never_its_own_mirror() -> None:
     a = _res("zenodo:1", "zenodo", title="Atlas", year=2020, doi="10.x/1")
-    b = _res("zenodo:2", "zenodo", title="Atlas", year=2020, doi="10.x/2")
+    b = _res("dryad:2", "dryad", title="Atlas", year=2020, doi="10.x/2")
     out = router._collapse_mirrors([a, b])
     survivor = out[0]
-    assert all(m.id != survivor.id for m in survivor.mirrors)
+    assert [m.id for m in survivor.mirrors] == ["dryad:2"]  # folded, and not into itself
 
 
 def test_collapse_is_pure_and_deterministic() -> None:
