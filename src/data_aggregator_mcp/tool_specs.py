@@ -160,7 +160,10 @@ TOOLS: list[types.Tool] = [
                     "enum": ["relevance", "semantic"],
                     "default": "relevance",
                     "description": (
-                        "Result ordering. 'relevance' (default) = upstream/merged order. "
+                        "Result ordering. 'relevance' (default) = hits that name more of the "
+                        "search first (each facet, then each query word, in the title, "
+                        "description, subjects or organism), each source's own order kept "
+                        "among equal hits. "
                         "'semantic' re-ranks the fetched page by embedding similarity to the "
                         "query (needs EMBEDDING_API_BASE; degrades to relevance order with an "
                         "errors['semantic'] note if unconfigured). In semantic mode pagination "
