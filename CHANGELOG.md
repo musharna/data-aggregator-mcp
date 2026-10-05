@@ -16,6 +16,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A deposit held by several sources ranks by the best-described of its copies. The copy
   kept is the most fetchable one, which can have no description (DataONE's), so it sank
   below hits naming nothing, and the DataCite copy behind it stopped DataCite from paging.
+- DataCite, Zenodo, BioStudies, OmicsDI and UniProt are sent each plain word of a query
+  with its plural ("snow leopard" goes as `(snow OR snows) (leopard OR leopards)`). They
+  match words exactly, so "snow leopard" missed studies titled "snow leopards": a 6-page
+  dataset search for it now reaches 7 of the 10 snow leopard studies in the head-to-head
+  benchmark, up from 4. Quoted phrases, field queries, wildcards, operators and words
+  ending in "s" are sent as written, and a cursor from an earlier version keeps its query.
 
 ### Fixed
 
