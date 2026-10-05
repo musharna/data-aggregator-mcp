@@ -14,6 +14,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and the environment variables moved to `docs/reference.md`. The demo is recorded from
   live calls (`examples/_demo_search.py`) instead of a network-free tools listing.
 
+### Fixed
+
+- A failed `fetch` no longer deletes a file already on disk. Downloads stream into a
+  temp file beside the target and replace it only once verified; before, a re-fetch of
+  a file with no checksum or size (every GEO supplementary file) truncated the good copy
+  and then deleted it if the download failed, for example on `max_bytes`.
+
 ## [0.59.0] - 2026-10-04
 
 ### Added
