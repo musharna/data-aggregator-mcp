@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.61.0] - 2026-10-05
+
 ### Fixed
 
 - A large `search` page no longer gets lost in Claude Code. A 50-hit page could run to
