@@ -1,0 +1,169 @@
+task: R1
+criteria: >-
+  Included: any publicly released deposit (as of 2026-10-05) holding sequencing reads, a genome or
+  transcriptome assembly, or sequence-derived expression data where Phelipanche aegyptiaca
+  (syn. Orobanche aegyptiaca, NCBI taxid 99112) tissue or DNA/RNA was sequenced. This covers
+  single-species and multi-species projects (if at least one P. aegyptiaca run, sample or assembly
+  is in the deposit) and host-parasite experiments with P. aegyptiaca samples. One study = one
+  deposit plus all its aliases: BioProject, SRA/ENA study, GEO series, TSA/GWH assembly, GSA CRA, and a
+  Figshare/Zenodo copy of the same files. Complete organelle genome assemblies (plastome, mitogenome)
+  count as genome assemblies; they and the bacterial-amplicon study PRJEB7137 are marked
+  confidence: borderline. Excluded: host-only data (even from broomrape-infected hosts); other
+  Phelipanche/Orobanche species; data-less BioProject registrations and NCBI organism umbrellas;
+  unreleased (embargoed) deposits; single-locus GenBank records (ITS, rps2, single genes, patent
+  sequences, the 132 partial mRNAs from PRJNA362206); journal supplementary tables and figures;
+  posters; phenotype/script deposits; soil/rhizosphere metagenomes; viruses of P. aegyptiaca.
+studies:
+  - key: S1
+    title: Parasitic Plant Genome Project (PPGP) - 454/Illumina EST and WGS reads of P. aegyptiaca (multi-species)
+    year: 2010
+    ids: [PRJNA340868, SRP083761, SRP001053]
+    archives: [SRA, ENA]
+    confidence: core
+    evidence: 9 of 27 runs are taxid 99112 (EST 454/GAII 2010-2011, WGS HiSeq 2016); SRP001053 is the original PPGP SRA study ("Transcriptome sequencing of Orobanche aegyptiaca, Striga hermonthica, Triphysaria"), and NCBI resolves it to the same 27 records.
+  - key: S2
+    title: Phelipanche aegyptiaca strain Hami transcriptome - RNA-seq of seed germination stages
+    year: 2015
+    ids: [PRJNA295481, SRP063686]
+    archives: [SRA, ENA]
+    confidence: core
+    evidence: 1 RNA-seq run (SRR2401466), organism P. aegyptiaca (taxid 99112).
+  - key: S3
+    title: Orobanche aegyptiaca seed germination RNA-seq (dormant, conditioned, GR24)
+    year: 2015
+    ids: [PRJNA296549, SRP063959, PRJNA296547]
+    archives: [SRA, ENA]
+    confidence: core
+    evidence: 3 RNA-seq runs, taxid 99112; the sibling PRJNA296547 has no runs but shares BioSample SAMN04100243 and the same description. Cited by Bao et al. 2016 (PMC4964512, SRR2477712).
+  - key: S4
+    title: Bacterial community composition in parasitic plant (P. aegyptiaca - tomato microbiome)
+    year: 2014
+    ids: [PRJEB7137, ERP006828]
+    archives: [ENA, SRA]
+    confidence: borderline
+    evidence: MiSeq amplicon/WXS reads from P. aegyptiaca tissue samples labelled taxid 99112; cited by Iasur Kruh et al. 2017 (PMC5331046). Bacterial 16S rather than plant sequence.
+  - key: S5
+    title: Transcriptome analysis of P. aegyptiaca seed germination stimulated by fluridone, TIS108 and GR24
+    year: 2017
+    ids: [PRJNA388245, SRP109112, GFQM00000000, GFQM01000000]
+    archives: [SRA, ENA, GenBank-TSA]
+    confidence: core
+    evidence: 15 RNA-seq runs, taxid 99112, plus TSA assembly GFQM00000000 (89,277 contigs) under the same BioProject; PLoS One 2017 (PMC5669479).
+  - key: S6
+    title: Small RNAs deep sequencing from tomato-Orobanche interaction (tubercle and interface)
+    year: 2022
+    ids: [GSE181578, PRJNA752600, SRP331360]
+    archives: [GEO, SRA, ENA]
+    confidence: core
+    evidence: 2 miRNA-seq samples (GSM5506484 interface, GSM5506485 tubercle), organism P. aegyptiaca; parasite tissue in a host-parasite experiment. Same paper as Cuscuta GSE181576 (PMID 35861439), but that is a separate series and not a SuperSeries.
+  - key: S7
+    title: Phelipanche aegyptiaca raw sequence reads - normal RNA-seq (melon attachment-stage secretory proteins)
+    year: 2022
+    ids: [PRJNA873060, SRP394271]
+    archives: [SRA, ENA]
+    confidence: core
+    evidence: 12 RNA-seq runs, taxid 99112; cited by Plants 2024 "Secretory Proteins ... Parasitism of Melon by P. aegyptiaca" (PMC11548055).
+  - key: S8
+    title: Phelipanche aegyptiaca raw sequence reads - normal RNAseq
+    year: 2023
+    ids: [PRJNA929515, SRP420096]
+    archives: [SRA, ENA]
+    confidence: core
+    evidence: 12 RNA-seq runs (HiSeq 2500), taxid 99112, Shihezi University.
+  - key: S9
+    title: Transcriptome study of parasitic differences in P. aegyptiaca of different populations
+    year: 2024
+    ids: [PRJNA1083627, SRP493524]
+    archives: [SRA, ENA]
+    confidence: core
+    evidence: 18 RNA-seq runs, taxid 99112.
+  - key: S10
+    title: Transcriptome sequencing of 15 Phelipanche aegyptiaca Pers. samples (IAA / prehaustorium time course)
+    year: 2025
+    ids: [PRJNA1123407, SRP513609]
+    archives: [SRA, ENA]
+    confidence: core
+    evidence: 15 runs, taxid 99112; cited with S11 by the 6-hydroxynicotinic acid / melon prehaustorium paper (PMC12339233).
+  - key: S11
+    title: Transcriptome sequencing of 18 Phelipanche aegyptiaca Pers. samples (IAA, DMBQ, inhibitor treatments)
+    year: 2025
+    ids: [PRJNA1197418, SRP551085]
+    archives: [SRA, ENA]
+    confidence: core
+    evidence: 18 runs, taxid 99112; a separate BioProject with separate runs from S10, cited by the same paper (PMC12339233).
+  - key: S12
+    title: Transcriptome sequencing of 9 Phelipanche aegyptiaca samples (IAA-mediated haustorium formation)
+    year: 2025
+    ids: [PRJNA1236295, SRP570469]
+    archives: [SRA, ENA]
+    confidence: core
+    evidence: 9 RNA-seq runs, taxid 99112; cited by PMC12158121.
+  - key: S13
+    title: Comparative genomics of orobanchaceous species with different parasitic lifestyles (P. aegyptiaca genome Pae_v1.0)
+    year: 2022
+    ids: [PRJCA008847, CRA007634, GWHBHPU00000000, SAMC695117, 10.6084/m9.figshare.24947553]
+    archives: [NGDC-GSA, NGDC-GWH, Figshare]
+    confidence: core
+    evidence: PacBio/survey WGS reads of P. aegyptiaca (CRX474755, CRR535110-535114) and the annotated genome assembly GWHBHPU00000000 (Xu et al. 2022 Mol Plant, 10.1016/j.molp.2022.07.007). The Figshare deposit (Xu postdoctoral thesis supplement) contains Pae.genome.1.1.fasta.gz and gff3, so it is a copy of the same assembly. Multi-species; also O. cumana and Lindenbergia.
+  - key: S14
+    title: Substrate transfer between broomrape and hosts (P. aegyptiaca on tobacco RNA-seq)
+    year: 2025
+    ids: [PRJCA015315, CRA010056]
+    archives: [NGDC-GSA]
+    confidence: core
+    evidence: Host-parasite experiment; 3 P. aegyptiaca RNA-seq experiments (CRX631553-631555) and 3 Nicotiana tabacum ones, released 2025-03-02.
+  - key: S15
+    title: Phelipanche aegyptiaca chloroplast complete genome (Wicke et al. 2016 PNAS)
+    year: 2016
+    ids: [KU212370]
+    archives: [GenBank, ENA]
+    confidence: borderline
+    evidence: Complete plastome assembly (60,947 bp, Illumina, CLC); a GenBank record only, with no reads deposited for P. aegyptiaca (that paper's PRJNA253667 holds only Erythranthe reads).
+  - key: S16
+    title: Phelipanche aegyptiaca mitochondrial genome, chromosomes 1-5 (Feng & Wicke 2025, Plant Cell Physiol)
+    year: 2025
+    ids: [PX150055, PX150056, PX150057, PX150058, PX150059]
+    archives: [GenBank, ENA]
+    confidence: borderline
+    evidence: Complete multichromosomal mitogenome assembly (5 records, about 1.1 Mb, SPAdes/CLC/Velvet, Illumina). Organelle assembly only; no linked BioProject.
+near_misses:
+  - {ids: [PRJNA872504], why_excluded: "Data-less sibling registration of S7 (same lab, same week). It has its own BioSample SAMN30468135 but 0 SRA runs at NCBI and ENA. Could be argued as an alias of S7."}
+  - {ids: [PRJNA1083435], why_excluded: "Data-less sibling registration of S9: 0 runs and 0 BioSamples."}
+  - {ids: [PRJNA296719], why_excluded: "NCBI organism-overview umbrella for taxid 99112; a container, not a study."}
+  - {ids: [GSE181576, PRJNA752587, SRP331356], why_excluded: "Cuscuta campestris sRNA series from the same paper as S6; no P. aegyptiaca samples, and not a SuperSeries of GSE181578."}
+  - {ids: [PRJNA362206], why_excluded: "Zeng et al. 2017 deep eudicot phylogeny: only 132 partial nuclear-gene mRNA GenBank records (KY5xxxxx) for P. aegyptiaca; no reads or assembly."}
+  - {ids: [CRA010630], why_excluded: "Second GSA dataset under PRJCA015315; not released until 2027-06-16."}
+  - {ids: [PRJCA050165], why_excluded: "Cited by a 2026 tobacco/P. aegyptiaca paper (PMC12977904) but not released until 2027-11-04."}
+  - {ids: [PRJNA1182506, PRJNA1182524], why_excluded: "Tomato rhizosphere soil metagenome amplicons (JTF001 / O. aegyptiaca parasitism study); no P. aegyptiaca tissue sequenced."}
+  - {ids: [GSE245472, PRJNA1028566], why_excluded: "Host-only tomato root RNA-seq; parasite is Phelipanche (Orobanche) ramosa."}
+  - {ids: [GSE284240], why_excluded: "Host-only tomato phosphate RNA-seq cited by a broomrape-resistance paper."}
+  - {ids: [GCA_031320515.1], why_excluded: "Phelipanche aegyptiaca amalgavirus 1 genome (virus, taxid 2982066)."}
+  - {ids: [10.5281/zenodo.22259959, 10.5281/zenodo.22259958], why_excluded: "Poster on P. aegyptiaca host-specific dual RNA-seq; no data deposited."}
+  - {ids: [10.15482/usda.adc/1503694, 10.15482/usda.adc/1503914, 10.3886/e250656, 10.3886/e250363], why_excluded: "Ag Data Commons / DataLumos deposits of phenotype, ROS, qPCR data and R scripts (Arabidopsis-P. aegyptiaca immunity, effectors); no reads or assemblies."}
+  - {ids: [10.5061/dryad.w3r228174], why_excluded: "Pedicularis genome Dryad deposit; P. aegyptiaca appears only as gene-ID lists, with no sequence data."}
+  - {ids: [10.5061/dryad.t2m75, 10.5061/dryad.31cf160, 10.5061/dryad.7b86c, 10.5061/dryad.xd2547dpk], why_excluded: "Alignments, phylogenetic marker sets and ISSR genotypes; no reads or assemblies (the S15 plastome lives in GenBank)."}
+  - {ids: [10.1371/journal.pone.0187539, 10.3389/fmicb.2024.1408926.s001, 10.3389/fpls.2023.1070319.s004], why_excluded: "Journal supplementary tables/figures auto-mirrored on Figshare; not independent data deposits."}
+  - {ids: [PRJNA1169115, PRJNA77835, PRJNA1066123, PRJDB5395, PRJNA1230823], why_excluded: "Multi-species Orobanchaceae sequencing projects with no P. aegyptiaca runs (checked organism lists at NCBI and ENA)."}
+  - {ids: [EP2563112 patent sequences (JB304250 etc.), Chinese ITS/rps2 isolates, PhAeBc5 clones, KAI2d genes], why_excluded: "Single-locus GenBank/patent records, not datasets."}
+queries:
+  - "esearch taxonomy 'Phelipanche aegyptiaca' -> 1 (taxid 99112); 'Orobanche aegyptiaca' -> 1 (99112)"
+  - "esearch sra txid99112[Organism:exp] -> 116; '\"Phelipanche aegyptiaca\"' -> 116; '\"Orobanche aegyptiaca\"' -> 152 (36 extra = soil metagenome PRJNA1182506/1182524)"
+  - "esearch bioproject txid99112[Organism:exp] -> 16; '\"Phelipanche aegyptiaca\"' -> 13; '\"Orobanche aegyptiaca\"' -> 5"
+  - "esearch bioproject '(Orobanche OR Phelipanche OR broomrape OR broomrapes) NOT txid99112[Organism:exp]' -> 76 (only 3 mention aegyptiaca; none add P. aegyptiaca data)"
+  - "esearch gds txid99112[Organism:exp] -> 4 (GSE181578, GSE181576, GSMs, GPL30484); gds '(Orobanche OR Phelipanche OR broomrape) AND gse[ETYP]' -> 5"
+  - "esearch assembly txid99112 / both names -> 0"
+  - "esearch biosample txid99112 -> 132; '\"Orobanche aegyptiaca\"' -> 169 (extras: 36 soil, 1 Lotus)"
+  - "esearch nuccore txid99112 -> 429; AND tsa_master[prop] -> 1 (GFQM00000000); AND wgs_master -> 0; organelle complete -> KU212370, PX150055-59"
+  - "ENA portal search result=read_run query=tax_tree(99112) -> 118 runs in 12 studies; result=study -> 11; result=tsa_set -> 1 (GFQM01000000); assembly/wgs_set/analysis -> 0"
+  - "ENA portal result=study query=study_title/study_description='*aegyptiaca*','*Phelipanche*','*broomrape*','*Orobanche*' -> no new P. aegyptiaca studies"
+  - "NGDC search api /search/api/specific?db=bioproject&q=Phelipanche aegyptiaca -> 8 (adds PRJCA015315); db=gsa -> 107 (adds CRA007634, CRA010056); db=gwh -> 2 (GWHBHPU00000000, virus GCA_031320515.1); q=Orobanche aegyptiaca / broomrape / Phelipanche -> nothing new"
+  - "NGDC gwh/gsa/ajax/getAssembliesListByBioProjectAccession/PRJCA008847 -> 3 assemblies (GWHBHPU00000000 = P. aegyptiaca)"
+  - "Zenodo api/records q='\"Phelipanche aegyptiaca\"' -> 7 (only the poster 10.5281/zenodo.22259959 is relevant, and it holds no data); '\"Orobanche aegyptiaca\"' -> 2"
+  - "DataCite api.datacite.org/dois query='\"Phelipanche aegyptiaca\"' -> 1501 (mostly GBIF downloads / DSSC specimens); '\"Orobanche aegyptiaca\"' -> 136; 'aegyptiaca AND (broomrape OR Phelipanche OR Orobanche)'; non-GBIF hits reviewed: 119 lines"
+  - "Figshare api/v2/articles/search '\"Phelipanche aegyptiaca\"' -> 32 (adds 10.6084/m9.figshare.24947553, which holds the genome); '\"Orobanche aegyptiaca\"' -> 11; 'aegyptiaca broomrape' -> 4"
+  - "Dryad api/v2/search '\"Phelipanche aegyptiaca\"' -> 1; '\"Orobanche aegyptiaca\"' -> 2; Harvard Dataverse api/search both names -> 0"
+  - "EBI BioStudies search both names -> 33 / 10 (literature only)"
+  - "Europe PMC search '(\"Phelipanche aegyptiaca\" OR \"Orobanche aegyptiaca\" OR \"P. aegyptiaca\" OR \"O. aegyptiaca\")' -> 494; with ACCESSION_TYPE filter -> 189, annotations mined"
+  - "Europe PMC '(TITLE:aegyptiaca OR ABSTRACT:...) AND OPEN_ACCESS:Y AND HAS_FT:Y' -> 138 full texts regex-scanned for accessions (added PRJCA050165 [unreleased], confirmed paper links for S5-S12)"
+  - "WebSearch 'Phelipanche aegyptiaca genome assembly sequencing data availability' -> led to PRJCA008847"
+size_verdict: ok

@@ -1,0 +1,748 @@
+[
+ {
+  "id": "R1",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds sequencing reads, a genome or transcriptome assembly, or sequencing-based expression data from the parasitic plant Phelipanche aegyptiaca (also published as Orobanche aegyptiaca). Host-parasite experiments count if P. aegyptiaca tissue was sequenced. Host-only data, other broomrape species and papers without deposited data do not count.",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "PRJNA340868",
+     "SRP083761",
+     "SRP001053"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "PRJNA295481",
+     "SRP063686"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "PRJNA296549",
+     "SRP063959",
+     "PRJNA296547"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "PRJNA388245",
+     "SRP109112",
+     "GFQM00000000",
+     "GFQM01000000"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "GSE181578",
+     "PRJNA752600",
+     "SRP331360"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "PRJNA873060",
+     "SRP394271"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "PRJNA929515",
+     "SRP420096"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "PRJNA1083627",
+     "SRP493524"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "PRJNA1123407",
+     "SRP513609"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "PRJNA1197418",
+     "SRP551085"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "PRJNA1236295",
+     "SRP570469"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "PRJCA008847",
+     "CRA007634",
+     "GWHBHPU00000000",
+     "SAMC695117",
+     "10.6084/m9.figshare.24947553"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "PRJCA015315",
+     "CRA010056"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S4",
+    "ids": [
+     "PRJEB7137",
+     "ERP006828"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "KU212370"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "PX150055",
+     "PX150056",
+     "PX150057",
+     "PX150058",
+     "PX150059"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "R2",
+  "kind": "list",
+  "prompt": "Find every public single-cell or single-nucleus RNA-seq dataset, in any archive, from axolotl (Ambystoma mexicanum) limb or digit regeneration, with at least one sample from regenerating limb tissue (wound, blastema or regrown limb). Imaging-based spatial data at single-cell resolution counts; bulk RNA-seq, spot-based spatial data, other regenerating organs and other salamanders do not.",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "GSE106269",
+     "PRJNA416091",
+     "SRP122505"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "GSE121737",
+     "PRJNA498286",
+     "SRP167700",
+     "SCP422",
+     "SCP489",
+     "SCP499",
+     "SCP500",
+     "10.82595/scilifelab.rp58y-78935",
+     "10.82595/scilifelab.0n5wb-meh03"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "GSE136546",
+     "PRJNA562657",
+     "SRP219590"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "PRJNA589484",
+     "SRP229913",
+     "CNP0000706"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "PRJCA002093",
+     "CRA002291"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "GSE165901",
+     "PRJNA698552",
+     "SRP304111"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "PRJNA877838",
+     "SRP396206"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "GSE206235",
+     "PRJNA849783",
+     "SRP382013",
+     "GSE206238",
+     "PRJNA849781"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "GSE294212",
+     "PRJNA1248582"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "PRJCA052336",
+     "CRA034344"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "GSE232082",
+     "GSE232083",
+     "PRJNA970777",
+     "PRJNA970776",
+     "SRP436694",
+     "SRP436699",
+     "10.7910/DVN/NW0ZN1"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "R3",
+  "kind": "list",
+  "prompt": "Find every public transcriptomic or proteomic dataset, in any archive, that studies anhydrobiosis or desiccation tolerance in tardigrades (any species): data from tardigrades comparing hydrated with desiccated, tun or rehydrating animals, or otherwise targeting desiccation tolerance. Genome assemblies alone, radiation- or freezing-only studies, and tardigrade genes expressed in other organisms do not count.",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "PRJDB2359",
+     "DRP001175",
+     "DRA001120",
+     "DRR013911",
+     "DRR013912",
+     "DRR013913",
+     "DRR013914",
+     "DRR013915",
+     "DRR013916",
+     "PRJDB2360",
+     "PRJDB5011"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "GSE94295",
+     "PRJNA369262",
+     "SRP098585",
+     "SRA533808"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "PRJNA369152",
+     "SRP098563"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "PRJDB5599",
+     "DRP004847",
+     "DRR089007",
+     "DRR089008",
+     "DRR089009",
+     "DRR089010",
+     "DRR089011"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "PRJDB7223",
+     "DRP007399",
+     "10.6084/m9.figshare.14489778",
+     "10.6084/m9.figshare.c.5491291"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "PRJNA79663",
+     "SRP002584",
+     "SRA020123",
+     "SRX426237",
+     "SRX426238",
+     "SRX426239",
+     "SRX426240",
+     "SRR1046127",
+     "SRR1046358",
+     "SRR1046360",
+     "SRR1046361",
+     "SRR057381"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "LIBEST_023933",
+     "LIBEST_023934",
+     "SAMN00166894",
+     "SAMN00166895",
+     "PRJNA34121",
+     "SRP296161",
+     "SRR9493355"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "PRJNA510287",
+     "SRP173948"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "PRJNA669587",
+     "SRP287522",
+     "SRR12832600",
+     "SRR12832599",
+     "10.6084/m9.figshare.13060634"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S5",
+    "ids": [
+     "PRJDB4575",
+     "DRP003101"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "PXD030241",
+     "JPST001416"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "R4",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, whose main subject is wild snow leopards (Panthera uncia): camera-trap or sign surveys, GPS telemetry, occurrence compilations, scat or tissue genetics, diet, or prey and livestock-conflict surveys centred on snow leopards. Captive-only studies, papers without deposited data, and broad datasets where snow leopards are a minor part do not count.",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "10.5061/dryad.1vhhmgr78",
+     "PRJNA1048427",
+     "SRP475968",
+     "PRJNA1051290",
+     "SRP477800"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "PRJCA022406",
+     "CRA021509",
+     "CRA022084",
+     "PRJNA1234234",
+     "GCA_048603155.1"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.5061/dryad.3r2280gfx",
+     "zenodo:4895080"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "10.5061/dryad.2rbnzs82x"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "10.5061/dryad.n5tb2rbv6",
+     "zenodo:8378176"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.5061/dryad.0cfxpnw3p",
+     "zenodo:5745879"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "10.5061/dryad.pnvx0k6x0",
+     "10.5281/zenodo.10949691",
+     "10.5281/zenodo.10949692"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "10.5061/dryad.vq83bk3rn",
+     "10.5281/zenodo.12735186",
+     "10.5281/zenodo.12735187"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.5061/dryad.j9kd51cjp",
+     "zenodo:10903905",
+     "10.5281/zenodo.10386240",
+     "10.5281/zenodo.10386241",
+     "10.6084/m9.figshare.c.7162451",
+     "PRJDB16690",
+     "DRP010797"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.5061/dryad.sb20c",
+     "10.5061/dryad.sb20c/1",
+     "10.5061/dryad.sb20c/2",
+     "zenodo:4962393"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "10.5061/dryad.8p689",
+     "10.5061/dryad.8p689/1",
+     "10.5061/dryad.8p689/2",
+     "10.5061/dryad.8p689/4",
+     "10.5061/dryad.8p689/5",
+     "10.5061/dryad.8p689/6",
+     "zenodo:4983117",
+     "10.6084/m9.figshare.c.3787397",
+     "10.6084/m9.figshare.5039255",
+     "10.6084/m9.figshare.5039237",
+     "10.6084/m9.figshare.5039228"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.5061/dryad.bj376f61",
+     "zenodo:4933829"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.5061/dryad.6f8p0",
+     "10.5061/dryad.6f8p0/1",
+     "zenodo:5016798"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "10.5061/dryad.j9kd51cft",
+     "zenodo:6518240"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "10.5061/dryad.02v6wwqcf"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "10.5061/dryad.314b5",
+     "10.5061/dryad.314b5/1",
+     "zenodo:4982660"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "10.5061/dryad.v61m2",
+     "10.5061/dryad.v61m2/1",
+     "zenodo:4935395"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "10.5061/dryad.7d7wm389t",
+     "10.6084/m9.figshare.32337723",
+     "10.6084/m9.figshare.22067480"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "10.5061/dryad.2280gb623"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "10.5061/dryad.905qftv0r",
+     "10.5281/zenodo.19751807"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "10.5061/dryad.hp4b3",
+     "10.5061/dryad.hp4b3/1",
+     "zenodo:5014594"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "10.5061/dryad.dfn2z34zq",
+     "zenodo:5450185"
+    ]
+   },
+   {
+    "key": "S25",
+    "ids": [
+     "10.5281/zenodo.5257571",
+     "10.5281/zenodo.5257572"
+    ]
+   },
+   {
+    "key": "S26",
+    "ids": [
+     "10.5281/zenodo.15003684",
+     "10.5281/zenodo.15003685",
+     "10.5281/zenodo.16575233",
+     "10.5281/zenodo.17384769",
+     "10.5281/zenodo.21638620",
+     "10.5281/zenodo.21887007"
+    ]
+   },
+   {
+    "key": "S27",
+    "ids": [
+     "10.5281/zenodo.20160628",
+     "10.5281/zenodo.20160629"
+    ]
+   },
+   {
+    "key": "S28",
+    "ids": [
+     "10.5281/zenodo.22252314",
+     "10.5281/zenodo.22252315",
+     "10.5281/zenodo.22253310",
+     "10.5281/zenodo.22253311",
+     "10.6084/m9.figshare.33415759"
+    ]
+   },
+   {
+    "key": "S29",
+    "ids": [
+     "10.6084/m9.figshare.19184897"
+    ]
+   },
+   {
+    "key": "S30",
+    "ids": [
+     "10.6084/m9.figshare.16691668"
+    ]
+   },
+   {
+    "key": "S31",
+    "ids": [
+     "10.6084/m9.figshare.22302919"
+    ]
+   },
+   {
+    "key": "S32",
+    "ids": [
+     "10.6084/m9.figshare.25736751"
+    ]
+   },
+   {
+    "key": "S33",
+    "ids": [
+     "10.1594/pangaea.883303",
+     "10.1594/pangaea.883301",
+     "10.1594/pangaea.883302"
+    ]
+   },
+   {
+    "key": "S34",
+    "ids": [
+     "10.17605/osf.io/hr6xm",
+     "osf:vqgbk"
+    ]
+   },
+   {
+    "key": "S36",
+    "ids": [
+     "PRJNA626440",
+     "SRP257371",
+     "10.3389/fvets.2020.00645.s001"
+    ]
+   },
+   {
+    "key": "S37",
+    "ids": [
+     "PRJNA767363",
+     "SRP339680",
+     "10.3389/fevo.2021.783546.s001",
+     "10.3389/fevo.2021.783546.s002"
+    ]
+   },
+   {
+    "key": "S38",
+    "ids": [
+     "PRJNA909234",
+     "SRP412258"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S12",
+    "ids": [
+     "10.5061/dryad.tb2rbp044",
+     "zenodo:7342955",
+     "10.5281/zenodo.7301817",
+     "10.5281/zenodo.7301818"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.5061/dryad.vt4b8gtqc",
+     "zenodo:5555168"
+    ]
+   },
+   {
+    "key": "S35",
+    "ids": [
+     "10.17632/cgcp7pkjpp",
+     "10.17632/cgcp7pkjpp.1"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "R5",
+  "kind": "list",
+  "prompt": "Find every public mass-spectrometry proteomics dataset, in any archive, from the green alga Chlamydomonas reinhardtii in which at least one sampled condition is cells under nitrogen starvation, deprivation or limitation. Raw MS data or deposited quantified protein or peptide tables count; transcriptome-only, metabolomics- or lipidomics-only data and other algae do not.",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "PRD000394",
+     "PRIDE experiment 16644"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "PXD002377",
+     "10.6019/PXD002377"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "PXD012311",
+     "JPST000542"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "PXD012391",
+     "JPST000544"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "10.6084/m9.figshare.c.3940042",
+     "10.6084/m9.figshare.c.3940042.v1",
+     "10.6084/m9.figshare.5639701",
+     "10.6084/m9.figshare.5639701.v1"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "PXD019491",
+     "10.6019/PXD019491"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "PXD036778",
+     "10.6019/PXD036778"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "PXD055071"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S9",
+    "ids": [
+     "PXD010945"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.5061/dryad.fn2z34txn"
+    ]
+   }
+  ]
+ }
+]

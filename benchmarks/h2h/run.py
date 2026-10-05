@@ -18,6 +18,8 @@ import concurrent.futures
 import hashlib
 import json
 import os
+import random
+import re
 import subprocess
 import sys
 import time
@@ -32,6 +34,16 @@ PROMPT_TAIL = (
     "\n\nSave the file into this directory: {out}\n"
     "When you are done, reply with the identifier (accession, DOI or record id) of the "
     "dataset you found and the path of the file you saved."
+)
+
+# Round 2: "find every dataset" tasks are scored from a list the agent writes.
+LIST_TAIL = (
+    "\n\nWrite your answer to this file: {out}/datasets.json\n"
+    "It must be a JSON list with one object per distinct study: "
+    '{{"id": "<main identifier>", "archive": "<archive>", "title": "<title>", '
+    '"same_as": ["<identifiers of the same study in other archives>"]}}. '
+    "List each study once, with its copies in other archives under same_as.\n"
+    "When you are done, reply with the number of studies you listed."
 )
 
 
@@ -55,7 +67,7 @@ def mcp_config(arm: str, dam_dir: str | None) -> dict:
     return {"mcpServers": {}}
 
 
-def command(arm: str, prompt: str, config: Path) -> list[str]:
+def command(arm: str, prompt: str, config: Path, writes_list: bool = False) -> list[str]:
     cmd = [
         "claude",
         "-p",
@@ -79,8 +91,9 @@ def command(arm: str, prompt: str, config: Path) -> list[str]:
     if arm == "web":
         cmd += ["--tools", "WebSearch,WebFetch,Bash,Read,Write"]
     else:
-        # No built-in tools: the server is the only way to search or download.
-        cmd += ["--tools", ""]
+        # No built-in tools: the server is the only way to search or download. A list
+        # task adds Write, which neither searches nor downloads, for datasets.json.
+        cmd += ["--tools", "Write" if writes_list else ""]
     return cmd
 
 
@@ -93,12 +106,13 @@ def run_one(task: dict, arm: str, rep: int, root: Path, dam_dir: str | None) -> 
     out.mkdir(parents=True, exist_ok=True)
     config = run_dir / "mcp.json"
     config.write_text(json.dumps(mcp_config(arm, dam_dir)))
-    prompt = task["prompt"] + PROMPT_TAIL.format(out=out.resolve())
+    tail = LIST_TAIL if task.get("kind") == "list" else PROMPT_TAIL
+    prompt = task["prompt"] + tail.format(out=out.resolve())
     started = time.monotonic()
     with log.open("w") as fh:
         try:
             proc = subprocess.run(
-                command(arm, prompt, config),
+                command(arm, prompt, config, task.get("kind") == "list"),
                 cwd=run_dir,
                 stdout=fh,
                 stderr=subprocess.PIPE,
@@ -125,7 +139,111 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def score(task: dict, arm: str, run_dir: Path) -> dict:
+def _norm(s: str) -> str:
+    s = s.strip().casefold()
+    for prefix in ("https://doi.org/", "http://doi.org/", "doi.org/", "doi:"):
+        if s.startswith(prefix):
+            return s[len(prefix) :]
+    return s
+
+
+def _aliases(ids: list[str]) -> list[str]:
+    """A study's ids, plus the other ways an agent writes a Zenodo record."""
+    out = [_norm(i) for i in ids]
+    for i in list(out):
+        m = re.fullmatch(r"(?:10\.5281/zenodo\.|zenodo:)(\d+)", i)
+        if m:
+            n = m.group(1)
+            out += [
+                f"10.5281/zenodo.{n}",
+                f"zenodo:{n}",
+                f"zenodo.org/records/{n}",
+                f"zenodo.org/record/{n}",
+            ]
+    return sorted(set(out))
+
+
+def _mentions(text: str, alias: str) -> bool:
+    # Whole token only, so GSE12 does not match GSE123.
+    return re.search(rf"(?<![0-9a-z]){re.escape(alias)}(?![0-9a-z])", text) is not None
+
+
+def score_list(task: dict, run_dir: Path, adjudication: dict) -> dict:
+    """Recall, duplicates and precision of the agent's datasets.json against the key.
+
+    The key is the pre-built studies plus any adjudicated additions (pooling); an entry
+    that matches neither the key nor a rejected id is ``pending`` adjudication.
+    """
+    adj = adjudication.get(task["id"], {})
+    # ``alias``: an id adjudication found to be another copy of a study already keyed.
+    extra = adj.get("alias", {})
+    studies = [
+        {**s, "ids": [*s["ids"], *extra.get(s["key"], [])]}
+        for s in [*task["studies"], *adj.get("add", [])]
+    ]
+    # Borderline studies: listing one is not wrong, missing one is not a miss.
+    optional = [
+        {**s, "ids": [*s["ids"], *extra.get(s["key"], [])]}
+        for s in [*task.get("optional", []), *adj.get("optional", [])]
+    ]
+    rejected = [_norm(i) for i in adj.get("reject", [])]
+    try:
+        listed = json.loads((run_dir / "out" / "datasets.json").read_text())
+        json_ok = isinstance(listed, list) and all(isinstance(e, dict) for e in listed)
+    except (OSError, ValueError):
+        listed, json_ok = [], False
+    if not json_ok:
+        listed = []
+    hits: dict[str, int] = {}
+    relevant, irrelevant, pending = 0, 0, []
+    for entry in listed:
+        ids = [entry.get("id"), *(entry.get("same_as") or [])]
+        text = " ".join(_norm(str(i)) for i in ids if i)
+        matched = [s["key"] for s in studies if any(_mentions(text, a) for a in _aliases(s["ids"]))]
+        for key in matched:
+            hits[key] = hits.get(key, 0) + 1
+        if matched or any(any(_mentions(text, a) for a in _aliases(s["ids"])) for s in optional):
+            relevant += 1
+        elif any(_mentions(text, r) for r in rejected):
+            irrelevant += 1
+        else:
+            pending.append({"id": entry.get("id"), "same_as": entry.get("same_as") or [],
+                            "title": entry.get("title")})  # fmt: skip
+    archives = sorted({str(e.get("archive", "")).strip() for e in listed} - {""})
+    return {
+        "json_ok": json_ok,
+        "listed": len(listed),
+        "key_size": len(studies),
+        "found_keys": sorted(hits),
+        "recall": round(len(hits) / len(studies), 3) if studies else None,
+        # A study listed as two or more separate entries.
+        "duplicates": sum(1 for n in hits.values() if n > 1),
+        "relevant": relevant,
+        "irrelevant": irrelevant,
+        "pending": pending,
+        "precision": round(relevant / (relevant + irrelevant), 3)
+        if relevant + irrelevant
+        else None,
+        "archives_listed": archives,
+    }
+
+
+def _result_sources(events: list[dict]) -> list[str]:
+    """Distinct ``source`` values in this server's tool results: did the fan-out fire?"""
+    found: set[str] = set()
+    for e in events:
+        if e.get("type") != "user":
+            continue
+        for block in e.get("message", {}).get("content", []):
+            if not isinstance(block, dict) or block.get("type") != "tool_result":
+                continue
+            content = block.get("content")
+            text = json.dumps(content) if not isinstance(content, str) else content
+            found.update(re.findall(r'\\?"source\\?":\s*\\?"([a-z_]+)', text))
+    return sorted(found)
+
+
+def score(task: dict, arm: str, run_dir: Path, adjudication: dict | None = None) -> dict:
     """What the run achieved, read from its log and its directory, not its own claims."""
     events = []
     for line in (run_dir / "session.jsonl").read_text().splitlines():
@@ -144,14 +262,23 @@ def score(task: dict, arm: str, run_dir: Path) -> dict:
     ]
     usage = result.get("usage") or {}
     answer = (result.get("result") or "").casefold()
-    # The file's sha256, plus any accepted alternative (e.g. the same entry gzipped).
-    want = {task["file"]["sha256"], *task["file"].get("also_sha256", [])}
-    files = [p for p in run_dir.rglob("*") if p.is_file() and p.name not in
-             ("session.jsonl", "meta.json", "mcp.json")]  # fmt: skip
-    got = [str(p.relative_to(run_dir)) for p in files if _sha256(p) in want]
     servers = {s.get("name"): s.get("status") for s in init.get("mcp_servers", [])}
     mcp_calls = [c for c in calls if c.startswith("mcp__")]
     meta = json.loads((run_dir / "meta.json").read_text())
+    if task.get("kind") == "list":
+        outcome = score_list(task, run_dir, adjudication or {})
+        outcome["result_sources"] = _result_sources(events)
+    else:
+        # The file's sha256, plus any accepted alternative (e.g. the same entry gzipped).
+        want = {task["file"]["sha256"], *task["file"].get("also_sha256", [])}
+        files = [p for p in run_dir.rglob("*") if p.is_file() and p.name not in
+                 ("session.jsonl", "meta.json", "mcp.json")]  # fmt: skip
+        got = [str(p.relative_to(run_dir)) for p in files if _sha256(p) in want]
+        outcome = {
+            "found": any(i.casefold() in answer for i in task["answer_ids"]),
+            "bytes_ok": bool(got),
+            "files_matching": got,
+        }
     return {
         "task": task["id"],
         "arm": arm,
@@ -159,9 +286,7 @@ def score(task: dict, arm: str, run_dir: Path) -> dict:
         "servers": servers,
         # A server arm that never called its server measured nothing.
         "valid": arm == "web" or bool(mcp_calls),
-        "found": any(i.casefold() in answer for i in task["answer_ids"]),
-        "bytes_ok": bool(got),
-        "files_matching": got,
+        **outcome,
         "tool_calls": len(calls),
         "tools": calls,
         "turns": result.get("num_turns"),
@@ -173,8 +298,18 @@ def score(task: dict, arm: str, run_dir: Path) -> dict:
         "wall_s": round(meta["wall_s"], 1),
         "exit": meta["exit"],
         "error": result.get("subtype") if result.get("is_error") else None,
-        "answer": (result.get("result") or "")[:400],
+        "answer": _portable(result.get("result") or "", run_dir)[:400],
     }
+
+
+def _portable(answer: str, run_dir: Path) -> str:
+    """``answer`` with the output root (``<out>/<arm>/<task>/r<n>``) written as ``<out>``:
+    agents name the file they wrote, and that absolute path is this machine's, not the
+    result's."""
+    root = run_dir.parents[2]
+    for form in dict.fromkeys((str(root.resolve()), str(root))):
+        answer = answer.replace(form, "<out>")
+    return answer
 
 
 def main() -> None:
@@ -187,8 +322,10 @@ def main() -> None:
     ap.add_argument("--parallel", type=int, default=3)
     ap.add_argument("--dam-dir")
     ap.add_argument("--score-only", action="store_true")
+    ap.add_argument("--adjudication", type=Path, help="list tasks: pooled additions/rejects")
     args = ap.parse_args()
     tasks = json.loads(args.tasks.read_text())
+    adjudication = json.loads(args.adjudication.read_text()) if args.adjudication else {}
     if args.only:
         keep = set(args.only.split(","))
         tasks = [t for t in tasks if t["id"] in keep]
@@ -203,9 +340,31 @@ def main() -> None:
     for t, a, r in jobs:
         run_dir = args.out / a / t["id"] / f"r{r}"
         if (run_dir / "meta.json").exists():
-            rows.append(score(t, a, run_dir))
+            rows.append(score(t, a, run_dir, adjudication))
     (args.out / "scores.json").write_text(json.dumps(rows, indent=1))
+    # Pooling: every listed entry no key study or reject covers, with no arm or run
+    # attached and in a shuffled order, so adjudication cannot favour an arm.
+    pool: dict[str, dict[str, dict]] = {}
     for row in rows:
+        for entry in row.get("pending", []):
+            pool.setdefault(row["task"], {}).setdefault(_norm(str(entry["id"])), entry)
+    shuffled = {}
+    for task_id, entries in sorted(pool.items()):
+        items = list(entries.values())
+        random.Random(task_id).shuffle(items)
+        shuffled[task_id] = items
+    (args.out / "pool.json").write_text(json.dumps(shuffled, indent=1))
+    for row in rows:
+        if "recall" in row:
+            print(
+                f"{row['task']} {row['arm']:4} {row['run']} valid={row['valid']!s:5} "
+                f"json={row['json_ok']!s:5} recall={row['recall']} listed={row['listed']:3} "
+                f"dup={row['duplicates']} prec={row['precision']} pending={len(row['pending'])} "
+                f"src={len(row['result_sources'])} calls={row['tool_calls']:3} "
+                f"in={row['input_tokens']:>8} ${row['cost_usd'] or 0:.2f} {row['wall_s']}s "
+                f"{row['error'] or ''}"
+            )
+            continue
         print(
             f"{row['task']} {row['arm']:4} {row['run']} valid={row['valid']!s:5} "
             f"found={row['found']!s:5} bytes={row['bytes_ok']!s:5} calls={row['tool_calls']:3} "

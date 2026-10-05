@@ -1,0 +1,107 @@
+{
+ "R1": {
+  "reject": [
+   "PRJNA872504",
+   "PRJNA1083435"
+  ]
+ },
+ "R2": {
+  "reject": [
+   "GSE184948",
+   "PRJNA767085",
+   "GSE243225",
+   "PRJNA1017433",
+   "10.1038/s41418-020-00640-8",
+   "GSE328965",
+   "PRJNA1457094",
+   "PRJNA1363939"
+  ]
+ },
+ "R3": {
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "PXD058865"
+    ]
+   },
+   {
+    "key": "B2",
+    "ids": [
+     "PRJEB59868",
+     "ERP144913"
+    ]
+   }
+  ],
+  "reject": [
+   "PXD069612",
+   "PRJNA263124",
+   "10.6084/m9.figshare.c.6019240",
+   "10.6084/m9.figshare.c.6019240.v1",
+   "PRJNA357357",
+   "PRJDB1451",
+   "GSE152753",
+   "PRJNA640345"
+  ]
+ },
+ "R4": {
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "10.3389/fvets.2025.1492640.s001"
+    ]
+   }
+  ],
+  "alias": {
+   "S23": [
+    "dataone:sha256:6b8cef9d3b481334dd88187b127d4e8d27ae43f7f7e6c1cefacd9b9821c535c3"
+   ],
+   "S4": [
+    "dataone:sha256:9aaf1251b2cd5834838f3a99070e907c7a6df21f67a1ab79f86482878229525b"
+   ],
+   "S1": [
+    "dataone:sha256:9ddc498e579e1cb2bcc670cf1d8e3c6a660f46a6f975dc74a21e6a1e8dd10173"
+   ],
+   "S29": [
+    "10.1371/journal.pone.0280011.t002"
+   ],
+   "S21": [
+    "dataone:sha256:12c99361685269c5a96d5da8f8b93e9ed2b7c03f1f1154eea963433366c13426"
+   ],
+   "S20": [
+    "dataone:sha256:0083b16f54f100ec2cdd80b8818ce9e36cd2e7175cb48629027c312764b1254e"
+   ],
+   "S9": [
+    "dataone:sha256:4424084cdb592f858c20ff4cf2ce04f5fea080b3c0f86f741ae973c765e08e5f"
+   ]
+  },
+  "reject": [
+   "10.3897/natureconservation.46.76036.suppl1",
+   "zenodo:6339849",
+   "10.5061/dryad.2547d7wqr",
+   "10.5061/dryad.31zcrjdxg",
+   "10.6084/m9.figshare.c.6150289",
+   "10.6084/m9.figshare.c.6150289.v1",
+   "10.5061/dryad.547d7wmd9",
+   "10.6084/m9.figshare.24787296",
+   "doi:10.5281/zenodo.17357880",
+   "10.1371/journal.pone.0322136.t003",
+   "10.3389/fcosc.2021.781085.s001",
+   "10.6084/m9.figshare.20495926",
+   "10.5061/dryad.5x69p8dgv",
+   "zenodo:17357880",
+   "10.5281/zenodo.17357879",
+   "10.83056/mmu.32483487.v1",
+   "zenodo:4979139",
+   "10.3897/abs.7.e69228",
+   "10.5061/dryad.47d7wm3dz"
+  ]
+ },
+ "R5": {
+  "reject": [
+   "PXD041691",
+   "PXD010847"
+  ]
+ }
+}

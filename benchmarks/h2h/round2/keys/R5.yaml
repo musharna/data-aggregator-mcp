@@ -1,0 +1,129 @@
+task: R5
+criteria: >-
+  Included: a public deposit in a data archive (ProteomeXchange members PRIDE, MassIVE, jPOST, iProX,
+  PeptideAtlas, Panorama Public; or Zenodo, Figshare, Dryad, Dataverse) of mass-spectrometry proteomics
+  data (raw/processed MS files or quantified protein/peptide tables) from Chlamydomonas reinhardtii where
+  at least one sampled condition is cells under nitrogen starvation, deprivation, depletion or limitation
+  (N-free/N-deficient medium). This includes time courses, N-starved vs N-replete comparisons, mutant
+  comparisons done under N deprivation, and subcellular fractions (lipid droplets, vesicles) taken from
+  N-starved cells. The N condition was confirmed from the deposit's own protocol text or, if that was silent,
+  from the linked paper's methods. Tier A means N starvation is the stress or metabolic condition being studied.
+  Tier B means N-free medium was used only to induce gametogenesis, so the samples are N-deprived gametes.
+  Tier B is kept in the key but flagged, so it can be scored separately or dropped. Excluded: transcriptome-only,
+  metabolomics- or lipidomics-only deposits; other algae (Chlorella, Nannochloropsis, Tribonema and others),
+  even when the paper also discusses Chlamydomonas; deposits whose MS samples were all N-replete, even if
+  the paper studies N-related traits (resource-limitation evolution with a common-garden replete regrowth,
+  lipid mutants sampled in replete medium, TOR inhibition); reserved or unreleased ids; papers with
+  N-starvation proteomics but no archive deposit (journal-site supplements only). Aliases of one deposit
+  (PXD plus JPST, PRIDE experiment number, Figshare collection plus item DOIs) are grouped as one study.
+  Separate PXDs from the same paper stay separate studies.
+studies:
+  - key: S1
+    tier: A
+    title: "ALGOMICS - Proteomic profiling of oil bodies isolated from the unicellular green microalga Chlamydomonas reinhardtii: with focus on proteins involved in lipid metabolism"
+    year: 2011
+    ids: [PRD000394, "PRIDE experiment 16644"]
+    archives: [PRIDE]
+    evidence: "PRIDE description: oil-body fraction purified from C. reinhardtii 'grown under nitrogen deprivation' (Nguyen et al. 2011 Proteomics, PMID 21928291); resolves via PRIDE v3 API."
+  - key: S2
+    tier: A
+    title: "The response of Chlamydomonas reinhardtii to nitrogen deprivation: a systems biology analysis"
+    year: 2015
+    ids: [PXD002377, "10.6019/PXD002377"]
+    archives: [PRIDE]
+    evidence: "Proteome across 8 time points after N deprivation (Park et al. 2015 Plant J, PMID 25515814); resolves in ProteomeCentral and PRIDE."
+  - key: S3
+    tier: A
+    title: "Phosphoproteomics of Chlamydomonas reinhardtii in photoautotrophic nitrogen-deficient conditions"
+    year: 2019
+    ids: [PXD012311, JPST000542]
+    archives: [jPOST]
+    evidence: "Phosphoproteome of wild type vs tar1-1 under photoautotrophic N-deficient conditions (Shinkawa et al. 2019 Plant Cell Physiol, PMID 30668822); the PC record lists JPST000542, and the jPOST XML resolves. The PX species field is 'cellular organisms', so species filters miss it."
+  - key: S4
+    tier: A
+    title: "Algal Protein Kinase, Triacylglycerol Accumulation Regulator1, Modulates Cell Viability and Gametogenesis in Carbon/Nitrogen Imbalanced Conditions"
+    year: 2019
+    ids: [PXD012391, JPST000544]
+    archives: [jPOST]
+    evidence: "Second deposit from the same paper as S3 (Shinkawa 2019): TAR1 under photoautotrophic N-deficient conditions. The PC record lists JPST000544, and the jPOST XML resolves. It is a separate PXD, so a separate study."
+  - key: S5
+    tier: A
+    title: "Quantitative in vivo phosphoproteomics reveals reversible signaling processes during nitrogen starvation and recovery in the biofuel model organism Chlamydomonas reinhardtii (supplementary data)"
+    year: 2017
+    ids: ["10.6084/m9.figshare.c.3940042", "10.6084/m9.figshare.c.3940042.v1", "10.6084/m9.figshare.5639701", "10.6084/m9.figshare.5639701.v1"]
+    archives: [Figshare]
+    evidence: "Springer Nature Figshare collection for Roustan et al. 2017 Biotechnol Biofuels (10.1186/s13068-017-0949-z). Item 5639701 (MOESM2.xlsx) is the quantified table of 1227 phosphopeptides across the N-depletion (0-72 h) and repletion time course. The paper has no PXD: its data statement points only to the additional files. The DOIs resolve via doi.org."
+  - key: S6
+    tier: A
+    title: "Reversible oxidative signaling in Chlamydomonas following nitrogen deprivation"
+    year: 2020
+    ids: [PXD019491, "10.6019/PXD019491"]
+    archives: [PRIDE]
+    evidence: "Redox (oxidized-cysteine) proteomics after N deprivation (Smythers et al. 2020 Plants 9:784, PMID 32585825); resolves in PC and PRIDE."
+  - key: S7
+    tier: A
+    title: "Mass spectrometry-based proteomic characterization of lipid droplets from WT and abhd1 KO mutants of Chlamydomonas reinhardtii"
+    year: 2024
+    ids: [PXD036778, "10.6019/PXD036778"]
+    archives: [PRIDE]
+    evidence: "PRIDE protocol: lipid droplets isolated from 'N-starved cells' after transfer to N-free TAP (NH4Cl replaced by NaCl); WT vs abhd1 (NSR 2024, 10.1093/nsr/nwae398); resolves in PC and PRIDE."
+  - key: S8
+    tier: A
+    title: "Extracellular Vesicles in Chlamydomonas reinhardtii: Mediators of Nutrient Sensing and Cell-to-Cell Communication"
+    year: 2025
+    ids: [PXD055071]
+    archives: [PRIDE]
+    evidence: "EV proteome samples Log, ND (3 d in TAP-N, nitrogen depletion) and plateau (Algal Res 2024, 10.1016/j.algal.2024.103853). The N condition appears only in the PRIDE protocol, not the title. Public 2025-03-04; resolves in PC and PRIDE."
+  - key: S9
+    tier: B
+    title: "Proteases Shape the Chlamydomonas Secretome: Comparison to Classical Neuropeptide Processing Machinery"
+    year: 2018
+    ids: [PXD010945]
+    archives: [PRIDE]
+    evidence: "Soluble mating secretome from gametes made by resuspending cells in nitrogen-deficient M-N/5 medium for 16-20 h (Luxmi et al. 2018 Proteomes, PMC6313938 methods). The N-free medium is only the gametogenesis trigger, so this is borderline. Resolves in PC and PRIDE."
+  - key: S10
+    tier: B
+    title: "Developmental changes in ciliary composition during gametogenesis in Chlamydomonas"
+    year: 2022
+    ids: ["10.5061/dryad.fn2z34txn"]
+    archives: [Dryad]
+    evidence: "Dryad deposit with MS data (Cilia.sf3, Scaffold file) for vegetative vs gametic cilia; gametes made overnight in M-N/5 medium (Sakato-Antoku and King 2022 MBoC, PMC9561859). No PXD found. Borderline: gametogenesis-induced N deprivation."
+near_misses:
+  - {ids: [PXD041691], why_excluded: "Vijayan et al. 2024 N-limitation/TOR proteome and phosphoproteome: the MS samples are Chlorella sorokiniana only (PRIDE organism and files). The Chlamydomonas part of the paper is radiolabeling only. Its Figshare supplements (10.6084/m9.figshare.c.7390761) are Chlorella tables."}
+  - {ids: [PXD010847], why_excluded: "Tamminen et al. 2018 experimental evolution under resource limitation, including low N. Proteomes were measured after regrowth in replete COMBO medium, so no N-starved samples."}
+  - {ids: [PXD047255], why_excluded: "dyrkp1 vs 137AH pellet proteome (Kim et al. 2025): the paper states the proteome comes from N-sufficient autotrophic cultures, and the N-depletion data are physiology only."}
+  - {ids: [PXD053580], why_excluded: "CTI1 knockout oil paper: proteome harvested in exponential, N-replete growth."}
+  - {ids: [PXD006736], why_excluded: "Lipid-inducing small molecules applied to N-replete cells; no N-starved samples."}
+  - {ids: [PXD007221, PXD011489, PXD014819], why_excluded: "TOR inhibition (rapamycin/AZD/Torin) proteomics; the papers compare to N starvation but no N-starved samples were measured."}
+  - {ids: [PXD031803], why_excluded: "CP12 mutant: keyword 'Nitrogen uptake', but cells grown in NH4Cl-replete MOPS medium."}
+  - {ids: [PXD033090], why_excluded: "Ciliary proteome of WT and transition-zone mutants from vegetative cells. N-free gametes were used only for ectosome EM, not MS."}
+  - {ids: [PXD018353], why_excluded: "N-glycan/flagella adhesion: TAP-N gametes used for mating assays, but MS samples were vegetative flagella and whole cells."}
+  - {ids: [PXD002146], why_excluded: "Wastewater-cultured Chlamydomonas, 'nitrogen sensing' (Patel et al. 2015 JPR). The identifier is reserved, not public: ProteomeCentral returns code 1003."}
+  - {ids: ["MTBLS208"], why_excluded: "MetaboLights metabolomics companion to PXD002377: metabolomics only."}
+  - {ids: ["10.6084/m9.figshare.c.3742325"], why_excluded: "tab2 vs WT under N depletion (Biotechnol Biofuels 2017, 10.1186/s13068-017-0774-4). Orbitrap proteomics was done, but the Figshare supplements are PDF heat-map keys and figures, not MS data or quantified tables. No PXD."}
+  - {ids: ["10.6084/m9.figshare.c.3599369"], why_excluded: "std1/DYRKP N-deprivation paper (Schulz-Raffelt 2016): the supplement is a figure docx (immunoblots); no MS proteomics deposit."}
+  - {ids: ["doi:10.1186/s13068-014-0171-1 (Valledor 2014)", "doi:10.1105/tpc.113.122523 (Schmollinger 2014)", "doi:10.1021/pr400952z (Wase 2014)", "doi:10.1021/pr300692t (Longworth 2012)", "doi:10.1093/jxb/erv217 (Gargouri 2015)", "doi:10.1104/pp.114.250530 (Juergens 2015)", "doi:10.1074/mcp.M111.016733 (Lee 2012, ammonium levels)"], why_excluded: "N-starvation/limitation Chlamydomonas proteomics papers with no archive deposit found in PRIDE/PC/MassIVE/jPOST/iProX/OmicsDI/DataCite/Zenodo searches. Data exist only as journal-site supplements, so they are not datasets under this key."}
+  - {ids: [PXD004712, PXD000250, PXD016699, PXD018605, PXD075898], why_excluded: "N-starvation proteomics of other algae (Chlorella sp. FC2, Chlorella vulgaris, Nannochloropsis oceanica/gaditana, Tribonema minus)."}
+  - {ids: [PXD000783], why_excluded: "Global phosphoproteome (Wang 2014 MCP); regex hit was 'limited', and no N-starved samples."}
+queries:
+  - "PRIDE v3 https://www.ebi.ac.uk/pride/ws/archive/v3/search/projects?keyword=chlamydomonas (pages 0-1): 142 hits; keyword=reinhardtii: 136; union 143 projects, each title/description/protocol regex-screened for N-starvation terms (v2 search endpoint returned 0, deprecated)"
+  - "PRIDE v3 keyword searches by author (Longworth, Wase, DiRusso, Schmollinger, Valledor, Weckwerth, Roustan, Fiehn, Goodenough, Benning, Kajikawa, Hicks, Li-Beisson, Shachar-Hill, Merchant, Schroda, Crespo): 0 new Chlamydomonas projects"
+  - "ProteomeCentral PROXI https://proteomecentral.proteomexchange.org/api/proxi/v0.1/datasets?search=Chlamydomonas&pageSize=1000: 154 (PRIDE 123, jPOST 13, iProX 10, MassIVE 8); search=reinhardtii: 147; search='Chlamydomonas nitrogen' or 'Chlamydomonas starvation': 0"
+  - "ProteomeCentral full compact list (?pageSize=100000&resultType=compact): 56,920 datasets, title/species regex chlamy|reinhardtii|volvox or (nitrogen & alga): 189 rows, no new C. reinhardtii N entries"
+  - "ProteomeCentral GetDataset?ID=<PXD>&outputMode=JSON for every non-PRIDE Chlamydomonas dataset (31) plus all candidates: descriptions screened"
+  - "Linked-paper screen: 141/173 Chlamydomonas PX datasets had a PMID/DOI; Europe PMC fullTextXML available for 93, regex-screened for N-starvation/N-free/gametogenesis terms"
+  - "MassIVE QueryDatasets full_search_input=chlamydomonas: 20; reinhardtii: 17; 'nitrogen starvation': 295; 'nitrogen deprivation': 283; 'nitrogen limitation': 380; 'green alga': 313; microalga: 23; algae: 112. No C. reinhardtii N-starvation dataset"
+  - "iProX https://www.iprox.cn/proxi/datasets?resultType=compact&search=Chlamydomonas: 7; reinhardtii: 4; microalgae: 5; 'Chlamydomonas nitrogen': 0"
+  - "jPOST repository search/API not publicly queryable (403); covered via ProteomeCentral (13 jPOST Chlamydomonas datasets) and jPOST XML https://repository.jpostdb.org/xml/JPST000542.0.xml, JPST000544.0.xml"
+  - "Panorama Public LabKey query-selectRows ExperimentAnnotations (766 experiments): 2 Chlamydomonas, 0 nitrogen"
+  - "PeptideAtlas PASS_View and builds page: no Chlamydomonas entries; PC lists 0 Chlamydomonas PeptideAtlas/PanoramaPublic PX datasets"
+  - "OmicsDI https://www.omicsdi.org/ws/dataset/search?query=chlamydomonas AND nitrogen: 255; reinhardtii AND starvation: 215; chlamydomonas AND deprivation: 108; AND depletion: 71; AND limitation: 65. Union 506 records, 37 proteomics (pride 32, jpost 3, massive 2), all already in the PRIDE/PC sets; PXD010847 surfaced here as a resource-limitation hit (near miss)"
+  - "Zenodo https://zenodo.org/api/records?q=+chlamydomonas +nitrogen +(proteomics proteome proteomic): 10; +chlamydomonas +(starvation deprivation depletion) +(proteomics proteome 'mass spectrometry'): 8; +reinhardtii +nitrogen +(protein proteome): 17; +chlamydomonas +proteomics: 18; +chlamydomonas +'lipid droplet': 1. None relevant"
+  - "DataCite https://api.datacite.org/dois?query=chlamydomonas AND nitrogen AND (proteomics OR proteome OR proteomic OR phosphoproteomics): 36; chlamydomonas AND (starvation OR deprivation OR depletion OR limitation) AND (proteomics OR proteome OR 'mass spectrometry'): 24; reinhardtii AND nitrogen AND (protein OR proteome OR proteomics): 110; (chlamydomonas OR reinhardtii) AND (nitrogen OR 'N starvation' ...): 314 (found Roustan Figshare S5)"
+  - "Figshare API https://api.figshare.com/v2/collections/{3940042,3742325,7390761}/articles plus article descriptions: content of supplementary items checked"
+  - "Dryad https://datadryad.org/api/v2/search?q=chlamydomonas nitrogen: 4; q=chlamydomonas proteomics: 5 (found S10)"
+  - "Harvard Dataverse https://dataverse.harvard.edu/api/search?q=chlamydomonas AND nitrogen&type=dataset: 0"
+  - "Europe PMC search (chlamydomonas) AND (N-starvation synonyms) AND (proteom* OR mass spectrometry OR iTRAQ OR TMT OR label-free): 825 hits, 96 Chlamydomonas-proteomics abstracts; fullText scanned for PXD/MSV/JPST/IPX/Zenodo/Figshare/Dryad"
+  - "Europe PMC same query AND repository terms (PXD*, ProteomeXchange, PRIDE, MassIVE, jPOST, iProX, zenodo, figshare, dryad, dataverse, PeptideAtlas): 175 hits, full texts scanned for accessions; new ids all from other organisms"
+  - "WebSearch: 'Chlamydomonas nitrogen starvation proteomics dataset PXD PRIDE', 'Wase 2014 ... data deposited', 'Chlamydomonas nitrogen deprivation proteome ... ProteomeXchange', 'Chlamydomonas ... 15N ... ProteomeXchange'. Leads PXD002146 (reserved) and PXD004712 (Chlorella)"
+size_verdict: ok
