@@ -298,8 +298,18 @@ def score(task: dict, arm: str, run_dir: Path, adjudication: dict | None = None)
         "wall_s": round(meta["wall_s"], 1),
         "exit": meta["exit"],
         "error": result.get("subtype") if result.get("is_error") else None,
-        "answer": (result.get("result") or "")[:400],
+        "answer": _portable(result.get("result") or "", run_dir)[:400],
     }
+
+
+def _portable(answer: str, run_dir: Path) -> str:
+    """``answer`` with the output root (``<out>/<arm>/<task>/r<n>``) written as ``<out>``:
+    agents name the file they wrote, and that absolute path is this machine's, not the
+    result's."""
+    root = run_dir.parents[2]
+    for form in dict.fromkeys((str(root.resolve()), str(root))):
+        answer = answer.replace(form, "<out>")
+    return answer
 
 
 def main() -> None:

@@ -71,6 +71,14 @@ def main() -> None:
     # A file that is not a JSON list scores as an empty list, not as an error.
     bad = run.score_list(TASK, run_dir("not json"), ADJUDICATION)
     assert not bad["json_ok"] and bad["recall"] == 0.0 and bad["listed"] == 0, bad
+    # A saved answer names the output root as <out>, not this machine's path.
+    with tempfile.TemporaryDirectory() as tmp:
+        rd = Path(tmp) / "runs" / "dam" / "R1" / "r1"
+        said = f"I listed 3 studies in `{rd.resolve()}/out/datasets.json`."
+        assert (
+            run._portable(said, rd) == "I listed 3 studies in `<out>/dam/R1/r1/out/datasets.json`."
+        )
+        assert run._portable("no path here", rd) == "no path here"  # control: untouched
     print("OK")
 
 
