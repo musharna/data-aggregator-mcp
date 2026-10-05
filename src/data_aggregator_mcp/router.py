@@ -49,6 +49,7 @@ from data_aggregator_mcp._merge import interleave
 from data_aggregator_mcp._relevance import MatchTiers
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import (
+    SEARCH_LIST_LIMITS,
     AssayExpansion,
     ChemicalExpansion,
     DataResource,
@@ -62,6 +63,7 @@ from data_aggregator_mcp.models import (
     TaxonExpansion,
     TissueExpansion,
     UnresolvedEntity,
+    compact,
     derive_access_modes,
     derive_version_status,
 )
@@ -433,6 +435,22 @@ def _stored_offset(offsets: dict[str, int], key: str) -> int:
     return offsets.get(key.partition("/")[0], 0)  # pragma: no mutate
 
 
+# Characters of hits one search page may carry. Claude Code passes a tool result of up to
+# about 50,000 characters to the model and saves a longer one to a file the model may
+# have no tool to read; in the 2026-10-05 head-to-head, 9 of 95 results were lost so.
+# The rest of the 50k is for the page's envelope (expansions, errors, cursor).
+SEARCH_PAGE_CHARS = 38_000
+# Taxon enrichment runs after the page is cut: per organism, at most one taxon and one
+# plant cross-link, ~130 characters together.
+_ENRICH_CHARS_PER_ORGANISM = 130
+
+
+def _hit_chars(r: DataResource) -> int:
+    """Characters ``r`` will take in the page, as compacted and enriched."""
+    organisms = min(len(r.organism), SEARCH_LIST_LIMITS["organism"])
+    return len(compact(r).model_dump_json()) + _ENRICH_CHARS_PER_ORGANISM * organisms
+
+
 @dataclass
 class _Page:
     emitted: list[DataResource]
@@ -523,15 +541,26 @@ async def _fetch_page(
     handled_dois: set[str] = set()
     emitted: list[DataResource] = []
     removed: dict[str, int] = {}  # handled records the post-filter dropped, per stream key
+    used = 0
     for key, i, r in kept:
         if len(emitted) == size:
+            break
+        passes = _passes_filters(r, filters)
+        cost = _hit_chars(r) if passes else 0
+        # A hit that does not fit stays unhandled, so the cursor returns it next page.
+        if emitted and used + cost > SEARCH_PAGE_CHARS:
+            errors["page_size"] = (
+                f"{len(emitted)} of the {size} hits asked for fit in one tool result "
+                f"(~{SEARCH_PAGE_CHARS:,} characters); next_cursor continues with the rest"
+            )
             break
         handled[key].add(i)
         handled_ids.add(r.id)
         if r.doi:
             handled_dois.add(r.doi.lower())
-        if _passes_filters(r, filters):
+        if passes:
             emitted.append(r)
+            used += cost
         else:
             removed[key] = removed.get(key, 0) + 1
     for key, i, r in dropped:
@@ -631,6 +660,8 @@ async def _build_search_result(
     # than `size`.
     if collapse_mirrors:
         enriched = _collapse_mirrors(enriched)
+    # Enrichment and collapse add to lists after the adapters compacted each hit.
+    enriched = [compact(r) for r in enriched]
     return SearchResult(
         query=query,
         total=total,

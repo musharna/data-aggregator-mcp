@@ -56,7 +56,10 @@ async def test_search_maps_dcat_hits_from_the_keyless_catalog():
     assert r0.files == []  # compact() drops files in the search view
     nonpublic = recs[1]
     assert nonpublic.access == "closed" and nonpublic.license == "CC0-1.0"
-    assert nonpublic.subjects[-1] == "geospatial"  # DCAT theme appended after keywords
+    # The DCAT theme is appended after the keywords; the search view keeps the first 5.
+    assert datagov._normalize(_SEARCH["results"][1]).subjects[-1] == "geospatial"
+    assert nonpublic.subjects[-1] != "geospatial"
+    assert nonpublic.truncated["subjects"].startswith("first 5 of ")
     no_licence = recs[2]
     assert no_licence.license is None and no_licence.access == "open"
     bare_year = recs[3]  # issued absent, modified "2021"

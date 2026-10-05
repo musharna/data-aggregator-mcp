@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from data_aggregator_mcp.models import (
+    SEARCH_LIST_LIMITS,
     Creator,
     DataResource,
     FetchResult,
     FileEntry,
     FundingRef,
+    Link,
+    Mirror,
     SearchResult,
+    Taxon,
     _orcid,
     compact,
     derive_access_modes,
@@ -386,3 +390,45 @@ def test_derive_access_modes_is_empty_when_fetch_refuses_the_record():
         "head",
         "sql",
     ]
+
+
+def test_compact_caps_every_list_and_names_each_cut() -> None:
+    long = {field: limit + 2 for field, limit in SEARCH_LIST_LIMITS.items()}
+    r = DataResource(
+        id="zenodo:1",
+        source="zenodo",
+        kind="dataset",
+        title="t",
+        creators=[Creator(name=f"c{i}") for i in range(long["creators"])],
+        funding=[FundingRef(funder=f"f{i}") for i in range(long["funding"])],
+        accessions=[f"A{i}" for i in range(long["accessions"])],
+        organism=[f"o{i}" for i in range(long["organism"])],
+        taxa=[Taxon(taxid=i, name=f"t{i}") for i in range(long["taxa"])],
+        subjects=[f"s{i}" for i in range(long["subjects"])],
+        links=[Link(rel="x", target_id=f"l{i}") for i in range(long["links"])],
+        mirrors=[Mirror(source="zenodo", id=f"m{i}") for i in range(long["mirrors"])],
+    )
+    c = compact(r)
+    for field, limit in SEARCH_LIST_LIMITS.items():
+        assert getattr(c, field) == getattr(r, field)[:limit], field
+        assert c.truncated[field] == (
+            f"first {limit} of {limit + 2} in this search hit; resolve for all"
+        )
+    assert compact(c) == c  # idempotent: the router compacts again after enrichment
+    assert r.truncated == {} and len(r.links) == long["links"]  # input not mutated
+
+
+def test_compact_leaves_lists_at_the_cap_and_keeps_an_earlier_cut_note() -> None:
+    at_cap = DataResource(
+        id="sra:1",
+        source="sra",
+        kind="study",
+        title="t",
+        links=[Link(rel="x", target_id=f"l{i}") for i in range(SEARCH_LIST_LIMITS["links"])],
+        truncated={"accessions": "first 100 of 891 SRA runs"},
+    )
+    assert compact(at_cap) == at_cap.model_copy(update={"files": []})
+    over = at_cap.model_copy(update={"accessions": [f"SRR{i}" for i in range(100)]})
+    assert compact(over).truncated["accessions"] == (
+        "first 10 of 100 in this search hit; resolve for all (first 100 of 891 SRA runs)"
+    )
