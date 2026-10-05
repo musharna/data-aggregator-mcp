@@ -166,17 +166,30 @@ async def test_the_target_holds_the_old_copy_until_the_new_one_is_complete(
         await fetch_mod.fetch_files(client, _record(entry), dest=str(tmp_path))
 
     seen_mid_stream: list[bytes] = []
+    temps_mid_stream: list[list[str]] = []
 
     async def chunks():
         yield NEW[:10]
         await asyncio.sleep(0)
         seen_mid_stream.append(out.read_bytes())
+        # The partial sits beside the target (os.replace is atomic only within one
+        # filesystem; /tmp often is another), hidden and named so a leftover is findable.
+        temps_mid_stream.append(
+            [
+                p.name
+                for p in out.parent.iterdir()
+                if p.name not in ("counts.txt", ".dataresource.json")
+            ]
+        )
         yield NEW[10:]
 
     async with _serving({entry.url: httpx.Response(200, content=chunks())}) as client:
         await fetch_mod.fetch_files(client, _record(entry), dest=str(tmp_path))
     assert seen_mid_stream == [OLD]
+    ((temp,),) = temps_mid_stream
+    assert temp.startswith(".fetch-") and temp.endswith(".part")
     assert out.read_bytes() == NEW  # positive control: the new copy did land
+    assert _leftovers(out.parent) == []
 
 
 @pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")

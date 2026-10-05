@@ -278,7 +278,9 @@ async def _download_one(
             )
         os.replace(part, out)
     except BaseException:
-        part.unlink(missing_ok=True)
+        # ``part`` always exists here (the replace is the try's last step), so
+        # missing_ok only keeps an outside deletion from masking the real error.
+        part.unlink(missing_ok=True)  # pragma: no mutate
         raise
     # From here ``out`` is a verified download, so a failed extraction leaves it in place.
     extracted: list[str] = []
