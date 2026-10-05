@@ -1,0 +1,300 @@
+task: R4
+criteria: >-
+  Included: any public data deposit (verified to resolve, built 2026-10-05) whose main subject is wild Panthera uncia.
+  That means field data (camera trap, GPS telemetry, occupancy or sign surveys, compiled field occurrence records,
+  scat or tissue genetics and metabarcoding, pathogen or virome sequencing of wild animals) or prey or conflict surveys
+  explicitly centred on snow leopards. A study counts if snow leopard is the sole focal species, or a named co-focal
+  species in the title with its own data (snow leopard + lynx, + wolf, + its prey, with the analysis turning on snow leopard).
+  Range-wide connectivity or priority-area models built for snow leopard are included.
+  Unit = study = one research output. All of its deposits are aliases and grouped together:
+  a Dryad DOI plus the Zenodo record that indexes it plus Dryad's software/supplement Zenodo DOI;
+  figshare/Zenodo versions and duplicate uploads; BioProject plus SRA/DRA/GSA study plus companion data files of the same paper.
+  Publisher-hosted supplementary files (Royal Society, Frontiers, BMC/Springer, PLOS, Pensoft figshare portals) are
+  listed only as aliases of a study that qualifies on its own; supplements standing alone are near misses.
+  Excluded: zoo or captive-only work; reference-genome assemblies with no field sampling; methods or simulation studies;
+  multi-carnivore or multi-species datasets where snow leopard is one of several (not title-focal); GBIF datasets that merely
+  contain snow leopard records (no GBIF dataset is snow-leopard-dominated: the highest share is 3/85 records);
+  papers, reports, theses and registrations without data; GitHub-only data; BioProjects with no public runs;
+  embargoed or unresolvable DOIs. Items marked BORDERLINE in evidence are prey-centred studies included because the title
+  frames them around snow leopards.
+studies:
+  - key: S1
+    title: "Exceedingly low genetic diversity in snow leopards due to persistently small population size (WGS of 37 newly sequenced snow leopards)"
+    year: 2025
+    ids: [10.5061/dryad.1vhhmgr78, PRJNA1048427, SRP475968, PRJNA1051290, SRP477800]
+    archives: [Dryad, NCBI BioProject/SRA]
+    evidence: "PNAS 2025 (PMC12541318) names PRJNA1048427 + PRJNA1051290 (Indian sample collected by Nature Conservation Foundation); 34 wild + 4 captive genomes; Dryad holds the VCFs"
+  - key: S2
+    title: "Conservation genomics of global snow leopards (52 wild resequenced genomes + reference genome)"
+    year: 2025
+    ids: [PRJCA022406, CRA021509, CRA022084, PRJNA1234234, GCA_048603155.1]
+    archives: [CNCB-NGDC GSA, NCBI BioProject]
+    evidence: "Data statement of PMC11998254: 52 wild snow leopards resequenced (GSA CRA021509); reference assembly under PRJNA1234234"
+  - key: S3
+    title: "Spatial variation in population-density, movement and detectability of snow leopards in a multiple use landscape in Spiti Valley"
+    year: 2021
+    ids: [10.5061/dryad.3r2280gfx, zenodo:4895080]
+    archives: [Dryad, Zenodo]
+    evidence: "Camera-trap SECR data, wild snow leopards, Spiti, India"
+  - key: S4
+    title: "From shadows to data: First robust population assessment of snow leopards in Pakistan"
+    year: 2025
+    ids: [10.5061/dryad.2rbnzs82x]
+    archives: [Dryad]
+    evidence: "Population assessment survey data for wild snow leopards, Pakistan"
+  - key: S5
+    title: "Spatial separation of prey from livestock facilitates coexistence of a specialized large carnivore with human land use"
+    year: 2023
+    ids: [10.5061/dryad.n5tb2rbv6, zenodo:8378176]
+    archives: [Dryad, Zenodo]
+    evidence: "Abstract: studied snow leopards and their main prey, bharal; livestock census + camera data"
+  - key: S6
+    title: "Rawdatafiles for snow leopard population estimation (Himachal Pradesh)"
+    year: 2021
+    ids: [10.5061/dryad.0cfxpnw3p, zenodo:5745879]
+    archives: [Dryad, Zenodo]
+    evidence: "Occupancy-stratified camera trapping at 10 sites to estimate the snow leopard population across 26,112 km2"
+  - key: S7
+    title: "Co-occurrence between snow leopard and Eurasian lynx in southern Mongolia"
+    year: 2024
+    ids: [10.5061/dryad.pnvx0k6x0, 10.5281/zenodo.10949691, 10.5281/zenodo.10949692]
+    archives: [Dryad, Zenodo]
+    evidence: "Camera-trap co-occurrence surveys 2017-2022 with snow leopard as the focal dominant species"
+  - key: S8
+    title: "No silver bullet? Snow leopard prey selection in Mt. Kangchenjunga, Nepal"
+    year: 2024
+    ids: [10.5061/dryad.vq83bk3rn, 10.5281/zenodo.12735186, 10.5281/zenodo.12735187]
+    archives: [Dryad, Zenodo]
+    evidence: "Snow leopard scat diet and prey-selection data"
+  - key: S9
+    title: "Metabarcoding analysis provides insight into the link between prey and plant intake in a large alpine cat carnivore, the snow leopard (Kyrgyzstan)"
+    year: 2024
+    ids: [10.5061/dryad.j9kd51cjp, zenodo:10903905, 10.5281/zenodo.10386240, 10.5281/zenodo.10386241, 10.6084/m9.figshare.c.7162451, PRJDB16690, DRP010797]
+    archives: [Dryad, Zenodo, figshare (Royal Society), DDBJ/ENA]
+    evidence: "Wild-scat vertebrate and plant metabarcoding; the paper (PMC11285773) cites the Dryad DOI and PRJDB16690"
+  - key: S10
+    title: "Range-wide snow leopard phylogeography supports three subspecies"
+    year: 2017
+    ids: [10.5061/dryad.sb20c, 10.5061/dryad.sb20c/1, 10.5061/dryad.sb20c/2, zenodo:4962393]
+    archives: [Dryad, Zenodo]
+    evidence: "Noninvasive scat microsatellite and mtDNA genotypes of 70 wild snow leopards"
+  - key: S11
+    title: "Impact of wild prey availability on livestock predation by snow leopards"
+    year: 2017
+    ids: [10.5061/dryad.8p689, 10.5061/dryad.8p689/1, 10.5061/dryad.8p689/2, 10.5061/dryad.8p689/4, 10.5061/dryad.8p689/5, 10.5061/dryad.8p689/6, zenodo:4983117, 10.6084/m9.figshare.c.3787397, 10.6084/m9.figshare.5039255, 10.6084/m9.figshare.5039237, 10.6084/m9.figshare.5039228]
+    archives: [Dryad, Zenodo, figshare (Royal Society)]
+    evidence: "Snow leopard diet, scat genotyping and density data plus prey and livestock censuses (Spiti and Ladakh)"
+  - key: S12
+    title: "Ungulate spatiotemporal responses to contrasting predation risk from wolves and snow leopards"
+    year: 2022
+    ids: [10.5061/dryad.tb2rbp044, zenodo:7342955, 10.5281/zenodo.7301817, 10.5281/zenodo.7301818]
+    archives: [Dryad, Zenodo]
+    evidence: "BORDERLINE: camera-trap data on prey responses to snow leopard (and wolf) predation risk"
+  - key: S13
+    title: "Prey preference of snow leopard (Panthera uncia) in South Gobi, Mongolia"
+    year: 2012
+    ids: [10.5061/dryad.bj376f61, zenodo:4933829]
+    archives: [Dryad, Zenodo]
+    evidence: "Sequence data from wild snow leopard scat metabarcoding (PLoS One 2012)"
+  - key: S14
+    title: "Multiscale factors affecting human attitudes toward snow leopards and wolves"
+    year: 2015
+    ids: [10.5061/dryad.6f8p0, 10.5061/dryad.6f8p0/1, zenodo:5016798]
+    archives: [Dryad, Zenodo]
+    evidence: "Household survey data on human-snow leopard conflict and attitudes"
+  - key: S15
+    title: "In the shadows of snow leopards and the Himalayas: density and habitat selection of blue sheep in Manang, Nepal"
+    year: 2021
+    ids: [10.5061/dryad.vt4b8gtqc, zenodo:5555168]
+    archives: [Dryad, Zenodo]
+    evidence: "BORDERLINE: survey of the snow leopard's main prey, framed around snow leopard in the title"
+  - key: S16
+    title: "Patterns of livestock depredation by snow leopards and effects of intervention strategies: lessons from the Nepalese Himalaya"
+    year: 2022
+    ids: [10.5061/dryad.j9kd51cft, zenodo:6518240]
+    archives: [Dryad, Zenodo]
+    evidence: "Survey data on snow leopard livestock depredation"
+  - key: S17
+    title: "Trophic interaction and livestock dependence of snow leopard and sympatric carnivores in Tianshan, Northwest China"
+    year: 2024
+    ids: [10.5061/dryad.02v6wwqcf]
+    archives: [Dryad]
+    evidence: "Fecal DNA metabarcoding (179 scats) with snow leopard as the title-focal species"
+  - key: S18
+    title: "Predicting global population connectivity and targeting conservation action for snow leopard across its range"
+    year: 2015
+    ids: [10.5061/dryad.314b5, 10.5061/dryad.314b5/1, zenodo:4982660]
+    archives: [Dryad, Zenodo]
+    evidence: "Range-wide snow leopard resistance and connectivity surfaces"
+  - key: S19
+    title: "Status of the mountain ungulate prey of the endangered snow leopard Panthera uncia in the Tost Local Protected Area, South Gobi, Mongolia"
+    year: 2016
+    ids: [10.5061/dryad.v61m2, 10.5061/dryad.v61m2/1, zenodo:4935395]
+    archives: [Dryad, Zenodo]
+    evidence: "Double-observer ibex and argali counts framed as snow leopard prey base"
+  - key: S20
+    title: "Identifying (gaps and) priority areas to guide management planning of a protected area network to support snow leopard connectivity in Central Asia"
+    year: 2026
+    ids: [10.5061/dryad.7d7wm389t, 10.6084/m9.figshare.32337723, 10.6084/m9.figshare.22067480]
+    archives: [Dryad, figshare]
+    evidence: "Connectivity (Conefor/IIC) results for snow leopard PA network; same author (Norris) and study on all three deposits"
+  - key: S21
+    title: "Narrow dietary niche with high overlap between snow leopards and Himalayan wolves indicates potential for resource competition"
+    year: 2025
+    ids: [10.5061/dryad.2280gb623]
+    archives: [Dryad]
+    evidence: "152 scats from Shey Phoksundo NP, snow leopard diet"
+  - key: S22
+    title: "Camera-trap evidence of Myricaria sp. consumption and head-rubbing by a wild snow leopard"
+    year: 2026
+    ids: [10.5061/dryad.905qftv0r, 10.5281/zenodo.19751807]
+    archives: [Dryad, Zenodo]
+    evidence: "Camera-trap observation of a wild snow leopard; the paper (PMC13240292) cites both deposits"
+  - key: S23
+    title: "Assessing changes in distribution of the endangered snow leopard Panthera uncia and its wild prey over 2 decades"
+    year: 2017
+    ids: [10.5061/dryad.hp4b3, 10.5061/dryad.hp4b3/1, zenodo:5014594]
+    archives: [Dryad, Zenodo]
+    evidence: "Snow leopard and prey occupancy or distribution survey data"
+  - key: S24
+    title: "Relative influence of wild prey and livestock abundance on carnivore caused livestock predation (Shey Phoksundo, Nepal)"
+    year: 2021
+    ids: [10.5061/dryad.dfn2z34zq, zenodo:5450185]
+    archives: [Dryad, Zenodo]
+    evidence: "Abstract: snow leopard SECR camera trapping + prey and livestock surveys + depredation"
+  - key: S25
+    title: "Data for 'Mapping the ghost: Estimating probabilistic snow leopard distribution across Mongolia'"
+    year: 2021
+    ids: [10.5281/zenodo.5257571, 10.5281/zenodo.5257572]
+    archives: [Zenodo]
+    evidence: "Country-wide snow leopard occupancy survey of 1017 sampling units"
+  - key: S26
+    title: "Data for: Snow leopard-mediated apparent competition between wild ungulates and domestic livestock in the Trans-Himalaya"
+    year: 2025
+    ids: [10.5281/zenodo.15003684, 10.5281/zenodo.15003685, 10.5281/zenodo.16575233, 10.5281/zenodo.17384769, 10.5281/zenodo.21638620, 10.5281/zenodo.21887007]
+    archives: [Zenodo]
+    evidence: "13-year snow leopard density, ungulate density and livestock depredation data from Spiti (all versions of one concept)"
+  - key: S27
+    title: "Supplementary data in Snow leopard population assessment in Qilianshan National Park"
+    year: 2026
+    ids: [10.5281/zenodo.20160628, 10.5281/zenodo.20160629]
+    archives: [Zenodo]
+    evidence: "Code and data for a snow leopard population assessment"
+  - key: S28
+    title: "Species presence data - snow leopard, siberian ibex, and marcopolo sheep (Tajikistan Pamir)"
+    year: 2026
+    ids: [10.5281/zenodo.22252314, 10.5281/zenodo.22252315, 10.5281/zenodo.22253310, 10.5281/zenodo.22253311, 10.6084/m9.figshare.33415759]
+    archives: [Zenodo, figshare]
+    evidence: "The same 'species presence data.xlsx' was uploaded 2026-09-02 to two Zenodo concepts (one has no files) and to figshare (Koirala, Tajikistan Pamir)"
+  - key: S29
+    title: "Data for 'Spatial ecology of snow leopards (Panthera uncia) in the Altai Mountains of western Mongolia'"
+    year: 2022
+    ids: [10.6084/m9.figshare.19184897]
+    archives: [figshare]
+    evidence: "GPS-collar home range and resource selection data; cited by PLoS One 2023 (PMC10045553)"
+  - key: S30
+    title: "Snow leopard detections, Sutai mountain range, Western Mongolia"
+    year: 2021
+    ids: [10.6084/m9.figshare.16691668]
+    archives: [figshare]
+    evidence: "Camera-trap snow leopard encounters for SECR (Oberosler et al. 2021)"
+  - key: S31
+    title: "Grachev et al. Kazakhstan snow leopard occurrence data"
+    year: 2023
+    ids: [10.6084/m9.figshare.22302919]
+    archives: [figshare]
+    evidence: "Snow leopard occurrence records from Kazakhstan 2004-2021: sightings, tracks, camera traps"
+  - key: S32
+    title: "Assessment of genetic diversity, population structure, and gene flow in snow leopards across Ladakh region, India"
+    year: 2025
+    ids: [10.6084/m9.figshare.25736751]
+    archives: [figshare]
+    evidence: "Microsatellite genotypes of 72 snow leopards from 4 Ladakh sites"
+  - key: S33
+    title: "Snow leopard (Panthera uncia) depredation and mass kills during 1992-2013 in the Hemis National Park of the Trans-Himalayas"
+    year: 2017
+    ids: [10.1594/pangaea.883303, 10.1594/pangaea.883301, 10.1594/pangaea.883302]
+    archives: [PANGAEA]
+    evidence: "Collection plus two child tables of snow leopard depredation and mass-kill records"
+  - key: S34
+    title: "More Than One Way To Count a Cat: Structured Camera-Trapping vs. Opportunistic Fecal Sampling for SCR Estimation of Snow Leopard Population Density"
+    year: 2016
+    ids: [10.17605/osf.io/hr6xm, osf:vqgbk]
+    archives: [OSF]
+    evidence: "The registration archive contains camera and fecal capture CSVs (Murghab, Madiyan; Tajikistan)"
+  - key: S35
+    title: "Greenery or fear: site use of Himalayan ibex in a predator-dominant landscape"
+    year: 2026
+    ids: [10.17632/cgcp7pkjpp, 10.17632/cgcp7pkjpp.1]
+    archives: [Mendeley Data]
+    evidence: "BORDERLINE: ibex and snow leopard co-occurrence occupancy data, Pakistan"
+  - key: S36
+    title: "Detection and genetic characterization of viruses present in free-ranging snow leopards (Panthera uncia)"
+    year: 2020
+    ids: [PRJNA626440, SRP257371, 10.3389/fvets.2020.00645.s001]
+    archives: [NCBI BioProject/SRA, Frontiers supplement]
+    evidence: "Virome sequencing of wild snow leopards: 22 runs"
+  - key: S37
+    title: "Snow leopard dietary preferences and livestock predation revealed by fecal DNA metabarcoding (Sanjiangyuan, Qinghai)"
+    year: 2021
+    ids: [PRJNA767363, SRP339680, 10.3389/fevo.2021.783546.s001, 10.3389/fevo.2021.783546.s002]
+    archives: [NCBI BioProject/SRA, Frontiers supplement]
+    evidence: "The paper's data statement names PRJNA767363; wild scats from 7 Sanjiangyuan sites, 2009-2017"
+  - key: S38
+    title: "Viral metagenomic analysis reveals a novel bocaparvovirus in the enteric virome of a wild snow leopard"
+    year: 2022
+    ids: [PRJNA909234, SRP412258]
+    archives: [NCBI BioProject/SRA]
+    evidence: "PMC11053277: fecal sample of a wild snow leopard, Gansu"
+near_misses:
+  - {ids: [10.5061/dryad.5x69p8dgv, PRJNA1186083, PRJNA602938, PRJNA861302, PRJNA693792, PRJNA29503, PRJNA182708], why_excluded: "reference genome assemblies of single (captive or unstated) animals; no field sampling"}
+  - {ids: [PRJNA1092733], why_excluded: "Pantherinae mutation-rate pedigree trios; captive animals"}
+  - {ids: [PRJNA1519155], why_excluded: "gut virome of captive snow leopards"}
+  - {ids: [PRJNA491757, PRJNA338382], why_excluded: "snow leopard gut-microbe BioProjects with 0 public SRA runs"}
+  - {ids: [PRJNA1103791], why_excluded: "predator-guild scat metabarcoding (snow leopard, wolf, fox and others), Qinghai; multi-carnivore"}
+  - {ids: [PRJNA735906, PRJNA832542, PRJNA716130, PRJNA810306, PRJNA1200941], why_excluded: "multi-species carnivore or zoo microbiome projects"}
+  - {ids: [PRJNA594927, PRJNA280802, PRJNA1272083], why_excluded: "methods projects (field sequencing pipeline, cross-species capture, barcodes) using some snow leopard samples"}
+  - {ids: [10.5061/dryad.2547d7wqr, zenodo:5032895], why_excluded: "faecal glucocorticoid method developed on a captive snow leopard"}
+  - {ids: [10.5061/dryad.66t1g1k2t, 10.5061/dryad.3r2280gn4, 10.5061/dryad.751cv, 10.5061/dryad.tx95x6b13, 10.5061/dryad.501ps, 10.5061/dryad.62p1q, 10.5061/dryad.q4n4884, 10.5061/dryad.ps04c], why_excluded: "felid-wide, captive or domestic, or other-species datasets mentioning snow leopard"}
+  - {ids: [10.5061/dryad.31zcrjdxg, 10.5061/dryad.547d7wmd9, 10.5281/zenodo.16600206, 10.6084/m9.figshare.19314176], why_excluded: "multi-carnivore or mammal-community camera-trap datasets (Spiti, Mongolia); snow leopard is not the title focus"}
+  - {ids: [10.5061/dryad.p5hqbzkx3], why_excluded: "climate vulnerability of several threatened mammals (snow leopard, red panda, rhino)"}
+  - {ids: [10.5061/dryad.47d7wm3dz, zenodo:5501004], why_excluded: "blue sheep double-observer survey, not framed around snow leopard"}
+  - {ids: [10.5281/zenodo.17357879], why_excluded: "bharal density from camera placement; snow leopard cameras are a methods contrast"}
+  - {ids: [10.5281/zenodo.8407625], why_excluded: "injured free-living felids: lynx, bobcat and snow leopard; multi-species"}
+  - {ids: [10.5061/dryad.brv15dvmn], why_excluded: "cited by PMC12611351 but not public (Dryad API refuses access, doi.org 404)"}
+  - {ids: ["github.com/DipeshDFRS/Snow_leopard"], why_excluded: "Nepal satellite-collar data (Shrestha 2025) only on GitHub; not an archive. No Movebank public study exists"}
+  - {ids: [10.6084/m9.figshare.c.6150289, 10.6084/m9.figshare.20495926], why_excluded: "standalone BMC journal supplement (Bhutan depredation); no independent data deposit"}
+  - {ids: [10.3389/fvets.2025.1492640.s001, 10.3389/fcosc.2021.781085.s001, 10.3897/natureconservation.46.76036.suppl1], why_excluded: "standalone journal supplements (clinical table, habitat model PDF, questionnaire)"}
+  - {ids: [10.1371/journal.pone.0101319.t001, 10.1371/journal.pone.0170549.t001, 10.1371/journal.pone.0155309, 10.1371/journal.pone.0236635.s001], why_excluded: "PLOS figshare auto-deposits of article tables (dozens of .t00x items); 0236635 is a zoo study"}
+  - {ids: [10.6084/m9.figshare.12996977, 10.6084/m9.figshare.24787296], why_excluded: "derived genomic analyses (cross-species poolseq VCF, NUMT hits), not field sampling"}
+  - {ids: [10.17632/frjcyhxr8b, 10.17632/jn7nw57cj2], why_excluded: "Kazakhstan threatened-species statistics; Jilin camera images with no snow leopard"}
+  - {ids: [99aaf87c-d4a5-4239-a42a-63df6eb7dbe9, 84b5b072-2832-4c72-ad17-eb90bcb0c5ac], why_excluded: "GBIF datasets with the highest snow leopard share: Nagar mammal inventory 3/85, Asian camera traps 5/10300. All 87 GBIF datasets with Panthera uncia records are broad"}
+  - {ids: [10.17605/osf.io/vjmkt], why_excluded: "systematic-review registration, no data"}
+  - {ids: [10.5281/zenodo.8072989, 10.5281/zenodo.15239562, 10.5281/zenodo.20821614], why_excluded: "Biosphere Expeditions reports (text), not datasets"}
+  - {ids: [10.5281/zenodo.13199155, 10.5281/zenodo.8028511], why_excluded: "Plazi/BLR figure images extracted from articles"}
+  - {ids: [10.7302/3zjz-9h25, 10.26180/19897018, 10.34810/data2065], why_excluded: "museum skull CT or specimen data"}
+  - {ids: [10.5281/zenodo.4074085], why_excluded: "SECR survey-design software"}
+queries:
+  - "GBIF species/match?name=Panthera uncia -> usageKey 2435238 (Uncia uncia)"
+  - "GBIF occurrence/search?taxonKey=2435238&facet=datasetKey&facetLimit=200 -> 851 occurrences in 87 datasets; each dataset's total queried; max share 0.035"
+  - "GBIF dataset/search q=snow leopard (39), uncia (38), Panthera uncia (3), irbis (334) -> 0 relevant"
+  - "Dryad api/v2/search q=snow leopard (32), Panthera uncia (29), Uncia uncia (29)"
+  - "DataCite dois?query=titles.title:(snow leopard|snow leopards|Panthera uncia|Uncia uncia) -> 239"
+  - "DataCite dois?query=(snow leopard...) resource-type-id=dataset -> 2265 (mostly GBIF downloads); excluding GBIF publisher -> 105; software 13, collection 13, other 43"
+  - "DataCite dois?query=prefix:10.5441 AND (uncia OR snow leopard) -> 0 (Movebank Data Repository)"
+  - "DataCite query 雪豹/снежный барс/ирбис -> 39, 0 relevant"
+  - "Zenodo api/records q=\"snow leopard\" type=dataset 34, software 8, other 4; \"snow leopards\" 20/4/1; \"Panthera uncia\" 14/4/1; \"Uncia uncia\" 1/0/0"
+  - "figshare api/v2/articles/search \"snow leopard\" 240, \"snow leopards\" 224, \"Panthera uncia\" 118, \"Uncia uncia\" 13"
+  - "Harvard Dataverse api/search q=\"snow leopard\" type=dataset -> 0 (positive control q=leopard -> 16)"
+  - "Mendeley Data api/research-data/search query=\"snow leopard\" -> 10; \"Panthera uncia\" -> 10"
+  - "OSF api/v2/nodes filter[title][icontains]=snow leopard -> 0; registrations -> 1 (hr6xm)"
+  - "DataONE cn/v2/query/solr q=title/abstract/keywords snow leopard|Panthera uncia|Uncia uncia AND formatType:METADATA -> 47 (Dryad + PANGAEA mirrors)"
+  - "PANGAEA ws.pangaea.de/es/pangaea/panmd/_search q=snow leopard|Panthera uncia -> 3"
+  - "Movebank service/public/json?entity_type=study -> 166 public studies, 0 snow leopard; direct-read needs login (401)"
+  - "NCBI esearch bioproject term=\"Panthera uncia\"[Organism] OR snow leopard OR ... -> 22; txid29064[Organism:exp] -> 13"
+  - "NCBI esearch sra term=txid29064[Organism:exp] OR \"snow leopard\" -> 194 runs in 26 projects"
+  - "ENA portal search read_run tax_tree(29064) OR host_tax_id=29064 -> about 30 projects; read_study title/description snow leopard|uncia"
+  - "CNCB-NGDC search/api/specific db=bioproject q=snow leopard -> 11; q=Panthera uncia -> 7 (adds PRJCA022406)"
+  - "Europe PMC search TITLE snow leopard AND repository terms -> 17; OPEN_ACCESS full texts -> 77 papers scanned for repository identifiers"
+  - "WebSearch Movebank snow leopard GPS -> papers only (GitHub data for Shrestha 2025)"
+size_verdict: ok

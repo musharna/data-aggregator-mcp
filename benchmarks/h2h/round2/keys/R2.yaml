@@ -1,0 +1,117 @@
+task: R2
+criteria: >
+  Included: any publicly released study whose own newly generated data are single-cell or
+  single-nucleus RNA-seq (any chemistry: 10x, Drop-seq-like, Smart-seq2, SeekOne, BGI DNBelab)
+  or imaging-based spatial transcriptomics at true single-cell resolution (Xenium, segmented
+  cells), from Ambystoma mexicanum limb/digit regeneration, with at least one sample from
+  regenerating limb tissue (wound/stump post-amputation, blastema at any stage, or a
+  regenerated limb collected after amputation). Unit = study: GEO series + BioProject + SRA
+  study + ENA mirror + GSA/CNSA/SCP/viewer copies of the same data are one study; a GEO
+  SuperSeries counts as an alias of its single-cell SubSeries. Excluded: bulk RNA-seq
+  (including FACS-sorted bulk populations), spot-based spatial (Visium v1, 55 um spots) that
+  is not single-cell resolution, non-limb regeneration (tail, brain, thymus, retina, heart,
+  jaw), other salamanders/species, uninjured-only or development-only atlases, the
+  contralateral "systemically activated" limbs of amputated animals (not regenerating tissue;
+  flagged as borderline), reanalyses that deposit no new data, and accessions cited in papers
+  that are not yet publicly resolvable.
+studies:
+  - key: S1
+    title: Single-cell analysis uncovers convergence of cell identities during axolotl limb regeneration (Gerber et al., Science)
+    year: 2018
+    ids: [GSE106269, PRJNA416091, SRP122505]
+    archives: [GEO, SRA, ENA]
+    evidence: Smart-seq2 scRNA-seq of Prrx1-lineage connective tissue in intact limb and 3-18 dpa blastemas; 1604 single-cell GSMs; PMID 30262634.
+  - key: S2
+    title: Transcriptomic landscape of the blastema niche in regenerating adult axolotl limbs at single-cell resolution (Leigh et al., Nat Commun)
+    year: 2018
+    ids: [GSE121737, PRJNA498286, SRP167700, SCP422, SCP489, SCP499, SCP500, 10.82595/scilifelab.rp58y-78935, 10.82595/scilifelab.0n5wb-meh03]
+    archives: [GEO, SRA, ENA, Single Cell Portal, SciLifeLab Serve]
+    evidence: 10x-style scRNA-seq of intact, 3 dpa, 14 dpa and 23 dpa limbs (>25,000 cells); four SCP studies hold the same time points; the SciLifeLab Serve DOIs are a 2026 ShinyCell viewer of these data (the repo README cites doi 10.1038/s41467-018-07604-0).
+  - key: S3
+    title: Identification of immune and non-immune cells in regenerating axolotl limbs by single-cell sequencing (Rodgers et al., Exp Cell Res)
+    year: 2020
+    ids: [GSE136546, PRJNA562657, SRP219590]
+    archives: [GEO, SRA, ENA]
+    evidence: 10x scRNA-seq; GSMs include 1 dpa and 6 dpa amputated limbs, plus peripheral leukocytes; PMID 32562784.
+  - key: S4
+    title: Dynamic cell transition and immune response landscapes of axolotl limb regeneration revealed by single-cell analysis (Li et al., Protein Cell)
+    year: 2020
+    ids: [PRJNA589484, SRP229913, CNP0000706]
+    archives: [SRA, ENA, CNGB-CNSA]
+    evidence: BGI single-cell RNA-seq (BGISEQ-500) of upper arm plus 3 h, 24 h and 72 h stumps and 7, 14, 22 and 33 dpa blastemas (8 runs, submitter BGI); the paper's data statement gives CNP0000706 and PRJNA589484. CNSA page is JS-only and was not machine-verified.
+  - key: S5
+    title: Single-cell RNA-seq reveals novel mitochondria-related musculoskeletal cell populations during adult axolotl limb regeneration (Qin et al., Cell Death Differ)
+    year: 2021
+    ids: [PRJCA002093, CRA002291]
+    archives: [NGDC-GSA]
+    evidence: NGDC BioProject "Single cell RNA sequence discover the cell atlas during adult axolotl limb regeneration", Zhejiang Univ, 938 single-cell BioSamples (0, 3, 7, 21 dpa), linked to PMID 33116295; released 2021-02-05.
+  - key: S6
+    title: Fibroblast dedifferentiation as a determinant of successful regeneration (Lin et al., Dev Cell)
+    year: 2021
+    ids: [GSE165901, PRJNA698552, SRP304111]
+    archives: [GEO, SRA, ENA]
+    evidence: scRNA-seq of axolotl 5 and 11 dpa limb blastema plus limb buds; the series also holds Xenopus samples, but it is one deposit. PMID 34004152.
+  - key: S7
+    title: Muscles are barely required for the patterning and cell dynamics in axolotl limb regeneration (Hu et al., Front Genet)
+    year: 2022
+    ids: [PRJNA877838, SRP396206]
+    archives: [SRA, ENA]
+    evidence: TRANSCRIPTOMIC SINGLE CELL runs from 47-day regenerated right limbs and original left limbs of Pax7 mutants and d/d controls (87,177 cells); data statement in PMC9589296.
+  - key: S8
+    title: Senescent cells promote progenitor cell expansion during axolotl limb regeneration (Yun lab; single-cell RNA profiling of blastemal senescent cells)
+    year: 2023
+    ids: [GSE206235, PRJNA849783, SRP382013, GSE206238, PRJNA849781]
+    archives: [GEO, SRA, ENA]
+    evidence: Smart-seq-type single-cell RNA-seq (2066 single-cell GSMs) of GalNP-rho+ senescent cells from mid-bud, late-bud and palette blastemas; GSE206238 is the SuperSeries that also holds bulk SubSeries GSE206234 and GSE206237.
+  - key: S9
+    title: The essential role of connective-tissue cells during axolotl limb regeneration [Xenium spatial transcriptomics]
+    year: 2025
+    ids: [GSE294212, PRJNA1248582]
+    archives: [GEO]
+    evidence: 10x Xenium in situ (single-cell resolution, 100-gene panel) on uninjured and 3, 5, 7, 10 and 14 dpa limb sections (GPL35750). The companion GSE294346 is a bulk Agilent array and is not part of this study.
+  - key: S10
+    title: tBid-mediated genetic ablation of connective tissue cells reveals their key regulatory function during limb regeneration in axolotls (Hu et al., Adv Sci)
+    year: 2026
+    ids: [PRJCA052336, CRA034344]
+    archives: [NGDC-GSA]
+    evidence: NGDC BioProject (data type "Single cell sequencing", Fei lab) with SeekOne droplet scRNA-seq of control limbs at 0, 6, 10 and 15 dpa and CT-ablated limbs at 6, 10 and 15 dpa; PMID 42201602; released 2026-09-29.
+near_misses:
+  - {ids: [GSE232082, GSE232083, PRJNA970777, PRJNA970776, SRP436694, SRP436699, 10.7910/DVN/NW0ZN1], why_excluded: "BORDERLINE. 10x scRNA-seq of 2C/4C-sorted cells from homeostatic and contralateral 'systemically activated' limbs, 14 days after amputating the other limb (Payzin-Dogru 2025, PMID 41138727). No blastema or regenerating limb tissue was sequenced. If a broader reading counts amputation-response limbs, add this as S11."}
+  - {ids: [GSE243225, PRJNA1017433, SRP460566], why_excluded: "Visium v1 spot-based spatial data (one 5 dpa lower-arm section), not single-cell resolution. The scRNA data in Zhong 2023 are reanalyses of other deposits."}
+  - {ids: [GSE315993, PRJNA1400073, SRP660762], why_excluded: "Axolotl limb Visium (spot-based), not single-cell resolution. The snRNA-seq in this paper (GSE316120) is Polypterus fin."}
+  - {ids: [GSE334433, PRJNA1475017, SRP706948], why_excluded: "First-generation Visium of 3 and 5 dpa limbs: spot-based, not single-cell resolution."}
+  - {ids: [GSE328965, PRJNA1457094], why_excluded: "Trostle 2026 A/P asymmetry study: samples are bulk RNA-seq (NEB Ultra II, STAR counts) despite the spatial wording in the summary."}
+  - {ids: [GSE201446, PRJNA831808, GSE182746, PRJNA757699, 10.6084/m9.figshare.15732027, 10.6084/m9.figshare.15758769], why_excluded: "Ye 2022 axolotl cell landscape: scRNA atlas of adult tissues and limb development only, no regeneration samples."}
+  - {ids: [PRJNA1363939, PRJNA1358705, SRP647242, 10.5281/zenodo.22885578, 10.5281/zenodo.18316185], why_excluded: "McMann/Reddien positional atlas: axolotl scRNA-seq from uninjured limbs only (all runs titled 'uninjured limb')."}
+  - {ids: [GSE314016, GSE312556], why_excluded: "Polikarpova et al. 2025 bioRxiv (bone defect, Gerber lab) cites GSE314016 for scRNA-seq, but gds esearch returns 0 hits, so it is not public as of 2026-10-05."}
+  - {ids: [10.64898/2026.09.18.752769], why_excluded: "INTACT-olotl preprint (Barrett/Currie 2026): snRNA-seq of limb CT during TGFb inhibition. No public accession found in GEO/SRA/ENA; the bioRxiv full text could not be fetched (HTTP 429)."}
+  - {ids: [CRA032313, CRA017895], why_excluded: "Wang 2026 Sci Adv: Smart-seq2 scRNA-seq is from regenerating tails; Stereo-seq is from stage 25 embryos. Not limb."}
+  - {ids: [GSE313338, PRJNA1379110], why_excluded: "Xenium of regenerating tails and embryos, not limb."}
+  - {ids: [PRJNA1200678, SRP553154], why_excluded: "Single-cell sequencing of brain after limb amputation; the tissue is brain, not limb."}
+  - {ids: [PRJEB102503, ERP183895, E-MTAB-16013], why_excluded: "Single-cell RNA-seq of regenerating thymus, not limb."}
+  - {ids: [PRJDB43506, DRP019625, PRJCA024824], why_excluded: "Smart-seq2 of muscle stem cells in tail regeneration, not limb."}
+  - {ids: [PRJEB52325, E-MTAB-11638, PRJEB52503, PRJEB52517, PRJEB52491], why_excluded: "Axolotl pallium/forebrain snRNA-seq, multiome and Visium (brain)."}
+  - {ids: [GSE284768, GSE243137], why_excluded: "Otsuki 2025 positional memory: bulk RNA-seq of FACS-purified blastema/dermal populations."}
+  - {ids: [GSE184948], why_excluded: "Tig1 paper deposits bulk RNA-seq only; its single-cell analysis reuses GSE165901 and Gerber data."}
+  - {ids: [GSE111213, GSE132317, GSE132325], why_excluded: "Tsai/Melton: bulk RNA-seq of sorted 2N/4N stump fractions and wound epidermis."}
+  - {ids: [GSE157716], why_excluded: "HDAC1 study: bulk RNA-seq of wound epidermis and soft tissue."}
+  - {ids: [CRA013464, PRJCA020953], why_excluded: "Qin 2024: long-read and short-read bulk transcriptome; its scRNA is a reanalysis of Qin 2021."}
+  - {ids: [PRJCA032540, CRA020559], why_excluded: "Spatial segmentation method study: axolotl intestine, brain and liver, not limb."}
+  - {ids: [GSE255436, SCP3463], why_excluded: "DRG/trigeminal and retina single-cell atlases, not limb regeneration."}
+queries:
+  - "E-utils gds: \"Ambystoma mexicanum\"[Organism] AND gse[Entry Type] -> 80 series (all screened by summary/design/samples)"
+  - "E-utils gds: (axolotl OR \"Ambystoma mexicanum\" OR salamander) AND (single-cell OR \"single cell\" OR scRNA-seq OR snRNA-seq OR \"single nucleus\" OR \"single-nucleus\" OR 10x OR Xenium OR Visium OR Stereo-seq OR spatial) AND gse[Entry Type] -> 43 (12 not in organism list; none axolotl limb sc)"
+  - "E-utils bioproject: (axolotl OR \"Ambystoma mexicanum\"[Organism]) AND (single cell OR single-cell OR scRNA OR snRNA OR single nucleus OR spatial OR 10x) -> 42"
+  - "E-utils sra: \"Ambystoma mexicanum\"[Organism] AND (\"transcriptomic single cell\"[Source] OR \"single cell\" OR \"single nucleus\" OR scRNA* OR 10x) -> 4566 runs / 30 projects"
+  - "ENA portal: result=read_run&query=tax_eq(8296)&fields=study_accession,secondary_study_accession,study_title,library_source,library_strategy -> 5994 runs / 114 studies (all titles screened; generic-titled ones checked for run/sample titles)"
+  - "Europe PMC: TITLE_ABS axolotl AND limb/digit/blastema AND single-cell terms, PUB_YEAR 2017-2026 -> 25"
+  - "Europe PMC: (axolotl OR \"Ambystoma mexicanum\") AND (\"limb regeneration\" OR blastema) AND (scRNA-seq OR single-cell RNA OR snRNA-seq OR Xenium OR Stereo-seq OR 10x Genomics OR Smart-seq2), 2017-2026 -> 195 (primary papers' full-text data statements mined)"
+  - "NGDC search API: db=bioproject q=axolotl -> 124; q=Ambystoma -> 93; q=blastema -> 98; db=gsa q=axolotl -> 1191 (CRA entries screened); q=blastema -> 453"
+  - "NGDC bioproject pages: PRJCA052336, PRJCA002093, PRJCA003076 (bulk), PRJCA032540"
+  - "Single Cell Portal API search terms=axolotl -> 5; Ambystoma -> 1; salamander -> 0; blastema -> 5; 'limb regeneration' -> 31"
+  - "CELLxGENE curation API /collections -> 396 collections, 0 Ambystoma/axolotl"
+  - "BioStudies arrayexpress search axolotl -> 20; Ambystoma -> 17 (no single-cell limb entries; no E-GEOD mirrors of sc series)"
+  - "Zenodo API q=axolotl AND (single-cell OR ... OR Xenium OR spatial) -> 55"
+  - "DataCite query axolotl AND (single-cell ...) AND (limb OR blastema) -> 33; Ambystoma variant -> 8"
+  - "Verification: E-utils esearch on every GSE/PRJNA/SRP (all >=1 except GSE314016=0); SCP422/489/499/500 HTTP 200; DataCite resolve for SciLifeLab and Zenodo DOIs"
+size_verdict: ok

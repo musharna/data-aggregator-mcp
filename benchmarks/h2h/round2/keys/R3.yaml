@@ -1,0 +1,128 @@
+task: R3
+criteria: >-
+  Included: a public deposit of transcriptomic data (RNA-seq, EST libraries, microarray) or proteomic data
+  (MS) generated from tardigrade tissue (any species) where the design compares hydrated/active animals with
+  desiccating, dehydrated, tun (anhydrobiotic) or rehydrating animals, or otherwise directly targets desiccation
+  tolerance in tardigrade material (e.g. dehydration-time-course or preconditioning transcriptomes, proteomics
+  of tardigrade lysate under dehydration-like stress). A deposit qualifies even if desiccation is one arm of a
+  larger design (e.g. developmental series plus active/tun), but at least one desiccated/tun/rehydrating sample
+  must be in it. Aliases of one deposit (GEO series, BioProject, SRA/DRA study and submission, ENA mirror, umbrella
+  project, figshare/Zenodo copy or derived files from the same study) are grouped as one study.
+  Excluded: genome or transcriptome assemblies alone; single-state transcriptomes; radiation-, UV-, bleomycin-,
+  heat-, freezing-only and osmotic-stress/osmobiosis-only studies (osmobiosis tuns are treated as not desiccation);
+  tardigrade proteins expressed in human cells, yeast, bacteria or cyanobacteria; amplicon/microbiome data;
+  reanalyses with no new deposit; papers whose data are not publicly deposited (on request or supplement-only);
+  deposits that do not resolve publicly.
+studies:
+  - key: S1
+    title: RNA Sequencing to improve annotation and detect expression changes during anhydrobiosis (Ramazzottius varieornatus; Hashimoto et al. 2016 Nat Commun)
+    year: 2016
+    ids: [PRJDB2359, DRP001175, DRA001120, DRR013911, DRR013912, DRR013913, DRR013914, DRR013915, DRR013916, PRJDB2360, PRJDB5011]
+    archives: [DDBJ DRA, SRA, ENA]
+    evidence: Runs are hydrated, dehydrated, rehydrated-80min and rehydrated-3h adults of R. varieornatus YOKOZUNA-1, plus 2 embryo runs. PRJDB5011 is the umbrella project, which also holds the genome. PRJDB2360 is where DRX012461/2 were reassigned from.
+  - key: S2
+    title: RNA-Seq analysis of developmental, juvenile, and anhydrobiotic stages of Hypsibius dujardini and Ramazzottius varieornatus (Yoshida et al. 2017 PLoS Biol)
+    year: 2017
+    ids: [GSE94295, PRJNA369262, SRP098585, SRA533808]
+    archives: [GEO, SRA, ENA]
+    evidence: 78 samples; includes H_active/H_tun (10k and 30 animals) and the matching R. varieornatus active/tun samples, n=3 each.
+  - key: S3
+    title: Hypsibius dujardini, Paramacrobiotus richtersi, Milnesium tardigradum raw reads (Boothby et al. 2017 Mol Cell, CAHS)
+    year: 2017
+    ids: [PRJNA369152, SRP098563]
+    archives: [SRA, ENA]
+    evidence: RNA-seq of hydrated vs desiccated H. dujardini and P. richtersi (plus frozen H. dujardini). 14 runs, SRR5217467 to SRR5367888.
+  - key: S4
+    title: Comparative transcriptomics in an anhydrobiotic tardigrade, Hypsibius dujardini, during desiccation treatment
+    year: 2019
+    ids: [PRJDB5599, DRP004847, DRR089007, DRR089008, DRR089009, DRR089010, DRR089011]
+    archives: [DDBJ DRA, SRA, ENA]
+    evidence: Active vs early- and late-phase desiccation (DMSO 6 h/24 h) vs cycloheximide-pretreated (CYH 6 h/24 h) H. dujardini Z151. It targets de novo gene expression needed for anhydrobiosis.
+  - key: S5
+    title: Genome and transcriptome sequencing from a single animal of Hypsibius dujardini (Arakawa et al. 2016 Sci Data)
+    year: 2016
+    ids: [PRJDB4575, DRP003101]
+    archives: [DDBJ DRA, SRA, ENA]
+    evidence: "BORDERLINE: a genome-focused deposit, but its RNA-seq includes adult active state (SAMD00047029) and adult tun state (SAMD00047030) alongside egg/juvenile stages."
+  - key: S6
+    title: Genome and transcriptome analyses of a trehalose-producing dioecious tardigrade, Paramacrobiotus sp. TYO (Hara et al. 2021 Open Biol)
+    year: 2021
+    ids: [PRJDB7223, DRP007399, 10.6084/m9.figshare.14489778, 10.6084/m9.figshare.c.5491291]
+    archives: [DDBJ DRA, SRA, ENA, figshare]
+    evidence: P. metropolitanus (sp. TYO) RNA-seq of hydrated adults vs adults dehydrated for 3 h, 1 d and 2 d (SAMD00132251-60). The figshare items hold the paper's slow-dehydration DE-gene table and supplement.
+  - key: S7
+    title: Towards decrypting cryptobiosis - analyzing anhydrobiosis in Milnesium tardigradum using transcriptome sequencing (Wang et al. 2014 PLoS One)
+    year: 2014
+    ids: [PRJNA79663, SRP002584, SRA020123, SRX426237, SRX426238, SRX426239, SRX426240, SRR1046127, SRR1046358, SRR1046360, SRR1046361, SRR057381]
+    archives: [SRA, ENA]
+    evidence: Illumina runs of active, inactive tun, dehydration and rehydration states, plus a 454 Funcrypta reference run in the same SRA study.
+  - key: S8
+    title: Transcriptome survey of the anhydrobiotic tardigrade Milnesium tardigradum, EST libraries (Mali et al. 2010 BMC Genomics)
+    year: 2010
+    ids: [LIBEST_023933, LIBEST_023934, SAMN00166894, SAMN00166895, PRJNA34121, SRP296161, SRR9493355]
+    archives: [GenBank dbEST, BioSample, SRA]
+    evidence: "dbEST libraries Milnesium_active (1,382 ESTs) and Milnesium_inactive (6,255 ESTs), with GO enrichment active vs inactive. PRJNA34121/SRR9493355 (Funcrypta Wuerzburg capillary EST traces from THW Wildau) is a PROBABLE alias: same project and centre, but the link is not stated explicitly."
+  - key: S9
+    title: Gene expression in Echiniscus testudo
+    year: 2019
+    ids: [PRJNA510287, SRP173948]
+    archives: [SRA, ENA]
+    evidence: 21 single-individual RNA-seq samples of the heterotardigrade E. testudo labelled Active_repN, Pre-tun_repN and Desiccated_repN (SAMN10601501-21). No linked paper was identified.
+  - key: S10
+    title: Multiomics study of a heterotardigrade, Echiniscus testudo (Murai et al. 2021 BMC Genomics)
+    year: 2021
+    ids: [PRJNA669587, SRP287522, SRR12832600, SRR12832599, 10.6084/m9.figshare.13060634]
+    archives: [SRA, ENA, figshare]
+    evidence: E. testudo active vs tun RNA-seq (plus a genome run). The figshare copy holds the assembly and CDS of the same study.
+  - key: S11
+    title: Dehydration-dependent reversibly condensing proteins (Tanaka et al. 2022 PLoS Biol)
+    year: 2022
+    ids: [PXD030241, JPST001416]
+    archives: [jPOST, ProteomeXchange]
+    evidence: "BORDERLINE: shotgun proteomics of R. varieornatus lysate condensed under the dehydration-like desolvating agent TFE (T-DRYPs). Tardigrade tissue was profiled to target desiccation-tolerance proteins, but there is no hydrated-vs-desiccated animal contrast."
+near_misses:
+  - {ids: [GSE152753, PRJNA640345, SRP267838], why_excluded: "UVC-only time course (Yoshida 2022). The paper's anhydrobiosis comparisons reuse GSE94295/DRA data."}
+  - {ids: [GSE166661, PRJNA701555, SRP306097, 10.6084/m9.figshare.14343788], why_excluded: gamma radiation only}
+  - {ids: [GSE168917, PRJNA714591, SRP310669], why_excluded: bleomycin DNA damage only}
+  - {ids: [GSE240501, PRJNA1003921, GSE253470, PRJNA1065867, GSE253471, PRJNA1065858, PXD047724, PXD043897], why_excluded: ionizing radiation / bleomycin only (Clark-Hachtel 2024; Anoud 2024)}
+  - {ids: [PRJNA997229, SRP450893], why_excluded: DNA-damaging stress only (H. exemplaris, A. antarcticus, P. fairbanksi)}
+  - {ids: [PXD045537], why_excluded: heavy-ion radiation proteomics of Hypsibius henanensis}
+  - {ids: [PRJEB59868, ERP144913], why_excluded: "osmotic-stress (osmobiotic tun) RNA-seq of R. varieornatus, Emdee et al. Not desiccation."}
+  - {ids: [PXD058865, MSV000102331, 10.25345/c5zk5616s], why_excluded: "osmobiosis proteomics (Hicks lab). MSV000102331 also not publicly resolvable: MassIVE PROXI 404 and absent from the public list."}
+  - {ids: [PRJEB47628, ERP131915], why_excluded: subzero/freezing only}
+  - {ids: [PRJEB49649, ERP134165, PRJNA851942, SRP383198], why_excluded: heat/thermal stress only}
+  - {ids: [GSE212632, PRJNA876283], why_excluded: storage cells vs whole body, active state only}
+  - {ids: [GSE130111, PRJNA533981, GSE64944, PRJNA272543], why_excluded: developmental/juvenile series without desiccation}
+  - {ids: [GSE253242, PRJNA1064883, PRJNA1063779], why_excluded: male vs female P. metropolitanus (text-matched 'anhydrobiosis' only)}
+  - {ids: [PRJNA357357, SRP150436, PRJNA475961, SRP150497, 10.17894/ucph.9d3a898c-37bb-4cd1-909f-e7fcb07e58d9, 10.7910/dvn/cfnugf], why_excluded: single-state transcriptome assemblies (Kamilari 2019; Mapalo) with no state contrast}
+  - {ids: [10.6084/m9.figshare.14482956], why_excluded: P. richtersi assembly re-derived from S3 reads}
+  - {ids: [PRJNA263124, SRP048645, PRJNA236252, PRJNA509138, PRJNA553097, PRJNA271450], why_excluded: single-sample transcriptome/EST resources with no desiccation contrast}
+  - {ids: [PRJNA1461411], why_excluded: "cited in Kamilari 2026 Mol Ecol as E. testudo genome/transcriptome. Not public on NCBI/ENA/DDBJ as of 2026-10-05, and design unclear."}
+  - {ids: [PRJNA658158, SRP278298], why_excluded: H. exemplaris/D. dispar genome+transcriptome shell with no public runs; not a desiccation design}
+  - {ids: [PRJDB1451, PRJDB4588, 10.5061/dryad.t4k7h, 10.5281/zenodo.45162], why_excluded: genome reads/assemblies only}
+  - {ids: [PRJNA1521714], why_excluded: 16S microbiome amplicon of non-anhydrobiotic Thulinius}
+  - {ids: [PRJNA1008366, SRP456540], why_excluded: tardigrade cDNA expression-cloning screen in desiccated E. coli (amplicon)}
+  - {ids: [GSE294019, GSE237436, PXD037439, PXD067125, GSE325200], why_excluded: tardigrade proteins (Dsup, MAHS) expressed in yeast/human cells}
+  - {ids: [PXD084387, PXD080659, PXD055533, PXD050882], why_excluded: tardigrade proteomics methods/glycoproteomics/metabolite work, not desiccation}
+  - {ids: [10.5281/zenodo.21789257], why_excluded: computational resistome atlas (sequence predictions, no expression data)}
+  - {ids: [10.25384/sage.21766957, 10.25384/sage.21766960], why_excluded: "supplement of a reanalysis (Evol Bioinform 2022) of existing data. No new deposit."}
+  - {ids: ["dbEST library cYOK (R. varieornatus full-length cDNA, e.g. HY446251)"], why_excluded: single EST library with no state contrast}
+  - {ids: [10.5061/dryad.78vd3, 10.60629/x2e3-1p53, 10.60629/wrxm-4104], why_excluded: survival/life-history data, not omics}
+  - {ids: ["no deposit: Kondo 2019 Genes Cells phosphoproteomics (PMID 31608545)", "Kondo 2020 FEBS Open Bio D942 proteome (data on request)", "Schokraie 2010/2012 Milnesium proteomics", "Smythers 2024 PLoS One chemobiosis thiol proteomics (supplement only)"], why_excluded: desiccation-relevant tardigrade proteomics with no public repository deposit found (checked the full ProteomeXchange list and PRIDE)}
+queries:
+  - "NCBI esearch bioproject 'tardigrada[orgn]' -> 72; with desiccation terms -> 16"
+  - "NCBI esearch gds 'tardigrada[orgn]' -> 392 (14 GSE via 'tardigrada[orgn] AND gse[etyp]'); '(tardigrade OR tardigrades OR tardigrada) AND gse[etyp]' -> 16; '(anhydrobiosis OR anhydrobiotic) AND gse[etyp]' -> 8"
+  - "NCBI esearch sra 'tardigrada[orgn]' -> 1217 experiments; RNA/transcriptomic subset -> 548 (33 studies); with desiccation terms -> 122; text query on genera AND rna/est strategy -> 824; '(tardigrade*) AND (desiccation|anhydrobiosis|tun|dehydrated)' -> 85"
+  - "NCBI biosample/nuccore: SAMD00076162:66, SAMD00132250:60, SAMN10601501/10/21, SAMN00166894/5; nuccore 'Tardigrada[orgn] AND gbdiv_est[prop]' -> 83691 ESTs; Milnesium -> 7637 (Milnesium_active 1382 / Milnesium_inactive 6255)"
+  - "ENA portal search result=read_study query=tax_tree(42241) -> 1232 run rows / ~57 studies; filereport for each candidate project"
+  - "DDBJ Search API https://ddbj.nig.ac.jp/search/api/entries/{bioproject,gea,sra-study}/?keywords=X: bioproject tardigrade 78, anhydrobiosis 22, Hypsibius 22, Ramazzottius 18, Paramacrobiotus 8, Milnesium 6; GEA 0 for all keywords; sra-study tardigrade 65, anhydrobiosis 20"
+  - "PRIDE https://www.ebi.ac.uk/pride/ws/archive/v2/search/projects?keyword=X: tardigrade 6, Hypsibius 3, Ramazzottius 1, Tardigrada/Milnesium/Paramacrobiotus/anhydrobiosis/Echiniscus/Richtersius 0"
+  - "ProteomeXchange full list https://proteomecentral.proteomexchange.org/cgi/GetDataset?outputMode=tsv (56,954 rows; covers PRIDE/MassIVE/jPOST/iProX) grep tardigrade terms -> 11 datasets"
+  - "MassIVE full public list datasets_json.jsp pageSize=25000 (20,316 datasets) grep tardigrade terms -> 0; PROXI MSV000102331 -> 404"
+  - "OmicsDI https://www.omicsdi.org/ws/dataset/search?query=X: tardigrade 253, Hypsibius 99, anhydrobiosis 128, Ramazzottius 67"
+  - "Zenodo API q='tardigrade AND (desiccation OR anhydrobiosis OR anhydrobiotic OR tun OR dehydration)' -> 107; q='tardigrade AND (transcriptome OR RNA-seq OR proteome ...)' -> 71"
+  - "DataCite API datasets: (tardigrade|genera) AND (desiccation terms) -> 55; AND (omics terms) -> 57; creator searches Hara (188), Kunieda (119), Arakawa (201), Boothby (9), Mobjerg (174), Hicks (53)"
+  - "Dryad API v2 doi:10.5061/dryad.t4k7h files -> genome.scf.fasta only"
+  - "Europe PMC search TITLE_ABS tardigrade AND desiccation terms AND omics terms -> 46 papers; annotations_api accession mining + fullTextXML data-availability statements for 14 papers"
+  - "WebSearch/WebFetch: Kondo 2019 AMPK data (no accession found); Smythers 2024 PLoS One data statement (supplement only)"
+size_verdict: ok
