@@ -28,3 +28,16 @@
 - {task: R4, id: 10.5061/dryad.5x69p8dgv, verdict: reject, reason: "DataCite: chromosome-level reference genome of one male snow leopard (J Hered 2025); reference assembly, no field sampling."}
 - {task: R5, id: PXD041691, verdict: reject, reason: "PRIDE: organism Chlorella sorokiniana only; 20 files are N-limited, control and Torin samples (NA/TA/Trn). The Chlamydomonas part of the paper is not in the MS data."}
 - {task: R5, id: PXD010847, verdict: reject, reason: "PRIDE: C. reinhardtii evolved under resource limitation, but protocol says every population was regrown in replete COMBO for protein extraction. No N-starved MS samples."}
+# Re-run with the fixed server (PRs #244, #245), 2026-10-05: 12 more pooled entries, judged blind the same way.
+- {task: R2, id: "10.1038/s41418-020-00640-8", verdict: reject, reason: "Crossref: journal-article (Qin et al., Cell Death & Differentiation, 2020), the paper; its data are PRJCA002093/CRA002291 (S5)."}
+- {task: R2, id: GSE328965, verdict: reject, reason: "GEO (same_as PRJNA1457094): all 17 GSMs are bulk RNA-seq (RNeasy, NEB Ultra II, STAR per-sample counts), not single-cell; key near miss."}
+- {task: R2, id: PRJNA1363939, verdict: reject, reason: "NCBI SRA: 38 runs, 26 axolotl single-cell, all from uninjured limb; no regenerating sample; key near miss."}
+- {task: R3, id: GSE152753, verdict: reject, reason: "GEO (same_as PRJNA640345): 48 R. varieornatus GSMs, UVC time course or non-exposed; no desiccated, tun or rehydrating sample; key near miss."}
+- {task: R4, id: "zenodo:17357880", verdict: reject, reason: "DataCite: version of 10.5281/zenodo.17357879; bharal density from cameras, snow leopard cameras as bycatch; as doi:10.5281/zenodo.17357880 above."}
+- {task: R4, id: "10.5281/zenodo.17357879", verdict: reject, reason: "DataCite: concept DOI of the same bharal camera-placement dataset."}
+- {task: R4, id: "dataone:sha256:12c99361685269c5a96d5da8f8b93e9ed2b7c03f1f1154eea963433366c13426", verdict: "alias:S21", reason: "DataONE solr: urn:node:DRYAD, seriesId https://doi.org/10.5061/dryad.2280gb623 (S21)."}
+- {task: R4, id: "10.83056/mmu.32483487.v1", verdict: reject, reason: "DataCite/Figshare: resourceTypeGeneral Dissertation; only file is the thesis PDF. No data deposit."}
+- {task: R4, id: "zenodo:4979139", verdict: reject, reason: "Zenodo (same_as 10.3897/abs.7.e69228): publication/article, one file ABS_article_69228.pdf; Crossref journal-article. A paper, not a dataset."}
+- {task: R4, id: "dataone:sha256:0083b16f54f100ec2cdd80b8818ce9e36cd2e7175cb48629027c312764b1254e", verdict: "alias:S20", reason: "DataONE solr: urn:node:DRYAD, seriesId https://doi.org/10.5061/dryad.7d7wm389t (S20)."}
+- {task: R4, id: "10.5061/dryad.47d7wm3dz", verdict: reject, reason: "DataCite: blue sheep abundance in Nar Phu; not framed on snow leopard; key near miss."}
+- {task: R4, id: "dataone:sha256:4424084cdb592f858c20ff4cf2ce04f5fea080b3c0f86f741ae973c765e08e5f", verdict: "alias:S9", reason: "DataONE solr: urn:node:DRYAD, seriesId https://doi.org/10.5061/dryad.j9kd51cjp (S9)."}

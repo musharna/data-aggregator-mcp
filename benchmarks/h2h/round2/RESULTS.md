@@ -60,6 +60,42 @@ qualify. Per-run data: `scores_2026-10-05.json`.
   - 3 searches came back empty because the `kind` filter, applied after fetching,
     removed the whole page; 3 more hit NCBI rate limits or an OmicsDI timeout.
 
+## Re-run with the first two fixes
+
+The same tasks, runs and arms, the same day, with the dam arm on 0.60.0 plus #244
+(a search page fits in one tool result) and #245 (OmicsDI filters and pages upstream;
+`errors.all_words` names an every-word source that matched nothing). The 12 new
+pooled entries were judged blind the same way: 3 copies of keyed studies, 9 did not
+qualify. Per-run data: `scores_2026-10-05_rerun.json`.
+
+| task | dam | tu | web |
+|---|---|---|---|
+| R1 | 0.85 / 0.85 | 0.85 / 0.85 | 0.85 / 0.85 |
+| R2 | 0.80 / 0.70 | 0.60 / 0.40 | 0.80 / 0.80 |
+| R3 | 0.78 / 0.56 | 0.56 / 0.78 | 0.67 / 0.78 |
+| R4 | 0.63 / 0.40 | 0.63 / 0.57 | 0.89 / 0.86 |
+| R5 | 0.75 / 0.62 | 0.50 / 0.38 | 0.62 / 0.88 |
+
+| arm | median recall | precision | duplicates | median tool calls | median input tokens | cost (10 runs) |
+|---|---|---|---|---|---|---|
+| dam | 0.72 (was 0.63) | 0.85 | 2 | 8 | 414k | $5.38 |
+| tu  | 0.59 (was 0.68) | 0.89 | 2 | 23 | 714k | $6.42 |
+| web | 0.82 (was 0.79) | 0.95 | 3 | 14 | 491k | $5.15 |
+
+- **No result was lost to size.** This server's results saved to a file fell from 9 to
+  0; every page of every run reached the agent. ToolUniverse: 29.
+- **The every-word note was read.** `errors.all_words` appeared in all 10 dam runs. R5
+  (OmicsDI's task) rose from 0.38 to 0.69 on average.
+- **Web is still ahead by 10 points, almost all of it on R4.** Web found 10 snow
+  leopard studies that this server found in neither run. Probing the fixed server
+  afterwards, per-source searches paged to 125–240 hits reach 8 of them (DataCite:
+  4 for "snow leopard", 2 more for "Panthera uncia"; NCBI omics: 2). The default
+  all-source search, paged to 201 hits of 47,971, reaches 1. The agent made 8 calls
+  per run and did not search source by source or page that deep. Two (Figshare)
+  were not reached at all.
+- **ToolUniverse fell 9 points** on the same tasks, a measure of run-to-run noise
+  with two runs per task.
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the
