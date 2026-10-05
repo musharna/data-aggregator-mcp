@@ -6,6 +6,23 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- `search` ranks a hit that names the query as written above one that names its words
+  apart, and a hit that names it in the title above one that names it elsewhere. For
+  "snow leopard", Antarctic station logs ("snow petrels", "leopard seals") tied the snow
+  leopard studies and took a share of every page; on 0.61.0, 5 of the 32 hits on the
+  first dataset page did not name snow leopard, and now every hit does.
+- A deposit held by several sources ranks by the best-described of its copies. The copy
+  kept is the most fetchable one, which can have no description (DataONE's), so it sank
+  below hits naming nothing, and the DataCite copy behind it stopped DataCite from paging.
+
+### Fixed
+
+- DataONE copies of Dryad and PANGAEA deposits now carry the deposit's DOI, read from
+  DataONE's series ID, so they merge with the same deposit from DataCite or Dryad instead
+  of appearing twice without a DOI.
+
 ## [0.61.0] - 2026-10-05
 
 ### Fixed
