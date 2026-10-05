@@ -409,9 +409,9 @@ SOURCES: tuple[SourceSpec, ...] = (
         layer="omics",
         kinds=("study",),
         rate_limit="public; courtesy only",
-        status="live (proteomics/metabolomics discovery; first page only)",
+        status="live (proteomics/metabolomics discovery)",
         fetchable="per-repo",
-        fetchable_notes="PRIDE records are fetchable (unverified - no upstream checksum); MetaboLights records are fetchable and sha-256-verified; MassIVE/Metabolomics Workbench/GNPS/PeptideAtlas are discovery-only.",
+        fetchable_notes="PRIDE records are fetchable (unverified - no upstream checksum); MetaboLights records are fetchable and sha-256-verified; MassIVE/jPOST/iProX/PeptideAtlas/Panorama Public/Metabolomics Workbench/GNPS are discovery-only.",
         id_example="omicsdi:pride:PXD000001",
         # Deliberately NO default_license, for the same reason as dataone: OmicsDI is an
         # INDEX over other repositories (PRIDE, MetaboLights, MassIVE, GNPS, ...), so the

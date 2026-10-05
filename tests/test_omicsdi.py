@@ -33,38 +33,84 @@ _SEARCH = {
 
 
 @pytest.mark.asyncio
-async def test_search_keeps_only_modality_repos():
+async def test_search_asks_omicsdi_for_the_modality_repos_and_reports_its_count():
     async def handler(request):
         assert request.url.path.endswith("/dataset/search")
+        assert request.url.params["query"] == f"(cancer) AND {omicsdi._MODALITY_CLAUSE}"
         return httpx.Response(200, json=_SEARCH)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
         total, recs = await omicsdi.search(c, "cancer", size=10)
-    ids = [r.id for r in recs]
-    assert ids == ["omicsdi:metabolights_dataset:MTBLS1355", "omicsdi:pride:PXD000001"]
-    assert total == 2  # GEO hit dropped; total is the kept count
+    # OmicsDI applied the restriction, so its count is the count of what can be paged
+    assert total == 740517
+    assert [r.id for r in recs][:2] == [
+        "omicsdi:metabolights_dataset:MTBLS1355",
+        "omicsdi:pride:PXD000001",
+    ]
     assert recs[0].source == "omicsdi" and recs[0].kind == "study"
     assert recs[0].files == []
 
 
+def test_the_modality_clause_names_every_mass_spec_repository():
+    assert omicsdi._MODALITY_CLAUSE == (
+        'repository:("pride" OR "MassIVE" OR "jPOST" OR "iProX" OR "PeptideAtlas" OR '
+        '"PanoramaPublic" OR "MetaboLights" OR "MetabolomicsWorkbench" OR "GNPS")'
+    )
+    assert omicsdi._modality_query("a b") == f"(a b) AND {omicsdi._MODALITY_CLAUSE}"
+    assert omicsdi._modality_query("  ") == omicsdi._MODALITY_CLAUSE
+
+
 @pytest.mark.asyncio
-async def test_search_offset_returns_empty():
-    async with httpx.AsyncClient(
-        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=_SEARCH))
-    ) as c:
-        assert await omicsdi.search(c, "x", size=10, offset=10) == (0, [])
+async def test_search_offset_is_sent_as_start():
+    seen = []
+
+    def handler(request):
+        seen.append(dict(request.url.params))
+        return httpx.Response(200, json=_SEARCH)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        total, recs = await omicsdi.search(c, "x", size=10, offset=10)
+        await omicsdi.search(c, "x", size=10)
+    assert (total, len(recs)) == (740517, 3)
+    assert seen[0]["start"] == "10" and "start" not in seen[1]
 
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 
 
+_MASS_SPEC_SOURCES = {
+    "pride",
+    "massive",
+    "jpost",
+    "iprox",
+    "peptide_atlas",
+    "panorama",
+    "metabolights_dataset",
+    "metabolomics_workbench",
+    "gnps",
+}
+
+
 @_live_only
 @pytest.mark.asyncio
-async def test_live_search_modality_only():
+async def test_live_search_modality_only_and_pages():
     async with httpx.AsyncClient(timeout=60) as c:
-        _total, recs = await omicsdi.search(c, "cancer", size=20)
-        assert all(r.id.split(":")[1] in omicsdi._MODALITY_REPOS for r in recs)
+        total, page1 = await omicsdi.search(c, "cancer", size=20)
+        total2, page2 = await omicsdi.search(c, "cancer", size=20, offset=20)
+    assert {r.id.split(":")[1] for r in page1 + page2} <= _MASS_SPEC_SOURCES
+    assert len(page1) == len(page2) == 20 and total == total2 > 40
+    assert not {r.id for r in page1} & {r.id for r in page2}  # page 2 is new records
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_a_search_the_old_filter_emptied_finds_the_mass_spec_datasets():
+    """Round 2: the old after-fetch filter kept 3 of page 1's 10 hits and could not page."""
+    async with httpx.AsyncClient(timeout=60) as c:
+        total, recs = await omicsdi.search(c, "Chlamydomonas nitrogen", size=50)
+    assert total >= 30 and len(recs) == total
+    assert {r.id.split(":")[1] for r in recs} <= _MASS_SPEC_SOURCES
 
 
 _RECORD = {"accession": "PXD000001", "name": "TMT spike-in", "description": "Proteomics study."}
@@ -188,7 +234,7 @@ async def test_live_search_at_the_largest_size_passes_the_answer_check():
     """A full page of live hits passes `_check_search` (1,561 of 1,561 sampled did)."""
     async with httpx.AsyncClient(timeout=60) as c:
         total, recs = await omicsdi.search(c, "proteome", size=omicsdi.MAX_SIZE)
-    assert total == len(recs) > 0
+    assert total >= len(recs) == omicsdi.MAX_SIZE
 
 
 @_live_only
