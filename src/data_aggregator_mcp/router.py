@@ -24,7 +24,7 @@ import logging
 import os
 import re
 from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -49,6 +49,7 @@ from data_aggregator_mcp._merge import interleave
 from data_aggregator_mcp._relevance import MatchTiers
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import (
+    SEARCH_LIST_LIMITS,
     AssayExpansion,
     ChemicalExpansion,
     DataResource,
@@ -62,6 +63,7 @@ from data_aggregator_mcp.models import (
     TaxonExpansion,
     TissueExpansion,
     UnresolvedEntity,
+    compact,
     derive_access_modes,
     derive_version_status,
 )
@@ -295,6 +297,9 @@ class _Stream:
     # Some active filter was NOT pushed upstream: this stream's total is unfiltered and
     # its window can be thinned by the post-filter (reported in errors["filters"]).
     post_filtered: bool
+    # The upstream matches only records holding every query word (the adapter's
+    # ``REQUIRES_EVERY_WORD``), so an extra word can empty it (errors["all_words"]).
+    every_word: bool = False
 
 
 def _source_streams(
@@ -352,10 +357,36 @@ def _source_streams(
                     call = functools.partial(call, filters=pushed)
             parts = [(name, call)]
         residual = any(k not in pushed for k in wanted)
+        every_word = getattr(adapter, "REQUIRES_EVERY_WORD", False)
         for skey, fn in parts:
             key, label = (skey, skey) if vi is None else (_comp_key(vi, skey), f"{skey}#v{vi}")
-            out.append(_Stream(key=key, label=label, call=fn, source=skey, post_filtered=residual))
+            out.append(
+                _Stream(
+                    key=key,
+                    label=label,
+                    call=fn,
+                    source=skey,
+                    post_filtered=residual,
+                    every_word=every_word,
+                )
+            )
     return out
+
+
+def _all_words_note(empty: list[str], query: str | None) -> str | None:
+    """Advisory for streams whose upstream requires every query word and matched
+    nothing: without it, a source's 0 next to errors{} reads as "no such data", when the
+    words only failed to meet in one record (GEO: "tardigrade" 221, "tun" 464,
+    "tardigrade dehydration tun" 0; probed 2026-10-05). Only for a query of two or more
+    words; one word cannot be dropped."""
+    words = query.split() if query else []
+    if not empty or len(words) < 2:
+        return None
+    return (
+        f"{', '.join(empty)} matched nothing: {'they return' if len(empty) > 1 else 'it returns'}"
+        " only records holding every word of the query, so a search with fewer words may"
+        " find some"
+    )
 
 
 def _within_limit(
@@ -404,6 +435,22 @@ def _stored_offset(offsets: dict[str, int], key: str) -> int:
     return offsets.get(key.partition("/")[0], 0)  # pragma: no mutate
 
 
+# Characters of hits one search page may carry. Claude Code passes a tool result of up to
+# about 50,000 characters to the model and saves a longer one to a file the model may
+# have no tool to read; in the 2026-10-05 head-to-head, 9 of 95 results were lost so.
+# The rest of the 50k is for the page's envelope (expansions, errors, cursor).
+SEARCH_PAGE_CHARS = 38_000
+# Taxon enrichment runs after the page is cut: per organism, at most one taxon and one
+# plant cross-link, ~130 characters together.
+_ENRICH_CHARS_PER_ORGANISM = 130
+
+
+def _hit_chars(r: DataResource) -> int:
+    """Characters ``r`` will take in the page, as compacted and enriched."""
+    organisms = min(len(r.organism), SEARCH_LIST_LIMITS["organism"])
+    return len(compact(r).model_dump_json()) + _ENRICH_CHARS_PER_ORGANISM * organisms
+
+
 @dataclass
 class _Page:
     emitted: list[DataResource]
@@ -411,6 +458,8 @@ class _Page:
     offsets: dict[str, int]
     ahead: dict[str, list[int]]
     more: bool
+    # Labels of every-word streams that answered with a total of 0 (not failed).
+    empty_every_word: list[str] = field(default_factory=list)
 
 
 async def _fetch_page(
@@ -446,6 +495,14 @@ async def _fetch_page(
         stream_total, recs = outcome
         total += stream_total
         fetched[s.key], totals[s.key] = list(recs), stream_total
+    # A source is empty when every one of its streams (one per query variant) answered
+    # and matched nothing; a variant that found something, or failed, says otherwise.
+    answered = [s for s in streams if s.label not in errors]
+    empty_every_word = [
+        src
+        for src in dict.fromkeys(s.source for s in answered if s.every_word)
+        if all(totals[s.key] == 0 for s in answered if s.source == src)
+    ]
 
     prior = {s.key: set(ahead.get(s.key, [])) for s in streams}
     # Candidates in upstream relevance order (fair round-robin across streams), minus the
@@ -484,15 +541,26 @@ async def _fetch_page(
     handled_dois: set[str] = set()
     emitted: list[DataResource] = []
     removed: dict[str, int] = {}  # handled records the post-filter dropped, per stream key
+    used = 0
     for key, i, r in kept:
         if len(emitted) == size:
+            break
+        passes = _passes_filters(r, filters)
+        cost = _hit_chars(r) if passes else 0
+        # A hit that does not fit stays unhandled, so the cursor returns it next page.
+        if emitted and used + cost > SEARCH_PAGE_CHARS:
+            errors["page_size"] = (
+                f"{len(emitted)} of the {size} hits asked for fit in one tool result "
+                f"(~{SEARCH_PAGE_CHARS:,} characters); next_cursor continues with the rest"
+            )
             break
         handled[key].add(i)
         handled_ids.add(r.id)
         if r.doi:
             handled_dois.add(r.doi.lower())
-        if _passes_filters(r, filters):
+        if passes:
             emitted.append(r)
+            used += cost
         else:
             removed[key] = removed.get(key, 0) + 1
     for key, i, r in dropped:
@@ -520,7 +588,7 @@ async def _fetch_page(
     more = any(remaining) and any(fetched.values())
     if note := _filters_note(streams, removed, filters, more=more):
         errors["filters"] = note
-    return _Page(emitted, total, new_offsets, new_ahead, more)
+    return _Page(emitted, total, new_offsets, new_ahead, more, empty_every_word)
 
 
 def _filters_note(
@@ -592,6 +660,8 @@ async def _build_search_result(
     # than `size`.
     if collapse_mirrors:
         enriched = _collapse_mirrors(enriched)
+    # Enrichment and collapse add to lists after the adapters compacted each hit.
+    enriched = [compact(r) for r in enriched]
     return SearchResult(
         query=query,
         total=total,
@@ -677,6 +747,8 @@ async def _multi_query_page(
         errors=errors,
         tiers=MatchTiers(original_query, groups),
     )
+    if note := _all_words_note(page.empty_every_word, original_query):
+        errors["all_words"] = note
     emitted, total = page.emitted, page.total
     next_cursor = (
         _cursor.encode(
@@ -1005,6 +1077,8 @@ async def search_page(
         errors=errors,
         tiers=MatchTiers(query, groups),
     )
+    if note := _all_words_note(page.empty_every_word, query):
+        errors["all_words"] = note
     emitted, total = page.emitted, page.total
     next_cursor = (
         _cursor.encode(

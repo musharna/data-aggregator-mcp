@@ -502,7 +502,7 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     )
     httpx_mock.add_response(
         url=re.compile(r"https://www\.omicsdi\.org/ws/dataset/search.*"),
-        json={"datasets": []},
+        json={"count": 0, "datasets": []},  # the live no-hit answer
     )
     # dandi is also a default source: returns empty here
     httpx_mock.add_response(
