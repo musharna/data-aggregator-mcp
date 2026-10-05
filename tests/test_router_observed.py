@@ -642,8 +642,9 @@ async def test_a_doi_loser_waits_for_its_winner_so_a_failed_winner_stream_loses_
 ) -> None:
     """A record that lost DOI dedup is only passed over once its winner is returned. If
     the winner's stream then fails, the loser is the only copy left and is returned."""
-    zen = {0: _rec("zenodo:a"), 1: _rec("zenodo:p", doi="10.1/d")}
-    dc = {0: _rec("datacite:b"), 1: _rec("datacite:q", doi="10.1/d")}
+    # Titles that name nothing of the search: the match tiers tie, so round-robin order.
+    zen = {0: _rec("zenodo:a", title="t"), 1: _rec("zenodo:p", doi="10.1/d", title="t")}
+    dc = {0: _rec("datacite:b", title="t"), 1: _rec("datacite:q", doi="10.1/d", title="t")}
     _serve(monkeypatch, "datacite", total=2, make=lambda q, i: dc[i])
 
     async def zenodo(client, query, *, size, offset=0, **kw):

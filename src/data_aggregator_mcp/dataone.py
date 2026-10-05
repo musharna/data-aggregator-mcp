@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from urllib.parse import quote
 
 import httpx
@@ -49,9 +50,19 @@ _SEGMENT_SAFE = ""
 _LUCENE_SPECIALS = r'\+-&&||!(){}[]^"~*?:/'
 
 _SEARCH_FL = (
-    "identifier,title,author,origin,formatId,dateUploaded,datePublished,dateModified,resourceMap"
+    "identifier,seriesId,title,author,origin,formatId,dateUploaded,datePublished,dateModified,"
+    "resourceMap"
 )
-_RESOLVE_FL = "identifier,title,author,origin,dateUploaded,datePublished,dateModified,resourceMap"
+_RESOLVE_FL = (
+    "identifier,seriesId,title,author,origin,dateUploaded,datePublished,dateModified,resourceMap"
+)
+# A member node's copy of a DOI deposit keeps the DOI as its seriesId, in either form
+# ("https://doi.org/10.5061/dryad.x", "doi:10.1594/PANGAEA.883301"); its identifier is a
+# sha256 or uuid. Without the DOI the copy never met the original in the DOI dedup: all
+# 15 DataONE records titled "snow leopard" are Dryad (11) or PANGAEA (4) deposits with the
+# DOI as seriesId, and they took 16 of the first 61 hits as DOI-less records (probed
+# 2026-10-05). Other seriesIds (urn:uuid:...) are not DOIs and are left alone.
+_SERIES_DOI = re.compile(r"(?:doi:|https?://(?:dx\.)?doi\.org/)(10\.\d{4,9}/\S+)", re.IGNORECASE)
 _DATA_FL = "identifier,fileName,size,checksum,checksumAlgorithm"
 # Latest version only, as DataONE's own search UI does (MetacatUI ``Search.js``
 # excludes ``obsoletedBy:*``): every update leaves the old version indexed, and
@@ -59,6 +70,7 @@ _DATA_FL = "identifier,fileName,size,checksum,checksumAlgorithm"
 _SEARCH_FILTER = " AND formatType:METADATA AND -obsoletedBy:*"
 # Fields read as text and as lists of text; ``size`` is the one number.
 _TEXT_FIELDS = (
+    "seriesId",
     "title",
     "author",
     "dateUploaded",
@@ -119,7 +131,8 @@ def _creators(doc: dict) -> list[Creator]:
 
 def _normalize(doc: dict) -> DataResource:
     pid = doc["identifier"]
-    doi = pid[4:] if pid[:4].lower() == "doi:" else None
+    series = _SERIES_DOI.fullmatch(str(doc.get("seriesId")))  # None reads "None"
+    doi = pid[4:] if pid[:4].lower() == "doi:" else series[1] if series else None
     return DataResource(
         id=f"dataone:{pid}",
         source="dataone",

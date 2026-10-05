@@ -8,6 +8,7 @@ change, so it can be run against the old code."""
 from __future__ import annotations
 
 import os
+import re
 from unittest.mock import AsyncMock
 
 import httpx
@@ -132,3 +133,76 @@ async def test_live_top_hits_name_the_organism_asked_for() -> None:
     assert len(top) == 5
     assert all(_names_organism(r) for r in top), [(r.source, r.title[:60]) for r in top]
     assert len({r.source for r in top}) > 1  # ranked across sources, not one source's list
+
+
+# --- the query as written, and a deposit's copies (2026-10-05, round-2 snow leopard task)
+
+
+async def test_hits_naming_the_query_as_written_outrank_its_words_scattered(monkeypatch) -> None:
+    """Live: Antarctic station logs ("snow" ... "leopard seals") tied the snow leopard
+    studies on two words each and took a share of every page by round-robin."""
+    log = DataResource(
+        id="nasacmr:1", source="nasacmr", kind="dataset",
+        title="Log of biological observations at Casey, 1974",
+        description="Snow petrels nested near the hut; leopard seals hauled out.",
+    )  # fmt: skip
+    study = _rec("gbif:1", "Snow leopard camera-trap survey in the Altai")
+    _serve(monkeypatch, "nasacmr", [log])
+    _serve(monkeypatch, "gbif", [study])
+    async with _client() as client:
+        page = await router.search_page(
+            client, query="snow leopard", size=1, sources=["nasacmr", "gbif"]
+        )
+        assert [r.id for r in page.results] == ["gbif:1"]
+        # positive control: the log is not lost, only later
+        nxt = await router.search_page(client, cursor=page.next_cursor)
+    assert [r.id for r in nxt.results] == ["nasacmr:1"]
+
+
+@pytest.mark.parametrize("described", ["datacite", "dataone"])
+async def test_a_deposit_ranks_by_its_best_described_copy(monkeypatch, described) -> None:
+    """The DOI dedup keeps the most fetchable copy (DataONE's), which has no description;
+    ranked on its own text it sank below hits naming nothing, and its DataCite twin, never
+    handled, held DataCite's offset in place for every later page. Either copy may be the
+    described one, so the rank is the best copy's, not the last one seen."""
+    doi = "10.5061/dryad.66t1g1k2t"
+    title = "Data from: Age estimation using methylation-sensitive markers"
+    about = {"description": "Faecal DNA of wild snow leopards in Mongolia."}
+    copy = DataResource(
+        id="dataone:sha256:1", source="dataone", kind="dataset", title=title, doi=doi,
+        **(about if described == "dataone" else {}),
+    )  # fmt: skip
+    twin = DataResource(
+        id=f"datacite:{doi}", source="dryad", kind="dataset", title=title, doi=doi.upper(),
+        **(about if described == "datacite" else {}),
+    )  # fmt: skip
+    log = DataResource(
+        id="nasacmr:1", source="nasacmr", kind="dataset", title="Casey station log",
+        description="Snow petrels and leopard seals.",
+    )  # fmt: skip
+    _serve(monkeypatch, "nasacmr", [log])
+    _serve(monkeypatch, "dataone", [copy])
+    _serve(monkeypatch, "datacite", [twin])
+    async with _client() as client:
+        page = await router.search_page(
+            client, query="snow leopard", size=1, sources=["nasacmr", "dataone", "datacite"]
+        )
+    assert [r.id for r in page.results] == ["dataone:sha256:1"]  # the kept copy, first
+    # both copies are handled, so DataCite moves on
+    assert router._cursor.decode(page.next_cursor)["offsets"]["datacite"] == 1
+
+
+@pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+async def test_live_a_first_page_for_a_two_word_name_is_hits_naming_it() -> None:
+    """Round 2's lost ground, replayed: on 0.61.0 the first page for "snow leopard"
+    held Antarctic logs and museum collections tied with the studies."""
+    async with httpx.AsyncClient(timeout=60) as client:
+        page = await router.search_page(client, query="snow leopard", size=50, kind="dataset")
+
+    def words(r: DataResource) -> str:  # "imnet1k_snow_leopard_ounce" names it too
+        return " ".join(re.split(r"[\W_]+", " ".join([r.title, r.description or "", *r.subjects])))
+
+    named = [r for r in page.results if "snow leopard" in words(r).casefold()]
+    assert len(page.results) >= 20 and len(named) == len(page.results), [
+        r.title for r in page.results if r not in named
+    ]
