@@ -1,0 +1,213 @@
+# H2H answer key: data-aggregator-mcp vs ToolUniverse, "find and download this dataset"
+# Built 2026-10-04 (EDT) with curl/python against each archive's own API only. No MCP tools used.
+# Every sha256 below was computed from a file downloaded in this session (files sit next to this YAML).
+
+tasks:
+  - id: T1
+    category: general_repository
+    archive_has_dedicated_api: Zenodo
+    prompt: >-
+      Find the Zenodo dataset from a 2021 study of wild bees and pollination in mountain apple
+      orchards in South Tyrol (Italy). The study used pan traps, visitation counts and a pollinator
+      exclusion experiment, and looked at landscape heterogeneity at five spatial scales (100-2,000 m
+      radius). Sebastiano Zanini deposited it in 2024. Download the land-cover table for the
+      500 m radius.
+    answer_ids: ["10.5281/zenodo.10046644", "zenodo:10046644", "10.5281/zenodo.10046643 (concept DOI)"]
+    file:
+      name: Apple_landcover500.csv
+      url: https://zenodo.org/api/records/10046644/files/Apple_landcover500.csv/content
+      size_bytes: 3295
+      sha256: 95c4de624d9219594b2599b27b6bf453793c41ede6c48b8f945b1851e051d779
+      archive_checksum: {md5: 7e1a4f5d9a4fc5c51b0eea1c0c6ff02f, matched: true}
+    why_unique: >-
+      This is the only version of its concept record. The nearest neighbour (zenodo 13933191,
+      Guariento et al., meadow orchards in South Tyrol) is a different multi-taxon study with one xlsx.
+      Among the six landcover CSVs, only one is the 500 m radius.
+
+  - id: T2
+    category: general_repository
+    archive_has_dedicated_api: Figshare
+    prompt: >-
+      Find the 2026 Figshare dataset on seed germination and viability of 19 native woody species
+      from the Valdivian temperate rainforest after heat-shock treatments (100 and 120 degrees C for
+      5 min, plus a control), by Rojas, Ocampo Zuleta, Tellez and Paula. Download its raw data CSV.
+    answer_ids: ["10.6084/m9.figshare.33227655", "10.6084/m9.figshare.33227655.v1", "figshare:33227655"]
+    file:
+      name: germANDviabData.csv
+      url: https://ndownloader.figshare.com/files/67470198
+      size_bytes: 10448
+      sha256: cb78d1388d94c417566104345d7874560e8bcf5a4e1a3dbb7e77a8f90da19022
+      archive_checksum: {md5: 0e9330d9d75523b62e4d0fde599001a4, matched: true}
+    why_unique: >-
+      Searching Figshare for "Valdivian heat shock seed" returns only this item (v1, single file).
+      Zenodo's top hits for the same query are other fire-cue germination studies.
+
+  - id: T3
+    category: omics
+    archive_has_dedicated_api: NCBI GEO
+    prompt: >-
+      Find the GEO RNA-seq series on antiviral defences in the liverwort Marchantia polymorpha: mock
+      versus tobacco mosaic virus (TMV) infected plants, 4 replicates each, released 2024. Download
+      the supplementary gene-level count table.
+    answer_ids: ["GSE241827", "PRJNA1010197", "GEO UID 200241827"]
+    file:
+      name: GSE241827_counts_dds_v5.txt.gz
+      url: https://ftp.ncbi.nlm.nih.gov/geo/series/GSE241nnn/GSE241827/suppl/GSE241827_counts_dds_v5.txt.gz
+      size_bytes: 254663
+      sha256: 8837dc6e5616561f1ed75ae558a04f3b9244e7b2bce4b1535a030644aa131800
+      archive_checksum: {declared: none (GEO publishes no checksum for supplementary files), gzip_test: ok}
+      content_check: 15156 lines; header Mock_1..Mock_4, TMV_1..TMV_4; rows are Mp gene IDs
+      note: >-
+        Chose the supplementary file rather than the series matrix. GEO regenerated the matrix file
+        on 2026-08-14 (the series was released 2024-08-16), so its bytes change over time. The suppl
+        file was last modified on 2023-08-29.
+        The first HTTPS GET returned a 403 HTML page and an immediate retry returned 0 bytes; after a
+        10 s wait it returned the file. Graders should allow retries.
+    why_unique: >-
+      This is the only GSE that GEO's esearch returns for Marchantia[Organism] AND (virus OR TMV).
+      It has one supplementary file.
+
+  - id: T4
+    category: omics
+    archive_has_dedicated_api: ArrayExpress (BioStudies)
+    prompt: >-
+      Find the ArrayExpress microarray experiment (NimbleGen arrays, Rensing lab, University of
+      Marburg) in which Physcomitrella patens gametophores were treated with exudates of the arbuscular
+      mycorrhizal fungi Rhizophagus irregularis and Gigaspora margarita for 1 h and 24 h. Download the
+      SDRF sample/data-relationship file.
+    answer_ids: ["E-MTAB-3081"]
+    file:
+      name: E-MTAB-3081.sdrf.txt
+      url: https://ftp.ebi.ac.uk/biostudies/fire/E-MTAB-/081/E-MTAB-3081/Files/E-MTAB-3081.sdrf.txt
+      size_bytes: 9051
+      sha256: 518be103cb5c8a4db497f178216c31bc34665524be8ab96d9e6b29b04e9128f0
+      archive_checksum: {declared: "size only (9051 in BioStudies study JSON)", matched: true}
+    why_unique: >-
+      This is the only Physcomitrella fungal-exudate experiment in ArrayExpress (the next search hit,
+      E-MTAB-4252, is heat-shock RNA-seq). GEO esearch for Physcomitrella AND exudate returns 0, so
+      there is no GEO mirror.
+
+  - id: T5
+    category: openml
+    archive_has_dedicated_api: OpenML
+    prompt: >-
+      Find the OpenML dataset of leaves from one hundred plant species collected at Kew (Cope, Beghin,
+      Remagnino, Barman; Mallah et al. 2013) that uses only the 64-bin texture histogram features
+      (1599 instances, target = species class). Download its ARFF file.
+    answer_ids: ["openml:1493", "one-hundred-plants-texture (version 1)", "OpenML file_id 1592285"]
+    file:
+      name: one-hundred-plants-texture.arff
+      url: https://openml.org/data/v1/download/1592285/one-hundred-plants-texture.arff
+      size_bytes: 654948
+      sha256: 57f8ce3e35ef04b30cda4ce3e39d2a2fa7450f3e809ed8acefb75d73e7df5413
+      archive_checksum: {md5: cfe6cb4bd3cc847e38e61f7fd941307b, matched: true}
+    why_unique: >-
+      The siblings one-hundred-plants-margin (1491) and -shape (1492) use different features. The
+      same name has a version 2 (did 40521), but it is "in_preparation" with no file, so 1493 is the
+      only active one.
+
+  - id: T6
+    category: dataverse_dataone
+    archive_has_dedicated_api: Harvard Dataverse
+    prompt: >-
+      Find the Harvard Dataverse dataset on how root architecture and anatomy of Southeast Asian rice
+      respond to drought stress: more than 200 accessions from the 3000 Rice Genomes Project
+      phenotyped over several field seasons. First author is Siangliw, and the contact is Amelia Henry
+      at IRRI. Download the spreadsheet that compiles the phenotypes used for the PCA/regression
+      analysis.
+    answer_ids: ["doi:10.7910/DVN/ISBMO4", "Dataverse file id 6584033"]
+    file:
+      name: compilation for PCA regression.xlsx
+      url: https://dataverse.harvard.edu/api/access/datafile/6584033
+      size_bytes: 143351
+      sha256: b9a0de9ad4f9836372fadb93df2259918bfafc8351e502656b0239552fcf99c2
+      archive_checksum: {md5: 0a3ee2af31d82ea89b7408397a7cddb7, matched: true}
+      note: >-
+        Not tabular-ingested (tabularData false), so the bytes are the original upload. The access
+        URL redirects to a signed S3 URL. Dataset version 1.1.
+    why_unique: >-
+      This is the only Harvard Dataverse hit for "Siangliw". Other IRRI rice-root datasets (e.g.
+      DVN/MCP17S on aus rice, DVN/JMCSXH by Sandhu) have different authors and germplasm.
+
+  - id: T7
+    category: paper_to_data
+    archive_has_dedicated_api: Dryad (bytes served via its Zenodo mirror)
+    prompt: >-
+      I'm reading VanValkenburg, Goncalves Souza, Sanders and CaraDonna (2024), "Sodium-enriched
+      nectar shapes plant-pollinator interactions in a subalpine meadow", Ecology and Evolution
+      (PMID 39015879, doi:10.1002/ece3.70026). Find the dataset that the paper's data availability
+      statement points to and download the CSV of pollinator visitation observations.
+    answer_ids: ["10.5061/dryad.7h44j1018", "Dryad dataset id 119074", "zenodo:10001813 (Dryad mirror; its DOI is the Dryad DOI)"]
+    file:
+      name: VanValkenburgNaPollinators.csv
+      url: https://zenodo.org/api/records/10001813/files/VanValkenburgNaPollinators.csv/content
+      url_dryad_canonical: https://datadryad.org/api/v2/files/2645788/download
+      size_bytes: 40719
+      sha256: be91708ae3d0cc106a4c6d3b7aad817bb759c95bf82693166d1ae7512a485fe5
+      archive_checksum:
+        dryad_declared_sha256: be91708ae3d0cc106a4c6d3b7aad817bb759c95bf82693166d1ae7512a485fe5
+        zenodo_declared_md5: 2805da220f8c00ae0cd14f8fa9fc440b
+        matched: true (both)
+      note: >-
+        Dryad will not serve files anonymously right now. /api/v2/files/2645788/download and the
+        dataset /download zip return 401 "must have current bearer token", and the web file_stream
+        route returns 403. Only the Zenodo mirror served the bytes, and they match Dryad's declared
+        sha-256 exactly. An agent that cites the right Dryad DOI but cannot fetch the file has
+        resolved the dataset but not completed the download.
+    verification: >-
+      Europe PMC full text (PMC11251754) has the data availability statement "All data are available
+      at DOI: 10.5061/dryad.7h44j1018". Dryad relatedWorks lists primary_article
+      https://doi.org/10.1002/ece3.70026. PMID 39015879 was resolved from the DOI with PubMed esearch.
+    why_unique: >-
+      The paper names exactly one data DOI (the code is on GitHub, not in a data archive). The
+      dataset has one CSV.
+
+  - id: T8
+    category: outside_sweet_spot
+    archive_has_dedicated_api: RCSB PDB (wwPDB)
+    prompt: >-
+      Download the mmCIF coordinate file for the crystal structure of Arabidopsis TIR1-ASK1 bound to
+      the natural auxin indole-3-acetic acid together with the Aux/IAA7 degron peptide, from Tan et
+      al. 2007, "Mechanism of auxin perception by the TIR1 ubiquitin ligase" (Nature).
+    answer_ids: ["2P1Q", "pdb_00002p1q", "10.2210/pdb2p1q/pdb"]
+    file:
+      name: 2P1Q.cif
+      url: https://files.rcsb.org/download/2P1Q.cif
+      size_bytes: 716469
+      sha256: 1896c9be8067ceae992cfedace8d14ac9893d35facf1f9a509c895168dccf6df
+      also_accept:
+        - {name: 2P1Q.cif.gz, url: "https://files.rcsb.org/download/2P1Q.cif.gz", size_bytes: 176647,
+           sha256_gz: 1b59fc31374f4a865441a539c93e72a5eae95d85b3c01da24aa08853c533c638,
+           sha256_decompressed: 1896c9be8067ceae992cfedace8d14ac9893d35facf1f9a509c895168dccf6df}
+      archive_checksum: {declared: none per file; cross-mirror check, matched: true}
+      note: >-
+        The wwPDB archive copy (files.wwpdb.org .../p1/2p1q.cif.gz, decompressed) and PDBe
+        entry-files/download/2p1q.cif are byte-identical to the RCSB copy. Latest revision is 1.4
+        (2023-08-30); a future wwPDB remediation would change the bytes, so re-hash if the revision
+        history grows.
+    why_unique: >-
+      Tan 2007 deposited 2P1M (apo, no auxin), 2P1N (2,4-D + IAA7 peptide), 2P1O (1-NAA + peptide),
+      2P1P (IAA, no peptide) and 2P1Q (IAA + IAA7 peptide). Only 2P1Q has both IAA (IAC) and the
+      peptide, which RCSB GraphQL confirmed.
+
+rejected:
+  - candidate: "Zenodo 18213533 (strigolactone transport distance in soil, Ziadne/Gafni/Paporisch 2026)"
+    reason: >-
+      22 near-identical sub-1.3 KB CSVs, including two GR24 response curves (1) and (2). No single
+      file can be named uniquely by its content.
+  - candidate: "Zenodo 10046644 fruit_set.csv"
+    reason: >-
+      Too easy to confuse with fruitset_success.csv in the same record. Kept the record and used
+      the unambiguous 500 m land-cover file instead.
+  - candidate: "OpenML eucalyptus (188)"
+    reason: 4 active versions (188, 990, 43924, 43925), so not one correct dataset.
+  - candidate: "GSE241827_series_matrix.txt.gz"
+    reason: >-
+      GEO regenerates it (Last-Modified 2026-08-14, two years after release), so its sha256 is not
+      stable. Replaced with the supplementary counts file.
+  - candidate: "Dryad 10.5061/dryad.7h44j1018 as the standalone Dryad general-repository task"
+    reason: >-
+      Anonymous Dryad file download is blocked (401/403). Moved Dryad to the paper task, where the
+      Zenodo mirror still lets the task be completed, and used Figshare for T2.
+  - candidate: "Figshare journal-supplement items (PLOS .t00N/.s00N, Frontiers Data Sheet N)"
+    reason: One paper spawns many items, so there is no single correct dataset.
