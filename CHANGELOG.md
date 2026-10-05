@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-10-05
+
 ### Changed
 
 - The README is now a short front page: install (with one-click VS Code and Cursor
@@ -29,9 +31,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   expansion that keeps every facet, the name you typed first, and as many other names
   as fit; `errors["operator_limit"]` lists the names it left out. Other sources still
   get the full expansion, and a query that already fits is sent unchanged.
-
-### Fixed
-
 - A failed `fetch` no longer deletes a file already on disk. Downloads stream into a
   temp file beside the target and replace it only once verified; before, a re-fetch of
   a file with no checksum or size (every GEO supplementary file) truncated the good copy
