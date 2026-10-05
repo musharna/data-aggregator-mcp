@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A large `search` page no longer gets lost in Claude Code. A 50-hit page could run to
+  57,000-427,000 characters, past the ~50,000 Claude Code passes to the model, so the
+  page was saved to a file the agent often could not read. A page now holds what fits
+  in about 38,000 characters: when fewer than `size` hits fit, `errors.page_size` says
+  so and `next_cursor` continues with the rest. Each hit keeps the first few items of
+  its lists (creators, links, subjects and others), and `truncated` names each cut list;
+  `resolve` still returns the whole record.
+
 ## [0.60.0] - 2026-10-05
 
 ### Changed
