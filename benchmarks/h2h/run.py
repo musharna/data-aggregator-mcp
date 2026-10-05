@@ -175,9 +175,17 @@ def score_list(task: dict, run_dir: Path, adjudication: dict) -> dict:
     that matches neither the key nor a rejected id is ``pending`` adjudication.
     """
     adj = adjudication.get(task["id"], {})
-    studies = [*task["studies"], *adj.get("add", [])]
+    # ``alias``: an id adjudication found to be another copy of a study already keyed.
+    extra = adj.get("alias", {})
+    studies = [
+        {**s, "ids": [*s["ids"], *extra.get(s["key"], [])]}
+        for s in [*task["studies"], *adj.get("add", [])]
+    ]
     # Borderline studies: listing one is not wrong, missing one is not a miss.
-    optional = [*task.get("optional", []), *adj.get("optional", [])]
+    optional = [
+        {**s, "ids": [*s["ids"], *extra.get(s["key"], [])]}
+        for s in [*task.get("optional", []), *adj.get("optional", [])]
+    ]
     rejected = [_norm(i) for i in adj.get("reject", [])]
     try:
         listed = json.loads((run_dir / "out" / "datasets.json").read_text())

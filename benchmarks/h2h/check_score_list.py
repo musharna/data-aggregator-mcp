@@ -27,7 +27,13 @@ TASK = {
     ],
     "optional": [{"key": "B1", "ids": ["KU212370"]}],
 }
-ADJUDICATION = {"X": {"add": [{"key": "A1", "ids": ["E-MTAB-7"]}], "reject": ["GSE999"]}}
+ADJUDICATION = {
+    "X": {
+        "add": [{"key": "A1", "ids": ["E-MTAB-7"]}],
+        "reject": ["GSE999"],
+        "alias": {"S3": ["MSV000123"]},
+    }
+}
 
 
 def run_dir(listed: list | str) -> Path:
@@ -52,15 +58,16 @@ def main() -> None:
                 {"id": "E-MTAB-7", "archive": "ArrayExpress"},  # added in adjudication
                 {"id": "KU212370", "archive": "GenBank"},  # borderline: relevant, no recall
                 {"id": "10.5281/zenodo.4895080", "archive": "Zenodo"},  # S4, keyed zenodo:N
+                {"id": "MSV000123", "archive": "MassIVE"},  # S3 via an adjudicated alias
             ]
         ),
         ADJUDICATION,
     )
-    assert r["json_ok"] and r["listed"] == 9 and r["key_size"] == 5, r
-    assert r["found_keys"] == ["A1", "S1", "S2", "S4"] and r["recall"] == 0.8, r
+    assert r["json_ok"] and r["listed"] == 10 and r["key_size"] == 5, r
+    assert r["found_keys"] == ["A1", "S1", "S2", "S3", "S4"] and r["recall"] == 1.0, r
     assert r["duplicates"] == 1, r
     assert [p["id"] for p in r["pending"]] == ["GSE1234", "doi:10.1/x"], r
-    assert r["relevant"] == 6 and r["irrelevant"] == 1 and r["precision"] == 0.857, r
+    assert r["relevant"] == 7 and r["irrelevant"] == 1 and r["precision"] == 0.875, r
     # A file that is not a JSON list scores as an empty list, not as an error.
     bad = run.score_list(TASK, run_dir("not json"), ADJUDICATION)
     assert not bad["json_ok"] and bad["recall"] == 0.0 and bad["listed"] == 0, bad
