@@ -30,6 +30,10 @@ _DB = {"geo": "gds", "sra": "sra", "bioproject": "bioproject"}
 PREFIXES = tuple(_DB)  # ("geo", "sra", "bioproject") — derived so it can't drift from _DB
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
+# esearch ANDs every word, so words that each match hundreds of records can match none
+# together (GEO: "tardigrade" 221, "tun" 464, "tardigrade dehydration tun" 0; probed
+# 2026-10-05); the router names these dbs when a multi-word search comes back empty.
+REQUIRES_EVERY_WORD = True
 
 # Per-db accession search field. NOT uniform: the BioProject index has no ``ACCN``
 # field at all (a term like ``PRJNA231221[ACCN]`` matches ZERO records there, while the

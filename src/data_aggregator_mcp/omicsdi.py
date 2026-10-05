@@ -1,14 +1,15 @@
 """OmicsDI (Omics Discovery Index) — proteomics/metabolomics discovery.
 
 Restricted to the mass-spec modality repos OmicsDI uniquely adds; GEO /
-ArrayExpress / ENA hits are dropped (already covered by the omics leg, and
+ArrayExpress / ENA hits are left out (already covered by the omics leg, and
 accession-keyed so the DOI dedup would miss the duplicates). Resolve (Task 6)
 routes fetchable files to PRIDE / MetaboLights; other repos are discovery-only.
 
-Page-1-only: we post-filter each page to the modality repos, so the router's
-offset accounting (which counts records consumed from the merged stream) cannot
-be reconciled with the upstream all-rows offset — mirror huggingface.py and
-contribute first-page results only.
+The restriction is sent upstream as a ``repository:`` clause, so OmicsDI's ``count``
+and ``start`` are in the same coordinates as the records returned and search pages.
+It used to filter each page after fetch, which made it page-1-only and could empty a
+page: "Chlamydomonas nitrogen" returned 3 hits of the 36 mass-spec datasets OmicsDI
+holds, none of them jPOST (2026-10-05 head-to-head).
 """
 
 from __future__ import annotations
@@ -27,26 +28,38 @@ _LANDING = "https://www.omicsdi.org/dataset/{source}/{acc}"
 PREFIXES = {"omicsdi"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
-# search serves page 1 only (``if offset`` below), so list_sources omits ``cursor``.
-PAGINATES = False
+# OmicsDI matches only records holding every word of the query ("Chlamydomonas
+# nitrogen" 255, "+ starvation" 71, "+ phosphoproteomics" 4; probed 2026-10-05), so the
+# router names this source when a multi-word search comes back empty.
+REQUIRES_EVERY_WORD = True
 MAX_RETRIES = 2
 _ACCEPT_JSON = {"Accept": "application/json"}
 # A module constant: mutmut does not mutate those, and a lower-cased method is the same
 # request (httpx upper-cases it); test_omicsdi_observed pins the method sent.
 _GET = "GET"
 
-# OmicsDI `source` codes for the mass-spectrometry modality we uniquely add
-# (proteomics + metabolomics). Deliberately excludes EGA (controlled-access human
-# genomics, not MS) and the transcriptomics repos (GEO/ArrayExpress/ENA) the omics
-# leg already covers.
-_MODALITY_REPOS = {
+# OmicsDI `repository` names (its search facet) for the mass-spectrometry modality we
+# uniquely add (proteomics + metabolomics). Deliberately excludes EGA (controlled-access
+# human genomics, not MS) and the transcriptomics repos (GEO/ArrayExpress/ENA) the omics
+# leg already covers. jPOST, iProX and Panorama Public are ProteomeXchange members.
+_MODALITY_REPOSITORIES = (
     "pride",
-    "massive",
-    "metabolights_dataset",
-    "metabolomics_workbench",
-    "gnps",
-    "peptide_atlas",
-}
+    "MassIVE",
+    "jPOST",
+    "iProX",
+    "PeptideAtlas",
+    "PanoramaPublic",
+    "MetaboLights",
+    "MetabolomicsWorkbench",
+    "GNPS",
+)
+_MODALITY_CLAUSE = "repository:(" + " OR ".join(f'"{r}"' for r in _MODALITY_REPOSITORIES) + ")"
+
+
+def _modality_query(query: str) -> str:
+    """``query`` restricted upstream to the mass-spec repositories."""
+    return f"({query}) AND {_MODALITY_CLAUSE}" if query.strip() else _MODALITY_CLAUSE
+
 
 # A source code or an accession, the two parts of `omicsdi:<source>:<acc>`. Both go
 # into the record URL's path, so a `/`, `..`, `?`, `#` or `%` must never reach it;
@@ -95,6 +108,10 @@ def _check_search(body: dict) -> None:
     datasets = body.get("datasets")
     if not (isinstance(datasets, list) and all(_is_hit(d) for d in datasets)):
         raise _http.UpstreamEnvelopeError(f"no OmicsDI dataset list in {body!r:.200}")
+    count = body.get("count")
+    # bool is an int subclass; a count below the page it came with is not a count.
+    if type(count) is not int or count < len(datasets):
+        raise _http.UpstreamEnvelopeError(f"no OmicsDI result count in {body!r:.200}")
 
 
 def _check_record(body: dict, acc: str) -> None:
@@ -174,21 +191,21 @@ def _record(resource_id: str, source: str, acc: str, body: dict) -> DataResource
 async def search(
     client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
 ) -> tuple[int, list[DataResource]]:
-    if offset:  # page-1-only (see module docstring)
-        return 0, []
+    params = {"query": _modality_query(query), "size": str(min(size, MAX_SIZE))}
+    if offset:
+        params["start"] = str(offset)
     body = await _http.request_json(
         client,
         _GET,
         SEARCH,
         service="OmicsDI search",
-        params={"query": query, "size": min(size, MAX_SIZE)},
+        params=params,
         headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         expect=dict,
         check=_check_search,
     )
-    kept = [d for d in body["datasets"] if d["source"] in _MODALITY_REPOS]
-    return len(kept), [compact(_normalize(d)) for d in kept]
+    return body["count"], [compact(_normalize(d)) for d in body["datasets"]]
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:

@@ -46,45 +46,51 @@ def _call(r: httpx.Request) -> tuple[str, str, str | None]:
 )
 async def test_search_sends_exactly_one_request(kwargs, size):
     sent: list[httpx.Request] = []
-    async with _client(sent, httpx.Response(200, json={"datasets": []})) as c:
+    async with _client(sent, httpx.Response(200, json={"count": 0, "datasets": []})) as c:
         assert await omicsdi.search(c, "lung cancer", **kwargs) == (0, [])
+    query = (
+        "%28lung+cancer%29+AND+repository%3A%28%22pride%22+OR+%22MassIVE%22+OR+%22jPOST%22"
+        "+OR+%22iProX%22+OR+%22PeptideAtlas%22+OR+%22PanoramaPublic%22+OR+%22MetaboLights%22"
+        "+OR+%22MetabolomicsWorkbench%22+OR+%22GNPS%22%29"
+    )
     assert [_call(r) for r in sent] == [
         (
             "GET",
-            f"https://www.omicsdi.org/ws/dataset/search?query=lung+cancer&size={size}",
+            f"https://www.omicsdi.org/ws/dataset/search?query={query}&size={size}",
             "application/json",
         )
     ]
 
 
 @pytest.mark.asyncio
-async def test_search_past_the_first_page_sends_nothing():
+async def test_search_past_the_first_page_asks_for_that_page():
     sent: list[httpx.Request] = []
-    async with _client(sent, httpx.Response(200, json={"datasets": [HIT]})) as c:
-        assert await omicsdi.search(c, "x", offset=1) == (0, [])
-        assert sent == []
-        # positive control: offset 0 is the first page
-        total, _ = await omicsdi.search(c, "x", offset=0)
-    assert total == 1 and len(sent) == 1
+    async with _client(sent, httpx.Response(200, json={"count": 51, "datasets": [HIT]})) as c:
+        assert (await omicsdi.search(c, "x", offset=50))[0] == 51
+        # positive control: offset 0 is the first page, sent with no start
+        assert (await omicsdi.search(c, "x", offset=0))[0] == 51
+    assert [(r.url.params.get("start"), r.url.params["size"]) for r in sent] == [
+        ("50", "10"),
+        (None, "10"),
+    ]
 
 
 @pytest.mark.asyncio
-async def test_search_reads_each_kept_hit_whole():
+async def test_search_reads_each_hit_whole():
     long = "d" * 2000
     hits = [
         {**HIT, "description": long},
-        {"id": "GSE1", "source": "geo", "title": "dropped", "description": None},
         {"id": "ST001684", "source": "metabolomics_workbench", "title": None},
         {"id": "MSV1", "source": "gnps", "title": "g", "description": ""},
         {"id": "MSV2", "source": "massive", "title": "m"},
         {"id": "PAe1", "source": "peptide_atlas", "title": "p"},
         {"id": "MTBLS1", "source": "metabolights_dataset", "title": "l"},
-        {"id": "EGAS1", "source": "ega", "title": "dropped"},
+        {"id": "RPXD049832", "source": "jpost", "title": "j"},
     ]
     sent: list[httpx.Request] = []
     async with _client(sent, httpx.Response(200, json={"count": 9, "datasets": hits})) as c:
         total, recs = await omicsdi.search(c, "x")
-    assert total == 6
+    assert total == 9  # OmicsDI's count of matches, not the page's length
     assert [r.id for r in recs] == [
         "omicsdi:pride:PXD006873",
         "omicsdi:metabolomics_workbench:ST001684",
@@ -92,6 +98,7 @@ async def test_search_reads_each_kept_hit_whole():
         "omicsdi:massive:MSV2",
         "omicsdi:peptide_atlas:PAe1",
         "omicsdi:metabolights_dataset:MTBLS1",
+        "omicsdi:jpost:RPXD049832",
     ]
     assert recs[0] == DataResource(
         id="omicsdi:pride:PXD006873",
@@ -120,7 +127,7 @@ async def test_search_retries_once_then_names_the_call():
     # positive control: one 503 then an answer is an answer
     sent.clear()
     async with _client(
-        sent, httpx.Response(503), httpx.Response(200, json={"datasets": [HIT]})
+        sent, httpx.Response(503), httpx.Response(200, json={"count": 1, "datasets": [HIT]})
     ) as c:
         assert (await omicsdi.search(c, "x"))[0] == 1
     assert len(sent) == 2

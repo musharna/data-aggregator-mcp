@@ -294,8 +294,31 @@ async def test_search_a_malformed_answer_is_an_outage_not_no_hits(body):
     # positive controls: the live no-hit answer is zero hits, and a real hit reads whole
     assert await _search(NO_HITS) == (0, [])
     total, [rec] = await _search({"count": 41763, "datasets": [HIT], "facets": []})
-    assert total == 1
+    assert total == 41763
     assert (rec.id, rec.title, rec.description) == ("omicsdi:pride:PXD006873", HIT["title"], None)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"datasets": [HIT]},
+        {"count": None, "datasets": []},
+        {"count": "41763", "datasets": [HIT]},
+        {"count": True, "datasets": [HIT]},
+        {"count": 0, "datasets": [HIT]},  # fewer matches than the page holds
+    ],
+)
+async def test_search_without_a_usable_count_is_an_outage(body):
+    """The count is the source's total, and the router pages to it: a missing or
+    wrong-typed count must not become 0 or a string total."""
+    with pytest.raises(
+        UpstreamUnavailableError,
+        match=r"UpstreamEnvelopeError\(.no OmicsDI result count in \{",
+    ):
+        await _search(body)
+    # positive control: the same page with its count reads
+    assert (await _search({**body, "count": 1}))[0] == 1
 
 
 @pytest.mark.asyncio
