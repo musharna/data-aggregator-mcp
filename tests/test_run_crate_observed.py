@@ -311,6 +311,7 @@ def test_failed_source_names_every_real_router_stream(vi: int | None) -> None:
         plain="q",
         filters={},
         pushdown=False,
+        plurals=True,
         vi=vi,
     )
     named = {s.label: run_crate._failed_source(s.label) for s in streams}

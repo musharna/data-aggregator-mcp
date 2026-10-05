@@ -49,7 +49,7 @@ async def test_search_sends_exactly_one_request(kwargs, size):
     async with _client(sent, httpx.Response(200, json={"count": 0, "datasets": []})) as c:
         assert await omicsdi.search(c, "lung cancer", **kwargs) == (0, [])
     query = (
-        "%28lung+cancer%29+AND+repository%3A%28%22pride%22+OR+%22MassIVE%22+OR+%22jPOST%22"
+        "%28%28lung+OR+lungs%29+%28cancer+OR+cancers%29%29+AND+repository%3A%28%22pride%22+OR+%22MassIVE%22+OR+%22jPOST%22"
         "+OR+%22iProX%22+OR+%22PeptideAtlas%22+OR+%22PanoramaPublic%22+OR+%22MetaboLights%22"
         "+OR+%22MetabolomicsWorkbench%22+OR+%22GNPS%22%29"
     )

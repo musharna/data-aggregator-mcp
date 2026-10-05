@@ -310,6 +310,7 @@ def _source_streams(
     plain: str,
     filters: dict[str, Any],
     pushdown: bool,
+    plurals: bool,
     vi: int | None = None,
     groups: Sequence[FacetGroup] = (),
     notes: list[str] | None = None,
@@ -327,7 +328,11 @@ def _source_streams(
     An adapter implementing ``_pushdown.FilterPushdown`` is sent the active filters it
     can evaluate upstream (unless ``pushdown`` is off: a cursor minted before pushdown
     holds offsets into the UNFILTERED upstream order). Only the pushed subset is sent,
-    and with no active filter the call is exactly the unfiltered one."""
+    and with no active filter the call is exactly the unfiltered one.
+
+    An adapter declaring ``QUERY_PLURALS`` sends each plain word with its plural
+    upstream; with ``plurals`` off (a cursor minted before it did, whose offsets index
+    the query as written) it is told not to."""
     wanted = _pushdown.active(filters)
     out: list[_Stream] = []
     for name, adapter in adapters.items():
@@ -351,6 +356,8 @@ def _source_streams(
             ]
         else:
             call = functools.partial(adapter.search, client, q)
+            if not plurals and getattr(adapter, "QUERY_PLURALS", False):
+                call = functools.partial(call, plurals=False)
             if pushdown and wanted and isinstance(adapter, _pushdown.FilterPushdown):
                 pushed = adapter.pushable(wanted)
                 if pushed:  # with nothing pushed the call is exactly the unfiltered one
@@ -708,6 +715,7 @@ async def _multi_query_page(
     errors: dict[str, str],
     query_expansion: QueryExpansion | None,
     pushdown: bool,
+    plurals: bool,
     taxon_expansion: TaxonExpansion | None = None,
     mesh_expansion: MeshExpansion | None = None,
     tissue_expansion: TissueExpansion | None = None,
@@ -738,6 +746,7 @@ async def _multi_query_page(
             plain=plain[vi],
             filters=filters,
             pushdown=pushdown,
+            plurals=plurals,
             vi=vi,
             groups=groups,
             notes=notes,
@@ -776,6 +785,7 @@ async def _multi_query_page(
                 "ahead": page.ahead,
                 "collapse_mirrors": collapse_mirrors,
                 "pd": pushdown,
+                "pl": plurals,
             }
             | ({"fg": _encode_groups(groups)} if groups else {})
         )
@@ -856,6 +866,7 @@ async def search_page(
                 errors={},
                 query_expansion=None,  # echo is page-1 only; frozen None on continuation
                 pushdown=bool(st.get("pd")),
+                plurals=bool(st.get("pl")),
                 groups=_decode_groups(st),
             )
         query = st["q"]
@@ -891,6 +902,8 @@ async def search_page(
         # minted before filter pushdown (no `pd`) indexes the UNFILTERED upstream order,
         # so it keeps being continued without pushdown.
         pushdown = bool(st.get("pd"))
+        # Likewise a cursor minted before plurals were sent indexes the query as written.
+        plurals = bool(st.get("pl"))
         errors: dict[str, str] = {}
     else:
         if query is None:
@@ -1045,6 +1058,7 @@ async def search_page(
                     errors=errors,
                     query_expansion=QueryExpansion(input=original_query, variants=raw_variants),
                     pushdown=True,
+                    plurals=True,
                     taxon_expansion=expansion,
                     mesh_expansion=disease_expansion,
                     tissue_expansion=tissue_expansion,
@@ -1057,6 +1071,7 @@ async def search_page(
         offsets = {}
         ahead = {}
         pushdown = True
+        plurals = True
 
     adapters = _select(sources)
     names = list(adapters)
@@ -1068,6 +1083,7 @@ async def search_page(
         plain=query,
         filters=filters,
         pushdown=pushdown,
+        plurals=plurals,
         groups=groups,
         notes=notes,
     )
@@ -1111,6 +1127,7 @@ async def search_page(
                 "rank": rank,
                 "collapse_mirrors": collapse_mirrors,
                 "pd": pushdown,
+                "pl": plurals,
             }
             | ({"fg": _encode_groups(groups)} if groups else {})
         )

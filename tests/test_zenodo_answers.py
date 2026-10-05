@@ -102,9 +102,9 @@ async def test_search_asks_for_no_more_than_zenodo_answers_anonymously():
         await zenodo.search(c, "climate", size=50, offset=30)
         await zenodo.search(c, "climate", size=10)
     assert [dict(r.url.params) for r in seen] == [
-        {"q": "climate", "size": "25"},
-        {"q": "climate", "size": "25", "page": "2"},  # records 25-49; drop 25-29
-        {"q": "climate", "size": "10"},
+        {"q": "(climate OR climates)", "size": "25"},
+        {"q": "(climate OR climates)", "size": "25", "page": "2"},  # records 25-49; drop 25-29
+        {"q": "(climate OR climates)", "size": "10"},
     ]
     # Positive control: the answer reads whole.
     assert total == 111767 and [r.id for r in recs] == ["zenodo:1491532"]

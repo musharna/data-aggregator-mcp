@@ -42,15 +42,21 @@ async def _sent(httpx_mock: HTTPXMock, body: dict, **kw) -> httpx.Request:
     [
         (
             {"published_after": 2019, "published_before": 2020},
-            "(soil moisture) AND publication_date:[2019-01-01 TO 2020-12-31]",
+            "((soil OR soils) (moisture OR moistures)) AND publication_date:[2019-01-01 TO 2020-12-31]",
         ),
-        ({"published_after": 2019}, "(soil moisture) AND publication_date:[2019-01-01 TO *]"),
-        ({"kind": "software"}, "(soil moisture) AND resource_type.type:(software)"),
+        (
+            {"published_after": 2019},
+            "((soil OR soils) (moisture OR moistures)) AND publication_date:[2019-01-01 TO *]",
+        ),
+        (
+            {"kind": "software"},
+            "((soil OR soils) (moisture OR moistures)) AND resource_type.type:(software)",
+        ),
         # A-M5: dataset is its own mapped types, no longer the complement — an image or
         # a poster normalizes to "other", so it must not come back for kind=dataset.
         (
             {"kind": "dataset", "published_before": 2020},
-            "(soil moisture) AND publication_date:[* TO 2020-12-31]"
+            "((soil OR soils) (moisture OR moistures)) AND publication_date:[* TO 2020-12-31]"
             " AND resource_type.type:(dataset)",
         ),
     ],
@@ -65,7 +71,10 @@ async def test_zenodo_request_carries_the_filters(
 async def test_zenodo_request_without_filters_is_unchanged(httpx_mock: HTTPXMock) -> None:
     """Positive control: byte-identical to the request 7fcd85b sent."""
     req = await _sent(httpx_mock, _ZENODO_EMPTY, sources=["zenodo"])
-    assert str(req.url) == "https://zenodo.org/api/records?q=soil+moisture&size=10"
+    assert (
+        str(req.url)
+        == "https://zenodo.org/api/records?q=%28soil+OR+soils%29+%28moisture+OR+moistures%29&size=10"
+    )
 
 
 @pytest.mark.parametrize(
@@ -73,20 +82,23 @@ async def test_zenodo_request_without_filters_is_unchanged(httpx_mock: HTTPXMock
     [
         (
             {"published_after": 2019, "published_before": 2020},
-            "(soil moisture) AND publicationYear:[2019 TO 2020]",
+            "((soil OR soils) (moisture OR moistures)) AND publicationYear:[2019 TO 2020]",
         ),
-        ({"published_before": 2020}, "(soil moisture) AND publicationYear:[* TO 2020]"),
+        (
+            {"published_before": 2020},
+            "((soil OR soils) (moisture OR moistures)) AND publicationYear:[* TO 2020]",
+        ),
         (
             {"kind": "software"},
-            "(soil moisture) AND types.resourceTypeGeneral:(ComputationalNotebook OR Software)",
+            "((soil OR soils) (moisture OR moistures)) AND types.resourceTypeGeneral:(ComputationalNotebook OR Software)",
         ),
         (
             {"kind": "dataset"},
-            "(soil moisture) AND types.resourceTypeGeneral:(Collection OR Dataset)",
+            "((soil OR soils) (moisture OR moistures)) AND types.resourceTypeGeneral:(Collection OR Dataset)",
         ),
         (
             {"kind": "publication", "published_after": 2019},
-            "(soil moisture) AND publicationYear:[2019 TO *] AND types.resourceTypeGeneral:"
+            "((soil OR soils) (moisture OR moistures)) AND publicationYear:[2019 TO *] AND types.resourceTypeGeneral:"
             "(Book OR BookChapter OR ConferencePaper OR Dissertation OR JournalArticle"
             " OR Preprint OR Report OR Text)",
         ),
@@ -104,7 +116,7 @@ async def test_datacite_request_without_filters_is_unchanged(httpx_mock: HTTPXMo
     relevance sort every DataCite search now asks for."""
     req = await _sent(httpx_mock, _DATACITE_EMPTY, sources=["datacite"])
     assert str(req.url) == (
-        "https://api.datacite.org/dois?query=soil+moisture&sort=relevance&page%5Bsize%5D=10"
+        "https://api.datacite.org/dois?query=%28soil+OR+soils%29+%28moisture+OR+moistures%29&sort=relevance&page%5Bsize%5D=10"
     )
 
 

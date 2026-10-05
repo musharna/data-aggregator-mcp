@@ -274,11 +274,11 @@ def test_dedup_keeps_records_without_doi() -> None:
 
 async def test_search_fans_out_and_merges(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
-        url="https://zenodo.org/api/records?q=rna&size=10",
+        url="https://zenodo.org/api/records?q=%28rna+OR+rnas%29&size=10",
         json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
     )
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=rna&sort=relevance&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=%28rna+OR+rnas%29&sort=relevance&page%5Bsize%5D=10",
         json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
     )
     async with httpx.AsyncClient() as client:
@@ -294,11 +294,11 @@ async def test_search_fans_out_and_merges(httpx_mock: HTTPXMock) -> None:
 async def test_search_captures_per_source_error_without_failing(httpx_mock: HTTPXMock) -> None:
     # zenodo succeeds; datacite 500s past its retries → captured, not raised
     httpx_mock.add_response(
-        url="https://zenodo.org/api/records?q=rna&size=10",
+        url="https://zenodo.org/api/records?q=%28rna+OR+rnas%29&size=10",
         json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
     )
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=rna&sort=relevance&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=%28rna+OR+rnas%29&sort=relevance&page%5Bsize%5D=10",
         status_code=500,
         is_reusable=True,
     )
@@ -313,7 +313,7 @@ async def test_search_captures_per_source_error_without_failing(httpx_mock: HTTP
 
 async def test_search_respects_sources_filter(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=rna&sort=relevance&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=%28rna+OR+rnas%29&sort=relevance&page%5Bsize%5D=10",
         json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
     )
     async with httpx.AsyncClient() as client:
@@ -441,11 +441,11 @@ async def test_resolve_unroutable_id_raises() -> None:
 async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch) -> None:
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     httpx_mock.add_response(
-        url="https://zenodo.org/api/records?q=rna&size=10",
+        url="https://zenodo.org/api/records?q=%28rna+OR+rnas%29&size=10",
         json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
     )
     httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=rna&sort=relevance&page%5Bsize%5D=10",
+        url="https://api.datacite.org/dois?query=%28rna+OR+rnas%29&sort=relevance&page%5Bsize%5D=10",
         json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
     )
     httpx_mock.add_response(

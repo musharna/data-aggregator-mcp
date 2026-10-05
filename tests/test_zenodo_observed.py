@@ -64,7 +64,11 @@ async def test_each_request_is_exactly_what_zenodo_is_sent():
         zenodo._SEARCH_CACHE.clear()
         r = await zenodo.resolve(c, f"zenodo:{_OLD}")
     assert [_call(s) for s in sent] == [
-        ("GET", "https://zenodo.org/api/records?q=climate&size=10", "application/json"),
+        (
+            "GET",
+            "https://zenodo.org/api/records?q=%28climate+OR+climates%29&size=10",
+            "application/json",
+        ),
         ("GET", f"https://zenodo.org/api/records/{_OLD}", "application/json"),
         ("HEAD", f"https://zenodo.org/api/records/{_OLD}/versions/latest", "*/*"),  # httpx's
     ]
