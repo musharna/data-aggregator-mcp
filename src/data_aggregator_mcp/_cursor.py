@@ -12,6 +12,7 @@ import base64
 import json
 from typing import Any
 
+from ._ontology import ONTOLOGY_FIELDS
 from .errors import ValidationError
 
 _REQUIRED = {"q", "size", "offsets"}
@@ -102,7 +103,29 @@ def decode(token: str) -> dict[str, Any]:
         raise ValidationError(
             "invalid or corrupt cursor: 'raw_variants' must be strings matching 'variants'"
         )
+    # Facet groups: one [typed name, [terms]] pair per ontology facet a search can AND on.
+    fg = state.get("fg")
+    if fg is not None and (
+        not isinstance(fg, list)
+        or len(fg) > len(ONTOLOGY_FIELDS)
+        or not all(_is_group(g) for g in fg)
+    ):
+        raise ValidationError(
+            "invalid or corrupt cursor: 'fg' must be a list of at most "
+            f"{len(ONTOLOGY_FIELDS)} [name, [terms]] pairs"
+        )
     return state
+
+
+def _is_group(g: object) -> bool:
+    return (
+        isinstance(g, list)
+        and len(g) == 2
+        and isinstance(g[0], str)
+        and isinstance(g[1], list)
+        and len(g[1]) > 0
+        and all(isinstance(t, str) for t in g[1])
+    )
 
 
 def _is_count(v: object) -> bool:
