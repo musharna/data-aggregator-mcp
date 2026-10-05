@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- OmicsDI search now pages, and finds every mass-spec dataset it matches. It used to
+  fetch one page and then drop the hits from other repositories, so it served page 1
+  only and could come back nearly empty: "Chlamydomonas nitrogen" returned 3 of the 36
+  datasets. The restriction is now part of the query sent to OmicsDI, and jPOST, iProX
+  and Panorama Public are included.
+- When NCBI omics (GEO, SRA, BioProject) or OmicsDI matches nothing for a query of two or
+  more words, `errors.all_words` now says so. Both return only records holding every
+  word, so a longer query can match nothing even when each word matches hundreds.
+
 ## [0.60.0] - 2026-10-05
 
 ### Changed
