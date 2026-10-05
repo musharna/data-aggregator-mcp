@@ -21,9 +21,13 @@ dropped.
   `software`. A record whose upstream type none of these covers (a Zenodo image, a
   DataCite `Audiovisual`, an untyped record) is kind `other` and matches no filter.
 - `published_after` / `published_before` — filter by publication year.
-- `rank` — `relevance` (default) or `semantic` (re-rank the fetched page by
-  embedding similarity to the query; needs `EMBEDDING_API_BASE`, degrades to
-  relevance order otherwise).
+- `rank` — `relevance` (default) or `semantic`. `relevance` puts hits that name
+  more of the search first: each facet you set (any of its expanded names), then
+  each word of the query, found in the title, description, subjects or organism.
+  Hits that name as much stay in the sources' own order, taken in turn, and
+  nothing is dropped. `semantic` re-ranks the fetched page by embedding
+  similarity to the query; it needs `EMBEDDING_API_BASE` and falls back to
+  `relevance` order otherwise.
 - `understand` — opt into LLM query understanding (default false). A free-text
   query is **normalized** into a focused keyword query: conversational fluff
   (`"I'm looking for…"`, `"where can I find…"`) is stripped while the scientific
