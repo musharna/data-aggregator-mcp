@@ -300,6 +300,71 @@ def test_normalize_doi_none_for_plain_ark():
     assert r.doi is None
 
 
+def test_a_member_node_copy_takes_its_doi_from_the_series_id():
+    """Dryad and PANGAEA copies carry a sha256 identifier and the deposit's DOI as
+    seriesId, in either form; without it they never met the original in the DOI dedup."""
+    sha = "sha256:12c99361685269c5a96d5da8f8b93e9ed2b7c03f1f1154eea963433366c13426"
+    for series, doi in [
+        ("https://doi.org/10.5061/dryad.2280gb623", "10.5061/dryad.2280gb623"),
+        ("doi:10.1594/PANGAEA.883301", "10.1594/PANGAEA.883301"),
+        ("http://dx.doi.org/10.5061/dryad.x1", "10.5061/dryad.x1"),
+    ]:
+        assert dataone._normalize({"identifier": sha, "seriesId": series, "title": "t"}).doi == doi
+    # not DOIs: a uuid series, a DOI-like string inside other text, none at all
+    for series in ("urn:uuid:4b9c", "see https://doi.org/10.5061/dryad.x1", None):
+        assert dataone._normalize({"identifier": sha, "seriesId": series, "title": "t"}).doi is None
+    # the record's own DOI identifier wins over its series
+    own = {"identifier": "doi:10.18739/A26336", "seriesId": "doi:10.1/other", "title": "t"}
+    assert dataone._normalize(own).doi == "10.18739/A26336"
+
+
+@pytest.mark.asyncio
+async def test_a_dataone_copy_and_its_dryad_original_are_one_search_hit(monkeypatch):
+    from types import SimpleNamespace
+
+    from data_aggregator_mcp import router
+    from data_aggregator_mcp.models import DataResource
+
+    copy = dataone._normalize(
+        {
+            "identifier": "sha256:12c9",
+            "seriesId": "https://doi.org/10.5061/dryad.2280gb623",
+            "title": "Narrow dietary niche of snow leopards and Himalayan wolves",
+        }
+    )
+    original = DataResource(
+        id="datacite:10.5061/dryad.2280gb623",
+        source="dryad",
+        kind="dataset",
+        title="Narrow dietary niche of snow leopards and Himalayan wolves",
+        doi="10.5061/DRYAD.2280GB623",
+    )
+
+    def adapter(rec):
+        async def search(client, q, *, size=10, offset=0):
+            return 1, [rec][offset : offset + size]
+
+        return SimpleNamespace(search=search, PREFIXES=frozenset())
+
+    monkeypatch.setattr(
+        router, "_ADAPTERS", {"dataone": adapter(copy), "datacite": adapter(original)}
+    )
+    async with httpx.AsyncClient() as c:
+        page = await router.search_page(c, query="snow leopard", sources=["dataone", "datacite"])
+    assert len(page.results) == 1  # one deposit, one hit (DOIs compare case-folded)
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_member_node_copies_carry_their_deposit_doi():
+    async with httpx.AsyncClient(timeout=60) as c:
+        _total, recs = await dataone.search(c, '"snow leopard"', size=20)
+    assert len(recs) >= 10  # positive control: the copies come back
+    assert all(
+        r.doi and r.doi.lower().startswith(("10.5061/dryad.", "10.1594/pangaea.")) for r in recs
+    )
+
+
 # ---------------------------------------------------------------------------
 # Fix — Lucene injection: search() and resolve() must escape special chars
 # ---------------------------------------------------------------------------

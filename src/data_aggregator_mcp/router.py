@@ -525,8 +525,21 @@ async def _fetch_page(
     kept: list[tuple[str, int, DataResource]] = []
     for c in unique:
         (kept if id(c[2]) in winners else dropped).append(c)
+    # A deposit ranks by the best that any of its copies names. The copy kept is the most
+    # fetchable, not the most described: a DataONE copy of a Dryad deposit has no
+    # description, so ranked alone it sank below hits naming nothing, and the dropped
+    # DataCite twin, never handled, held DataCite's offset in place (2026-10-05).
+    best: dict[str, tuple[int, ...]] = {}
+    for c in unique:
+        if c[2].doi:
+            score = tiers.score(c[2])
+            best[c[2].doi.casefold()] = max(best.get(c[2].doi.casefold(), score), score)
+
+    def rank(c: tuple[str, int, DataResource]) -> tuple[int, ...]:
+        return best[c[2].doi.casefold()] if c[2].doi else tiers.score(c[2])
+
     # Stable: hits that name as much of the search keep the round-robin order.
-    kept.sort(key=lambda c: tiers.score(c[2]), reverse=True)
+    kept.sort(key=rank, reverse=True)
 
     if rank_query is not None:
         reordered, reason = await embeddings.rerank(client, rank_query, [c[2] for c in kept])

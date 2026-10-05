@@ -75,7 +75,8 @@ def _solr_call(request: httpx.Request) -> tuple[str, str, dict, str | None]:
 
 
 _SEARCH_FL = (
-    "identifier,title,author,origin,formatId,dateUploaded,datePublished,dateModified,resourceMap"
+    "identifier,seriesId,title,author,origin,formatId,dateUploaded,datePublished,"
+    "dateModified,resourceMap"
 )
 _SOLR = "https://cn.dataone.org/cn/v2/query/solr/"
 
@@ -107,7 +108,8 @@ async def test_resolve_sends_exactly_the_record_package_and_locator_requests():
         _SOLR,
         {
             "q": 'identifier:"doi\\:10.5063\\/AA\\/knb\\-csun\\-usvi.10700"',
-            "fl": "identifier,title,author,origin,dateUploaded,datePublished,dateModified,resourceMap",
+            "fl": "identifier,seriesId,title,author,origin,dateUploaded,datePublished,"
+            "dateModified,resourceMap",
             "rows": "1",
             "start": "0",
             "wt": "json",
