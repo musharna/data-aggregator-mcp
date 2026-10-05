@@ -373,14 +373,40 @@ class FetchResult(BaseModel):
 
 SEARCH_DESC_LIMIT = 500
 
+# How many items of each list a search hit keeps. Uncapped, one GBIF hit carried 400k
+# characters of links, and a page holding it never reached the agent (the 2026-10-05
+# head-to-head). A cut list is named in ``truncated``; resolve returns the whole record.
+SEARCH_LIST_LIMITS = {
+    "creators": 3,
+    "funding": 3,
+    "accessions": 10,
+    "organism": 3,
+    "taxa": 3,
+    "subjects": 5,
+    "links": 5,
+    "mirrors": 5,
+}
+
 
 def compact(r: DataResource) -> DataResource:
-    """Search-result form of a resource: drop the file manifest and truncate
-    the description. Token-budget rule — callers pull the full record and
-    ``files[]`` via ``resolve``. Returns a copy; the input is not mutated.
+    """Search-result form of a resource: drop the file manifest, truncate the
+    description and cap each list (``SEARCH_LIST_LIMITS``), naming every cut list in
+    ``truncated``. Token-budget rule — callers pull the full record and ``files[]`` via
+    ``resolve``. Idempotent, so a hit enriched after compaction can be compacted again.
+    Returns a copy; the input is not mutated.
     """
     desc = r.description[:SEARCH_DESC_LIMIT] if r.description else None
-    return r.model_copy(update={"files": [], "description": desc})
+    update: dict[str, Any] = {"files": [], "description": desc}
+    truncated = dict(r.truncated)
+    for field, limit in SEARCH_LIST_LIMITS.items():
+        items = getattr(r, field)
+        if len(items) > limit:
+            update[field] = items[:limit]
+            note = f"first {limit} of {len(items)} in this search hit; resolve for all"
+            truncated[field] = f"{note} ({truncated[field]})" if field in truncated else note
+    if truncated != r.truncated:
+        update["truncated"] = truncated
+    return r.model_copy(update=update)
 
 
 _ACCESS_ALIASES = {
