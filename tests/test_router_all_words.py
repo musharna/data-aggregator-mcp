@@ -81,6 +81,11 @@ async def test_no_note_when_the_every_word_source_found_something(monkeypatch) -
 async def test_no_note_for_a_one_word_query(monkeypatch) -> None:
     errors = await _errors(monkeypatch, {"omicsdi": _adapter(0, every_word=True)}, query="tun")
     assert "all_words" not in errors
+    # positive control: two words are the fewest that can be cut to one
+    errors = await _errors(
+        monkeypatch, {"omicsdi": _adapter(0, every_word=True)}, query="tardigrade tun"
+    )
+    assert errors["all_words"].startswith("omicsdi matched nothing: it returns ")
 
 
 async def test_a_failed_stream_is_an_error_not_an_empty_match(monkeypatch) -> None:
@@ -102,6 +107,8 @@ async def test_several_empty_sources_are_named_together(monkeypatch) -> None:
         {"omicsdi": _adapter(0, every_word=True), "omics": _composite({"geo": 0, "sra": 0})},
     )
     assert errors["all_words"].startswith("omicsdi, omics/geo, omics/sra matched nothing: they ")
+    errors = await _errors(monkeypatch, {"omics": _composite({"geo": 0, "sra": 0})})
+    assert errors["all_words"].startswith("omics/geo, omics/sra matched nothing: they return ")
 
 
 async def test_multi_query_names_a_source_only_if_every_variant_was_empty(monkeypatch) -> None:

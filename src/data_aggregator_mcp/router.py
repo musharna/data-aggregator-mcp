@@ -377,7 +377,8 @@ def _all_words_note(empty: list[str], query: str | None) -> str | None:
     words only failed to meet in one record (GEO: "tardigrade" 221, "tun" 464,
     "tardigrade dehydration tun" 0; probed 2026-10-05). Only for a query of two or more
     words; one word cannot be dropped."""
-    if not empty or len((query or "").split()) < 2:
+    words = query.split() if query else []
+    if not empty or len(words) < 2:
         return None
     return (
         f"{', '.join(empty)} matched nothing: {'they return' if len(empty) > 1 else 'it returns'}"
