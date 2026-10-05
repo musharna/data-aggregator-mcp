@@ -6,6 +6,8 @@ import asyncio
 import fnmatch
 import hashlib
 import logging
+import os
+import tempfile
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
@@ -230,11 +232,18 @@ async def _download_one(
         )
     written = 0
     head = b""
+    # The body streams into a temp file beside ``out`` and replaces it only once
+    # verified: writing over ``out`` truncated a good copy on open, and the cleanup
+    # below then unlinked it, so a failed re-fetch destroyed a file it had not written.
+    # Same directory, because os.replace is atomic only within one filesystem; a short
+    # name, because one built from ``out``'s could pass the name-length limit.
+    fd, part_name = tempfile.mkstemp(prefix=".fetch-", suffix=".part", dir=out.parent)
+    os.close(fd)
+    part = Path(part_name)
     # Concurrency: a sibling task's failure cancels this one mid-stream
-    # (CancelledError). ANY escape before the file is verified-complete must
-    # remove our partial; the broad ``except BaseException`` covers cancellation,
-    # which the typed handlers below do not. Nothing after verification can raise,
-    # so the only way out of the try once the file is complete is the return.
+    # (CancelledError). ANY escape before the replace must remove our partial; the
+    # broad ``except BaseException`` covers cancellation, which the typed handlers
+    # below do not.
     try:
         try:
             # httpx upper-cases the method, so "get" would send the same request. The
@@ -243,7 +252,7 @@ async def _download_one(
             async with client.stream("GET", f.url, timeout=_STREAM_TIMEOUT_S) as resp:
                 # pragma: no mutate end
                 resp.raise_for_status()
-                with out.open("wb") as fh:
+                with part.open("wb") as fh:
                     async for chunk in resp.aiter_bytes():
                         await budget.debit(len(chunk), f.name)
                         written += len(chunk)
@@ -267,33 +276,37 @@ async def _download_one(
                 f"fetch {f.name}: body is HTML, not the declared {f.mime} "
                 "(the URL likely served a login/paywall/error page)"
             )
-        extracted: list[str] = []
-        if extract and archive.is_archive(safe_name):
-            # Fix 2: pass the REMAINING budget headroom as the extraction ceiling so
-            # that download + extraction together cannot exceed max_bytes. With force
-            # the ceiling is max_bytes itself: force lifts the download limit, not the
-            # per-archive zip-bomb guard. Debit the actual extracted bytes from the
-            # budget afterward so later archives in the same fetch share the ceiling.
-            if force:
-                extract_max = budget.cap
-            else:
-                extract_max = await budget.headroom()
-            members = archive.extract_archive(out, target, max_bytes=extract_max)
-            extracted_bytes = sum(p.stat().st_size for p in members)
-            # Extraction is capped at the headroom read just above (or force skips the
-            # check), so this debit cannot overrun; the name only labels that error.
-            await budget.debit(extracted_bytes, safe_name)  # pragma: no mutate
-            extracted = [str(m) for m in members]
-        return _Outcome(
-            f.name,
-            path=str(out),
-            extracted=extracted,
-            bytes=written,
-            checksum_unverifiable=checksum_unverifiable,
-        )
+        os.replace(part, out)
     except BaseException:
-        out.unlink(missing_ok=True)
+        # ``part`` always exists here (the replace is the try's last step), so
+        # missing_ok only keeps an outside deletion from masking the real error.
+        part.unlink(missing_ok=True)  # pragma: no mutate
         raise
+    # From here ``out`` is a verified download, so a failed extraction leaves it in place.
+    extracted: list[str] = []
+    if extract and archive.is_archive(safe_name):
+        # Fix 2: pass the REMAINING budget headroom as the extraction ceiling so
+        # that download + extraction together cannot exceed max_bytes. With force
+        # the ceiling is max_bytes itself: force lifts the download limit, not the
+        # per-archive zip-bomb guard. Debit the actual extracted bytes from the
+        # budget afterward so later archives in the same fetch share the ceiling.
+        if force:
+            extract_max = budget.cap
+        else:
+            extract_max = await budget.headroom()
+        members = archive.extract_archive(out, target, max_bytes=extract_max)
+        extracted_bytes = sum(p.stat().st_size for p in members)
+        # Extraction is capped at the headroom read just above (or force skips the
+        # check), so this debit cannot overrun; the name only labels that error.
+        await budget.debit(extracted_bytes, safe_name)  # pragma: no mutate
+        extracted = [str(m) for m in members]
+    return _Outcome(
+        f.name,
+        path=str(out),
+        extracted=extracted,
+        bytes=written,
+        checksum_unverifiable=checksum_unverifiable,
+    )
 
 
 async def fetch_files(
