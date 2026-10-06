@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `ngdc`, a discovery-only source for NGDC (China National Center for Bioinformation):
+  BioProjects deposited in China (`ngdc:PRJCA…`), with the Genome Sequence Archive read
+  sets (CRA) each holds and its landing page. NCBI does not mirror them, and in the
+  round-2 benchmark five keyed studies across three tasks were held only there; no arm
+  found any, web search included. NGDC's index also mirrors INSDC projects (116 of 124
+  for "axolotl"), which the `omics` source already covers, so only NGDC's own are asked
+  for. The API is the undocumented JSON endpoint behind NGDC's search portal.
+
 ## [0.64.0] - 2026-10-06
 
 ### Changed
