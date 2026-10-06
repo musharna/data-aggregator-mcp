@@ -120,6 +120,28 @@ Per-run data: `scores_2026-10-06_r4.json`. The other arms did not change.
   A 6-page dataset search reaches 7 of the 10 web-only studies, so depth per run, not
   reach, is now the limit. Web (0.89 / 0.86) is still ahead on this task.
 
+## R4 after #250 and #251
+
+R4 alone, dam arm only, four runs each on 2026-10-06:
+
+- **#250:** a hit leaves out its empty fields, so a page holds 44–50 hits instead of 30–36. Run on main 58e71b7.
+- **#251:** `errors.next_page` counts the fetched hits not yet sent that name every query word. Run on that branch, released as 0.63.0.
+
+Scored with the same adjudication. Per-run data: `scores_2026-10-06_r4_dense.json` and `scores_2026-10-06_r4_next.json`.
+
+| | recall | median / mean | keyed studies seen per run | distinct hits seen per run | cost |
+|---|---|---|---|---|---|
+| 0.62.0 | 0.74 / 0.60 / 0.66 / 0.46 | 0.63 / 0.61 | 22.75 | 127 | $2.18 |
+| + #250 | 0.69 / 0.57 / 0.77 / 0.49 | 0.63 / 0.63 | 23.5 | 150 | $2.06 |
+| + #251 | 0.74 / 0.77 / 0.57 / 0.77 | 0.76 / 0.71 | 27 | 182 | $2.26 |
+
+- **Fuller pages alone did nothing.** The agents saw more hits, but few of the extra ones were snow leopard studies.
+  - The agents list nearly every keyed study they are shown: 1–4 were missed per run.
+  - Studies thin out after page 1: six pages of "snow leopard" hold 27 of the 35, 16 of them on page 1.
+- **The note made the agents page.** Every #251 run asked for a next page once, against under half the runs before. The next page held studies they had not seen.
+- Four runs per arm: the gain is about one run's spread. It matches the transcripts, but it is not a significance test.
+- **Still behind web, and still out of reach:** web stays ahead (0.89 / 0.86). Four studies (S27, S28, S31, S34) appear in no six-page plain search. One #250 entry, Zenodo 17695964, is unjudged and left out of precision.
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the
