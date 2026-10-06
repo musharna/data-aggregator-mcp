@@ -142,6 +142,28 @@ Scored with the same adjudication. Per-run data: `scores_2026-10-06_r4_dense.jso
 - Four runs per arm: the gain is about one run's spread. It matches the transcripts, but it is not a significance test.
 - **Still behind web, and still out of reach:** web stays ahead (0.89 / 0.86). Four studies (S27, S28, S31, S34) appear in no six-page plain search. One #250 entry, Zenodo 17695964, is unjudged and left out of precision.
 
+## R4 after #253
+
+#253 asks DataCite and Zenodo for title matches as a request of their own, so a deposit
+naming "snow leopard" in its title enters the fetched window however deep the source's
+own order puts it. R4 alone, dam arm, four runs on that branch on 2026-10-06, same
+adjudication. Per-run data: `scores_2026-10-06_r4_title.json`.
+
+| | recall | median / mean | calls per run | cost |
+|---|---|---|---|---|
+| 0.63.0 | 0.74 / 0.77 / 0.57 / 0.77 | 0.76 / 0.71 | 6 / 7 / 7 / 8 | $2.26 |
+| + #253 | 0.71 / 0.60 / 0.80 / 0.69 | 0.70 / 0.70 | 5 / 5 / 6 / 8 | $1.97 |
+
+- **Recall did not move.** The difference is within one run's spread.
+- **The studies it targeted came in:** S14 in 4 of 4 runs (was 0), S28 in 3 (was 0), S31
+  in 3 (was 1). Nine others were found in one or two fewer runs.
+- **Not crowding:** the default "snow leopard" search, 6 pages of 50, reaches 12 / 20 / 23 /
+  24 / 27 / 30 keyed studies by page with #253 and 11 / 18 / 22 / 26 / 26 / 30 without;
+  the 30 differ by four studies each way.
+- Zenodo now returns S27 and S28 on page 3 of a Zenodo search; neither was in its first
+  8 pages. The agents read one or two pages, so what bounds recall now is how far they
+  read, not what a search can reach.
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the
