@@ -96,6 +96,30 @@ qualify. Per-run data: `scores_2026-10-05_rerun.json`.
 - **ToolUniverse fell 9 points** on the same tasks, a measure of run-to-run noise
   with two runs per task.
 
+## R4 after #247 and #248
+
+R4 alone, dam arm only, four runs on main 85efa15 (released as 0.62.0), on
+2026-10-06. Two fixes went in:
+
+- #247: the query as written outranks its words scattered, and DataONE copies merge
+  with their deposits.
+- #248: sources that match words exactly are sent each word with its plural.
+
+Scored with the same adjudication; every new entry had already been judged.
+Per-run data: `scores_2026-10-06_r4.json`. The other arms did not change.
+
+| | runs | recall | median recall | median precision | web-only studies found | cost |
+|---|---|---|---|---|---|---|
+| before | 2 | 0.63 / 0.40 | 0.51 | 0.88 | 0 / 0 | $0.97 |
+| after | 4 | 0.74 / 0.60 / 0.66 / 0.46 | 0.63 | 0.94 | 4 / 2 / 3 / 1 | $2.18 |
+
+- **Some of the web-only studies are now found.** Five of the 10 appeared across the
+  four runs: S26, S29, S32, S33 and S36. The two Figshare studies (S29, S32) are among
+  them, reached through the plural form.
+- **The agent still stops early.** Each run made 6–8 calls and listed 17–28 studies.
+  A 6-page dataset search reaches 7 of the 10 web-only studies, so depth per run, not
+  reach, is now the limit. Web (0.89 / 0.86) is still ahead on this task.
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the
