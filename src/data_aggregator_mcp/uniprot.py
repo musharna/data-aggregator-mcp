@@ -14,6 +14,7 @@ import re
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp._relevance import with_plurals
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import DataResource, FileEntry, Link, compact, local_id
 
@@ -28,6 +29,9 @@ PREFIXES = {"uniprot"}
 _ACC_RE = re.compile(r"^[A-Za-z0-9_]{1,15}$")
 DEFAULT_SIZE = 10
 MAX_SIZE = 25
+# Matches words exactly, so search sends each word with its plural (``plurals``): "coral reef"
+# 14,204 hits, "coral reefs" 4,523, "coral (reef OR reefs)" 18,699 (probed 2026-10-05).
+QUERY_PLURALS = True
 # search serves page 1 only (``if offset`` below), so list_sources omits ``cursor``.
 PAGINATES = False
 MAX_RETRIES = 2
@@ -98,7 +102,12 @@ def _inactive_message(acc: str, reason: dict) -> str:
 
 
 async def search(
-    client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
+    client: httpx.AsyncClient,
+    query: str,
+    *,
+    size: int = DEFAULT_SIZE,
+    offset: int = 0,
+    plurals: bool = True,
 ) -> tuple[int, list[DataResource]]:
     if offset:
         return 0, []
@@ -107,7 +116,11 @@ async def search(
         _GET,
         SEARCH,
         service="UniProt search",
-        params={"query": query, "format": "json", "size": min(size, MAX_SIZE)},
+        params={
+            "query": with_plurals(query) if plurals else query,
+            "format": "json",
+            "size": min(size, MAX_SIZE),
+        },
         headers=_ACCEPT_JSON,
         max_retries=MAX_RETRIES,
         # No not_found_returns: no hits is a 200 with `results: []` (live, 2026-10-01),

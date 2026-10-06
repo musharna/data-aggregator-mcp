@@ -19,6 +19,7 @@ import re
 import httpx
 
 from data_aggregator_mcp import _http, metabolights, pride
+from data_aggregator_mcp._relevance import with_plurals
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import Creator, DataResource, Link, compact
 
@@ -28,6 +29,9 @@ _LANDING = "https://www.omicsdi.org/dataset/{source}/{acc}"
 PREFIXES = {"omicsdi"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
+# Matches words exactly, so search sends each word with its plural (``plurals``): "coral reef" 89
+# hits, "coral reefs" 37, "coral (reef OR reefs)" 98 (probed 2026-10-05).
+QUERY_PLURALS = True
 # OmicsDI matches only records holding every word of the query ("Chlamydomonas
 # nitrogen" 255, "+ starvation" 71, "+ phosphoproteomics" 4; probed 2026-10-05), so the
 # router names this source when a multi-word search comes back empty.
@@ -189,9 +193,15 @@ def _record(resource_id: str, source: str, acc: str, body: dict) -> DataResource
 
 
 async def search(
-    client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
+    client: httpx.AsyncClient,
+    query: str,
+    *,
+    size: int = DEFAULT_SIZE,
+    offset: int = 0,
+    plurals: bool = True,
 ) -> tuple[int, list[DataResource]]:
-    params = {"query": _modality_query(query), "size": str(min(size, MAX_SIZE))}
+    words = with_plurals(query) if plurals else query
+    params = {"query": _modality_query(words), "size": str(min(size, MAX_SIZE))}
     if offset:
         params["start"] = str(offset)
     body = await _http.request_json(

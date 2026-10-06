@@ -32,6 +32,7 @@ from data_aggregator_mcp import (
     osf,
     zenodo,
 )
+from data_aggregator_mcp._relevance import with_plurals
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.license_compat import host_matches
 from data_aggregator_mcp.models import (
@@ -53,6 +54,9 @@ _GET = "GET"
 _ACCEPT_JSON = {"Accept": "application/json"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
+# Matches words exactly, so search sends each word with its plural (``plurals``): "snow leopard" 387
+# hits, "snow leopards" 186, "snow (leopard OR leopards)" 478 (probed 2026-10-05).
+QUERY_PLURALS = True
 
 # DataCite types.resourceTypeGeneral → DataResource.kind
 _KIND_FIELD = "types.resourceTypeGeneral"
@@ -370,6 +374,7 @@ async def search(
     size: int = DEFAULT_SIZE,
     offset: int = 0,
     filters: Mapping[str, Any] | None = None,
+    plurals: bool = True,
 ) -> tuple[int, list[DataResource]]:
     """Search DataCite DOIs. Returns (total_hits, COMPACT resources).
     ``offset`` → page ``offset // size + 1`` then drop first ``offset % size``.
@@ -378,7 +383,8 @@ async def search(
     DataCite evaluates them and ``total_hits`` is the filtered total. None/empty sends
     ``query`` unchanged."""
     capped = min(size, MAX_SIZE)
-    q = _pushdown.with_clauses(query, _filter_clauses(filters or {}))
+    words = with_plurals(query) if plurals else query
+    q = _pushdown.with_clauses(words, _filter_clauses(filters or {}))
     # With no sort (or an unknown one) DataCite orders by most recently updated, so a
     # search returned a feed of recent edits and page 2 shifted whenever a record was
     # touched between requests (probe 2026-09-29). Records with tied relevance scores can

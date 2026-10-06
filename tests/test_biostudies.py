@@ -40,7 +40,7 @@ async def test_search_normalizes_real_hits() -> None:
         # Exact host, not a substring: `"ebi.ac.uk" in host` also matches
         # ebi.ac.uk.evil.com (CodeQL py/incomplete-url-substring-sanitization).
         assert request.url.host == "www.ebi.ac.uk"
-        assert request.url.params["query"] == "drought"
+        assert request.url.params["query"] == "(drought OR droughts)"
         return httpx.Response(200, json=SEARCH)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:

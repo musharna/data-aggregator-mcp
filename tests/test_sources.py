@@ -377,6 +377,7 @@ def _streams(spec: sources.SourceSpec, filters: dict[str, Any], **queries: str) 
         plain=queries.get("plain", "q"),
         filters=filters,
         pushdown=True,
+        plurals=True,
     )
 
 

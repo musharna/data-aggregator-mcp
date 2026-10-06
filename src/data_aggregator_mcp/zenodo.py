@@ -17,6 +17,7 @@ import httpx
 
 from data_aggregator_mcp import _http, _pushdown
 from data_aggregator_mcp._cache import MISS, TTLCache
+from data_aggregator_mcp._relevance import with_plurals
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import (
     Creator,
@@ -46,6 +47,10 @@ DEFAULT_SIZE = 10
 # 2026-10-02). At 50 every search asking for 26-50 records failed. The router pages each
 # source in its own coordinates, so a source returning fewer than asked is fine.
 MAX_SIZE = 25
+# Matches words exactly, so search sends each word with its plural (``plurals``): "snow leopard"
+# 11,734 hits, "snow leopards" 10,742, "snow (leopard OR leopards)" 11,925 (probed
+# 2026-10-05).
+QUERY_PLURALS = True
 
 # Search returns FULL records (manifest included); compact() strips files[] for the search
 # view, so a naive search→resolve re-fetches what we already had. Stash the raw record here
@@ -246,6 +251,7 @@ async def search(
     size: int = DEFAULT_SIZE,
     offset: int = 0,
     filters: Mapping[str, Any] | None = None,
+    plurals: bool = True,
 ) -> tuple[int, list[DataResource]]:
     """Search Zenodo records. Returns (total_hits, COMPACT resources).
 
@@ -259,7 +265,9 @@ async def search(
     """
     capped = min(size, MAX_SIZE)
     params = {
-        "q": _pushdown.with_clauses(query, _filter_clauses(filters or {})),
+        "q": _pushdown.with_clauses(
+            with_plurals(query) if plurals else query, _filter_clauses(filters or {})
+        ),
         "size": str(capped),
     }
     if offset:  # only when paging past page 1, so offset=0 request stays byte-identical

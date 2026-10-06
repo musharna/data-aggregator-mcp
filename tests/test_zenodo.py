@@ -62,7 +62,7 @@ def test_normalize_maps_files_with_checksum() -> None:
 
 async def test_search_returns_total_and_resources(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
-        url="https://zenodo.org/api/records?q=phelipanche&size=10",
+        url="https://zenodo.org/api/records?q=%28phelipanche+OR+phelipanches%29&size=10",
         json={"hits": {"total": 1, "hits": [_record()]}},
     )
     async with httpx.AsyncClient() as client:
@@ -89,7 +89,7 @@ async def test_resolve_after_search_skips_the_redundant_get(httpx_mock: HTTPXMoc
     GET. The resolve GET is deliberately NOT mocked — if resolve tried it, pytest-httpx would
     raise 'no response mocked'."""
     httpx_mock.add_response(
-        url="https://zenodo.org/api/records?q=phelipanche&size=10",
+        url="https://zenodo.org/api/records?q=%28phelipanche+OR+phelipanches%29&size=10",
         json={"hits": {"total": 1, "hits": [_record()]}},
     )
     async with httpx.AsyncClient() as client:

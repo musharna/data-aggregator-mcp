@@ -37,6 +37,7 @@ from urllib.parse import quote
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp._relevance import with_plurals
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import DataResource, FileEntry, Link, Metrics, compact, local_id
 
@@ -51,6 +52,10 @@ PREFIXES = {"biostudies"}
 _ACC_RE = re.compile(r"^[A-Za-z0-9-]{1,40}$")
 DEFAULT_SIZE = 10
 MAX_SIZE = 100
+# Matches words exactly, so search sends each word with its plural (``plurals``): "snow leopard"
+# 3,294 hits, "snow leopards" 2,875, "snow (leopard OR leopards)" 3,357 (probed
+# 2026-10-05).
+QUERY_PLURALS = True
 MAX_RETRIES = 2
 _ACCEPT_JSON = {"Accept": "application/json"}
 #: Runaway guard on external file lists read per study (one request each). Real studies
@@ -288,6 +293,7 @@ async def search(
     size: int = DEFAULT_SIZE,
     offset: int = 0,
     collection: str | None = None,
+    plurals: bool = True,
 ) -> tuple[int, list[DataResource]]:
     capped = min(size, MAX_SIZE)
     # The API pages by 1-indexed page number, not row offset.
@@ -301,7 +307,11 @@ async def search(
         client,
         url,
         service="BioStudies search",
-        params={"query": query, "pageSize": capped, "page": page},
+        params={
+            "query": with_plurals(query) if plurals else query,
+            "pageSize": capped,
+            "page": page,
+        },
         expect=dict,
     )
     hits = (body or {}).get("hits") or []

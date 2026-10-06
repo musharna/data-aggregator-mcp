@@ -36,7 +36,9 @@ _SEARCH = {
 async def test_search_asks_omicsdi_for_the_modality_repos_and_reports_its_count():
     async def handler(request):
         assert request.url.path.endswith("/dataset/search")
-        assert request.url.params["query"] == f"(cancer) AND {omicsdi._MODALITY_CLAUSE}"
+        assert (
+            request.url.params["query"] == f"((cancer OR cancers)) AND {omicsdi._MODALITY_CLAUSE}"
+        )
         return httpx.Response(200, json=_SEARCH)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:

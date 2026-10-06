@@ -101,7 +101,11 @@ async def test_search_sends_the_query_as_json_capped_at_25_rows():
     (sent,) = server.requests
     assert sent.method == "GET"
     assert str(sent.url).startswith("https://rest.uniprot.org/uniprotkb/search?")
-    assert dict(sent.url.params) == {"query": "insulin", "format": "json", "size": "25"}
+    assert dict(sent.url.params) == {
+        "query": "(insulin OR insulins)",
+        "format": "json",
+        "size": "25",
+    }
     assert sent.headers["Accept"] == "application/json"
     assert sent.extensions["timeout"]["read"] == 30.0
 

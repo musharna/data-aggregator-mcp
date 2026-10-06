@@ -74,6 +74,33 @@ def query_phrase(query: str) -> str:
     )
 
 
+# A parenthesis, a double-quoted phrase, or a run of anything else; no nested quantifier.
+_QUERY_TOKEN = re.compile(r'[()]|"[^"]*"|[^\s"()]+')
+
+
+def with_plurals(query: str) -> str:
+    """``query`` with each plain word sent as ``(word OR words)``, for an upstream that
+    matches words exactly, so it finds what :func:`_names` counts as naming the word.
+    DataCite found "Spatial ecology of snow leopards" for "snow leopards" but not for
+    "snow leopard" (probed 2026-10-05). Only words of three or more letters change:
+    a quoted phrase, an operator, a stop word, a word ending in "s", and anything holding
+    a field, wildcard or other syntax are sent as written."""
+
+    def plural(m: re.Match[str]) -> str:
+        word = m[0]
+        if (
+            not word.isalpha()
+            or len(word) < 3
+            or word in _OPERATORS
+            or word.casefold() in _STOP_WORDS
+            or word.casefold().endswith("s")
+        ):
+            return word
+        return f"({word} OR {word}s)"
+
+    return _QUERY_TOKEN.sub(plural, query)
+
+
 def _text(record: DataResource) -> str:
     return _normalize(
         " ".join(

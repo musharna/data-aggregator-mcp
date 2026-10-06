@@ -389,7 +389,8 @@ async def test_live_search_returns_datacite_relevance_order_not_recent_edits() -
         return [(f"datacite:{x['id']}", x["attributes"]["updated"]) for x in r.json()["data"]]
 
     async with httpx.AsyncClient() as client:
-        _, ours = await datacite.search(client, "climate", size=10)
+        # The query as written, so the pages compared hold the same matches.
+        _, ours = await datacite.search(client, "climate", size=10, plurals=False)
         recent = await raw(client)
         relevant = await raw(client, sort="relevance")
     # Control: unsorted, DataCite really does list the most recently updated first.
