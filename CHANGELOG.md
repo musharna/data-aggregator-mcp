@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `resolve` on a paper (`pubmed:` or `openaire:`) adds the data deposits Europe PMC
+  text-mines from it, as `references` links: BioProject, NGDC, GEO, SRA/ENA reads,
+  ArrayExpress (`biostudies:`) and GWAS Catalog ids, and bare ProteomeXchange and
+  MetaboLights accessions. Most deposits are named in a paper and linked nowhere else:
+  the BioProjects of Boothby 2017 (tardigrade desiccation) and of the snow leopard
+  virome paper have no PubMed link either way, and now resolve from the paper. A paper
+  names others' data too, so a `references` link is a lead, not proof of authorship; a
+  failed lookup is named in `errors.links`.
+
 ## [0.65.0] - 2026-10-06
 
 ### Added
