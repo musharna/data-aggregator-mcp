@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.65.0] - 2026-10-06
+
 ### Added
 
 - `ngdc`, a discovery-only source for NGDC (China National Center for Bioinformation):
