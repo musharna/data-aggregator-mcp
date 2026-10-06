@@ -591,6 +591,18 @@ async def _fetch_page(
     for key, i, r in dropped:
         if r.id in handled_ids or (r.doi and r.doi.lower() in handled_dois):
             handled[key].add(i)
+    # Hits ranked but not sent stay unhandled, so the cursor fetches them again. Saying
+    # how many name the query is the one signal a page has that the next is on topic:
+    # agents shown none stopped at page 1 (R4 re-runs, 2026-10-06).
+    waiting = sum(
+        i not in handled[key] and _passes_filters(r, filters) and tiers.names_every_term(r)
+        for key, i, r in kept
+    )
+    if waiting:
+        errors["next_page"] = (
+            f"{waiting} more hits already fetched name every word of the query; "
+            "next_cursor continues with them"
+        )
 
     new_offsets: dict[str, int] = {}
     new_ahead: dict[str, list[int]] = {}

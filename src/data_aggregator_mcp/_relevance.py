@@ -135,3 +135,7 @@ class MatchTiers:
         in_title = bool(self.phrase) and _names(_normalize(record.title), self.phrase)
         anywhere = bool(self.phrase) and _names(text, self.phrase)
         return facets, int(in_title), int(anywhere), sum(_names(text, t) for t in self.terms)
+
+    def names_every_term(self, record: DataResource) -> bool:
+        """Whether ``record`` names every term of the query; never for an empty query."""
+        return bool(self.terms) and self.score(record)[3] == len(self.terms)
