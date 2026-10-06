@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from data_aggregator_mcp import _ratelimit, egress, router, taxonomy, zenodo
+from data_aggregator_mcp import _ratelimit, egress, europepmc, router, taxonomy, zenodo
 
 # Every environment variable the server reads as configuration. A test's behavior must
 # not depend on which of these happen to be exported in the shell that runs it: with
@@ -91,3 +91,28 @@ def live_env(_isolate_app_env, monkeypatch):
     for name, value in _REAL_ENV.items():
         monkeypatch.setenv(name, value)
     return dict(_REAL_ENV)
+
+
+# Captured at import, before the fixture below replaces it.
+_MINED_LINKS = europepmc.mined_links
+
+
+@pytest.fixture(autouse=True)
+def _no_text_mining(monkeypatch):
+    """Resolve a paper without asking Europe PMC which accessions its text names.
+
+    Every paper resolve makes that call, and the resolve tests mock exactly the requests
+    they are about (elink, idconv, full text), so an extra one failed 14 of them as an
+    unexpected request. A test that means to exercise it takes ``text_mining``.
+    """
+
+    async def nothing(client, *, pmid=None, pmcid=None):
+        return [], None, None
+
+    monkeypatch.setattr(europepmc, "mined_links", nothing)
+
+
+@pytest.fixture
+def text_mining(_no_text_mining, monkeypatch):
+    """Opt back in to the real ``europepmc.mined_links``."""
+    monkeypatch.setattr(europepmc, "mined_links", _MINED_LINKS)

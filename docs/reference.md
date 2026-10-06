@@ -71,7 +71,11 @@ or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
 - **`files[]`** — ENA FASTQ manifest (SRA), GEO `suppl/`, or the host repo's
   native manifest (Figshare / Dataverse / OSF / Dryad).
 - **`links[]`** — paper → data: `pubmed:` → `sra:` / `geo:` / `bioproject:` (NCBI
-  elink); `openaire:` → `datacite:` (ScholeXplorer Scholix).
+  elink); `openaire:` → `datacite:` (ScholeXplorer Scholix); and, for both, the data
+  accessions Europe PMC text-mines from the paper (`references`: `bioproject:`,
+  `ngdc:`, `geo:`, `sra:`, `biostudies:`, `gwas:`, or a bare `PXD…` / `MTBLS…`). A
+  paper names others' data too, so a `references` link is a lead to check, not proof
+  the paper made the deposit.
 - **`access` / `license`** — normalized status
   (`open` / `embargoed` / `restricted` / `closed` / `unknown`) and license where
   the source exposes it.

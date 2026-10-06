@@ -2,7 +2,8 @@
 
 Discovery via the Graph API ``researchProducts`` endpoint (type=publication).
 Resolve re-fetches the single entity and queries the ScholeXplorer Scholix API
-(via ``scholix``) by the publication's DOI for data links. Paper→dataset link
+(via ``scholix``) by the publication's DOI for data links, and adds the accessions
+Europe PMC mines from its text (``europepmc``) when idconv finds its PMID. Paper→dataset link
 yield is best-effort: most OpenAIRE link edges from a paper are citations, which
 ``scholix`` drops; the primary value here is broad publication discovery.
 """
@@ -15,7 +16,7 @@ from collections.abc import Mapping
 
 import httpx
 
-from data_aggregator_mcp import _http, fulltext, idconv, omics, scholix
+from data_aggregator_mcp import _http, europepmc, fulltext, idconv, omics, scholix
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import Creator, DataResource, normalize_access
 
@@ -208,6 +209,10 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     resource = _normalize_openaire(record)
     links, links_error = await scholix.links_for(client, resource.doi)
     ids, ids_error = await idconv.identifiers_for(client, resource.doi)
+    mined, mined_cut, mined_error = await europepmc.mined_links(
+        client, pmid=ids.get("pmid"), pmcid=ids.get("pmcid")
+    )
+    links = europepmc.merge(links, mined)
     ft = await fulltext.find(client, pmcid=ids.get("pmcid"), doi=resource.doi)
     update: dict = {}
     # Each failed lookup is recorded, so the router does not cache a degraded record.
@@ -216,8 +221,11 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         update["identifiers"] = ids
     if links:
         update["links"] = links
-    if links_error:
-        errors["links"] = links_error
+    if mined_cut:
+        update["truncated"] = {"links": mined_cut}
+    links_errors = "; ".join(e for e in (links_error, mined_error) if e)
+    if links_errors:
+        errors["links"] = links_errors
     if ids_error:
         errors["identifiers"] = ids_error
     if ft.error:
