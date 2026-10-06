@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-10-06
+
 ### Changed
 
 - `search` ranks a hit that names the query as written above one that names its words
