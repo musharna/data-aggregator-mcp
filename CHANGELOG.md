@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.66.0] - 2026-10-06
+
 ### Added
 
 - `resolve` on a paper (`pubmed:` or `openaire:`) adds the data deposits Europe PMC
