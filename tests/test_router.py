@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import os
 import re
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import httpx
@@ -97,6 +99,7 @@ def test_available_sources_lists_all_adapters() -> None:
         "pdb",
         "uniprot",
         "gwas",
+        "ngdc",
         "nasacmr",
         "biostudies",
     ]
@@ -518,6 +521,13 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
     httpx_mock.add_response(
         url=re.compile(r"https://www\.ebi\.ac\.uk/biostudies/api/v1/search.*"),
         json={"hits": [], "totalHits": 0},
+    )
+    # ngdc is also a default source (discovery-only): the live no-hit answer
+    httpx_mock.add_response(
+        url=re.compile(r"https://ngdc\.cncb\.ac\.cn/search/api/specific\?.*"),
+        json=json.loads(
+            (Path(__file__).parent / "fixtures" / "ngdc_search_empty.json").read_text()
+        ),
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "rna")

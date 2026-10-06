@@ -1276,7 +1276,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             "'gbif:<dataset-key>', 'datagov:<name-slug>', 'nasacmr:<concept-id>', "
             "'omicsdi:<source>:<acc>', 'dandi:<id>', "
             "'cellxgene:<id>', 'openml:<id>', "
-            "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', 'biostudies:<acc>', "
+            "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', 'biostudies:<acc>', 'ngdc:<PRJCA acc>', "
             "a bare Zenodo id, or a DOI"
         )
     if resource.organism:

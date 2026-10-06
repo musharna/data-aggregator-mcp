@@ -46,7 +46,7 @@ def test_fetch_gate_matches_the_historical_hand_maintained_set():
 
 
 def test_discovery_only_is_the_non_fetchable_sources():
-    assert frozenset({"gwas", "nasacmr"}) == sources.DISCOVERY_ONLY
+    assert frozenset({"gwas", "nasacmr", "ngdc"}) == sources.DISCOVERY_ONLY
     assert router._DISCOVERY_ONLY_SOURCES is sources.DISCOVERY_ONLY
 
 
@@ -229,6 +229,7 @@ BOOLEAN_PROBE_QUERY = {
     "gwas": "Type 2 diabetes",
     "nasacmr": "sea surface temperature",
     "biostudies": "arabidopsis",
+    "ngdc": "axolotl",
 }
 
 

@@ -13,6 +13,7 @@ WELL_FORMED = {
     "gwas": "GCST000028",
     "hf": "owner/name",
     "nasacmr": "C2586786218-POCLOUD",
+    "ngdc": "PRJCA022406",
     "omicsdi": "pride:PXD000001",
     "openml": "61",
     "pdb": "1ABC",

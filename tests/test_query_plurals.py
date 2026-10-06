@@ -102,9 +102,9 @@ async def test_each_declaring_source_sends_the_plurals_upstream(monkeypatch, nam
 def test_the_sources_that_match_words_exactly() -> None:
     """Each probed live 2026-10-05: the OR form counted between the larger of the two
     words' counts and their sum. DataONE stems already; GBIF, NCBI and NASA CMR read the
-    OR form some other way."""
+    OR form some other way. NGDC (2026-10-06): "leopard" 13, "leopards" 1, OR form 13."""
     declared = {n for n, a in router._ADAPTERS.items() if getattr(a, "QUERY_PLURALS", False)}
-    assert declared == {"biostudies", "datacite", "omicsdi", "uniprot", "zenodo"}
+    assert declared == {"biostudies", "datacite", "ngdc", "omicsdi", "uniprot", "zenodo"}
 
 
 @pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
