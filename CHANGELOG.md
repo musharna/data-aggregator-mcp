@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-10-06
+
 ### Changed
 
 - `search` ranks a hit that names the query as written above one that names its words
@@ -28,6 +30,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - DataONE copies of Dryad and PANGAEA deposits now carry the deposit's DOI, read from
   DataONE's series ID, so they merge with the same deposit from DataCite or Dryad instead
   of appearing twice without a DOI.
+
+### Security
+
+- The lock file now pins multidict 6.9.1 (CVE-2026-104874) and fsspec 2026.9.0
+  (CVE-2026-104851), both indirect dependencies. An install from PyPI resolves its own
+  versions within the declared ranges.
 
 ## [0.61.0] - 2026-10-05
 
