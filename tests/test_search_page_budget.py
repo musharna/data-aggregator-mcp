@@ -153,3 +153,64 @@ async def test_live_a_50_hit_search_fits_one_tool_result() -> None:
     result = await server._dispatch("search", {"query": "snow leopard Panthera uncia", "size": 50})
     assert len(json.dumps(result, separators=(",", ":"))) < HOST_LIMIT
     assert result["count"] >= 20 and result["next_cursor"]
+
+
+async def test_a_hit_carries_only_the_fields_it_has(monkeypatch) -> None:
+    """R4 re-run (2026-10-06): a hit spent 27% of its characters on null and empty
+    fields, 500 characters for a hit with none, so a 50-hit search returned 34."""
+    held = [
+        DataResource(
+            id=f"zenodo:{i}",
+            source="zenodo",
+            kind="dataset",
+            title=f"Snow leopard survey {i} " + "x" * 580,
+            year=2020,
+            creators=[Creator(name="A")],
+            is_latest=False,
+        )
+        for i in range(60)
+    ]
+    monkeypatch.setattr(router, "_ADAPTERS", {"zenodo": _adapter(held)})
+    async with httpx.AsyncClient() as client:
+        page = await router.search_page(client, query="q", size=50, sources=["zenodo"])
+
+    assert page.count == 50 and "page_size" not in page.errors
+    hits = page.model_dump(mode="json")["results"]
+    # Every field with a value stays, a false one included; no null, [] or {} does.
+    assert hits[0] == {
+        "id": "zenodo:0",
+        "source": "zenodo",
+        "kind": "dataset",
+        "title": held[0].title,
+        "year": 2020,
+        "creators": [{"name": "A"}],
+        "is_latest": False,
+    }
+    assert json.loads(page.model_dump_json())["results"] == hits
+    # The hits read back as the records they were.
+    assert [DataResource.model_validate(h) for h in hits] == [compact(r) for r in held[:50]]
+
+
+async def test_the_budget_counts_a_hit_as_it_is_sent(monkeypatch) -> None:
+    """The page budget measures each hit in the form the page sends: no spaces, no
+    escaped accents, no empty fields. Measured any other way, it cuts pages short."""
+    held = [
+        DataResource(
+            id=f"zenodo:{i}",
+            source="zenodo",
+            kind="dataset",
+            title=f"Léopard des neiges {i}",
+            creators=[Creator(name="Ö")],
+            subjects=["Panthera uncia"],
+        )
+        for i in range(3)
+    ]
+    monkeypatch.setattr(router, "_ADAPTERS", {"zenodo": _adapter(held)})
+    async with httpx.AsyncClient() as client:
+        page = await router.search_page(client, query="q", size=10, sources=["zenodo"])
+    sent = json.loads(page.model_dump_json())["results"]
+    assert len(sent) == 3
+    for hit, r in zip(sent, page.results, strict=True):
+        assert router._hit_chars(r) == len(
+            json.dumps(hit, separators=(",", ":"), ensure_ascii=False)
+        )

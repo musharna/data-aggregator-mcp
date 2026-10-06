@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- A `search` hit leaves out the fields it has no value for (null, `[]`, `{}`); a field
+  left out reads as its default. A hit with no data took 500 characters of empty
+  fields, so a 50-hit page held 30 to 36 hits; the same snow leopard searches now return
+  44 to 50. A script reading hits as plain JSON should treat a missing key as empty.
+
 ## [0.62.0] - 2026-10-06
 
 ### Changed

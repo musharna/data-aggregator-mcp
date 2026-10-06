@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import json
 import logging
 import os
 import re
@@ -64,6 +65,7 @@ from data_aggregator_mcp.models import (
     TissueExpansion,
     UnresolvedEntity,
     compact,
+    dense,
     derive_access_modes,
     derive_version_status,
 )
@@ -453,9 +455,12 @@ _ENRICH_CHARS_PER_ORGANISM = 130
 
 
 def _hit_chars(r: DataResource) -> int:
-    """Characters ``r`` will take in the page, as compacted and enriched."""
+    """Characters ``r`` will take in the page, as compacted, enriched and sent."""
     organisms = min(len(r.organism), SEARCH_LIST_LIMITS["organism"])
-    return len(compact(r).model_dump_json()) + _ENRICH_CHARS_PER_ORGANISM * organisms
+    sent = json.dumps(
+        dense(compact(r).model_dump(mode="json")), separators=(",", ":"), ensure_ascii=False
+    )
+    return len(sent) + _ENRICH_CHARS_PER_ORGANISM * organisms
 
 
 @dataclass

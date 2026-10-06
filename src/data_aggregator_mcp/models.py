@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, field_serializer
 
 _ORCID_RE = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")
 
@@ -351,6 +351,25 @@ class SearchResult(BaseModel):
     provenance_crate: dict[str, Any] | None = (
         None  # whole-search RO-Crate 1.1 Run Crate, populated only on search(provenance=true)
     )
+
+    @field_serializer("results", mode="wrap")
+    def _dense_results(
+        self, results: list[DataResource], handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        return dense(handler(results))
+
+
+def dense(value: Any) -> Any:
+    """``value`` without the null, ``[]`` and ``{}`` entries of its dicts, at any depth.
+    The form a search hit is sent in: a hit with no data took 500 characters of empty
+    fields, 27% of a real page, so a 50-hit search returned 34 (R4 re-run, 2026-10-06).
+    A field left out reads back as its default."""
+    if isinstance(value, dict):
+        kept = {k: dense(v) for k, v in value.items()}
+        return {k: v for k, v in kept.items() if v is not None and v != [] and v != {}}
+    if isinstance(value, list):
+        return [dense(v) for v in value]
+    return value
 
 
 class FetchResult(BaseModel):
