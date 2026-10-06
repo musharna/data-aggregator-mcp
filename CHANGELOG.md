@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.64.0] - 2026-10-06
+
 ### Changed
 
 - A plain-words `search` asks DataCite and Zenodo for the records holding the query in
