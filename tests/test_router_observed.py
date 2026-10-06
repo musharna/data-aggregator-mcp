@@ -811,7 +811,7 @@ async def test_an_unroutable_id_lists_every_accepted_form() -> None:
         "'geo:/sra:/bioproject:<acc>', 'pubmed:/openaire:<id>', 'dataone:<pid>', "
         "'gbif:<dataset-key>', 'datagov:<name-slug>', 'nasacmr:<concept-id>', "
         "'omicsdi:<source>:<acc>', 'dandi:<id>', 'cellxgene:<id>', 'openml:<id>', "
-        "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', 'biostudies:<acc>', "
+        "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', 'biostudies:<acc>', 'ngdc:<PRJCA acc>', "
         "a bare Zenodo id, or a DOI"
     )
 

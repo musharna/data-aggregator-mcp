@@ -43,8 +43,9 @@ TOOLS: list[types.Tool] = [
             "GWAS Catalog (genotype-phenotype studies), OpenML (ML datasets), "
             "DANDI (neurophysiology dandisets), CZ CELLxGENE (single-cell datasets), "
             "GBIF (biodiversity datasets), data.gov (US government open data), NASA CMR "
-            "(Earth-science collections), UniProt (protein entries), and BioStudies "
-            "(EMBL-EBI study records). "
+            "(Earth-science collections), UniProt (protein entries), BioStudies "
+            "(EMBL-EBI study records), and NGDC (BioProjects deposited in China, with "
+            "their GSA read sets). "
             "Returns compact DataResource "
             "records (fields with no value left out; long lists cut to their first few, "
             "named in truncated{}); a page "
@@ -97,7 +98,7 @@ TOOLS: list[types.Tool] = [
                     "description": "Restrict fan-out to these sources (default: all). "
                     "Available: zenodo, dataone, gbif, cellxgene, datacite, dandi, omics, "
                     "literature, huggingface, datagov, nasacmr, omicsdi, openml, pdb, "
-                    "uniprot, gwas, biostudies",
+                    "uniprot, gwas, biostudies, ngdc",
                 },
                 "organism": {
                     "type": "string",

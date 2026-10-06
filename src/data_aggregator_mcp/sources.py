@@ -37,6 +37,7 @@ from data_aggregator_mcp import (
     huggingface,
     literature,
     nasacmr,
+    ngdc,
     omics,
     omicsdi,
     openml,
@@ -490,6 +491,20 @@ SOURCES: tuple[SourceSpec, ...] = (
         description="GWAS Catalog (EBI) — genome-wide association studies keyed by disease trait; DOI/PMID-rich, reinforces the paper-data bridge. NOTE: query must be an exact GWAS Catalog disease-trait vocabulary term (e.g. 'Type 2 diabetes'), not free text — the GWAS Catalog REST API v2 disease_trait filter performs case-insensitive exact trait matching.",
     ),
     _spec(
+        "ngdc",
+        ngdc,
+        layer="omics",
+        kinds=("study",),
+        rate_limit="public; courtesy only",
+        status="live (NGDC's own BioProjects; the search portal's undocumented JSON endpoint)",
+        fetchable=False,
+        fetchable_notes="Discovery-only: the record names its GSA read sets (CRA accessions) and landing page; GSA download is not wired.",
+        id_example="ngdc:PRJCA022406",
+        # Deliberately NO default_license: NGDC publishes no blanket licence for
+        # submitted projects, and a BioProject record carries none.
+        description="NGDC (China National Center for Bioinformation) - BioProjects deposited in China (PRJCA), with their Genome Sequence Archive read sets (CRA); INSDC mirrors are left to the omics source.",
+    ),
+    _spec(
         "nasacmr",
         nasacmr,
         boolean_query=False,
@@ -579,6 +594,7 @@ CATALOG_ORDER: tuple[str, ...] = (
     "gwas",
     "biostudies",
     "cellxgene",
+    "ngdc",
 )
 
 if set(CATALOG_ORDER) != set(_BY_NAME):  # a new source must be given a catalog position

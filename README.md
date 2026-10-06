@@ -1,8 +1,8 @@
 # data-aggregator-mcp
 
-Search 17 research-data sources at once (data archives, omics repositories and
+Search 18 research-data sources at once (data archives, omics repositories and
 papers) and get one list back. Organism, disease and tissue names are expanded
-with their synonyms in the 11 sources that accept them, records that share a DOI are collapsed to one, and downloads
+with their synonyms in the 12 sources that accept them, records that share a DOI are collapsed to one, and downloads
 are checked against the source's checksum where it publishes one.
 
 [![PyPI](https://img.shields.io/pypi/v/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
@@ -106,7 +106,7 @@ A source that fails is named in the result's `errors`, never dropped silently.
 
 | Server | Searches | One search | Checksum | Remote SQL | Licence check |
 | --- | --- | :---: | :---: | :---: | :---: |
-| **data-aggregator-mcp** | 17 sources: data archives, omics, papers | yes, DOI dedup | where published | yes | yes |
+| **data-aggregator-mcp** | 18 sources: data archives, omics, papers | yes, DOI dedup | where published | yes | yes |
 | [Mobus](https://github.com/mobus-ai/Mobus) | 20 general and ML data platforms | yes | — | row preview | yes |
 | [paper-search-mcp](https://github.com/openags/paper-search-mcp) | papers: arXiv, PubMed, OpenAlex, Crossref and more | yes, deduplicated | — | — | — |
 | [ToolUniverse](https://github.com/mims-harvard/ToolUniverse) | 1000+ tools: models, datasets, APIs, packages | papers | — | — | — |
@@ -148,6 +148,7 @@ compatibility. More detail: [docs/POSITIONING.md](https://github.com/musharna/da
 | data.gov (DCAT-US)           |    ✅    |  ✅ (file URL)⁴   |      none³       |
 | NASA CMR (Earth science)     |    ✅    |        —⁵         |        —         |
 | GWAS Catalog                 |    ✅    |   → PMID bridge   |        —         |
+| NGDC BioProject (China)      |    ✅    |  → GSA read sets  |        —         |
 
 ¹ Dryad downloads are token / bot-challenge gated, so `fetch` returns an error;
 `resolve` still lists the files.

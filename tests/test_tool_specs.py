@@ -121,6 +121,7 @@ _SEARCH_LABELS = {
     "gwas": "GWAS Catalog",
     "nasacmr": "NASA CMR",
     "biostudies": "BioStudies",
+    "ngdc": "NGDC",
 }
 
 
