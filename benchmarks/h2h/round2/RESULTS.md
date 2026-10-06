@@ -164,6 +164,33 @@ adjudication. Per-run data: `scores_2026-10-06_r4_title.json`.
   8 pages. The agents read one or two pages, so what bounds recall now is how far they
   read, not what a search can reach.
 
+## All five tasks on 0.64.0
+
+The dam arm alone, two runs per task on 2026-10-06, on 0.64.0 (#247, #248, #250, #251
+and #253 since the re-run above). Same adjudication; nothing listed was left unjudged.
+Per-run data: `scores_2026-10-06_064.json`.
+
+| task | 0.60.0 + #244/#245 | 0.64.0 |
+|---|---|---|
+| R1 | 0.85 / 0.85 | 0.85 / 0.85 |
+| R2 | 0.80 / 0.70 | 0.70 / 0.80 |
+| R3 | 0.78 / 0.56 | 0.56 / 0.67 |
+| R4 | 0.63 / 0.40 | 0.77 / 0.63 |
+| R5 | 0.75 / 0.62 | 0.62 / 0.75 |
+
+Median recall 0.72 both times, mean 0.69 → 0.72, precision median 0.86 both, median tool
+calls 8 → 11, cost $5.38 → $5.25. R4 gained; no other task moved beyond one run.
+
+Where the 17 keyed studies no run found are held:
+
+- **NGDC (China's GSA and BioProject), 5:** R1 S13 S14, R2 S5 S10, R4 S2. No arm found
+  any of them, web included, and NGDC is not a source here. NGDC's own search finds all
+  five for the task's words (probed 2026-10-06).
+- **NCBI SRA / BioProject, 5:** R3 S3 S8 S9, R4 S36 S38; web found S3, S8 and S36.
+- **figshare, 3:** R4 S29 S30 S32, reached here only through DataCite; web found all three.
+- **PRIDE, 2:** R5 S7 S8, reached through OmicsDI; web found both.
+- **Zenodo S27 and OSF S34,** one each.
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the
