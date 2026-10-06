@@ -3,7 +3,8 @@
 Discovery via NCBI E-utils (``esearch``/``esummary`` db=pubmed). Resolve attaches
 data links via ``elink`` (pubmed → sra/gds/bioproject); each elinked record is run
 through the omics normalizers so the link target is a directly-resolvable
-``sra:``/``geo:``/``bioproject:`` id. PubMed esummary carries no abstract, so
+``sra:``/``geo:``/``bioproject:`` id; the accessions Europe PMC mines from the text are
+added as ``references`` links (``europepmc``). PubMed esummary carries no abstract, so
 ``resolve`` enriches ``description`` by fetching the article AbstractText(s) via
 ``efetch`` (best-effort; description stays None on any failure).
 """
@@ -16,7 +17,7 @@ import re
 import httpx
 from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
 
-from data_aggregator_mcp import _eutils, fulltext, omics
+from data_aggregator_mcp import _eutils, europepmc, fulltext, omics
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import Creator, DataResource, Link
 
@@ -168,6 +169,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         raise NotFoundError(f"no pubmed record for {pmid!r}")
     resource = _normalize_pubmed(docs[0])
     links, links_cut = await _links_via_elink(client, pmid)
+    mined, mined_cut, mined_error = await europepmc.mined_links(client, pmid=pmid)
+    links = europepmc.merge(links, mined)
     ft = await fulltext.find(client, pmcid=resource.identifiers.get("pmcid"), doi=resource.doi)
     abstract, abstract_error = await _abstract_for(client, pmid)
     update: dict = {}
@@ -177,12 +180,15 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         errors["files"] = ft.error
     if abstract_error:
         errors["description"] = abstract_error
+    if mined_error:
+        errors["links"] = mined_error
     if errors != resource.errors:
         update["errors"] = errors
     if links:
         update["links"] = links
-    if links_cut:
-        update["truncated"] = {"links": links_cut}
+    cuts = "; ".join(c for c in (links_cut, mined_cut) if c)
+    if cuts:
+        update["truncated"] = {"links": cuts}
     if ft.file is not None:
         update["files"] = [ft.file]
     if ft.access:
