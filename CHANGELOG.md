@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- A plain-words `search` asks DataCite and Zenodo for the records holding the query in
+  their title as a request of its own, beside one for the rest; the two split the
+  source's total. The ranking puts a title match first only among the hits it fetched,
+  and Zenodo's own order had two snow leopard deposits titled with the name beyond its
+  first 200 hits: they now come on page 3 (probed 2026-10-06; DataCite reached them one
+  page sooner, page 6 of what was 7). A query with an operator, quote, field or
+  wildcard is sent as written, and a multi-query variant is not split. A failed half
+  is named in `errors` as `datacite/title` or `zenodo/title`. A cursor minted earlier
+  continues as before.
+
 ## [0.63.0] - 2026-10-06
 
 ### Added

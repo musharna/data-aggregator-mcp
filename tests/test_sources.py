@@ -9,6 +9,7 @@ import httpx
 import pytest
 
 from data_aggregator_mcp import router, server, sources
+from tests._title_split import whole
 
 
 def test_registry_is_the_adapter_map_in_order():
@@ -378,6 +379,7 @@ def _streams(spec: sources.SourceSpec, filters: dict[str, Any], **queries: str) 
         filters=filters,
         pushdown=True,
         plurals=True,
+        title_tier=True,
     )
 
 
@@ -405,7 +407,10 @@ def test_ontology_facets_are_listed_exactly_when_the_source_gets_the_expanded_qu
     expanded_seen = set()
     for spec in sources.SOURCES:
         streams = _streams(spec, {}, expanded="EXPANDED", plain="PLAIN")
-        sent = {s.call.args[-1] for s in streams}
+        queries = [s.call.args[-1] for s in streams]
+        # A source with a title field gets two halves wrapping one query.
+        split = any(s.key.endswith("/title") for s in streams)
+        sent = {whole(queries)} if split else set(queries)
         listed = {f for f in sources.ONTOLOGY_FACETS if f in spec.filters_supported}
         assert sent in ({"EXPANDED"}, {"PLAIN"}), (spec.name, sent)
         expanded = sent == {"EXPANDED"}

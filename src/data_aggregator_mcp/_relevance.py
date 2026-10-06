@@ -88,17 +88,38 @@ def with_plurals(query: str) -> str:
 
     def plural(m: re.Match[str]) -> str:
         word = m[0]
-        if (
-            not word.isalpha()
-            or len(word) < 3
-            or word in _OPERATORS
-            or word.casefold() in _STOP_WORDS
-            or word.casefold().endswith("s")
-        ):
-            return word
-        return f"({word} OR {word}s)"
+        return f"({word} OR {word}s)" if _pluralisable(word) else word
 
     return _QUERY_TOKEN.sub(plural, query)
+
+
+def _pluralisable(word: str) -> bool:
+    return (
+        word.isalpha()
+        and len(word) >= 3
+        and word not in _OPERATORS
+        and word.casefold() not in _STOP_WORDS
+        and not word.casefold().endswith("s")
+    )
+
+
+# Words of letters, digits, hyphens and apostrophes, separated by spaces: nothing an
+# upstream query language reads as syntax.
+_PLAIN_WORDS = re.compile(r"[A-Za-z0-9][A-Za-z0-9'-]*(?: +[A-Za-z0-9][A-Za-z0-9'-]*)*")
+
+
+def title_clause(query: str, field: str) -> str | None:
+    """A clause matching records whose ``field`` holds ``query`` as written, its last
+    word also as a plural: ``title:("snow leopard" OR "snow leopards")``. None unless
+    ``query`` is plain words; an operator, quote, field or wildcard means the caller
+    already wrote the query they want."""
+    words = query.split()
+    if not _PLAIN_WORDS.fullmatch(" ".join(words)) or any(w in _OPERATORS for w in words):
+        return None
+    phrase = " ".join(words)
+    if not _pluralisable(words[-1]):
+        return f'{field}:"{phrase}"'
+    return f'{field}:("{phrase}" OR "{phrase}s")'
 
 
 def _text(record: DataResource) -> str:

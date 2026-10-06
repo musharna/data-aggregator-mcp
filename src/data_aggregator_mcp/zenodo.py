@@ -51,6 +51,10 @@ MAX_SIZE = 25
 # 11,734 hits, "snow leopards" 10,742, "snow (leopard OR leopards)" 11,925 (probed
 # 2026-10-05).
 QUERY_PLURALS = True
+# The title field of Zenodo's query language; the router asks for title matches first.
+# For "snow leopard": 56 of 12,040 hits hold it in a title, and 56 + 11,984 with
+# "AND NOT" the clause = 12,040 (probed 2026-10-06).
+TITLE_FIELD = "title"
 
 # Search returns FULL records (manifest included); compact() strips files[] for the search
 # view, so a naive search→resolve re-fetches what we already had. Stash the raw record here

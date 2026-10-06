@@ -25,13 +25,29 @@ _ZENODO_EMPTY = {"hits": {"total": 0, "hits": []}}
 _DATACITE_EMPTY = {"data": [], "meta": {"total": 0}}
 
 
-async def _sent(httpx_mock: HTTPXMock, body: dict, **kw) -> httpx.Request:
-    """Run a one-source search and return the single upstream request it made."""
-    httpx_mock.add_response(json=body)
+# What a plain-words search sends each half of its title split (test_title_tier.py).
+_WORDS = "((soil OR soils) (moisture OR moistures))"
+
+
+def _halves(field: str) -> tuple[str, str]:
+    clause = f'{field}:("soil moisture" OR "soil moistures")'
+    return f"{_WORDS} AND {clause}", f"{_WORDS} AND NOT {clause}"
+
+
+async def _sent(httpx_mock: HTTPXMock, body: dict, param: str, **kw) -> tuple[httpx.Request, ...]:
+    """Run a one-source search and return its two upstream requests, title half first."""
+    httpx_mock.add_response(json=body, is_reusable=True)
     async with httpx.AsyncClient() as client:
         await router.search_page(client, query="soil moisture", **kw)
-    (req,) = httpx_mock.get_requests()
-    return req
+    reqs = httpx_mock.get_requests()
+    assert len(reqs) == 2
+    return tuple(sorted(reqs, key=lambda r: " AND NOT " in r.url.params[param]))
+
+
+def _with_halves(expected: str, field: str) -> list[str]:
+    """``expected`` (the query with its filter clauses) for the title half and the rest."""
+    assert expected.startswith(_WORDS)
+    return [f"({half}){expected[len(_WORDS) :]}" for half in _halves(field)]
 
 
 # --- the upstream requests carry the filters ----------------------------------------
@@ -64,17 +80,14 @@ async def _sent(httpx_mock: HTTPXMock, body: dict, **kw) -> httpx.Request:
 async def test_zenodo_request_carries_the_filters(
     httpx_mock: HTTPXMock, filters: dict, expected_q: str
 ) -> None:
-    req = await _sent(httpx_mock, _ZENODO_EMPTY, sources=["zenodo"], **filters)
-    assert req.url.params["q"] == expected_q
+    reqs = await _sent(httpx_mock, _ZENODO_EMPTY, "q", sources=["zenodo"], **filters)
+    assert [r.url.params["q"] for r in reqs] == _with_halves(expected_q, "title")
 
 
 async def test_zenodo_request_without_filters_is_unchanged(httpx_mock: HTTPXMock) -> None:
-    """Positive control: byte-identical to the request 7fcd85b sent."""
-    req = await _sent(httpx_mock, _ZENODO_EMPTY, sources=["zenodo"])
-    assert (
-        str(req.url)
-        == "https://zenodo.org/api/records?q=%28soil+OR+soils%29+%28moisture+OR+moistures%29&size=10"
-    )
+    """Positive control: no filter clause, each half exactly as the title split sends it."""
+    reqs = await _sent(httpx_mock, _ZENODO_EMPTY, "q", sources=["zenodo"])
+    assert [dict(r.url.params) for r in reqs] == [{"q": h, "size": "10"} for h in _halves("title")]
 
 
 @pytest.mark.parametrize(
@@ -107,17 +120,16 @@ async def test_zenodo_request_without_filters_is_unchanged(httpx_mock: HTTPXMock
 async def test_datacite_request_carries_the_filters(
     httpx_mock: HTTPXMock, filters: dict, expected_query: str
 ) -> None:
-    req = await _sent(httpx_mock, _DATACITE_EMPTY, sources=["datacite"], **filters)
-    assert req.url.params["query"] == expected_query
+    reqs = await _sent(httpx_mock, _DATACITE_EMPTY, "query", sources=["datacite"], **filters)
+    assert [r.url.params["query"] for r in reqs] == _with_halves(expected_query, "titles.title")
 
 
 async def test_datacite_request_without_filters_is_unchanged(httpx_mock: HTTPXMock) -> None:
-    """Positive control: no filter clause is added — the request 7fcd85b sent, plus the
-    relevance sort every DataCite search now asks for."""
-    req = await _sent(httpx_mock, _DATACITE_EMPTY, sources=["datacite"])
-    assert str(req.url) == (
-        "https://api.datacite.org/dois?query=%28soil+OR+soils%29+%28moisture+OR+moistures%29&sort=relevance&page%5Bsize%5D=10"
-    )
+    """Positive control: no filter clause is added, each half with the relevance sort."""
+    reqs = await _sent(httpx_mock, _DATACITE_EMPTY, "query", sources=["datacite"])
+    assert [dict(r.url.params) for r in reqs] == [
+        {"query": h, "sort": "relevance", "page[size]": "10"} for h in _halves("titles.title")
+    ]
 
 
 @pytest.mark.parametrize("adapter", [zenodo, datacite])

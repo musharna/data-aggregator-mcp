@@ -47,7 +47,7 @@ from data_aggregator_mcp import query_understanding as query_understanding_mod
 from data_aggregator_mcp import relate as relate_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
-from data_aggregator_mcp._relevance import MatchTiers
+from data_aggregator_mcp._relevance import MatchTiers, title_clause
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import (
     SEARCH_LIST_LIMITS,
@@ -313,6 +313,7 @@ def _source_streams(
     filters: dict[str, Any],
     pushdown: bool,
     plurals: bool,
+    title_tier: bool,
     vi: int | None = None,
     groups: Sequence[FacetGroup] = (),
     notes: list[str] | None = None,
@@ -334,18 +335,26 @@ def _source_streams(
 
     An adapter declaring ``QUERY_PLURALS`` sends each plain word with its plural
     upstream; with ``plurals`` off (a cursor minted before it did, whose offsets index
-    the query as written) it is told not to."""
+    the query as written) it is told not to.
+
+    An adapter declaring ``TITLE_FIELD`` is sent a plain-words query as two streams that
+    split it: the records holding it in that field (``<name>/title``), then the rest. The
+    ranking puts a title match first only among the hits fetched, and DataCite ranked
+    its snow leopard title matches 95th to 337th of 480 by its own relevance (R4,
+    2026-10-06). With ``title_tier`` off (a cursor minted before, whose offsets index the
+    query as one stream, or a multi-query variant) it is sent whole."""
     wanted = _pushdown.active(filters)
     out: list[_Stream] = []
     for name, adapter in adapters.items():
         q = plain if name in sources.KEYWORD_ONLY else expanded
         subs = getattr(adapter, "SUBSOURCES", None)
-        parts: list[tuple[str, Callable[..., Awaitable[tuple[int, list[DataResource]]]]]]
+        parts: list[tuple[str, str, Callable[..., Awaitable[tuple[int, list[DataResource]]]]]]
         pushed: dict[str, Any] = {}
         if subs:
             limits: dict[str, int] = getattr(adapter, "OPERATOR_LIMITS", {})
             parts = [
                 (
+                    f"{name}/{sub}",
                     f"{name}/{sub}",
                     functools.partial(
                         adapter.search_subsource,  # type: ignore[attr-defined]
@@ -357,29 +366,58 @@ def _source_streams(
                 for sub in subs
             ]
         else:
-            call = functools.partial(adapter.search, client, q)
-            if not plurals and getattr(adapter, "QUERY_PLURALS", False):
-                call = functools.partial(call, plurals=False)
             if pushdown and wanted and isinstance(adapter, _pushdown.FilterPushdown):
                 pushed = adapter.pushable(wanted)
-                if pushed:  # with nothing pushed the call is exactly the unfiltered one
-                    call = functools.partial(call, filters=pushed)
-            parts = [(name, call)]
+            field = getattr(adapter, "TITLE_FIELD", None) if title_tier else None
+            clause = title_clause(plain, field) if field else None
+            if clause:
+                parts = [
+                    (
+                        f"{name}/title",
+                        name,
+                        _adapter_call(client, adapter, f"({q}) AND {clause}", plurals, pushed),
+                    ),
+                    (
+                        name,
+                        name,
+                        _adapter_call(client, adapter, f"({q}) AND NOT {clause}", plurals, pushed),
+                    ),
+                ]
+            else:
+                parts = [(name, name, _adapter_call(client, adapter, q, plurals, pushed))]
         residual = any(k not in pushed for k in wanted)
         every_word = getattr(adapter, "REQUIRES_EVERY_WORD", False)
-        for skey, fn in parts:
+        for skey, src, fn in parts:
             key, label = (skey, skey) if vi is None else (_comp_key(vi, skey), f"{skey}#v{vi}")
             out.append(
                 _Stream(
                     key=key,
                     label=label,
                     call=fn,
-                    source=skey,
+                    source=src,
                     post_filtered=residual,
                     every_word=every_word,
                 )
             )
     return out
+
+
+def _adapter_call(
+    client: httpx.AsyncClient,
+    adapter: SourceAdapter,
+    query: str,
+    plurals: bool,
+    pushed: dict[str, Any],
+) -> Callable[..., Awaitable[tuple[int, list[DataResource]]]]:
+    """``adapter.search`` bound to ``query``, told not to send plurals when ``plurals`` is
+    off, and sent ``pushed`` filters only when there are some (with none the call is
+    exactly the unfiltered one)."""
+    call = functools.partial(adapter.search, client, query)
+    if not plurals and getattr(adapter, "QUERY_PLURALS", False):
+        call = functools.partial(call, plurals=False)
+    if pushed:
+        call = functools.partial(call, filters=pushed)
+    return call
 
 
 def _all_words_note(empty: list[str], query: str | None) -> str | None:
@@ -764,6 +802,9 @@ async def _multi_query_page(
             filters=filters,
             pushdown=pushdown,
             plurals=plurals,
+            # Each variant already fans out to every source; the title split would
+            # double that again. It is for the single query (R4 measured that path).
+            title_tier=False,
             vi=vi,
             groups=groups,
             notes=notes,
@@ -921,6 +962,8 @@ async def search_page(
         pushdown = bool(st.get("pd"))
         # Likewise a cursor minted before plurals were sent indexes the query as written.
         plurals = bool(st.get("pl"))
+        # And one minted before the title tier indexes each source as one stream.
+        title_tier = bool(st.get("tt"))
         errors: dict[str, str] = {}
     else:
         if query is None:
@@ -1089,6 +1132,7 @@ async def search_page(
         ahead = {}
         pushdown = True
         plurals = True
+        title_tier = True
 
     adapters = _select(sources)
     names = list(adapters)
@@ -1101,6 +1145,7 @@ async def search_page(
         filters=filters,
         pushdown=pushdown,
         plurals=plurals,
+        title_tier=title_tier,
         groups=groups,
         notes=notes,
     )
@@ -1145,6 +1190,7 @@ async def search_page(
                 "collapse_mirrors": collapse_mirrors,
                 "pd": pushdown,
                 "pl": plurals,
+                "tt": title_tier,
             }
             | ({"fg": _encode_groups(groups)} if groups else {})
         )

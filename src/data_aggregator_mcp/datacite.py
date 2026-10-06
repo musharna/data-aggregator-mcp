@@ -57,6 +57,10 @@ MAX_SIZE = 50
 # Matches words exactly, so search sends each word with its plural (``plurals``): "snow leopard" 387
 # hits, "snow leopards" 186, "snow (leopard OR leopards)" 478 (probed 2026-10-05).
 QUERY_PLURALS = True
+# The title field of DataCite's query language; the router asks for title matches first.
+# For "snow leopard": 221 of the 480 hits hold it in a title, and 221 + 259 with
+# "AND NOT" the clause = 480 (probed 2026-10-06).
+TITLE_FIELD = "titles.title"
 
 # DataCite types.resourceTypeGeneral → DataResource.kind
 _KIND_FIELD = "types.resourceTypeGeneral"

@@ -312,16 +312,27 @@ def test_failed_source_names_every_real_router_stream(vi: int | None) -> None:
         filters={},
         pushdown=False,
         plurals=True,
+        title_tier=True,
         vi=vi,
     )
     named = {s.label: run_crate._failed_source(s.label) for s in streams}
     suffix = "" if vi is None else "#v3"
     assert named[f"zenodo{suffix}"] == "zenodo"
+    # The title half of a split source is that source, not a sub-source called "title".
+    assert named[f"zenodo/title{suffix}"] == "zenodo"
+    assert named[f"datacite/title{suffix}"] == "datacite"
     assert named[f"omics/sra{suffix}"] == "sra"
     assert named[f"literature/openaire{suffix}"] == "openaire"
     # every stream the router can fail is named as a source
     assert None not in named.values()
     assert len(named) == len(streams)
+
+
+def test_a_title_key_names_a_source_only_for_an_adapter_with_a_title_field() -> None:
+    assert run_crate._failed_source("datacite/title") == "datacite"
+    # Control: an adapter with no TITLE_FIELD has no title half, so the key is no source.
+    assert run_crate._failed_source("gbif/title") is None
+    assert run_crate._failed_source("gbif") == "gbif"
 
 
 def test_sources_queried_lists_sources_not_run_notes() -> None:
