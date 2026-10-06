@@ -11,6 +11,7 @@ from pytest_httpx import HTTPXMock
 from data_aggregator_mcp import anatomy, assay, chemistry, mesh, router, taxonomy
 from data_aggregator_mcp.errors import UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import DataResource
+from tests._title_split import half_urls, mock_halves, whole
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
@@ -273,13 +274,9 @@ def test_dedup_keeps_records_without_doi() -> None:
 
 
 async def test_search_fans_out_and_merges(httpx_mock: HTTPXMock) -> None:
-    httpx_mock.add_response(
-        url="https://zenodo.org/api/records?q=%28rna+OR+rnas%29&size=10",
-        json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
-    )
-    httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=%28rna+OR+rnas%29&sort=relevance&page%5Bsize%5D=10",
-        json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
+    mock_halves(httpx_mock, "zenodo", "rna", json={"hits": {"total": 1, "hits": [_ZENODO_REC]}})
+    mock_halves(
+        httpx_mock, "datacite", "rna", json={"data": [_DATACITE_ITEM], "meta": {"total": 1}}
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(
@@ -293,15 +290,9 @@ async def test_search_fans_out_and_merges(httpx_mock: HTTPXMock) -> None:
 
 async def test_search_captures_per_source_error_without_failing(httpx_mock: HTTPXMock) -> None:
     # zenodo succeeds; datacite 500s past its retries → captured, not raised
-    httpx_mock.add_response(
-        url="https://zenodo.org/api/records?q=%28rna+OR+rnas%29&size=10",
-        json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
-    )
-    httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=%28rna+OR+rnas%29&sort=relevance&page%5Bsize%5D=10",
-        status_code=500,
-        is_reusable=True,
-    )
+    mock_halves(httpx_mock, "zenodo", "rna", json={"hits": {"total": 1, "hits": [_ZENODO_REC]}})
+    for url in half_urls("datacite", "rna"):
+        httpx_mock.add_response(url=url, status_code=500, is_reusable=True)
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(
             client, "rna", sources=["zenodo", "datacite"]
@@ -312,9 +303,8 @@ async def test_search_captures_per_source_error_without_failing(httpx_mock: HTTP
 
 
 async def test_search_respects_sources_filter(httpx_mock: HTTPXMock) -> None:
-    httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=%28rna+OR+rnas%29&sort=relevance&page%5Bsize%5D=10",
-        json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
+    mock_halves(
+        httpx_mock, "datacite", "rna", json={"data": [_DATACITE_ITEM], "meta": {"total": 1}}
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "rna", sources=["datacite"])
@@ -365,14 +355,8 @@ async def test_search_does_not_starve_later_source(httpx_mock: HTTPXMock) -> Non
         }
         for i in range(5)
     ]
-    httpx_mock.add_response(
-        url="https://zenodo.org/api/records?q=x&size=5",
-        json={"hits": {"total": 5, "hits": zen_hits}},
-    )
-    httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=x&sort=relevance&page%5Bsize%5D=5",
-        json={"data": dc_hits, "meta": {"total": 5}},
-    )
+    mock_halves(httpx_mock, "zenodo", "x", size=5, rest={"hits": {"total": 5, "hits": zen_hits}})
+    mock_halves(httpx_mock, "datacite", "x", size=5, rest={"data": dc_hits, "meta": {"total": 5}})
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(
             client, "x", size=5, sources=["zenodo", "datacite"]
@@ -440,13 +424,9 @@ async def test_resolve_unroutable_id_raises() -> None:
 
 async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch) -> None:
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
-    httpx_mock.add_response(
-        url="https://zenodo.org/api/records?q=%28rna+OR+rnas%29&size=10",
-        json={"hits": {"total": 1, "hits": [_ZENODO_REC]}},
-    )
-    httpx_mock.add_response(
-        url="https://api.datacite.org/dois?query=%28rna+OR+rnas%29&sort=relevance&page%5Bsize%5D=10",
-        json={"data": [_DATACITE_ITEM], "meta": {"total": 1}},
+    mock_halves(httpx_mock, "zenodo", "rna", json={"hits": {"total": 1, "hits": [_ZENODO_REC]}})
+    mock_halves(
+        httpx_mock, "datacite", "rna", json={"data": [_DATACITE_ITEM], "meta": {"total": 1}}
     )
     httpx_mock.add_response(
         url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=rna&retmax=10&retmode=json",
@@ -637,7 +617,7 @@ async def test_search_expands_organism_synonyms(httpx_mock: HTTPXMock, monkeypat
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -645,9 +625,9 @@ async def test_search_expands_organism_synonyms(httpx_mock: HTTPXMock, monkeypat
         total, results, errors, expansion = await router.search(
             client, "small RNA", organism="Orobanche aegyptiaca", sources=["zenodo"]
         )
-    assert "small RNA" in captured["query"]
-    assert "Phelipanche aegyptiaca" in captured["query"]
-    assert "Orobanche aegyptiaca" in captured["query"]
+    assert "small RNA" in whole(captured["sent"])
+    assert "Phelipanche aegyptiaca" in whole(captured["sent"])
+    assert "Orobanche aegyptiaca" in whole(captured["sent"])
     assert expansion is not None
     assert expansion.taxid == 99112
     assert expansion.synonyms == ["Orobanche aegyptiaca"]
@@ -663,7 +643,7 @@ async def test_search_organism_lookup_failure_surfaces_error_and_runs_unexpanded
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -671,7 +651,7 @@ async def test_search_organism_lookup_failure_surfaces_error_and_runs_unexpanded
         total, results, errors, expansion = await router.search(
             client, "small RNA", organism="Phelipanche aegyptiaca", sources=["zenodo"]
         )
-    assert captured["query"] == "small RNA"  # ran un-expanded
+    assert whole(captured["sent"]) == "small RNA"  # ran un-expanded
     assert expansion is None
     assert "taxonomy" in errors
     assert "UpstreamUnavailableError" in errors["taxonomy"]
@@ -714,15 +694,15 @@ async def test_search_disease_synonym_with_quote_produces_wellformed_query(monke
     captured: dict[str, str] = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
     async with httpx.AsyncClient() as client:
         await router.search_page(client, query="q", disease="foo", sources=["zenodo"])
     # stray quote neutralized → balanced quotes, no injected boolean tokens
-    assert captured["query"].count('"') % 2 == 0
-    assert "bar baz" in captured["query"]
+    assert whole(captured["sent"]).count('"') % 2 == 0
+    assert "bar baz" in whole(captured["sent"])
 
 
 async def test_search_expands_disease_synonyms(monkeypatch) -> None:
@@ -730,7 +710,7 @@ async def test_search_expands_disease_synonyms(monkeypatch) -> None:
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -738,9 +718,9 @@ async def test_search_expands_disease_synonyms(monkeypatch) -> None:
         result = await router.search_page(
             client, query="tumor rna", disease="breast cancer", sources=["zenodo"]
         )
-    assert "tumor rna" in captured["query"]
-    assert "Breast Neoplasms" in captured["query"]
-    assert "Breast Cancer" in captured["query"]
+    assert "tumor rna" in whole(captured["sent"])
+    assert "Breast Neoplasms" in whole(captured["sent"])
+    assert "Breast Cancer" in whole(captured["sent"])
     assert result.mesh_expansion is not None
     assert result.mesh_expansion.mesh_ui == "D001943"
     assert result.mesh_expansion.canonical_name == "Breast Neoplasms"
@@ -765,7 +745,7 @@ async def test_search_disease_and_organism_compose_stacked_and_groups(monkeypatc
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -777,7 +757,7 @@ async def test_search_disease_and_organism_compose_stacked_and_groups(monkeypatc
             disease="breast cancer",
             sources=["zenodo"],
         )
-    q = captured["query"]
+    q = whole(captured["sent"])
     # disease expands the ALREADY organism-expanded query → two stacked AND-groups
     assert (
         q == '((rna) AND ("Homo sapiens" OR "human")) AND ("Breast Neoplasms" OR "Breast Cancer")'
@@ -795,7 +775,7 @@ async def test_search_disease_lookup_failure_surfaces_error_and_runs_unexpanded(
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -803,7 +783,7 @@ async def test_search_disease_lookup_failure_surfaces_error_and_runs_unexpanded(
         result = await router.search_page(
             client, query="tumor rna", disease="breast cancer", sources=["zenodo"]
         )
-    assert captured["query"] == "tumor rna"  # ran un-expanded
+    assert whole(captured["sent"]) == "tumor rna"  # ran un-expanded
     assert result.mesh_expansion is None
     assert "mesh" in result.errors
     assert "UpstreamUnavailableError" in result.errors["mesh"]
@@ -865,13 +845,13 @@ async def test_search_expands_tissue_synonyms(monkeypatch) -> None:
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
     async with httpx.AsyncClient() as client:
         result = await router.search_page(client, query="rna", tissue="liver", sources=["zenodo"])
-    assert captured["query"] == '(rna) AND ("liver" OR "iecur" OR "jecur")'
+    assert whole(captured["sent"]) == '(rna) AND ("liver" OR "iecur" OR "jecur")'
     assert result.tissue_expansion is not None
     assert result.tissue_expansion.uberon_id == "UBERON:0002107"
     assert result.tissue_expansion.canonical_name == "liver"
@@ -899,7 +879,7 @@ async def test_search_tissue_organism_disease_compose_three_stacked_and_groups(
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -912,7 +892,7 @@ async def test_search_tissue_organism_disease_compose_three_stacked_and_groups(
             tissue="liver",
             sources=["zenodo"],
         )
-    q = captured["query"]
+    q = whole(captured["sent"])
     # tissue expands the ALREADY organism+disease-expanded query → three stacked groups
     assert q == (
         '(((rna) AND ("Homo sapiens" OR "human")) '
@@ -935,13 +915,13 @@ async def test_search_tissue_lookup_failure_surfaces_error_and_runs_unexpanded(
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
     async with httpx.AsyncClient() as client:
         result = await router.search_page(client, query="rna", tissue="liver", sources=["zenodo"])
-    assert captured["query"] == "rna"  # ran un-expanded
+    assert whole(captured["sent"]) == "rna"  # ran un-expanded
     assert result.tissue_expansion is None
     assert "uberon" in result.errors
     assert "UpstreamUnavailableError" in result.errors["uberon"]
@@ -1009,7 +989,7 @@ async def test_search_expands_chemical_synonyms(monkeypatch) -> None:
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -1017,7 +997,7 @@ async def test_search_expands_chemical_synonyms(monkeypatch) -> None:
         result = await router.search_page(
             client, query="rna", chemical="caffeine", sources=["zenodo"]
         )
-    assert captured["query"] == '(rna) AND ("caffeine" OR "theine" OR "guaranine")'
+    assert whole(captured["sent"]) == '(rna) AND ("caffeine" OR "theine" OR "guaranine")'
     assert result.chemical_expansion is not None
     assert result.chemical_expansion.chebi_id == "CHEBI:27732"
     assert result.chemical_expansion.canonical_name == "caffeine"
@@ -1030,13 +1010,13 @@ async def test_search_expands_assay_synonyms(monkeypatch) -> None:
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
     async with httpx.AsyncClient() as client:
         result = await router.search_page(client, query="rna", assay="ChIP-seq", sources=["zenodo"])
-    assert captured["query"] == '(rna) AND ("ChIP-seq" OR "ChIP-exo" OR "ChIP-sequencing")'
+    assert whole(captured["sent"]) == '(rna) AND ("ChIP-seq" OR "ChIP-exo" OR "ChIP-sequencing")'
     assert result.assay_expansion is not None
     assert result.assay_expansion.edam_id == "EDAM:topic_3169"
     assert result.assay_expansion.canonical_name == "ChIP-seq"
@@ -1051,7 +1031,7 @@ async def test_search_chemical_assay_chain_after_tissue(monkeypatch) -> None:
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -1065,7 +1045,7 @@ async def test_search_chemical_assay_chain_after_tissue(monkeypatch) -> None:
             sources=["zenodo"],
         )
     # tissue → chemical → assay, each ANDing onto the prior expansion (stacked groups)
-    assert captured["query"] == (
+    assert whole(captured["sent"]) == (
         '(((rna) AND ("liver" OR "iecur" OR "jecur")) '
         'AND ("caffeine" OR "theine" OR "guaranine")) '
         'AND ("ChIP-seq" OR "ChIP-exo" OR "ChIP-sequencing")'
@@ -1086,7 +1066,7 @@ async def test_search_chemical_lookup_failure_surfaces_error_and_runs_unexpanded
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -1094,7 +1074,7 @@ async def test_search_chemical_lookup_failure_surfaces_error_and_runs_unexpanded
         result = await router.search_page(
             client, query="rna", chemical="caffeine", sources=["zenodo"]
         )
-    assert captured["query"] == "rna"  # ran un-expanded
+    assert whole(captured["sent"]) == "rna"  # ran un-expanded
     assert result.chemical_expansion is None
     assert "chebi" in result.errors
     assert "UpstreamUnavailableError" in result.errors["chebi"]
@@ -1111,13 +1091,13 @@ async def test_search_assay_lookup_failure_surfaces_error_and_runs_unexpanded(
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
     async with httpx.AsyncClient() as client:
         result = await router.search_page(client, query="rna", assay="ChIP-seq", sources=["zenodo"])
-    assert captured["query"] == "rna"  # ran un-expanded
+    assert whole(captured["sent"]) == "rna"  # ran un-expanded
     assert result.assay_expansion is None
     assert "edam" in result.errors
     assert "UpstreamUnavailableError" in result.errors["edam"]
@@ -1941,7 +1921,7 @@ async def test_understand_keyword_core_applied_entity_facets_echo_only(monkeypat
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -1953,8 +1933,8 @@ async def test_understand_keyword_core_applied_entity_facets_echo_only(monkeypat
             understand=True,
         )
     # keyword_core replaced the raw query (entity terms retained); organism was NOT auto-applied
-    assert captured["query"] == "maize rna decay"
-    assert "Zea mays" not in captured["query"]  # no auto-ANDed organism synonym clause
+    assert whole(captured["sent"]) == "maize rna decay"
+    assert "Zea mays" not in whole(captured["sent"])  # no auto-ANDed organism synonym clause
     resolve.assert_not_awaited()  # the _expand_organism resolver never ran for an LLM-only facet
     assert result.taxon_expansion is None
     qu = result.query_understanding
@@ -2010,7 +1990,7 @@ async def test_understand_hallucinated_facet_never_reaches_resolver(monkeypatch)
     captured = {}
 
     async def fake_zenodo_search(client, query, *, size=10, offset=0):
-        captured["query"] = query
+        captured.setdefault("sent", []).append(query)
         return 0, []
 
     monkeypatch.setattr("data_aggregator_mcp.zenodo.search", fake_zenodo_search)
@@ -2019,7 +1999,7 @@ async def test_understand_hallucinated_facet_never_reaches_resolver(monkeypatch)
             client, query="rna dragons", sources=["zenodo"], understand=True
         )
     assert result.taxon_expansion is None  # unresolved → dropped, no fabricated taxonomy
-    assert "Dragonus" not in captured["query"]  # query ran un-expanded (just keyword_core)
+    assert "Dragonus" not in whole(captured["sent"])  # query ran un-expanded (just keyword_core)
     resolve.assert_not_awaited()  # LLM-only facet never triggers the resolver
     qu = result.query_understanding
     assert qu is not None

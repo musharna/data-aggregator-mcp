@@ -29,6 +29,7 @@ from data_aggregator_mcp import (
 from data_aggregator_mcp.errors import UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import DataResource, Link, QueryUnderstanding, Taxon
 from data_aggregator_mcp.query_understanding import ParsedRewrite
+from tests._title_split import title_half, whole
 
 _FACETS = {
     "organism": "Zea mays",
@@ -103,16 +104,19 @@ def _rec(id_: str, **kw) -> DataResource:
 
 class _Upstream:
     """A fake adapter ``search`` holding ``total`` records per query, ``<name>:<query>:<i>``
-    unless ``make`` builds them. Records every call, so a test sees what page 2 was sent."""
+    unless ``make`` builds them. Records every call, so a test sees what page 2 was sent.
+    ``titled`` is how many it holds for the title half of a split search (test_title_tier.py);
+    0 where the records' titles do not name the query, as a real upstream would answer."""
 
-    def __init__(self, name: str, total: int = 100, make=None) -> None:
-        self.name, self.total, self.calls = name, total, []
+    def __init__(self, name: str, total: int = 100, make=None, titled: int | None = None) -> None:
+        self.name, self.total, self.titled, self.calls = name, total, titled, []
         self.make = make or (lambda query, i: _rec(f"{name}:{query}:{i}"))
 
     async def search(self, client, query, *, size, offset=0, **kw):
         self.calls.append({"client": client, "query": query, "offset": offset, **kw})
-        stop = min(offset + size, self.total)
-        return self.total, [self.make(query, i) for i in range(offset, stop)]
+        total = self.titled if self.titled is not None and title_half(query) else self.total
+        stop = min(offset + size, total)
+        return total, [self.make(query, i) for i in range(offset, stop)]
 
 
 def _serve(monkeypatch, name: str, **kw) -> _Upstream:
@@ -155,7 +159,8 @@ async def test_every_search_setting_survives_into_the_page_after_next(monkeypatc
             **_FACETS,
         )
         p2 = await router.search_page(client, cursor=p1.next_cursor)
-    expanded = up.calls[0]["query"]
+    title_q, rest_q = up.calls[0]["query"], up.calls[1]["query"]
+    expanded = whole([title_q, rest_q])
     assert all(group in expanded for group in _GROUPS)
     c1, c2 = _cursor.decode(p1.next_cursor), _cursor.decode(p2.next_cursor)
     assert _settings(c1) == {
@@ -176,13 +181,18 @@ async def test_every_search_setting_survives_into_the_page_after_next(monkeypatc
         "collapse_mirrors": True,
         "pd": True,
         "pl": True,
+        "tt": True,
     }
     assert _settings(c2) == _settings(c1)
-    # Page 2 searched the same expanded query with the same pushed filters, one page on,
-    # and re-ranked against the raw query as page 1 did.
+    # Page 2 searched the same expanded query's two halves with the same pushed filters,
+    # each one hit on (page 1 took one from each), and re-ranked against the raw query
+    # as page 1 did.
+    pushed = {"published_after": 2000, "kind": "dataset"}
     assert [(c["query"], c["offset"], c["filters"]) for c in up.calls] == [
-        (expanded, 0, {"published_after": 2000, "kind": "dataset"}),
-        (expanded, 2, {"published_after": 2000, "kind": "dataset"}),
+        (title_q, 0, pushed),
+        (rest_q, 0, pushed),
+        (title_q, 1, pushed),
+        (rest_q, 1, pushed),
     ]
     assert anchors == ["rna", "rna"]
     assert p1.unresolved == []  # all five resolved: nothing to report
@@ -568,11 +578,13 @@ async def test_understand_echoes_every_extracted_field_and_which_year_the_caller
         overridden=["year_max"],
         confidence=0.7,
     )
-    # The year each search applied is the one sent upstream; the caller's always wins.
-    assert [(c["query"], c["filters"]) for c in up.calls] == [
-        ("maize rna", {"published_after": 2015, "published_before": 2020}),
-        ("maize rna", {"published_after": 2010, "published_before": 2018}),
-    ]
+    # The year each search applied is the one sent upstream, to both halves of the
+    # keyword core; the caller's always wins.
+    after_years = {"published_after": 2015, "published_before": 2020}
+    before_years = {"published_after": 2010, "published_before": 2018}
+    assert [c["filters"] for c in up.calls] == [after_years] * 2 + [before_years] * 2
+    sent = [c["query"] for c in up.calls]
+    assert whole(sent[:2]) == whole(sent[2:]) == "maize rna"
 
 
 async def test_an_unavailable_llm_is_named_in_errors_for_understand_and_multi_query(
@@ -592,7 +604,7 @@ async def test_an_unavailable_llm_is_named_in_errors_for_understand_and_multi_qu
     }
     assert expand.await_args.args[1:] == ("rna",)
     assert expand.await_args.kwargs == {"n": router.MAX_QUERY_VARIANTS} == {"n": 4}
-    assert [c["query"] for c in up.calls] == ["rna"]  # fell back to the single query
+    assert whole([c["query"] for c in up.calls]) == "rna"  # fell back to the single query
 
 
 # --- paging accounting ----------------------------------------------------------------
@@ -601,7 +613,7 @@ async def test_an_unavailable_llm_is_named_in_errors_for_understand_and_multi_qu
 async def test_a_failed_stream_adds_nothing_to_total_and_does_not_keep_the_walk_open(
     monkeypatch,
 ) -> None:
-    _serve(monkeypatch, "zenodo", total=2)
+    _serve(monkeypatch, "zenodo", total=2, titled=0)
 
     async def down(client, query, *, size, offset=0, **kw):
         raise UpstreamUnavailableError("DataCite HTTP 503")
@@ -610,9 +622,9 @@ async def test_a_failed_stream_adds_nothing_to_total_and_does_not_keep_the_walk_
     async with _client() as client:
         page = await router.search_page(client, query="q", size=10, sources=["zenodo", "datacite"])
     assert (page.total, page.count, page.next_cursor) == (2, 2, None)
-    assert page.errors == {
-        "datacite": "UpstreamUnavailableError: [UpstreamUnavailableError] DataCite HTTP 503"
-    }
+    # Both halves of DataCite's split search failed, each named.
+    failed = "UpstreamUnavailableError: [UpstreamUnavailableError] DataCite HTTP 503"
+    assert page.errors == {"datacite/title": failed, "datacite": failed}
 
 
 async def test_a_record_two_variants_both_return_is_emitted_once_and_advances_both(
@@ -647,9 +659,11 @@ async def test_a_doi_loser_waits_for_its_winner_so_a_failed_winner_stream_loses_
     # Titles that name nothing of the search: the match tiers tie, so round-robin order.
     zen = {0: _rec("zenodo:a", title="t"), 1: _rec("zenodo:p", doi="10.1/d", title="t")}
     dc = {0: _rec("datacite:b", title="t"), 1: _rec("datacite:q", doi="10.1/d", title="t")}
-    _serve(monkeypatch, "datacite", total=2, make=lambda q, i: dc[i])
+    _serve(monkeypatch, "datacite", total=2, make=lambda q, i: dc[i], titled=0)
 
     async def zenodo(client, query, *, size, offset=0, **kw):
+        if title_half(query):
+            return 0, []  # no title names "q"
         if offset:
             raise UpstreamUnavailableError("Zenodo HTTP 503")
         return 2, [zen[0], zen[1]][:size]
@@ -657,7 +671,13 @@ async def test_a_doi_loser_waits_for_its_winner_so_a_failed_winner_stream_loses_
     monkeypatch.setattr(router._ADAPTERS["zenodo"], "search", zenodo)
     async with _client() as client:
         p1 = await router.search_page(client, query="q", size=2, sources=["zenodo", "datacite"])
-        assert _cursor.decode(p1.next_cursor)["offsets"] == {"zenodo": 1, "datacite": 1}
+        # The empty title halves stay at 0.
+        assert _cursor.decode(p1.next_cursor)["offsets"] == {
+            "zenodo/title": 0,
+            "zenodo": 1,
+            "datacite/title": 0,
+            "datacite": 1,
+        }
         p2 = await router.search_page(client, cursor=p1.next_cursor)
     assert [r.id for r in p1.results] == ["zenodo:a", "datacite:b"]
     assert [r.id for r in p2.results] == ["datacite:q"]
@@ -669,8 +689,8 @@ async def test_a_reranked_walk_skips_exactly_the_positions_it_already_returned(
 ) -> None:
     """Re-ranking returns zenodo's third record before its second: the offset stops at
     the second, and the third is kept as a skip one position past the new offset."""
-    zen = _serve(monkeypatch, "zenodo", total=5, make=lambda q, i: _rec(f"zenodo:{i}"))
-    _serve(monkeypatch, "datacite", total=3, make=lambda q, i: _rec(f"datacite:{i}"))
+    zen = _serve(monkeypatch, "zenodo", total=5, make=lambda q, i: _rec(f"zenodo:{i}"), titled=0)
+    _serve(monkeypatch, "datacite", total=3, make=lambda q, i: _rec(f"datacite:{i}"), titled=0)
     first = {"zenodo:0": 0, "zenodo:2": 1, "datacite:0": 2}
 
     async def rerank(client, query, resources):
@@ -684,7 +704,8 @@ async def test_a_reranked_walk_skips_exactly_the_positions_it_already_returned(
         )
         state = _cursor.decode(page.next_cursor)
         assert [r.id for r in page.results] == ["zenodo:0", "zenodo:2", "datacite:0"]
-        assert (state["offsets"], state["ahead"]) == ({"zenodo": 1, "datacite": 1}, {"zenodo": [1]})
+        offsets = {"zenodo/title": 0, "zenodo": 1, "datacite/title": 0, "datacite": 1}
+        assert (state["offsets"], state["ahead"]) == (offsets, {"zenodo": [1]})
         ids += [r.id for r in page.results]
         for _ in range(10):
             if page.next_cursor is None:
@@ -695,7 +716,8 @@ async def test_a_reranked_walk_skips_exactly_the_positions_it_already_returned(
     assert sorted(ids) == sorted(
         [f"zenodo:{i}" for i in range(5)] + [f"datacite:{i}" for i in range(3)]
     )
-    assert zen.calls[1]["offset"] == 1
+    rest = [c for c in zen.calls if not title_half(c["query"])]
+    assert rest[1]["offset"] == 1
 
 
 def test_a_stream_offset_falls_back_to_the_composite_offset_an_old_cursor_stored() -> None:
