@@ -13,6 +13,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   fields, so a 50-hit page held 30 to 36 hits; the same snow leopard searches now return
   44 to 50. A script reading hits as plain JSON should treat a missing key as empty.
 
+### Added
+
+- `errors.next_page` on a `search` page counts the hits already fetched, not yet sent,
+  that name every word of the query and pass the filters; `next_cursor` returns them.
+  In the snow leopard benchmark task the agents almost never asked for a second page, though six
+  pages of "snow leopard" hold 27 of its 35 studies and the first holds 16, and nothing on
+  a page said the next was still on topic (`total` counts every loose upstream match).
+  The first page of "snow leopard" now says 160 more name it.
+
 ## [0.62.0] - 2026-10-06
 
 ### Changed
