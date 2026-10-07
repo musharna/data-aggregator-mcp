@@ -101,3 +101,18 @@ def test_query_phrase_keeps_stop_words_and_drops_operators_and_quotes() -> None:
     )
     assert query_phrase("snow-leopard") == "snow leopard"
     assert query_phrase("") == ""
+
+
+def test_unshown_lists_the_query_terms_a_hit_does_not_name_in_query_order() -> None:
+    tiers = MatchTiers('Chlamydomonas "nitrogen starvation" proteomics', [])
+    hit = _rec("Extracellular vesicles in Chlamydomonas", description="A proteomics study.")
+    assert tiers.unshown(hit) == ["nitrogen starvation"]
+    # Every field the ranking reads counts; "proteomic" does not name "proteomics".
+    assert tiers.unshown(_rec("x", subjects=["nitrogen starvation"], description="proteomic")) == [
+        "chlamydomonas",
+        "proteomics",
+    ]
+    # Positive control: a hit naming every term (one as a plural) leaves none, and so does
+    # an empty query.
+    assert tiers.unshown(_rec("Chlamydomonas proteomics under nitrogen starvations")) == []
+    assert MatchTiers("", []).unshown(hit) == []

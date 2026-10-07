@@ -78,8 +78,26 @@ _ID_PART_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 # is paper authorship, not dataset creation.
 _CREATOR_KEYS = ("submitter", "submitter_name")
 _ORGANISM_KEYS = ("species", "organism")
+# The protocol keys that say how samples were grown and treated, in the order `methods`
+# lists them: every mass-spec repository here writes `sample_protocol` and
+# `data_protocol` except MetaboLights, which writes the others (sampled 2026-10-07). A
+# sampled condition often sits only here: PXD055071's "nitrogen depletion" is in its
+# sample protocol, not its description.
+_METHOD_KEYS = (
+    ("study_design", "Study design"),
+    ("sample_protocol", "Sample protocol"),
+    ("sample_collection_protocol", "Sample collection protocol"),
+    ("extraction_protocol", "Extraction protocol"),
+    ("data_protocol", "Data protocol"),
+)
 # Every `additional` key the reader reads; `_check_record` holds each to a string list.
-_READ_KEYS = (*_CREATOR_KEYS, *_ORGANISM_KEYS, "publication", "doi")
+_READ_KEYS = (
+    *_CREATOR_KEYS,
+    *_ORGANISM_KEYS,
+    "publication",
+    "doi",
+    *(key for key, _label in _METHOD_KEYS),
+)
 # `publication` is free text: PRIDE writes "<pmid> <citation> <doi>", MetaboLights
 # "<title>. <doi>. PMID:<pmid>". A DOI may sit anywhere; trailing punctuation is the
 # sentence's, not the DOI's.
@@ -161,6 +179,16 @@ def _own_doi(additional: dict) -> str | None:
     return next((v for v in additional.get("doi") or [] if _DOI_RE.fullmatch(v)), None)
 
 
+def _methods(additional: dict) -> str | None:
+    """Each protocol the record holds, labelled, its distinct non-blank texts in order."""
+    parts = []
+    for key, label in _METHOD_KEYS:
+        texts = dict.fromkeys(v.strip() for v in additional.get(key) or [] if v.strip())
+        if texts:
+            parts.append(f"{label}: {' '.join(texts)}")
+    return "\n\n".join(parts) or None
+
+
 def _normalize(d: dict) -> DataResource:
     source, acc = d["source"], d["id"]
     return DataResource(
@@ -184,6 +212,7 @@ def _record(resource_id: str, source: str, acc: str, body: dict) -> DataResource
         kind="study",
         title=body.get("name") or "",
         description=body.get("description"),
+        methods=_methods(additional),
         creators=[Creator(name=n) for n in _str_list(additional, _CREATOR_KEYS)],
         organism=_str_list(additional, _ORGANISM_KEYS),
         doi=_own_doi(additional),

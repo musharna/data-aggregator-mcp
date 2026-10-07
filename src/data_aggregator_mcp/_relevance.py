@@ -160,3 +160,8 @@ class MatchTiers:
     def names_every_term(self, record: DataResource) -> bool:
         """Whether ``record`` names every term of the query; never for an empty query."""
         return bool(self.terms) and self.score(record)[3] == len(self.terms)
+
+    def unshown(self, record: DataResource) -> list[str]:
+        """The query terms ``record``'s text does not name, in query order."""
+        text = _text(record)
+        return [t for t in self.terms if not _names(text, t)]

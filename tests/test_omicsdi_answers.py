@@ -356,6 +356,7 @@ async def test_resolve_a_malformed_answer_is_an_outage(body):
 _WRONG = ["x", 7, True, 1.5, [1], {"k": 1}, None]
 _FULL = copy.deepcopy(PXD026702)
 _FULL["additional"].update(submitter_name=["X"], organism=["Y"])
+_FULL["additional"].update({key: ["Z"] for key, _label in omicsdi._METHOD_KEYS})
 
 
 def _paths(node, path=()):

@@ -605,9 +605,14 @@ async def _fetch_page(
     emitted: list[DataResource] = []
     removed: dict[str, int] = {}  # handled records the post-filter dropped, per stream key
     used = 0
+    every_word = {s.key for s in streams if s.every_word}
     for key, i, r in kept:
         if len(emitted) == size:
             break
+        # Such a source matched every word, so a word the hit does not show was matched
+        # in text it leaves out; without the note the hit reads as off-topic.
+        if key in every_word and (unshown := tiers.unshown(r)):
+            r = r.model_copy(update={"unshown_terms": unshown})
         passes = _passes_filters(r, filters)
         cost = _hit_chars(r) if passes else 0
         # A hit that does not fit stays unhandled, so the cursor returns it next page.

@@ -132,6 +132,9 @@ class DataResource(BaseModel):
     funding: list[FundingRef] = Field(default_factory=list)
     year: int | None = None
     description: str | None = None
+    # How the samples and data were made, as the source states it (PRIDE's sample and
+    # data protocols); on resolve, for sources that publish it apart from the abstract.
+    methods: str | None = None
     doi: str | None = None
     identifiers: dict[str, str] = Field(default_factory=dict)  # cross-ids: pmid/pmcid/doi
     accessions: list[str] = Field(default_factory=list)
@@ -171,6 +174,13 @@ class DataResource(BaseModel):
     # unlike errors it does not keep the record out of the cache), e.g.
     # {"links": "first 100 of 891 SRA runs; ..."}. Empty = every list is complete.
     truncated: dict[str, str] = Field(default_factory=dict)
+    # On a search hit from a source that matches only records holding every query word:
+    # the query words this hit's title, description, subjects and organism do not show.
+    # The source matched them in text the hit leaves out (a protocol, a field past the
+    # cut) or through its own synonyms; resolve shows what it holds. OmicsDI's
+    # PXD055071 showed only "nutrient stress" while its protocol held "nitrogen
+    # depletion", and agents shown it in both R5 runs left it out (2026-10-06).
+    unshown_terms: list[str] = Field(default_factory=list)
 
 
 class TaxonAlternative(BaseModel):
@@ -408,14 +418,14 @@ SEARCH_LIST_LIMITS = {
 
 
 def compact(r: DataResource) -> DataResource:
-    """Search-result form of a resource: drop the file manifest, truncate the
+    """Search-result form of a resource: drop the file manifest and methods, truncate the
     description and cap each list (``SEARCH_LIST_LIMITS``), naming every cut list in
     ``truncated``. Token-budget rule — callers pull the full record and ``files[]`` via
     ``resolve``. Idempotent, so a hit enriched after compaction can be compacted again.
     Returns a copy; the input is not mutated.
     """
     desc = r.description[:SEARCH_DESC_LIMIT] if r.description else None
-    update: dict[str, Any] = {"files": [], "description": desc}
+    update: dict[str, Any] = {"files": [], "methods": None, "description": desc}
     truncated = dict(r.truncated)
     for field, limit in SEARCH_LIST_LIMITS.items():
         items = getattr(r, field)
