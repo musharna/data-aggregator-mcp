@@ -251,7 +251,11 @@ with `421 Invalid Host header`.
 All optional, set via environment variables:
 
 - `NCBI_API_KEY` — raises the NCBI E-utilities rate limit (3 → 10 req/s) used by
-  the omics, literature, and taxonomy lookups.
+  the omics, literature, and taxonomy lookups. Requests are paced at two thirds of
+  the limit (2/s, or 6.7/s with a key), shared by every server process on the
+  machine, since NCBI counts the IP: several sessions no longer exhaust it.
+- `DATA_AGGREGATOR_MCP_STATE_DIR` — where that shared NCBI schedule lives
+  (default `~/.cache/data-aggregator-mcp`, the `fetch` download directory).
 - `DATA_GOV_API_KEY` — optional; data.gov works without it through the keyless
   catalog API (`catalog.data.gov`). With a free
   [api.data.gov](https://api.data.gov/signup/) key set, data.gov requests go

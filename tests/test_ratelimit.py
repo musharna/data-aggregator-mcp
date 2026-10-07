@@ -74,21 +74,22 @@ def test_bucket_survives_a_url_it_cannot_parse():
 
 
 def test_ncbi_rate_responds_to_api_key(monkeypatch):
+    """Two thirds of NCBI's ceiling: 3/s keyless, 10/s with a key."""
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     monkeypatch.delenv("NCBI_EMAIL", raising=False)
-    assert _rate_for("ncbi") == 3.0
+    assert _rate_for("ncbi") == pytest.approx(2.0)
     monkeypatch.setenv("NCBI_API_KEY", "abc")
-    assert _rate_for("ncbi") == 10.0
+    assert _rate_for("ncbi") == pytest.approx(20 / 3)
 
 
-def test_ncbi_rate_email_only_is_still_3(monkeypatch):
+def test_ncbi_rate_email_only_is_still_keyless(monkeypatch):
     """NCBI grants 10 req/s only with an API key; email alone is identification,
-    not elevated access, so the rate must stay at 3 req/s."""
+    not elevated access, so the rate stays at the keyless one."""
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     monkeypatch.setenv("NCBI_EMAIL", "user@example.com")
     from data_aggregator_mcp._ratelimit import _ncbi_rate
 
-    assert _ncbi_rate() == 3.0
+    assert _ncbi_rate() == pytest.approx(2.0)
 
 
 @pytest.mark.asyncio
