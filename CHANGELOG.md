@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- GEO, SRA and BioProject are sent each plain word of a query with its plural, as
+  DataCite, Zenodo and four other sources already were. NCBI maps some plurals, never the
+  singular, to a taxon, so "tardigrades" also finds Tardigrada records that never name the
+  word: SRA "tardigrade anhydrobiosis" found 4 runs and none of the *Ramazzottius
+  varieornatus* study PRJDB2359, and now finds 37 with all six of its runs. A cursor from
+  an earlier version keeps its NCBI query as written.
+
 ## [0.68.0] - 2026-10-07
 
 ### Changed
