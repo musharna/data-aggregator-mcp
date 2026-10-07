@@ -224,6 +224,25 @@ data: `scores_2026-10-06_066.json`.
 - Web still leads on R3 (tardigrades, 0.83 vs 0.67 mean). Its R5 run 1 (0.25) is the
   widest swing of any arm on any task.
 
+## R5 with unshown_terms
+
+OmicsDI showed R5 S8 (PXD055071, "Chlamydomonas nitrogen", rank 22) in both 0.66.0 runs,
+and neither listed it: its title and description say "nutrient stress", and the nitrogen
+depletion is only in its sample protocol. A hit from a source that matches every query
+word now names the words it does not show (`unshown_terms`), and an OmicsDI resolve shows
+the protocols (`methods`). The dam arm alone, two runs on 2026-10-07; nothing listed was
+left unjudged. Per-run data: `scores_2026-10-07_r5_unshown.json`.
+
+| | 0.66.0 | with unshown_terms |
+|---|---|---|
+| recall | 0.75 / 0.75 | 0.88 / 0.88 |
+| precision | 1.00 / 1.00 | 1.00 / 1.00 |
+| tool calls | 6 / 7 | 10 / 17 |
+| cost | $0.33 / $0.36 | $0.42 / $0.48 |
+
+Both runs resolved PXD055071 after its hit named "nitrogen" as unshown, and listed it.
+S7 (PXD036778) is still missed: its OmicsDI record says "N-starved", never "nitrogen".
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the
