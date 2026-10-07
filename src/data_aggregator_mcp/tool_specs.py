@@ -172,8 +172,9 @@ TOOLS: list[types.Tool] = [
                     "description": (
                         "Result ordering. 'relevance' (default) = hits that name more of the "
                         "search first (each facet, then each query word, in the title, "
-                        "description, subjects or organism), each source's own order kept "
-                        "among equal hits. "
+                        "description, subjects or organism); among equal hits a data deposit "
+                        "(dataset, sequencing run, study) before a paper, figure or tool, "
+                        "then each source's own order. "
                         "'semantic' re-ranks the fetched page by embedding similarity to the "
                         "query (needs EMBEDDING_API_BASE; degrades to relevance order with an "
                         "errors['semantic'] note if unconfigured). In semantic mode pagination "

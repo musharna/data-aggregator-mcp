@@ -25,29 +25,40 @@ _ZENODO_EMPTY = {"hits": {"total": 0, "hits": []}}
 _DATACITE_EMPTY = {"data": [], "meta": {"total": 0}}
 
 
-# What a plain-words search sends each half of its title split (test_title_tier.py).
+# What a plain-words search sends each part of its title split (test_title_tier.py,
+# test_deposit_tier.py). A kind filter sent upstream leaves the title matches whole.
 _WORDS = "((soil OR soils) (moisture OR moistures))"
 
 
-def _halves(field: str) -> tuple[str, str]:
+def _halves(field: str, deposits: str | None = None) -> tuple[str, ...]:
     clause = f'{field}:("soil moisture" OR "soil moistures")'
-    return f"{_WORDS} AND {clause}", f"{_WORDS} AND NOT {clause}"
+    titled = (
+        [f"{_WORDS} AND {clause} AND {deposits}", f"{_WORDS} AND {clause} AND NOT {deposits}"]
+        if deposits
+        else [f"{_WORDS} AND {clause}"]
+    )
+    return (*titled, f"{_WORDS} AND NOT {clause}")
 
 
-async def _sent(httpx_mock: HTTPXMock, body: dict, param: str, **kw) -> tuple[httpx.Request, ...]:
-    """Run a one-source search and return its two upstream requests, title half first."""
+async def _sent(
+    httpx_mock: HTTPXMock, body: dict, param: str, n: int, **kw
+) -> tuple[httpx.Request, ...]:
+    """Run a one-source search and return its ``n`` upstream requests: the deposits, the
+    other title matches, then the rest."""
     httpx_mock.add_response(json=body, is_reusable=True)
     async with httpx.AsyncClient() as client:
         await router.search_page(client, query="soil moisture", **kw)
     reqs = httpx_mock.get_requests()
-    assert len(reqs) == 2
-    return tuple(sorted(reqs, key=lambda r: " AND NOT " in r.url.params[param]))
+    assert len(reqs) == n
+    return tuple(
+        sorted(reqs, key=lambda r: (" AND NOT title" in (q := r.url.params[param]), " AND NOT " in q))
+    )
 
 
-def _with_halves(expected: str, field: str) -> list[str]:
-    """``expected`` (the query with its filter clauses) for the title half and the rest."""
+def _with_halves(expected: str, field: str, deposits: str | None = None) -> list[str]:
+    """``expected`` (the query with its filter clauses) for each part of the split."""
     assert expected.startswith(_WORDS)
-    return [f"({half}){expected[len(_WORDS) :]}" for half in _halves(field)]
+    return [f"({half}){expected[len(_WORDS) :]}" for half in _halves(field, deposits)]
 
 
 # --- the upstream requests carry the filters ----------------------------------------
@@ -80,14 +91,19 @@ def _with_halves(expected: str, field: str) -> list[str]:
 async def test_zenodo_request_carries_the_filters(
     httpx_mock: HTTPXMock, filters: dict, expected_q: str
 ) -> None:
-    reqs = await _sent(httpx_mock, _ZENODO_EMPTY, "q", sources=["zenodo"], **filters)
-    assert [r.url.params["q"] for r in reqs] == _with_halves(expected_q, "title")
+    deposits = None if "kind" in filters else zenodo.DEPOSIT_CLAUSE
+    reqs = await _sent(
+        httpx_mock, _ZENODO_EMPTY, "q", 2 if deposits is None else 3, sources=["zenodo"], **filters
+    )
+    assert [r.url.params["q"] for r in reqs] == _with_halves(expected_q, "title", deposits)
 
 
 async def test_zenodo_request_without_filters_is_unchanged(httpx_mock: HTTPXMock) -> None:
     """Positive control: no filter clause, each half exactly as the title split sends it."""
-    reqs = await _sent(httpx_mock, _ZENODO_EMPTY, "q", sources=["zenodo"])
-    assert [dict(r.url.params) for r in reqs] == [{"q": h, "size": "10"} for h in _halves("title")]
+    reqs = await _sent(httpx_mock, _ZENODO_EMPTY, "q", 3, sources=["zenodo"])
+    assert [dict(r.url.params) for r in reqs] == [
+        {"q": h, "size": "10"} for h in _halves("title", zenodo.DEPOSIT_CLAUSE)
+    ]
 
 
 @pytest.mark.parametrize(
@@ -120,15 +136,26 @@ async def test_zenodo_request_without_filters_is_unchanged(httpx_mock: HTTPXMock
 async def test_datacite_request_carries_the_filters(
     httpx_mock: HTTPXMock, filters: dict, expected_query: str
 ) -> None:
-    reqs = await _sent(httpx_mock, _DATACITE_EMPTY, "query", sources=["datacite"], **filters)
-    assert [r.url.params["query"] for r in reqs] == _with_halves(expected_query, "titles.title")
+    deposits = None if "kind" in filters else datacite.DEPOSIT_CLAUSE
+    reqs = await _sent(
+        httpx_mock,
+        _DATACITE_EMPTY,
+        "query",
+        2 if deposits is None else 3,
+        sources=["datacite"],
+        **filters,
+    )
+    assert [r.url.params["query"] for r in reqs] == _with_halves(
+        expected_query, "titles.title", deposits
+    )
 
 
 async def test_datacite_request_without_filters_is_unchanged(httpx_mock: HTTPXMock) -> None:
     """Positive control: no filter clause is added, each half with the relevance sort."""
-    reqs = await _sent(httpx_mock, _DATACITE_EMPTY, "query", sources=["datacite"])
+    reqs = await _sent(httpx_mock, _DATACITE_EMPTY, "query", 3, sources=["datacite"])
     assert [dict(r.url.params) for r in reqs] == [
-        {"query": h, "sort": "relevance", "page[size]": "10"} for h in _halves("titles.title")
+        {"query": h, "sort": "relevance", "page[size]": "10"}
+        for h in _halves("titles.title", datacite.DEPOSIT_CLAUSE)
     ]
 
 

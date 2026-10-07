@@ -213,10 +213,11 @@ async def test_multi_query_fail_soft_falls_back_to_single_query(monkeypatch) -> 
         result = await router.search_page(
             client, query="orig", sources=["zenodo"], multi_query=True
         )
-    # Fell back to a single-query search (variant 0 only), split by title like any
-    # single query (test_title_tier.py).
+    # Fell back to a single-query search (variant 0 only), split by title and deposits
+    # like any single query (test_title_tier.py, test_deposit_tier.py).
     assert seen == [
-        '(orig) AND title:("orig" OR "origs")',
+        '(orig) AND title:("orig" OR "origs") AND resource_type.type:("dataset")',
+        '(orig) AND title:("orig" OR "origs") AND NOT resource_type.type:("dataset")',
         '(orig) AND NOT title:("orig" OR "origs")',
     ]
     assert result.query_expansion is None

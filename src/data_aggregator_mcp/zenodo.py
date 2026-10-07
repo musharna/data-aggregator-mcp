@@ -76,6 +76,8 @@ _KIND_MAP = {
     "publication": "publication",
     "software": "software",
 }
+# The records the router ranks first among title matches: the types read as datasets.
+DEPOSIT_CLAUSE = _pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, "dataset", quoted=True)
 
 
 def _opt(value: object, kind: type) -> bool:

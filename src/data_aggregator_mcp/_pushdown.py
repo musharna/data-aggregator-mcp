@@ -56,14 +56,22 @@ def active(filters: Mapping[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in filters.items() if v is not None}
 
 
-def kind_clause(field: str, kind_map: Mapping[str, str], kind: str) -> str | None:
+def kind_clause(
+    field: str, kind_map: Mapping[str, str], kind: str, *, quoted: bool = False
+) -> str | None:
     """Upstream clause selecting exactly the records ``kind_map`` normalizes to ``kind``,
     or None when no upstream type maps to it (the post-filter then decides). ``other`` is
-    every type the map does not name."""
+    every type the map does not name. ``quoted`` quotes each type, for a clause that goes
+    into the query text, where an unquoted type is sent with its plural ("Dataset" as
+    "(Dataset OR Datasets)")."""
+
+    def types(names: list[str]) -> str:
+        return " OR ".join(f'"{n}"' if quoted else n for n in names)
+
     if kind == OTHER_KIND:
-        return f"NOT {field}:({' OR '.join(sorted(kind_map))})" if kind_map else None
+        return f"NOT {field}:({types(sorted(kind_map))})" if kind_map else None
     mine = sorted(t for t, k in kind_map.items() if k == kind)
-    return f"{field}:({' OR '.join(mine)})" if mine else None
+    return f"{field}:({types(mine)})" if mine else None
 
 
 def range_clause(field: str, low: str | None, high: str | None) -> str | None:

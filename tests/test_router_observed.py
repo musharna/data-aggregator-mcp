@@ -182,6 +182,7 @@ async def test_every_search_setting_survives_into_the_page_after_next(monkeypatc
         "pd": True,
         "pl": True,
         "tt": True,
+        "dt": True,
     }
     assert _settings(c2) == _settings(c1)
     # Page 2 searched the same expanded query's two halves with the same pushed filters,
@@ -578,13 +579,13 @@ async def test_understand_echoes_every_extracted_field_and_which_year_the_caller
         overridden=["year_max"],
         confidence=0.7,
     )
-    # The year each search applied is the one sent upstream, to both halves of the
+    # The year each search applied is the one sent upstream, to all three parts of the
     # keyword core; the caller's always wins.
     after_years = {"published_after": 2015, "published_before": 2020}
     before_years = {"published_after": 2010, "published_before": 2018}
-    assert [c["filters"] for c in up.calls] == [after_years] * 2 + [before_years] * 2
+    assert [c["filters"] for c in up.calls] == [after_years] * 3 + [before_years] * 3
     sent = [c["query"] for c in up.calls]
-    assert whole(sent[:2]) == whole(sent[2:]) == "maize rna"
+    assert whole(sent[:3]) == whole(sent[3:]) == "maize rna"
 
 
 async def test_an_unavailable_llm_is_named_in_errors_for_understand_and_multi_query(
@@ -622,9 +623,13 @@ async def test_a_failed_stream_adds_nothing_to_total_and_does_not_keep_the_walk_
     async with _client() as client:
         page = await router.search_page(client, query="q", size=10, sources=["zenodo", "datacite"])
     assert (page.total, page.count, page.next_cursor) == (2, 2, None)
-    # Both halves of DataCite's split search failed, each named.
+    # All three parts of DataCite's split search failed, each named.
     failed = "UpstreamUnavailableError: [UpstreamUnavailableError] DataCite HTTP 503"
-    assert page.errors == {"datacite/title": failed, "datacite": failed}
+    assert page.errors == {
+        "datacite/deposits": failed,
+        "datacite/title": failed,
+        "datacite": failed,
+    }
 
 
 async def test_a_record_two_variants_both_return_is_emitted_once_and_advances_both(
@@ -671,10 +676,12 @@ async def test_a_doi_loser_waits_for_its_winner_so_a_failed_winner_stream_loses_
     monkeypatch.setattr(router._ADAPTERS["zenodo"], "search", zenodo)
     async with _client() as client:
         p1 = await router.search_page(client, query="q", size=2, sources=["zenodo", "datacite"])
-        # The empty title halves stay at 0.
+        # The empty title parts stay at 0.
         assert _cursor.decode(p1.next_cursor)["offsets"] == {
+            "zenodo/deposits": 0,
             "zenodo/title": 0,
             "zenodo": 1,
+            "datacite/deposits": 0,
             "datacite/title": 0,
             "datacite": 1,
         }
@@ -704,7 +711,14 @@ async def test_a_reranked_walk_skips_exactly_the_positions_it_already_returned(
         )
         state = _cursor.decode(page.next_cursor)
         assert [r.id for r in page.results] == ["zenodo:0", "zenodo:2", "datacite:0"]
-        offsets = {"zenodo/title": 0, "zenodo": 1, "datacite/title": 0, "datacite": 1}
+        offsets = {
+            "zenodo/deposits": 0,
+            "zenodo/title": 0,
+            "zenodo": 1,
+            "datacite/deposits": 0,
+            "datacite/title": 0,
+            "datacite": 1,
+        }
         assert (state["offsets"], state["ahead"]) == (offsets, {"zenodo": [1]})
         ids += [r.id for r in page.results]
         for _ in range(10):

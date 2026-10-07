@@ -74,6 +74,8 @@ from data_aggregator_mcp.models import (
 from data_aggregator_mcp.sources import SourceAdapter
 
 _VALID_KINDS = {"dataset", "sequencing_run", "study", "publication", "software"}
+# Records that hold data, as against a paper, figure, tool or untyped item about it.
+_DEPOSIT_KINDS = frozenset({"dataset", "sequencing_run", "study"})
 
 # A2.P2: hard cap on the number of query variants fanned out (incl. the original as
 # variant 0). The upstream fan-out is N variants × M sources × size, so this bounds the
@@ -314,6 +316,7 @@ def _source_streams(
     pushdown: bool,
     plurals: bool,
     title_tier: bool,
+    deposit_tier: bool = False,
     vi: int | None = None,
     groups: Sequence[FacetGroup] = (),
     notes: list[str] | None = None,
@@ -342,7 +345,14 @@ def _source_streams(
     ranking puts a title match first only among the hits fetched, and DataCite ranked
     its snow leopard title matches 95th to 337th of 480 by its own relevance (R4,
     2026-10-06). With ``title_tier`` off (a cursor minted before, whose offsets index the
-    query as one stream, or a multi-query variant) it is sent whole."""
+    query as one stream, or a multi-query variant) it is sent whole.
+
+    An adapter that also declares ``DEPOSIT_CLAUSE`` has its title matches split again,
+    data deposits (``<name>/deposits``) before the rest (``<name>/title``): DataCite held
+    221 snow leopard title matches of every type, and ranked the figshare datasets S29 and
+    S32 120th and 114th among them, behind papers; among its 62 datasets they are 42nd
+    and 39th (2026-10-07). With ``deposit_tier`` off (a cursor minted before), or a kind
+    filter already sent upstream, the title matches stay one stream."""
     wanted = _pushdown.active(filters)
     out: list[_Stream] = []
     for name, adapter in adapters.items():
@@ -371,11 +381,20 @@ def _source_streams(
             field = getattr(adapter, "TITLE_FIELD", None) if title_tier else None
             clause = title_clause(plain, field) if field else None
             if clause:
+                split = deposit_tier and "kind" not in pushed
+                deposits = getattr(adapter, "DEPOSIT_CLAUSE", None) if split else None
+                titled = (
+                    [
+                        (f"{name}/deposits", f"({q}) AND {clause} AND {deposits}"),
+                        (f"{name}/title", f"({q}) AND {clause} AND NOT {deposits}"),
+                    ]
+                    if deposits
+                    else [(f"{name}/title", f"({q}) AND {clause}")]
+                )
                 parts = [
-                    (
-                        f"{name}/title",
-                        name,
-                        _adapter_call(client, adapter, f"({q}) AND {clause}", plurals, pushed),
+                    *(
+                        (key, name, _adapter_call(client, adapter, query, plurals, pushed))
+                        for key, query in titled
                     ),
                     (
                         name,
@@ -575,18 +594,25 @@ async def _fetch_page(
     kept: list[tuple[str, int, DataResource]] = []
     for c in unique:
         (kept if id(c[2]) in winners else dropped).append(c)
+
     # A deposit ranks by the best that any of its copies names. The copy kept is the most
     # fetchable, not the most described: a DataONE copy of a Dryad deposit has no
     # description, so ranked alone it sank below hits naming nothing, and the dropped
     # DataCite twin, never handled, held DataCite's offset in place (2026-10-05).
+    # Among hits naming the search equally, a data deposit comes before a paper, figure or
+    # tool: "snow leopard" tied the R4 datasets with every paper titled with it, and a
+    # round-robin over ~20 sources put figshare's first at 213th (2026-10-07).
+    def score(r: DataResource) -> tuple[int, ...]:
+        return (*tiers.score(r), int(r.kind in _DEPOSIT_KINDS))
+
     best: dict[str, tuple[int, ...]] = {}
     for c in unique:
         if c[2].doi:
-            score = tiers.score(c[2])
-            best[c[2].doi.casefold()] = max(best.get(c[2].doi.casefold(), score), score)
+            s = score(c[2])
+            best[c[2].doi.casefold()] = max(best.get(c[2].doi.casefold(), s), s)
 
     def rank(c: tuple[str, int, DataResource]) -> tuple[int, ...]:
-        return best[c[2].doi.casefold()] if c[2].doi else tiers.score(c[2])
+        return best[c[2].doi.casefold()] if c[2].doi else score(c[2])
 
     # Stable: hits that name as much of the search keep the round-robin order.
     kept.sort(key=rank, reverse=True)
@@ -969,6 +995,8 @@ async def search_page(
         plurals = bool(st.get("pl"))
         # And one minted before the title tier indexes each source as one stream.
         title_tier = bool(st.get("tt"))
+        # And one minted before the deposit tier holds its title matches as one stream.
+        deposit_tier = bool(st.get("dt"))
         errors: dict[str, str] = {}
     else:
         if query is None:
@@ -1138,6 +1166,7 @@ async def search_page(
         pushdown = True
         plurals = True
         title_tier = True
+        deposit_tier = True
 
     adapters = _select(sources)
     names = list(adapters)
@@ -1151,6 +1180,7 @@ async def search_page(
         pushdown=pushdown,
         plurals=plurals,
         title_tier=title_tier,
+        deposit_tier=deposit_tier,
         groups=groups,
         notes=notes,
     )
@@ -1196,6 +1226,7 @@ async def search_page(
                 "pd": pushdown,
                 "pl": plurals,
                 "tt": title_tier,
+                "dt": deposit_tier,
             }
             | ({"fg": _encode_groups(groups)} if groups else {})
         )

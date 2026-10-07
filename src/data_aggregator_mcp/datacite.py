@@ -78,6 +78,8 @@ _KIND_MAP = {
     "Report": "publication",
     "Dissertation": "publication",
 }
+# The records the router ranks first among title matches: the types read as datasets.
+DEPOSIT_CLAUSE = _pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, "dataset", quoted=True)
 
 # relationships.client.data.id → friendly source name (matched by substring).
 # publisher is unreliable (figshare.ars → "Taylor & Francis"), so we key on the
