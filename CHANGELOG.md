@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A search hit from OmicsDI or NCBI omics, which match only records holding every query
+  word, lists in `unshown_terms` the query words its title and description do not show:
+  the source matched them in text the hit leaves out. An OmicsDI `resolve` now shows that
+  text as `methods` (the sample, data and other protocols). PXD055071 said "nutrient
+  stress" where its protocol said "nitrogen depletion", and agents shown it left it out;
+  with both, R5 recall rose from 0.75 to 0.88 in two runs.
+
 ## [0.66.0] - 2026-10-06
 
 ### Added

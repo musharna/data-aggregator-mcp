@@ -91,6 +91,9 @@ or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
 - **`errors`** — `{step: message}` when an enrichment step failed on this record
   (e.g. `taxonomy` during an NCBI rate limit); the rest of the record stands. Such a
   record is not cached, so the next resolve retries the step.
+- **`methods`** — how the samples and data were made, as the source states it apart
+  from the abstract: an OmicsDI record's sample, data and other protocols, labelled. A
+  sampled condition is often only here.
 - **`truncated`** — `{field: note}` when a list on this record is deliberately partial,
   e.g. a BioProject's `links` past 100 SRA runs: `first 100 of 891 SRA runs; …`. Empty
   when every list is complete.

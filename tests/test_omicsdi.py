@@ -5,7 +5,7 @@ import pytest
 
 from data_aggregator_mcp import omicsdi
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.models import FileEntry
+from data_aggregator_mcp.models import FileEntry, compact
 
 _SEARCH = {
     "count": 740517,
@@ -284,3 +284,87 @@ async def test_live_resolve_an_unknown_or_miscased_accession_is_not_found():
         for rid in ("omicsdi:pride:PXD999999999", "omicsdi:massive:msv000081764"):
             with pytest.raises(NotFoundError, match=r"^\[NotFoundError\] OmicsDI has no "):
                 await omicsdi.resolve(c, rid)
+
+
+_RECORD_PROTOCOLS = {
+    "accession": "PXD055071",
+    "name": "Extracellular Vesicles in Chlamydomonas reinhardtii",
+    "description": "Microalgal EVs ... under nutrient stress conditions.",
+    "additional": {
+        # Out of order on purpose: methods lists them in its own order.
+        "data_protocol": ["MaxQuant 2.0."],
+        "sample_protocol": [
+            " Cells grown in TAP; nitrogen depletion (ND) after 3 days in TAP-N. ",
+            "",
+            "Cells grown in TAP; nitrogen depletion (ND) after 3 days in TAP-N.",
+            "EVs isolated by ultracentrifugation.",
+        ],
+        "quantification_method": ["label free"],  # not a protocol: left out
+    },
+}
+
+
+@pytest.mark.asyncio
+async def test_resolve_names_the_sampled_conditions_the_protocols_hold(monkeypatch):
+    """PXD055071's description says "nutrient stress"; its nitrogen depletion is only in
+    the sample protocol (live record, 2026-10-07)."""
+    monkeypatch.setattr("data_aggregator_mcp.pride.files", lambda c, a: _aempty())
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=_RECORD_PROTOCOLS))
+    ) as c:
+        r = await omicsdi.resolve(c, "omicsdi:pride:PXD055071")
+    assert r.methods == (
+        "Sample protocol: Cells grown in TAP; nitrogen depletion (ND) after 3 days in TAP-N. "
+        "EVs isolated by ultracentrifugation.\n\n"
+        "Data protocol: MaxQuant 2.0."
+    )
+
+
+@pytest.mark.asyncio
+async def test_resolve_reads_the_metabolights_protocol_keys(monkeypatch):
+    monkeypatch.setattr("data_aggregator_mcp.metabolights.files", lambda c, a: _aempty())
+    rec = {
+        **_RECORD_MTBLS_RICH,
+        "additional": {
+            **_RECORD_MTBLS_RICH["additional"],
+            "extraction_protocol": ["Methanol extraction."],
+            "sample_collection_protocol": ["Plasma after fasting."],
+            "study_design": ["Case vs control."],
+            "chromatography_protocol": ["HILIC."],  # how it was measured: left out
+        },
+    }
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda r: httpx.Response(200, json=rec))
+    ) as c:
+        r = await omicsdi.resolve(c, "omicsdi:metabolights_dataset:MTBLS9830")
+    assert r.methods == (
+        "Study design: Case vs control.\n\n"
+        "Sample collection protocol: Plasma after fasting.\n\n"
+        "Extraction protocol: Methanol extraction."
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_record_with_no_protocol_text_has_no_methods(monkeypatch):
+    monkeypatch.setattr("data_aggregator_mcp.pride.files", lambda c, a: _aempty())
+    blank = {**_RECORD_PRIDE_RICH, "additional": {"sample_protocol": [" ", ""]}}
+    for rec in (_RECORD_PRIDE_RICH, blank):
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda r, rec=rec: httpx.Response(200, json=rec))
+        ) as c:
+            r = await omicsdi.resolve(c, "omicsdi:pride:PXD002213")
+        assert r.methods is None
+    # A search hit never carries methods: compact drops them like the file manifest.
+    assert compact(r.model_copy(update={"methods": "Sample protocol: x"})).methods is None
+
+
+@_live_only
+@pytest.mark.asyncio
+async def test_live_resolve_shows_the_condition_only_the_protocol_names(monkeypatch):
+    monkeypatch.setattr("data_aggregator_mcp.pride.files", lambda c, a: _aempty())
+    async with httpx.AsyncClient(timeout=60) as c:
+        r = await omicsdi.resolve(c, "omicsdi:pride:PXD055071")
+    assert "nitrogen depletion" in r.methods
+    assert r.methods.startswith("Sample protocol: ")
+    # Why it matters: the description, all a search hit shows, never says nitrogen.
+    assert "nitrogen" not in (r.description or "").lower()
