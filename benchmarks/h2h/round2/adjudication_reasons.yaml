@@ -53,3 +53,8 @@
 # 2026-10-07 dam arm with deposits ranked first and one hit per deposit (#266): two pooled entries, both near misses the key named.
 - {task: R4, id: PRJNA693792, verdict: reject, reason: "Key near miss (R4.yaml): 'Genome sequencing of snow leopard', among the reference-genome projects of single captive or unstated animals with no field sampling."}
 - {task: R4, id: PRJNA491757, verdict: reject, reason: "Key near miss (R4.yaml): snow leopard and Tibetan mastiff gut-microbe BioProject; NCBI SRA count for it 0 (2026-10-07), as the key recorded."}
+# 2026-10-07 three-arm run with the dam arm on #266: four pooled entries, all from the web arm.
+- {task: R2, id: "doi:10.1007/s13238-020-00763-1", verdict: "optional", reason: "The Protein Cell paper of keyed study S4 (PRJNA589484/CNP0000706), listed with no accession ('accession not verified'). Names the right study but not a dataset: B1, not wrong and not a find."}
+- {task: R2, id: "doi:10.1101/2025.03.30.645595", verdict: "optional", reason: "The bioRxiv preprint of keyed study S9 (GSE294212, Xenium), listed with no accession. As B1: B2."}
+- {task: R2, id: GSE314016, verdict: reject, reason: "Key near miss (R2.yaml): cited for scRNA-seq by Polikarpova 2025 but not public (gds esearch 0)."}
+- {task: R4, id: PRJNA1103791, verdict: reject, reason: "Key near miss (R4.yaml): predator-guild scat metabarcoding of snow leopard, wolf, fox and others; multi-carnivore."}

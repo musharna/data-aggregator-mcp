@@ -311,6 +311,36 @@ misses the key named, were rejected. Per-run data: `scores_2026-10-07_266.json`.
 - The web arm was not re-run; its numbers are the two earlier sets. Two runs a task, so
   a confirming three-arm run is the test of the lead.
 
+## Confirmation: all three arms with the dam arm on #266
+
+The five tasks, two runs each, all three arms on 2026-10-07 ($15.83). Four pooled
+entries, all from the web arm, were judged: two near misses rejected, and two paper DOIs
+of keyed studies listed without a data accession (R2 S4, S9) made optional, not wrong
+and not a find; counted as finds they would raise web's mean to 0.78. Per-run data:
+`scores_2026-10-07_266_3arm.json`.
+
+| task | dam | tu | web |
+|---|---|---|---|
+| R1 | 0.92 / 0.85 | 0.69 / 0.77 | 0.85 / 0.77 |
+| R2 | 0.90 / 0.90 | 0.60 / 0.70 | 0.50 / 0.80 |
+| R3 | 0.44 / 0.56 | 0.56 / 0.33 | 0.78 / 0.78 |
+| R4 | 0.86 / 0.83 | 0.56 / 0.56 | 0.83 / 0.78 |
+| R5 | 0.88 / 0.75 | 0.75 / 0.88 | 0.62 / 0.88 |
+
+| arm | mean recall | median recall | precision | median tool calls | median input tokens | median wall | cost (10 runs) |
+|---|---|---|---|---|---|---|---|
+| dam | 0.79 | 0.85 | 0.87 | 9 | 370k | 87 s | $4.66 |
+| tu  | 0.64 | 0.65 | 0.87 | 20 | 589k | 85 s | $5.50 |
+| web | 0.76 | 0.78 | 0.93 | 13 | 473k | 159 s | $5.67 |
+
+- **Over every run on each version:** the dam arm on #266 averages 0.83 (20 runs; 0.77
+  before), web 0.77 (30) and ToolUniverse 0.63 (30). By task, dam on #266 against web:
+  R1 0.88 vs 0.86, R2 0.93 vs 0.77, R3 0.69 vs 0.78, R4 0.84 vs 0.81, R5 0.81 vs 0.65.
+- **R3 is still web's.** The dam arm's R3 went 0.78 / 1.00 in the first run on #266 and
+  0.44 / 0.56 here: the widest swing in the round, so R3 depends on which searches an
+  agent happens to make.
+- Web keeps the best precision (0.93 to 0.87).
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the
