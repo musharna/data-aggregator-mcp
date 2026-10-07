@@ -341,6 +341,27 @@ and not a find; counted as finds they would raise web's mean to 0.78. Per-run da
   agent happens to make.
 - Web keeps the best precision (0.93 to 0.87).
 
+## R3: NCBI asked for what the plurals add (#269)
+
+R3's study S1 (*Ramazzottius varieornatus*, PRJDB2359) never names "tardigrade", and NCBI
+maps only the plural "tardigrades" to the taxon Tardigrada, so no "tardigrade ..." search
+reached it: the dam arm found it in 5 of 16 earlier runs, each through a species-name
+search. The dam arm alone, R3, two runs per version, 2026-10-07 ($1.88):
+
+| version | recall | S1 | S7 | per-run data |
+|---|---|---|---|---|
+| plural form as one query | 0.78 / 0.56 | 2 of 2 | 1 of 2 | `scores_2026-10-07_269_one_query.json` |
+| plurals as their own stream | 0.56 / 0.67 | 2 of 2 | 2 of 2 | `scores_2026-10-07_269.json` |
+
+- In one query, the 33 runs the plural adds came first (NCBI lists newest first), and
+  pushed S7's runs, which name both words, from 1st to 34th: one run lost S7. As a
+  separate stream both reach the page; every run found S1 through "tardigrade
+  anhydrobiosis".
+- Recall did not rise: S3 was missed in both runs (8 of 16 before). No page lost it:
+  with the plural stream on and off, S3 sits on the same pages within four places. The
+  agents searched *Hypsibius exemplaris*, while S3 is filed under its older name
+  *H. dujardini*. Two runs cannot separate this from the agents' choice of searches.
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the

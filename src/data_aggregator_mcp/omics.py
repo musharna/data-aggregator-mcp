@@ -34,6 +34,14 @@ MAX_SIZE = 50
 # together (GEO: "tardigrade" 221, "tun" 464, "tardigrade dehydration tun" 0; probed
 # 2026-10-05); the router names these dbs when a multi-word search comes back empty.
 REQUIRES_EVERY_WORD = True
+# NCBI maps some plurals, never the singular, to a taxon: "tardigrades" also matches
+# Tardigrada records that never name the word. SRA "tardigrade anhydrobiosis" found 4 runs
+# and none of the Ramazzottius varieornatus study PRJDB2359; "(tardigrade OR tardigrades)
+# anhydrobiosis" found 37 with all six (2026-10-07). But NCBI orders by record, newest
+# first, whatever ``sort`` asks, so the 33 added runs pushed the 4 that name both words
+# from 1st to 34th. The router therefore asks for what the plurals add as a stream of its
+# own (``<db>/plurals``), beside the query as written.
+PLURAL_STREAM = True
 
 # Per-db accession search field. NOT uniform: the BioProject index has no ``ACCN``
 # field at all (a term like ``PRJNA231221[ACCN]`` matches ZERO records there, while the

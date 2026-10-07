@@ -47,7 +47,7 @@ from data_aggregator_mcp import query_understanding as query_understanding_mod
 from data_aggregator_mcp import relate as relate_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
-from data_aggregator_mcp._relevance import MatchTiers, title_clause
+from data_aggregator_mcp._relevance import MatchTiers, title_clause, with_plurals
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import (
     SEARCH_LIST_LIMITS,
@@ -318,6 +318,7 @@ def _source_streams(
     plurals: bool,
     title_tier: bool,
     deposit_tier: bool = False,
+    plural_streams: bool = False,
     vi: int | None = None,
     groups: Sequence[FacetGroup] = (),
     notes: list[str] | None = None,
@@ -341,6 +342,13 @@ def _source_streams(
     upstream; with ``plurals`` off (a cursor minted before it did, whose offsets index
     the query as written) it is told not to.
 
+    A composite adapter declaring ``PLURAL_STREAM`` sends each sub-source the query as
+    written, and what each plain word's plural adds as a stream of its own
+    (``<name>/<sub>/plurals``: the plural form NOT the query): its upstream returns records
+    in an order that has nothing to do with the query, so in one stream the added records
+    push the ones naming every word past the window fetched. With ``plural_streams`` off
+    (a cursor minted before) or a query with no word to pluralise, there is no such stream.
+
     An adapter declaring ``TITLE_FIELD`` is sent a plain-words query as two streams that
     split it: the records holding it in that field (``<name>/title``), then the rest. The
     ranking puts a title match first only among the hits fetched, and DataCite ranked
@@ -363,19 +371,21 @@ def _source_streams(
         pushed: dict[str, Any] = {}
         if subs:
             limits: dict[str, int] = getattr(adapter, "OPERATOR_LIMITS", {})
-            parts = [
-                (
-                    f"{name}/{sub}",
-                    f"{name}/{sub}",
-                    functools.partial(
+            split = plurals and plural_streams and getattr(adapter, "PLURAL_STREAM", False)
+            parts = []
+            for sub in subs:
+                sq = _within_limit(f"{name}/{sub}", q, plain, groups, limits.get(sub), notes)
+                pq = with_plurals(sq) if split else sq
+                for key, query in [(f"{name}/{sub}", sq)] + (
+                    [(f"{name}/{sub}/plurals", f"({pq}) NOT ({sq})")] if pq != sq else []
+                ):
+                    call = functools.partial(
                         adapter.search_subsource,  # type: ignore[attr-defined]
                         client,
                         sub,
-                        _within_limit(f"{name}/{sub}", q, plain, groups, limits.get(sub), notes),
-                    ),
-                )
-                for sub in subs
-            ]
+                        query,
+                    )
+                    parts.append((key, f"{name}/{sub}", call))
         else:
             if pushdown and wanted and isinstance(adapter, _pushdown.FilterPushdown):
                 pushed = adapter.pushable(wanted)
@@ -805,6 +815,7 @@ async def _multi_query_page(
     query_expansion: QueryExpansion | None,
     pushdown: bool,
     plurals: bool,
+    plural_streams: bool,
     taxon_expansion: TaxonExpansion | None = None,
     mesh_expansion: MeshExpansion | None = None,
     tissue_expansion: TissueExpansion | None = None,
@@ -836,6 +847,7 @@ async def _multi_query_page(
             filters=filters,
             pushdown=pushdown,
             plurals=plurals,
+            plural_streams=plural_streams,
             # Each variant already fans out to every source; the title split would
             # double that again. It is for the single query (R4 measured that path).
             title_tier=False,
@@ -878,6 +890,7 @@ async def _multi_query_page(
                 "collapse_mirrors": collapse_mirrors,
                 "pd": pushdown,
                 "pl": plurals,
+                "ps": plural_streams,
             }
             | ({"fg": _encode_groups(groups)} if groups else {})
         )
@@ -959,6 +972,7 @@ async def search_page(
                 query_expansion=None,  # echo is page-1 only; frozen None on continuation
                 pushdown=bool(st.get("pd")),
                 plurals=bool(st.get("pl")),
+                plural_streams=bool(st.get("ps")),
                 groups=_decode_groups(st),
             )
         query = st["q"]
@@ -1000,6 +1014,8 @@ async def search_page(
         title_tier = bool(st.get("tt"))
         # And one minted before the deposit tier holds its title matches as one stream.
         deposit_tier = bool(st.get("dt"))
+        # And one minted before NCBI's plural streams holds no offsets for them.
+        plural_streams = bool(st.get("ps"))
         errors: dict[str, str] = {}
     else:
         if query is None:
@@ -1155,6 +1171,7 @@ async def search_page(
                     query_expansion=QueryExpansion(input=original_query, variants=raw_variants),
                     pushdown=True,
                     plurals=True,
+                    plural_streams=True,
                     taxon_expansion=expansion,
                     mesh_expansion=disease_expansion,
                     tissue_expansion=tissue_expansion,
@@ -1170,6 +1187,7 @@ async def search_page(
         plurals = True
         title_tier = True
         deposit_tier = True
+        plural_streams = True
 
     adapters = _select(sources)
     names = list(adapters)
@@ -1184,6 +1202,7 @@ async def search_page(
         plurals=plurals,
         title_tier=title_tier,
         deposit_tier=deposit_tier,
+        plural_streams=plural_streams,
         groups=groups,
         notes=notes,
     )
@@ -1230,6 +1249,7 @@ async def search_page(
                 "pl": plurals,
                 "tt": title_tier,
                 "dt": deposit_tier,
+                "ps": plural_streams,
             }
             | ({"fg": _encode_groups(groups)} if groups else {})
         )
