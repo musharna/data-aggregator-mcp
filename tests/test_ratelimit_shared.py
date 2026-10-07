@@ -24,34 +24,47 @@ from data_aggregator_mcp._ratelimit import SharedSchedule
 from tests.test_ratelimit import FakeClock
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
-_RATE = 10.0  # 0.1 s apart: wide enough that event-loop jitter cannot close a gap
+_RATE = 100.0  # 600 slots fill 6 s, inside the 30 s queue horizon
+_CLAIMS = 200
 
 
-def _stamps(path: str, n: int) -> list[float]:
-    """In a fresh process: acquire ``n`` slots and stamp when each was granted."""
+def _slots(path: str, n: int, start) -> list[float]:
+    """In a fresh process: claim ``n`` slots as fast as possible and return the time each
+    was granted for. The slot is read from the claim itself (the clock reading it was
+    taken at plus the wait it returned), not from when a sleep happened to end: stamping
+    the wake-up failed CI with a 0.066 s gap between 0.1 s slots, one late wake-up on a
+    busy runner (2026-10-07)."""
+    readings: list[float] = []
 
-    async def run() -> list[float]:
-        schedule = SharedSchedule(Path(path), _RATE)
-        out = []
-        for _ in range(n):
-            await schedule.acquire()
-            out.append(time.time())
-        return out
+    def now() -> float:
+        readings.append(time.time())
+        return readings[-1]
 
-    return asyncio.run(run())
+    schedule = SharedSchedule(Path(path), _RATE, now=now)
+    start.wait()  # all three claim at once, so a missing lock has races to lose
+    out = []
+    for _ in range(n):
+        wait = schedule._claim()
+        out.append(readings[-1] + wait)
+    return out
 
 
 def test_three_processes_share_one_schedule(tmp_path) -> None:
     path = str(tmp_path / "ncbi.schedule")
-    with multiprocessing.get_context("spawn").Pool(3) as pool:
-        runs = pool.starmap(_stamps, [(path, 4)] * 3)
-    stamps = sorted(t for run in runs for t in run)
-    assert len(stamps) == 12  # positive control: every process got all its slots
-    gaps = [b - a for a, b in zip(stamps, stamps[1:], strict=False)]
-    # Per-process pacing grants the three processes' first slots together (gaps ~0).
-    assert min(gaps) > 0.7 / _RATE, gaps
-    # And the schedule is not stricter than asked: 12 slots take about 11 periods.
-    assert stamps[-1] - stamps[0] < 11 / _RATE + 1.0
+    ctx = multiprocessing.get_context("spawn")
+    with ctx.Manager() as manager, ctx.Pool(3) as pool:
+        start = manager.Barrier(3)
+        runs = pool.starmap(_slots, [(path, _CLAIMS, start)] * 3)
+    slots = sorted(t for run in runs for t in run)
+    assert len(slots) == 3 * _CLAIMS  # positive control: every process got all its slots
+    gaps = [b - a for a, b in zip(slots, slots[1:], strict=False)]
+    # No two slots closer than one period. Per-process files grant each process its own
+    # sequence (gaps ~0); without the lock two claims read the same free slot (gap 0). A
+    # gap may be longer: a stall that lets the queue fall behind the clock starts the next
+    # slot at "now", 1 run in 12 on a loaded machine. Exact spacing is
+    # test_slots_are_spaced_with_no_burst_after_idle's. (1e-5 s: float spacing at today's
+    # epoch is ~2e-7.)
+    assert min(gaps) >= 1 / _RATE - 1e-5, sorted(gaps)[:5]
 
 
 async def test_slots_are_spaced_with_no_burst_after_idle(tmp_path) -> None:
