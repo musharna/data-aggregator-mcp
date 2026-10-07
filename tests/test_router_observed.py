@@ -183,6 +183,7 @@ async def test_every_search_setting_survives_into_the_page_after_next(monkeypatc
         "pl": True,
         "tt": True,
         "dt": True,
+        "sp": True,
     }
     assert _settings(c2) == _settings(c1)
     # Page 2 searched the same expanded query's two halves with the same pushed filters,
@@ -337,6 +338,7 @@ async def test_a_multi_query_cursor_carries_every_setting_to_the_page_after_next
         "collapse_mirrors": True,
         "pd": True,
         "pl": True,
+        "sp": True,
     }
     assert c1["ahead"]  # the reversed window left positions returned out of order
     assert _settings(c2) == _settings(c1)

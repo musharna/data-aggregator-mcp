@@ -20,6 +20,7 @@ from defusedxml.common import DefusedXmlException
 
 from data_aggregator_mcp import _eutils, ena, geo
 from data_aggregator_mcp._merge import fan_in, interleave
+from data_aggregator_mcp._relevance import with_plurals
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import DataResource, Link, compact
 
@@ -34,6 +35,13 @@ MAX_SIZE = 50
 # together (GEO: "tardigrade" 221, "tun" 464, "tardigrade dehydration tun" 0; probed
 # 2026-10-05); the router names these dbs when a multi-word search comes back empty.
 REQUIRES_EVERY_WORD = True
+# Each plain word goes with its plural: NCBI maps some plurals, never the singular, to a
+# taxon, so "tardigrades" also matches Tardigrada records that never name the word and
+# "tardigrade" does not. SRA "tardigrade anhydrobiosis" found 4 runs and none of the
+# Ramazzottius varieornatus study PRJDB2359; "(tardigrade OR tardigrades) anhydrobiosis"
+# found 37 with all six of its runs (2026-10-07). The OR form never counted fewer than the
+# singular: "plants" adds Viridiplantae, "bees" Anthophila, "mouses" nothing.
+QUERY_PLURALS = True
 
 # Per-db accession search field. NOT uniform: the BioProject index has no ``ACCN``
 # field at all (a term like ``PRJNA231221[ACCN]`` matches ZERO records there, while the
@@ -236,9 +244,12 @@ async def search_subsource(
     *,
     size: int = DEFAULT_SIZE,
     offset: int = 0,
+    plurals: bool = True,
 ) -> tuple[int, list[DataResource]]:
-    """One NCBI db (``geo`` / ``sra`` / ``bioproject``) at its own offset. Raises on failure."""
-    total, recs = await _search_db(client, _DB[subsource], query, min(size, MAX_SIZE), offset)
+    """One NCBI db (``geo`` / ``sra`` / ``bioproject``) at its own offset, each plain word
+    sent with its plural unless ``plurals`` is off. Raises on failure."""
+    q = with_plurals(query) if plurals else query
+    total, recs = await _search_db(client, _DB[subsource], q, min(size, MAX_SIZE), offset)
     return total, [compact(r) for r in recs]
 
 
@@ -248,6 +259,7 @@ async def search(
     *,
     size: int = DEFAULT_SIZE,
     offset: int = 0,
+    plurals: bool = True,
 ) -> tuple[int, list[DataResource]]:
     """Discover across GEO + SRA + BioProject. Returns (summed_total, COMPACT).
 
@@ -255,7 +267,10 @@ async def search(
     router pages ``search_subsource`` per db instead. Raises when every db fails."""
     capped = min(size, MAX_SIZE)
     total, per_db = await fan_in(
-        {sub: search_subsource(client, sub, query, size=capped, offset=offset) for sub in _DB},
+        {
+            sub: search_subsource(client, sub, query, size=capped, offset=offset, plurals=plurals)
+            for sub in _DB
+        },
         what="omics search",
         logger=logger,
     )

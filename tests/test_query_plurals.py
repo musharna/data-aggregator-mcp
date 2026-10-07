@@ -13,12 +13,14 @@ import types
 import httpx
 import pytest
 
-from data_aggregator_mcp import _cursor, _http, datacite, router
+from data_aggregator_mcp import _cursor, _http, datacite, omics, router
 from data_aggregator_mcp._relevance import with_plurals
 from data_aggregator_mcp.models import DataResource
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _S29 = "10.6084/m9.figshare.19184897"  # the Altai study, titled with "snow leopards"
+# R3's Ramazzottius varieornatus study: its records name the species, never "tardigrade"
+_S1 = "PRJDB2359"
 
 
 def test_each_plain_word_is_sent_with_its_plural() -> None:
@@ -78,6 +80,50 @@ async def test_a_cursor_minted_before_plurals_keeps_the_query_as_written(monkeyp
     assert stems == ["snow leopard"] * 3  # positive control: the other source is untouched
 
 
+def _composite(sent: list[str]):
+    """A source paged per sub-source, like NCBI's, that applies ``with_plurals`` unless
+    told not to."""
+
+    async def search_subsource(client, sub, q, *, size=10, offset=0, plurals=True):
+        sent.append(with_plurals(q) if plurals else q)
+        hits = [
+            DataResource(id=f"{sub}:{i}", source=sub, kind="dataset", title="snow leopard")
+            for i in range(3)
+        ]
+        return 3, hits[offset : offset + size]
+
+    return types.SimpleNamespace(
+        search_subsource=search_subsource,
+        SUBSOURCES=("a",),
+        PREFIXES=frozenset(),
+        QUERY_PLURALS=True,
+    )
+
+
+async def test_a_cursor_minted_before_ncbi_got_plurals_keeps_its_query_there(
+    monkeypatch,
+) -> None:
+    """NCBI's sub-sources were sent plurals after the other sources, so a cursor holding
+    "pl" but no "sp" indexes the query as written there and plurals everywhere else."""
+    ncbi: list[str] = []
+    exact: list[str] = []
+    monkeypatch.setattr(
+        router, "_ADAPTERS", {"ncbi": _composite(ncbi), "exact": _recording(exact, plurals=True)}
+    )
+    async with httpx.AsyncClient() as c:
+        page = await router.search_page(c, query="snow leopard", size=1)
+        await router.search_page(c, cursor=page.next_cursor)
+        old = _cursor.decode(page.next_cursor)
+        old.pop("sp", None)
+        await router.search_page(c, cursor=_cursor.encode(old))
+        old.pop("pl", None)
+        await router.search_page(c, cursor=_cursor.encode(old))
+    plural = "(snow OR snows) (leopard OR leopards)"
+    assert ncbi == [plural, plural, "snow leopard", "snow leopard"]
+    # positive control: the source sent plurals first keeps them until "pl" goes too
+    assert exact == [plural, plural, plural, "snow leopard"]
+
+
 class _Sent(Exception):
     """Stops a search at its request, carrying the params it was about to send."""
 
@@ -101,10 +147,13 @@ async def test_each_declaring_source_sends_the_plurals_upstream(monkeypatch, nam
 
 def test_the_sources_that_match_words_exactly() -> None:
     """Each probed live 2026-10-05: the OR form counted between the larger of the two
-    words' counts and their sum. DataONE stems already; GBIF, NCBI and NASA CMR read the
-    OR form some other way. NGDC (2026-10-06): "leopard" 13, "leopards" 1, OR form 13."""
+    words' counts and their sum. DataONE stems already; GBIF and NASA CMR read the OR form
+    some other way. NGDC (2026-10-06): "leopard" 13, "leopards" 1, OR form 13. NCBI
+    (2026-10-07) counted the OR form above the sum when it maps the plural to a taxon
+    ("tardigrades" to Tardigrada) and at the singular's count when the plural is no word
+    ("mouses"), never below the singular."""
     declared = {n for n, a in router._ADAPTERS.items() if getattr(a, "QUERY_PLURALS", False)}
-    assert declared == {"biostudies", "datacite", "ngdc", "omicsdi", "uniprot", "zenodo"}
+    assert declared == {"biostudies", "datacite", "ngdc", "omics", "omicsdi", "uniprot", "zenodo"}
 
 
 @pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
@@ -119,3 +168,19 @@ async def test_live_datacite_finds_a_study_titled_with_the_plural() -> None:
     assert _S29 in dois(plural)  # positive control: the record is there to find
     assert _S29 not in dois(singular)  # the query as written misses it upstream
     assert _S29 in dois(page.results)
+
+
+@pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+async def test_live_ncbi_finds_a_tardigrade_study_that_never_names_the_word() -> None:
+    """NCBI maps "tardigrades", not "tardigrade", to the taxon Tardigrada, and R3's
+    S1 records name only the species Ramazzottius varieornatus."""
+    q = "tardigrade anhydrobiosis"
+    studies = lambda recs: {a for r in recs for a in r.accessions}  # noqa: E731
+    async with httpx.AsyncClient(timeout=90) as c:
+        _, singular = await omics.search_subsource(c, "sra", q, size=50, plurals=False)
+        _, plural = await omics.search_subsource(c, "sra", q, size=50)
+        page = await router.search_page(c, query=q, sources=["omics"], size=50)
+    assert singular  # positive control: the query as written finds tardigrade runs
+    assert _S1 not in studies(singular)  # but none of S1's
+    assert _S1 in studies(plural)
+    assert _S1 in studies(page.results)

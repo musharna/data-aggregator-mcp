@@ -96,15 +96,18 @@ def test_an_sra_experiment_without_a_study_takes_its_summary_title_once() -> Non
 
 
 async def test_a_subsource_search_asks_one_db_for_one_page(monkeypatch) -> None:
-    """``search_subsource`` asks its own db, with the page size capped at ``MAX_SIZE``
-    and no offset unless one is given."""
+    """``search_subsource`` asks its own db for each word with its plural, with the page
+    size capped at ``MAX_SIZE`` and no offset unless one is given; told not to send
+    plurals, it sends the query as written."""
     ncbi = _NCBI(monkeypatch, {"gds": [_GDS]})
     total, recs = await omics.search_subsource(None, "geo", "influenza")
-    assert ncbi.esearch == [("gds", "influenza", omics.DEFAULT_SIZE, 0)]
+    assert ncbi.esearch == [("gds", "(influenza OR influenzas)", omics.DEFAULT_SIZE, 0)]
     assert ncbi.esummary == [("gds", ["6063"])]
     assert (total, [r.id for r in recs]) == (1, ["geo:GDS6063"])
     await omics.search_subsource(None, "bioproject", "q", size=500, offset=30)
     assert ncbi.esearch[-1] == ("bioproject", "q", omics.MAX_SIZE, 30)
+    await omics.search_subsource(None, "geo", "influenza", plurals=False)
+    assert ncbi.esearch[-1] == ("gds", "influenza", omics.DEFAULT_SIZE, 0)
 
 
 async def test_search_passes_its_page_size_to_every_db(monkeypatch) -> None:
@@ -121,13 +124,18 @@ async def test_search_passes_its_page_size_to_every_db(monkeypatch) -> None:
     assert {call[2:] for call in ncbi.esearch[3:]} == {(omics.MAX_SIZE, 7)}
     _total, two = await omics.search(None, "q", size=2)
     assert [r.id for r in two] == ["geo:GDS6063", "sra:SRX35511800"]
+    await omics.search(None, "tardigrade", plurals=False)
+    await omics.search(None, "tardigrade")
+    assert [call[1] for call in ncbi.esearch[-6:]] == ["tardigrade"] * 3 + [
+        "(tardigrade OR tardigrades)"
+    ] * 3
 
 
 async def test_search_names_every_db_when_all_fail(monkeypatch) -> None:
     """A total outage is one error naming each db; one db failing is tolerated."""
 
     async def down(client, db, term, *, retmax, retstart=0):
-        if db == "sra" and term == "partial":
+        if db == "sra" and term == "(partial OR partials)":
             return 0, []
         raise UpstreamUnavailableError(f"{db} down")
 

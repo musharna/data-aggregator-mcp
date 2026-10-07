@@ -318,6 +318,7 @@ def _source_streams(
     plurals: bool,
     title_tier: bool,
     deposit_tier: bool = False,
+    subsource_plurals: bool = False,
     vi: int | None = None,
     groups: Sequence[FacetGroup] = (),
     notes: list[str] | None = None,
@@ -339,7 +340,9 @@ def _source_streams(
 
     An adapter declaring ``QUERY_PLURALS`` sends each plain word with its plural
     upstream; with ``plurals`` off (a cursor minted before it did, whose offsets index
-    the query as written) it is told not to.
+    the query as written) it is told not to. A composite adapter's sub-sources are told
+    not to unless ``subsource_plurals`` is on too: NCBI's were sent plurals later than the
+    other sources, so a cursor minted between holds offsets into the query as written.
 
     An adapter declaring ``TITLE_FIELD`` is sent a plain-words query as two streams that
     split it: the records holding it in that field (``<name>/title``), then the rest. The
@@ -363,6 +366,9 @@ def _source_streams(
         pushed: dict[str, Any] = {}
         if subs:
             limits: dict[str, int] = getattr(adapter, "OPERATOR_LIMITS", {})
+            singular = not (plurals and subsource_plurals) and getattr(
+                adapter, "QUERY_PLURALS", False
+            )
             parts = [
                 (
                     f"{name}/{sub}",
@@ -372,6 +378,7 @@ def _source_streams(
                         client,
                         sub,
                         _within_limit(f"{name}/{sub}", q, plain, groups, limits.get(sub), notes),
+                        **({"plurals": False} if singular else {}),
                     ),
                 )
                 for sub in subs
@@ -805,6 +812,7 @@ async def _multi_query_page(
     query_expansion: QueryExpansion | None,
     pushdown: bool,
     plurals: bool,
+    subsource_plurals: bool,
     taxon_expansion: TaxonExpansion | None = None,
     mesh_expansion: MeshExpansion | None = None,
     tissue_expansion: TissueExpansion | None = None,
@@ -836,6 +844,7 @@ async def _multi_query_page(
             filters=filters,
             pushdown=pushdown,
             plurals=plurals,
+            subsource_plurals=subsource_plurals,
             # Each variant already fans out to every source; the title split would
             # double that again. It is for the single query (R4 measured that path).
             title_tier=False,
@@ -878,6 +887,7 @@ async def _multi_query_page(
                 "collapse_mirrors": collapse_mirrors,
                 "pd": pushdown,
                 "pl": plurals,
+                "sp": subsource_plurals,
             }
             | ({"fg": _encode_groups(groups)} if groups else {})
         )
@@ -959,6 +969,7 @@ async def search_page(
                 query_expansion=None,  # echo is page-1 only; frozen None on continuation
                 pushdown=bool(st.get("pd")),
                 plurals=bool(st.get("pl")),
+                subsource_plurals=bool(st.get("sp")),
                 groups=_decode_groups(st),
             )
         query = st["q"]
@@ -1000,6 +1011,8 @@ async def search_page(
         title_tier = bool(st.get("tt"))
         # And one minted before the deposit tier holds its title matches as one stream.
         deposit_tier = bool(st.get("dt"))
+        # And one minted before NCBI was sent plurals indexes the query as written there.
+        subsource_plurals = bool(st.get("sp"))
         errors: dict[str, str] = {}
     else:
         if query is None:
@@ -1155,6 +1168,7 @@ async def search_page(
                     query_expansion=QueryExpansion(input=original_query, variants=raw_variants),
                     pushdown=True,
                     plurals=True,
+                    subsource_plurals=True,
                     taxon_expansion=expansion,
                     mesh_expansion=disease_expansion,
                     tissue_expansion=tissue_expansion,
@@ -1170,6 +1184,7 @@ async def search_page(
         plurals = True
         title_tier = True
         deposit_tier = True
+        subsource_plurals = True
 
     adapters = _select(sources)
     names = list(adapters)
@@ -1184,6 +1199,7 @@ async def search_page(
         plurals=plurals,
         title_tier=title_tier,
         deposit_tier=deposit_tier,
+        subsource_plurals=subsource_plurals,
         groups=groups,
         notes=notes,
     )
@@ -1230,6 +1246,7 @@ async def search_page(
                 "pl": plurals,
                 "tt": title_tier,
                 "dt": deposit_tier,
+                "sp": subsource_plurals,
             }
             | ({"fg": _encode_groups(groups)} if groups else {})
         )
