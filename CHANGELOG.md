@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.67.0] - 2026-10-07
+
 ### Added
 
 - A search hit from OmicsDI or NCBI omics, which match only records holding every query
