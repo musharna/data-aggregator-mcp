@@ -41,3 +41,6 @@
 - {task: R4, id: "dataone:sha256:0083b16f54f100ec2cdd80b8818ce9e36cd2e7175cb48629027c312764b1254e", verdict: "alias:S20", reason: "DataONE solr: urn:node:DRYAD, seriesId https://doi.org/10.5061/dryad.7d7wm389t (S20)."}
 - {task: R4, id: "10.5061/dryad.47d7wm3dz", verdict: reject, reason: "DataCite: blue sheep abundance in Nar Phu; not framed on snow leopard; key near miss."}
 - {task: R4, id: "dataone:sha256:4424084cdb592f858c20ff4cf2ce04f5fea080b3c0f86f741ae973c765e08e5f", verdict: "alias:S9", reason: "DataONE solr: urn:node:DRYAD, seriesId https://doi.org/10.5061/dryad.j9kd51cjp (S9)."}
+# 2026-10-06 three-arm re-run on 0.66.0: two pooled entries, both named near misses in the key built before any run.
+- {task: R2, id: GSE284768, verdict: reject, reason: "Key near miss (R2.yaml): Otsuki 2025 positional memory, GSE284768/GSE243137, bulk RNA-seq of FACS-purified blastema/dermal populations, not single-cell."}
+- {task: R4, id: "10.6084/m9.figshare.12996977", verdict: reject, reason: "Key near miss (R4.yaml): Snowleopard_WGS_poolseq_VCF, a derived cross-species poolseq analysis, not field sampling."}
