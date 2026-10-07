@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.67.1] - 2026-10-07
+
 ### Fixed
 
 - NCBI requests are paced machine-wide, not per server process: NCBI counts the IP,
