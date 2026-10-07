@@ -57,10 +57,11 @@ def test_copies_and_versions_share_a_key_and_distinct_deposits_do_not() -> None:
     )
     concept = _rec("datacite:z0", doi=CONCEPT)
     assert key(a) == key(b) == key(concept) == f"doi:{CONCEPT}"
+
     # Runs of one study are one deposit; runs of another study are another.
-    run = lambda n, study: _rec(
-        f"sra:SRX{n}", kind="sequencing_run", acc=[f"SRX{n}", study, "PRJNA9"]
-    )
+    def run(n: int, study: str) -> DataResource:
+        return _rec(f"sra:SRX{n}", kind="sequencing_run", acc=[f"SRX{n}", study, "PRJNA9"])
+
     assert key(run(1, "SRP9")) == key(run(2, "SRP9")) == "study:SRP9"
     assert key(run(3, "ERP8")) == "study:ERP8"
     # Positive controls: a supplement link is a different object, not a copy; a paper's

@@ -51,7 +51,9 @@ async def _sent(
     reqs = httpx_mock.get_requests()
     assert len(reqs) == n
     return tuple(
-        sorted(reqs, key=lambda r: (" AND NOT title" in (q := r.url.params[param]), " AND NOT " in q))
+        sorted(
+            reqs, key=lambda r: (" AND NOT title" in (q := r.url.params[param]), " AND NOT " in q)
+        )
     )
 
 
