@@ -191,6 +191,39 @@ Where the 17 keyed studies no run found are held:
 - **PRIDE, 2:** R5 S7 S8, reached through OmicsDI; web found both.
 - **Zenodo S27 and OSF S34,** one each.
 
+## All three arms on 0.66.0
+
+The same five tasks, two runs each, all three arms on 2026-10-06, with the dam arm on
+0.66.0 (NGDC as a source, #256; data deposits a paper names, #258). ToolUniverse and the
+web arm are unchanged. Two new pooled entries, both near misses the key already named
+(R2 GSE284768, R4 figshare 12996977), were rejected; nothing was left unjudged. Per-run
+data: `scores_2026-10-06_066.json`.
+
+| task | dam | tu | web |
+|---|---|---|---|
+| R1 | 0.85 / 0.92 | 0.85 / 0.69 | 0.92 / 0.85 |
+| R2 | 1.00 / 1.00 | 0.60 / 0.40 | 0.90 / 0.80 |
+| R3 | 0.67 / 0.67 | 0.67 / 0.56 | 0.89 / 0.78 |
+| R4 | 0.86 / 0.57 | 0.57 / 0.77 | 0.83 / 0.80 |
+| R5 | 0.75 / 0.75 | 0.62 / 0.50 | 0.25 / 0.62 |
+
+| arm | median recall | mean recall | precision | duplicates | median tool calls | median input tokens | cost (10 runs) |
+|---|---|---|---|---|---|---|---|
+| dam | 0.80 (was 0.72) | 0.80 | 0.86 | 3 | 7.5 | 362k | $5.12 |
+| tu  | 0.61 (was 0.59) | 0.62 | 0.87 | 3 | 20.5 | 611k | $5.73 |
+| web | 0.81 (was 0.82) | 0.76 | 0.89 | 0 | 15 | 426k | $5.05 |
+
+- **This server now ties web search** (median 0.80 vs 0.81, mean 0.80 vs 0.76) at half
+  the tool calls, and is 19 points ahead of ToolUniverse. Both other arms held within
+  2 points of the first re-run, so the dam arm's 8 points are not run-to-run drift.
+- **NGDC carried R2:** both runs found all 10 studies, including S5 and S10, which this
+  server had never found and the earlier runs had found once between them (ToolUniverse,
+  2026-10-05). R1 S14 (NGDC) was found here only; web found R1 S13 once.
+- Found by this server in some run and by web in none: R1 S14, R4 S2 and S36, R5 S3,
+  S4 and S5. The reverse: R1 S13, R3 S9, and R5 S7 and S8 (PRIDE).
+- Web still leads on R3 (tardigrades, 0.83 vs 0.67 mean). Its R5 run 1 (0.25) is the
+  widest swing of any arm on any task.
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the
