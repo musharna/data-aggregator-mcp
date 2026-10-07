@@ -8,7 +8,9 @@ wading through the fan-out.
 
 Two layers, applied in order by the router:
 
-1. :func:`dedup_by_doi` — exact DOI equality. Cheap and certain.
+1. :func:`dedup_by_deposit` — one hit per deposit (:func:`deposit_key`): the same DOI,
+   a copy or version linked to it, or runs of one sequencing study. Cheap and certain:
+   only identities the records themselves state.
 2. :func:`collapse_mirrors` — opt-in content dedup ON TOP of that, for the same
    dataset deposited in several repos under different (or no) DOIs.
 
@@ -21,6 +23,7 @@ from __future__ import annotations
 
 import itertools
 import re
+from collections.abc import Callable
 
 from data_aggregator_mcp import sources
 from data_aggregator_mcp.models import DataResource, Mirror
@@ -53,21 +56,60 @@ def dedup_by_doi(resources: list[DataResource]) -> list[DataResource]:
     so the fetchable copy survives regardless of encounter order; ties keep the first seen.
     Records without a DOI are always kept.
     """
-    by_doi: dict[str, DataResource] = {}
+    return _dedup_by(resources, lambda r: r.doi.casefold() if r.doi else None)
+
+
+# A record linked to another DOI by one of these is a copy of that deposit: figshare's
+# ``.v1`` DOI "IsIdenticalTo" its unversioned one, and every Zenodo version "IsVersionOf"
+# its concept DOI. (An "IsVersionOf" that points at the previous version instead only
+# collapses less, never two deposits into one.)
+_SAME_DEPOSIT_RELS = ("is_identical_to", "is_version_of")
+_DOI_PREFIX = re.compile(r"^(?:https?://(?:dx\.)?doi\.org/|doi:)", re.IGNORECASE)
+# A sequencing run's study accession: SRA, ENA and DDBJ number studies SRP, ERP and DRP.
+_STUDY_ACCESSION = re.compile(r"^[SED]RP\d+$")
+
+
+def deposit_key(r: DataResource) -> str | None:
+    """What makes two search hits the same deposit: the DOI a record is a copy or version
+    of, else its own DOI; for a sequencing run with no DOI, its study. None when nothing
+    identifies it beyond its id. Round 2 (2026-10-07): page 1 of "snow leopard" spent 7
+    of 50 hits on runs of one SRA study and 6 on second and third copies of three
+    deposits, while three keyed studies waited just past it."""
+    for link in r.links:
+        if link.rel in _SAME_DEPOSIT_RELS and link.target_id:
+            return "doi:" + _DOI_PREFIX.sub("", link.target_id.strip()).casefold()
+    if r.doi:
+        return "doi:" + r.doi.casefold()
+    if r.kind == "sequencing_run":
+        study = next((a for a in r.accessions if _STUDY_ACCESSION.match(a)), None)
+        return f"study:{study}" if study else None
+    return None
+
+
+def dedup_by_deposit(resources: list[DataResource]) -> list[DataResource]:
+    """:func:`dedup_by_doi` over :func:`deposit_key`: one hit per deposit, the most
+    fetchable copy winning, ties to the first seen."""
+    return _dedup_by(resources, deposit_key)
+
+
+def _dedup_by(
+    resources: list[DataResource], key_of: Callable[[DataResource], str | None]
+) -> list[DataResource]:
+    by_key: dict[str, DataResource] = {}
     order: list[str] = []
-    no_doi: list[DataResource] = []
+    keyless: list[DataResource] = []
     for r in resources:
-        if not r.doi:
-            no_doi.append(r)
+        key = key_of(r)
+        if key is None:
+            keyless.append(r)
             continue
-        key = r.doi.casefold()
-        existing = by_doi.get(key)
+        existing = by_key.get(key)
         if existing is None:
-            by_doi[key] = r
+            by_key[key] = r
             order.append(key)
         elif fetch_priority(r) > fetch_priority(existing):
-            by_doi[key] = r
-    return [by_doi[k] for k in order] + no_doi
+            by_key[key] = r
+    return [by_key[k] for k in order] + keyless
 
 
 _PUNCT_RE = re.compile(r"[^\w\s]", re.UNICODE)

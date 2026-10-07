@@ -227,7 +227,7 @@ def test_a_search_hit_normalises_in_full() -> None:
     assert biostudies._normalize_hit(hit) == DataResource(
         id="biostudies:S-EPMC9542112",
         source="biostudies",
-        kind="study",
+        kind="publication",
         title="Drought legacies and ecosystem responses to subsequent drought.",
         year=2022,
         accessions=["S-EPMC9542112"],

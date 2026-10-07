@@ -147,7 +147,8 @@ def _select(sources: list[str] | None) -> dict[str, SourceAdapter]:
 # surface the merge path — and its tests — already address.
 _DISCOVERY_ONLY_SOURCES = _mirror.DISCOVERY_ONLY_SOURCES
 _fetch_priority = _mirror.fetch_priority
-_dedup = _mirror.dedup_by_doi
+_dedup = _mirror.dedup_by_deposit
+_deposit_key = _mirror.deposit_key
 _normalize_title = _mirror.normalize_title
 _first_author_name_key = _mirror.first_author_name_key
 _fingerprint_key = _mirror.fingerprint_key
@@ -582,8 +583,9 @@ async def _fetch_page(
             for s in streams
         ]
     )
-    # Dedup: the same id twice (two query variants) keeps the first; a shared DOI keeps
-    # the _dedup winner. Losers are not emitted but DO occupy their upstream position.
+    # Dedup: the same id twice (two query variants) keeps the first; copies of one deposit
+    # (a shared DOI, a version of the same concept, runs of one study) keep the _dedup
+    # winner. Losers are not emitted but DO occupy their upstream position.
     seen_ids: set[str] = set()
     unique: list[tuple[str, int, DataResource]] = []
     dropped: list[tuple[str, int, DataResource]] = []
@@ -607,12 +609,13 @@ async def _fetch_page(
 
     best: dict[str, tuple[int, ...]] = {}
     for c in unique:
-        if c[2].doi:
+        if dk := _deposit_key(c[2]):
             s = score(c[2])
-            best[c[2].doi.casefold()] = max(best.get(c[2].doi.casefold(), s), s)
+            best[dk] = max(best.get(dk, s), s)
 
     def rank(c: tuple[str, int, DataResource]) -> tuple[int, ...]:
-        return best[c[2].doi.casefold()] if c[2].doi else score(c[2])
+        dk = _deposit_key(c[2])
+        return best[dk] if dk else score(c[2])
 
     # Stable: hits that name as much of the search keep the round-robin order.
     kept.sort(key=rank, reverse=True)
@@ -627,7 +630,7 @@ async def _fetch_page(
 
     handled: dict[str, set[int]] = {s.key: set() for s in streams}
     handled_ids: set[str] = set()
-    handled_dois: set[str] = set()
+    handled_deposits: set[str] = set()
     emitted: list[DataResource] = []
     removed: dict[str, int] = {}  # handled records the post-filter dropped, per stream key
     used = 0
@@ -650,15 +653,15 @@ async def _fetch_page(
             break
         handled[key].add(i)
         handled_ids.add(r.id)
-        if r.doi:
-            handled_dois.add(r.doi.lower())
+        if dk := _deposit_key(r):
+            handled_deposits.add(dk)
         if passes:
             emitted.append(r)
             used += cost
         else:
             removed[key] = removed.get(key, 0) + 1
     for key, i, r in dropped:
-        if r.id in handled_ids or (r.doi and r.doi.lower() in handled_dois):
+        if r.id in handled_ids or _deposit_key(r) in handled_deposits:
             handled[key].add(i)
     # Hits ranked but not sent stay unhandled, so the cursor fetches them again. Saying
     # how many name the query is the one signal a page has that the next is on topic:
