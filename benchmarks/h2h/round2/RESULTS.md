@@ -278,6 +278,39 @@ Per-run data: `scores_2026-10-07_0671.json` and `scores_2026-10-07_066_rescored.
 - Over both versions (four runs a task), the dam and web arms tie (mean recall 0.77 vs
   0.78) and both lead ToolUniverse (0.63). Run-to-run spread on one task reaches 0.37.
 
+## Deposits first, one hit per deposit (#266)
+
+Web search found the R4 figshare and Zenodo deposits in every run; this server ranked
+them behind papers sharing their title words, and page 1, the only page an agent read,
+spent 29 of its 50 hits on 7 runs of one SRA study, 6 extra copies of three deposits and
+16 Europe PMC paper imports filed as BioStudies studies. #266 ranks deposits first among
+equal hits, collapses copies, versions and runs of one study, and files S-EPMC records as
+publications. The dam arm alone, two runs on 2026-10-07; two pooled entries, both near
+misses the key named, were rejected. Per-run data: `scores_2026-10-07_266.json`.
+
+| task | dam on #266 | dam before (4 runs) | web (4 runs) |
+|---|---|---|---|
+| R1 | 0.85 / 0.92 | 0.85 0.92 0.85 0.77 | 0.92 0.85 0.85 0.92 |
+| R2 | 0.90 / 1.00 | 1.00 1.00 0.90 0.90 | 0.90 0.80 0.70 0.90 |
+| R3 | 0.78 / 1.00 | 0.67 0.67 0.56 0.56 | 0.89 0.78 0.78 0.67 |
+| R4 | 0.83 / 0.83 | 0.83 0.56 0.69 0.67 | 0.81 0.78 0.81 0.83 |
+| R5 | 0.88 / 0.75 | 0.75 0.75 0.75 0.75 | 0.25 0.62 0.88 0.62 |
+
+| | dam on #266 | dam before | web |
+|---|---|---|---|
+| mean recall | 0.87 | 0.77 | 0.78 |
+| median recall | 0.86 | 0.75 | 0.81 |
+| precision | 0.87 | 0.87 | 0.90 |
+| duplicates (10 runs) | 5 | 2 to 3 | 0 |
+| median tool calls | 7.5 | 7.5 to 10 | 15 to 17 |
+
+- **R4:** S28, S29, S30 and S32 in both runs (one run of four before), and S37 for the
+  first time. S31 (figshare) was missed in both (four of four before), S5 and S19 in one.
+- **R3:** S8 in both runs (never before) and S1 in both (one of four): tardigrade SRA
+  runs of one study no longer fill the page.
+- The web arm was not re-run; its numbers are the two earlier sets. Two runs a task, so
+  a confirming three-arm run is the test of the lead.
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the

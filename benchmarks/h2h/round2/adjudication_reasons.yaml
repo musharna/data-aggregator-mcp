@@ -50,3 +50,6 @@
 - {task: R4, id: "10.17630/sta/1247", verdict: reject, reason: "DataCite: resourceTypeGeneral Text, University of St Andrews thesis developing spatial capture-recapture methods for snow leopard camera traps. Methods study, no data deposit."}
 - {task: R5, id: "10.1021/pr300692t.s003", verdict: reject, reason: "Key exclusion (R5.yaml): Longworth 2012 HILIC/SCX N-starvation proteomics has no archive deposit; this is the ACS journal supplement, which the key does not count as a dataset."}
 - {task: R5, id: "10.25675/3.023590", verdict: reject, reason: "DataCite: resourceTypeGeneral Other, Colorado State University 2017 dissertation on nitrogen use in heterotrophic C. reinhardtii. A thesis, not a mass-spectrometry deposit."}
+# 2026-10-07 dam arm with deposits ranked first and one hit per deposit (#266): two pooled entries, both near misses the key named.
+- {task: R4, id: PRJNA693792, verdict: reject, reason: "Key near miss (R4.yaml): 'Genome sequencing of snow leopard', among the reference-genome projects of single captive or unstated animals with no field sampling."}
+- {task: R4, id: PRJNA491757, verdict: reject, reason: "Key near miss (R4.yaml): snow leopard and Tibetan mastiff gut-microbe BioProject; NCBI SRA count for it 0 (2026-10-07), as the key recorded."}
