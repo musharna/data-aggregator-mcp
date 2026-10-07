@@ -610,8 +610,8 @@ async def _fetch_page(
     best: dict[str, tuple[int, ...]] = {}
     for c in unique:
         if dk := _deposit_key(c[2]):
-            s = score(c[2])
-            best[dk] = max(best.get(dk, s), s)
+            hit = score(c[2])
+            best[dk] = max(best.get(dk, hit), hit)
 
     def rank(c: tuple[str, int, DataResource]) -> tuple[int, ...]:
         dk = _deposit_key(c[2])
