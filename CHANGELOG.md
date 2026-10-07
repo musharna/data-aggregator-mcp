@@ -13,6 +13,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   are now asked for in two parts, deposits first. For "snow leopard", figshare datasets
   that papers with the same words in their titles had pushed to 213th or past 240th now
   rank 66th to 99th, and the first 240 hits hold 31 figshare records instead of 9.
+- A search shows each deposit once: copies and versions a record links to (figshare's
+  `.v1` DOI and its unversioned twin, the versions of one Zenodo concept) and the runs of
+  one sequencing study collapse to one hit, the most fetchable copy kept. Zenodo records
+  now link their concept DOI (`is_version_of`), as DataCite's copies of them already did.
+- BioStudies `S-EPMC` records, Europe PMC's imports of papers with their supplementary
+  files, are `kind="publication"`, not `"study"`. Page 1 of "snow leopard" (50 hits) had
+  spent 7 slots on runs of one study, 6 on extra copies and 16 on these papers; it now
+  holds 36 answer-key studies instead of 25, including the four it was missing.
 
 ## [0.67.1] - 2026-10-07
 
