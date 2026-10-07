@@ -1,7 +1,8 @@
 """NCBI E-utilities plumbing (esearch + esummary + elink JSON; efetch XML/text).
 
-Optional ``NCBI_API_KEY`` env var raises the NCBI rate limit (3→10 req/s) and is
-appended automatically when present. Normalization lives in the adapters, not here.
+Optional ``NCBI_API_KEY`` env var raises the NCBI rate limit (3→10 req/s; ``_ratelimit``
+paces at two thirds of it, machine-wide) and is appended automatically when present.
+Normalization lives in the adapters, not here.
 """
 
 from __future__ import annotations

@@ -18,6 +18,7 @@ _APP_ENV_VARS = (
     "DATAVERSE_BASE_URL",
     "DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS",
     "DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS",
+    "DATA_AGGREGATOR_MCP_STATE_DIR",
     "DATA_GOV_API_KEY",
     "EMBEDDING_API_BASE",
     "EMBEDDING_API_KEY",
@@ -60,7 +61,7 @@ def _reset_process_singletons():
 
 
 @pytest.fixture(autouse=True)
-def _isolate_app_env(monkeypatch):
+def _isolate_app_env(monkeypatch, tmp_path):
     """Run every test against an empty server configuration.
 
     A test that wants a variable set says so with ``monkeypatch.setenv`` — which still
@@ -78,6 +79,11 @@ def _isolate_app_env(monkeypatch):
     # this themselves — see tests/test_egress.py.
     monkeypatch.setenv("DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS", "1")
     egress._clear_cache()
+    # Mocked requests pace against a private NCBI schedule: the machine's would make
+    # them wait on live servers here, and delay those. A live run keeps the machine's,
+    # since its requests do reach NCBI.
+    if os.environ.get("DATA_AGGREGATOR_MCP_LIVE") != "1":
+        monkeypatch.setenv(_ratelimit.STATE_DIR_ENV, str(tmp_path))
 
 
 @pytest.fixture

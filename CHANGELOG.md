@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- NCBI requests are paced machine-wide, not per server process: NCBI counts the IP,
+  so several Claude sessions (or parallel runs) each pacing themselves at 3/s together
+  sent several times that, and searches lost GEO, SRA or BioProject to HTTP 429. Three
+  processes running five searches each lost a stream on every page before (one search
+  fell from 1,652 hits to 0) and on none after. The schedule lives in a lock file under
+  `~/.cache/data-aggregator-mcp` (`DATA_AGGREGATOR_MCP_STATE_DIR` moves it).
+- NCBI is paced at two thirds of its documented limit (2/s, 6.7/s with a key) with no
+  burst: one process spacing requests exactly 1/3 s apart still drew 429 on about one
+  in five. NCBI searches are slower, and complete.
+
 ## [0.67.0] - 2026-10-07
 
 ### Added

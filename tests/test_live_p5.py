@@ -23,8 +23,8 @@ async def test_live_health_probe_shape():
 
 @pytest.mark.asyncio
 async def test_live_ncbi_rate_pacing():
-    """6 real NCBI esearch calls on a 3/s bucket must span >= ~1s (real CLI path,
-    not a mock) — the real-execution check that the limiter actually paces."""
+    """6 real NCBI esearch calls at 2/s with no burst must span >= ~2.5 s (real CLI
+    path, not a mock) — the real-execution check that the limiter actually paces."""
     from data_aggregator_mcp import _eutils, _ratelimit
 
     _ratelimit.reset()
@@ -33,4 +33,4 @@ async def test_live_ncbi_rate_pacing():
         for _ in range(6):
             await _eutils.esearch(client, "pubmed", "cancer", retmax=1)
         elapsed = time.monotonic() - start
-    assert elapsed >= 0.9  # ~ (6 - capacity 3) / 3 s of forced pacing
+    assert elapsed >= 2.4  # (6 - 1) slots / 2 per s of forced pacing

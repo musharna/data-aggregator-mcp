@@ -107,19 +107,23 @@ async def test_concurrent_acquirers_are_served_in_arrival_order() -> None:
     assert clk.t == pytest.approx(1.0)
 
 
-async def test_buckets_persist_per_name_with_the_rate_for_that_name(monkeypatch) -> None:
+async def test_buckets_persist_per_name_with_the_rate_for_that_name(monkeypatch, tmp_path) -> None:
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    monkeypatch.setenv(_ratelimit.STATE_DIR_ENV, str(tmp_path))
     await _ratelimit.acquire("NCBI esearch (pubmed)", "https://eutils.ncbi.nlm.nih.gov/x")
     ncbi = _ratelimit._BUCKETS["ncbi"]
     await _ratelimit.acquire("Zenodo search", "https://zenodo.org/api/records")
     default = _ratelimit._BUCKETS["default"]
-    await _ratelimit.acquire("NCBI efetch (sra)", "https://eutils.ncbi.nlm.nih.gov/y")
+    # Back to back: the second NCBI slot waits a third of a second, refilling `default`.
     await _ratelimit.acquire("EBI OLS", "https://www.ebi.ac.uk/ols4/api/search")
+    await _ratelimit.acquire("NCBI efetch (sra)", "https://eutils.ncbi.nlm.nih.gov/y")
     buckets = _ratelimit._BUCKETS
     assert buckets == {"ncbi": ncbi, "default": default}  # reused, not replaced
-    assert (ncbi.rate, ncbi.capacity) == (3.0, 3.0)
+    # NCBI: the machine-wide schedule in the state directory, 2/s with no burst.
+    assert isinstance(ncbi, _ratelimit.SharedSchedule)
+    assert ncbi.path == tmp_path / "ncbi.schedule"
+    assert ncbi.rate == pytest.approx(2.0)
     assert (default.rate, default.capacity) == (10.0, 10.0)
-    assert ncbi._tokens == pytest.approx(1.0, abs=0.01)  # two of three spent
     assert default._tokens == pytest.approx(8.0, abs=0.01)
 
 
