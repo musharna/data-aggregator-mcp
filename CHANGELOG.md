@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Search ranks a data deposit (dataset, sequencing run, study) before a paper, figure
+  or tool among hits that match the search equally. DataCite and Zenodo title matches
+  are now asked for in two parts, deposits first. For "snow leopard", figshare datasets
+  that papers with the same words in their titles had pushed to 213th or past 240th now
+  rank 66th to 99th, and the first 240 hits hold 31 figshare records instead of 9.
+
 ## [0.67.1] - 2026-10-07
 
 ### Fixed
