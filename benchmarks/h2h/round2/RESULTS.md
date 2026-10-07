@@ -243,6 +243,41 @@ left unjudged. Per-run data: `scores_2026-10-07_r5_unshown.json`.
 Both runs resolved PXD055071 after its hit named "nitrogen" as unshown, and listed it.
 S7 (PXD036778) is still missed: its OmicsDI record says "N-starved", never "nitrogen".
 
+## All three arms on 0.67.1
+
+The same five tasks, two runs each, all three arms on 2026-10-07, with the dam arm on
+0.67.1 (`unshown_terms`, #261; NCBI paced machine-wide at 2/s, #263). Five pooled entries
+were judged (`adjudication_reasons.yaml`): one study the key missed was added (R4 A1, a
+Zenodo snow leopard corridor deposit), one is optional (R4 B2) and three were rejected.
+The 0.66.0 runs are rescored with the same rulings, so its R4 reads 0.83 / 0.56 here.
+Per-run data: `scores_2026-10-07_0671.json` and `scores_2026-10-07_066_rescored.json`.
+
+| task | dam | tu | web |
+|---|---|---|---|
+| R1 | 0.85 / 0.77 | 0.69 / 0.85 | 0.85 / 0.92 |
+| R2 | 0.90 / 0.90 | 0.50 / 0.60 | 0.70 / 0.90 |
+| R3 | 0.56 / 0.56 | 0.44 / 0.67 | 0.78 / 0.67 |
+| R4 | 0.69 / 0.67 | 0.69 / 0.56 | 0.81 / 0.83 |
+| R5 | 0.75 / 0.75 | 0.75 / 0.62 | 0.88 / 0.62 |
+
+| arm | median recall (0.66.0) | mean recall (0.66.0) | precision | duplicates | median tool calls | median input tokens | median wall | cost (10 runs) |
+|---|---|---|---|---|---|---|---|---|
+| dam | 0.75 (0.79) | 0.74 (0.80) | 0.87 | 2 | 10 | 427k | 136 s | $5.32 |
+| tu  | 0.65 (0.61) | 0.64 (0.62) | 0.88 | 1 | 23.5 | 679k | 109 s | $6.57 |
+| web | 0.82 (0.80) | 0.80 (0.76) | 0.91 | 0 | 17 | 571k | 180 s | $5.39 |
+
+- **NCBI 429s fell from 13 mentions in 6 dam runs to 2 in 1.** The dam arm's median wall
+  rose from 96 s to 136 s: NCBI is now paced, not refused.
+- **The dam arm's 5-point drop is not the rate limiter.** Of the 7 studies a 0.66.0 run
+  found and no 0.67.1 run did, 6 are outside NCBI (R1 S14 in NGDC; R4 S28, S29, S30 and
+  S32 on figshare or Zenodo) and each came up in one of the two 0.66.0 runs only, four
+  of them in the same run; no 0.67.1 search returned any of the six, and none timed out. R3 S1 came
+  back in a 0.67.1 search and was not listed.
+- **R5 S8 held in one run of two.** Both runs saw PXD055071 with "nitrogen" unshown; run 2
+  resolved and listed it (and S7), run 1 did not. The 0.88 / 0.88 above was two runs.
+- Over both versions (four runs a task), the dam and web arms tie (mean recall 0.77 vs
+  0.78) and both lead ToolUniverse (0.63). Run-to-run spread on one task reaches 0.37.
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the
