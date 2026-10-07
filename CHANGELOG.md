@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.69.0] - 2026-10-07
+
 ### Changed
 
 - GEO, SRA and BioProject are sent each plain word of a query with its plural, as
