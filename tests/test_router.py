@@ -432,12 +432,18 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
         httpx_mock, "datacite", "rna", json={"data": [_DATACITE_ITEM], "meta": {"total": 1}}
     )
     httpx_mock.add_response(
-        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=%28rna+OR+rnas%29&retmax=10&retmode=json",
+        url="https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=rna&retmax=10&retmode=json",
         json={"esearchresult": {"count": "1", "idlist": ["1"]}},
     )
     for db in ("sra", "bioproject"):
         httpx_mock.add_response(
-            url=f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db={db}&term=%28rna+OR+rnas%29&retmax=10&retmode=json",
+            url=f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db={db}&term=rna&retmax=10&retmode=json",
+            json={"esearchresult": {"count": "0", "idlist": []}},
+        )
+    # what "rnas" adds to each db, asked for as a stream of its own
+    for db in ("gds", "sra", "bioproject"):
+        httpx_mock.add_response(
+            url=f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db={db}&term=%28%28rna+OR+rnas%29%29+NOT+%28rna%29&retmax=10&retmode=json",
             json={"esearchresult": {"count": "0", "idlist": []}},
         )
     httpx_mock.add_response(
