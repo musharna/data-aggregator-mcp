@@ -25,7 +25,9 @@ it just cannot make the integrity claim that Zenodo/ENA fetches make.
 Total counts are ESTIMATES on the cross-collection search: the API returns
 ``isTotalHitsExact: false`` there (consecutive pages reported 1549 then 1550), and
 true only within a single collection. We pass the number through as given rather
-than implying a precision the source does not have. kind="study".
+than implying a precision the source does not have. kind="study", except an ``S-EPMC``
+record, which is Europe PMC's import of a paper (title, abstract, supplementary files):
+kind="publication".
 """
 
 from __future__ import annotations
@@ -194,6 +196,15 @@ def _xrefs(section: dict[str, Any]) -> list[tuple[str, str]]:
     return out
 
 
+def _kind(acc: str) -> str:
+    """An ``S-EPMC`` accession is Europe PMC's import of a paper: its record holds the
+    paper's title and abstract (``DataSource: Europe PMC``) and its supplementary files.
+    Read as studies, they filled 16 of the 50 hits on page 1 of "snow leopard" as data,
+    ahead of the deposits a search for data wants (2026-10-07); every other collection
+    (ArrayExpress, BioImages, S-BSST submissions) holds studies."""
+    return "publication" if acc.startswith("S-EPMC") else "study"
+
+
 def _normalize_hit(hit: dict[str, Any]) -> DataResource:
     """Build a compact record from a search hit (no detail call)."""
     acc = str(hit.get("accession") or "")
@@ -203,7 +214,7 @@ def _normalize_hit(hit: dict[str, Any]) -> DataResource:
     return DataResource(
         id=f"biostudies:{acc}",
         source="biostudies",
-        kind="study",
+        kind=_kind(acc),
         title=str(hit.get("title") or acc),
         year=year,
         accessions=[acc] if acc else [],
@@ -247,7 +258,7 @@ def _normalize_study(body: dict[str, Any], listed: list[Any] | None = None) -> D
     return DataResource(
         id=f"biostudies:{acc}",
         source="biostudies",
-        kind="study",
+        kind=_kind(acc),
         title=title,
         year=year,
         description=sec.get("Description") or None,

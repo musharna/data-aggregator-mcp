@@ -76,6 +76,8 @@ _KIND_MAP = {
     "publication": "publication",
     "software": "software",
 }
+# The records the router ranks first among title matches: the types read as datasets.
+DEPOSIT_CLAUSE = _pushdown.kind_clause(_KIND_FIELD, _KIND_MAP, "dataset", quoted=True)
 
 
 def _opt(value: object, kind: type) -> bool:
@@ -168,6 +170,17 @@ def _is_last_version(meta: dict[str, Any]) -> bool | None:
     return versions[0].get("is_last") if versions else None
 
 
+def _concept_link(record: dict[str, Any]) -> list[Link]:
+    """The version's link to its concept DOI, as DataCite gives every Zenodo version
+    ("IsVersionOf"); none for the concept itself or a record with no version set. Without
+    it, a Zenodo record and DataCite's copies of its other versions read as unrelated
+    deposits (three copies of R4 S26 on one page, 2026-10-07)."""
+    concept, doi = record.get("conceptdoi"), record.get("doi")
+    if not isinstance(concept, str) or not concept or concept == doi:
+        return []
+    return [Link(rel="is_version_of", target_id=concept)]
+
+
 def _normalize(record: dict[str, Any]) -> DataResource:
     meta = record["metadata"]
     rtype = (meta.get("resource_type") or {}).get("type")
@@ -213,7 +226,8 @@ def _normalize(record: dict[str, Any]) -> DataResource:
             Link(rel=_rel(r["relation"]), target_id=r["identifier"])
             for r in (meta.get("related_identifiers") or [])
             if r.get("relation") and r.get("identifier")
-        ],
+        ]
+        + _concept_link(record),
         files=files,
         metrics=metrics,
         is_latest=_is_last_version(meta),

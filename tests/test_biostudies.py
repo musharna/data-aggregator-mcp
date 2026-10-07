@@ -48,7 +48,12 @@ async def test_search_normalizes_real_hits() -> None:
 
     assert total == SEARCH["totalHits"]
     assert recs and all(r.id.startswith("biostudies:") for r in recs)
-    assert all(r.source == "biostudies" and r.kind == "study" for r in recs)
+    assert all(r.source == "biostudies" for r in recs)
+    # Europe PMC's import of a paper is a publication; an ArrayExpress series a study.
+    assert [(r.id, r.kind) for r in recs] == [
+        ("biostudies:S-EPMC9542112", "publication"),
+        ("biostudies:E-GEOD-30436", "study"),
+    ]
     # A hit's own accession is addressable, so relate can key on it.
     assert recs[0].accessions == [SEARCH["hits"][0]["accession"]]
     assert all(r.title for r in recs)

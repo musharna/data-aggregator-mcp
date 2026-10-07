@@ -16,7 +16,8 @@ from data_aggregator_mcp import _mirror, router, sources
 def test_router_reexports_are_the_extracted_objects():
     """router keeps the historical private names, but they ARE the _mirror objects —
     no copy that could drift, and the existing tests keep testing live code."""
-    assert router._dedup is _mirror.dedup_by_doi
+    assert router._dedup is _mirror.dedup_by_deposit
+    assert router._deposit_key is _mirror.deposit_key
     assert router._collapse_mirrors is _mirror.collapse_mirrors
     assert router._fetch_priority is _mirror.fetch_priority
     assert router._fingerprint_key is _mirror.fingerprint_key
