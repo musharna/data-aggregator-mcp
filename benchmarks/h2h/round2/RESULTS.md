@@ -362,6 +362,36 @@ search. The dam arm alone, R3, two runs per version, 2026-10-07 ($1.88):
   agents searched *Hypsibius exemplaris*, while S3 is filed under its older name
   *H. dujardini*. Two runs cannot separate this from the agents' choice of searches.
 
+## All three arms on 0.69.1
+
+The five tasks, two runs each, all three arms on 2026-10-07 ($16.13), the dam arm on
+0.69.1 (#269 and #271). Two pooled entries were judged and both rejected: a key near miss
+(R3, tu arm) and a repository copy of a paper with no data (R4, web arm). Per-run data:
+`scores_2026-10-07_0691_3arm.json`.
+
+| task | dam | tu | web |
+|---|---|---|---|
+| R1 | 0.85 / 0.85 | 0.85 / 0.85 | 0.85 / 0.85 |
+| R2 | 0.90 / 0.90 | 0.70 / 0.50 | 0.80 / 0.80 |
+| R3 | 0.78 / 0.67 | 0.44 / 0.33 | 0.78 / 0.67 |
+| R4 | 0.81 / 0.86 | 0.75 / 0.75 | 0.83 / 0.78 |
+| R5 | 1.00 / 0.88 | 0.62 / 0.88 | 0.50 / 0.62 |
+
+| arm | mean recall | median recall | precision | median tool calls | median input tokens | median wall | cost (10 runs) |
+|---|---|---|---|---|---|---|---|
+| dam | 0.85 | 0.85 | 0.89 | 10 | 413k | 98 s | $5.01 |
+| tu  | 0.67 | 0.72 | 0.88 | 30 | 1,080k | 133 s | $7.11 |
+| web | 0.75 | 0.79 | 0.90 | 13 | 418k | 178 s | $4.01 |
+
+- **The dam arm leads on mean recall for the second three-arm run in a row** (0.85 vs
+  web 0.75; 0.79 vs 0.76 on #266). Over every run on #266 or later the dam arm averages
+  0.84 (30 runs); web 0.77 and ToolUniverse 0.64 over all their runs (40 each).
+- **R3 is a tie.** The dam and web arms found the same studies in both runs, S1 and S3
+  included. S3 was found 8 of 16 times before, and S3 is untouched by #269 and #271, so
+  two runs do not show that either change moved it.
+- The dam arm stays the fastest (median 98 s against web's 178 s); web stays the cheapest
+  and keeps the best precision by a hair.
+
 ## Limits
 
 - Five tasks and two runs each: per-task differences of one run are noise; the
