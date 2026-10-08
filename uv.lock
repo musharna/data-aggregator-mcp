@@ -666,7 +666,7 @@ wheels = [
 
 [[package]]
 name = "data-aggregator-mcp"
-version = "0.69.0"
+version = "0.69.1"
 source = { editable = "." }
 dependencies = [
     { name = "defusedxml" },

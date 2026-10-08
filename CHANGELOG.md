@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.69.1] - 2026-10-07
+
 ### Fixed
 
 - `organism="water bear"` resolved to a bear (*Ursus* sp.) and filtered the search to it,
