@@ -58,3 +58,6 @@
 - {task: R2, id: "doi:10.1101/2025.03.30.645595", verdict: "optional", reason: "The bioRxiv preprint of keyed study S9 (GSE294212, Xenium), listed with no accession. As B1: B2."}
 - {task: R2, id: GSE314016, verdict: reject, reason: "Key near miss (R2.yaml): cited for scRNA-seq by Polikarpova 2025 but not public (gds esearch 0)."}
 - {task: R4, id: PRJNA1103791, verdict: reject, reason: "Key near miss (R4.yaml): predator-guild scat metabarcoding of snow leopard, wolf, fox and others; multi-carnivore."}
+# 2026-10-07 three-arm run on 0.69.1: two pooled entries.
+- {task: R3, id: PRJNA658158, verdict: reject, reason: "Key near miss (R3.yaml): H. exemplaris/D. dispar genome and transcriptome shell with no public runs; not a desiccation design. Listed by the tu arm."}
+- {task: R4, id: 10.5167/uzh-209107, verdict: reject, reason: "DataCite type JournalArticle: the ZORA repository copy of Lham et al. 2021 (Frontiers), a habitat model paper. Its only supplement (10.3389/fcosc.2021.781085.s001) is already a key near miss; a paper without data. Listed by the web arm."}
