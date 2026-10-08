@@ -168,3 +168,29 @@ class MatchTiers:
         """The query terms ``record``'s text does not name, in query order."""
         text = _text(record)
         return [t for t in self.terms if not _names(text, t)]
+
+
+def passage(text: str, terms: Sequence[str], width: int = 240) -> str | None:
+    """About ``width`` characters of ``text`` around the first place it names one of
+    ``terms`` (normalized terms, read as ``_names`` reads them: their words in order with
+    any punctuation between, the last word also as a plural), cut at spaces and marked
+    with an ellipsis where cut. None when ``text`` names none of them."""
+    found = [m for t in terms if (m := _term_pattern(t).search(text))]
+    if not found:
+        return None
+    first = min(found, key=lambda m: m.start())
+    # A third of the width before the match, less where the text ends sooner.
+    start = max(0, min(first.start() - width // 3, len(text) - width))
+    end = min(len(text), start + width)
+    if start:
+        space = text.find(" ", start, first.start())
+        start = space + 1 if space != -1 else start
+    if end < len(text):
+        space = text.rfind(" ", first.end(), end)
+        end = space if space != -1 else end
+    return ("…" if start else "") + text[start:end].strip() + ("…" if end < len(text) else "")
+
+
+def _term_pattern(term: str) -> re.Pattern[str]:
+    words = r"[\W_]+".join(re.escape(w) for w in term.split())
+    return re.compile(rf"(?<![^\W_]){words}s?(?![^\W_])", re.IGNORECASE)

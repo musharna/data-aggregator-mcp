@@ -47,7 +47,7 @@ from data_aggregator_mcp import query_understanding as query_understanding_mod
 from data_aggregator_mcp import relate as relate_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
-from data_aggregator_mcp._relevance import MatchTiers, title_clause, with_plurals
+from data_aggregator_mcp._relevance import MatchTiers, passage, title_clause, with_plurals
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import (
     SEARCH_LIST_LIMITS,
@@ -68,6 +68,7 @@ from data_aggregator_mcp.models import (
     dense,
     derive_access_modes,
     derive_version_status,
+    full_description,
 )
 
 # Imported by name: `_select`'s own `sources` parameter shadows the module inside it.
@@ -651,7 +652,8 @@ async def _fetch_page(
         # Such a source matched every word, so a word the hit does not show was matched
         # in text it leaves out; without the note the hit reads as off-topic.
         if key in every_word and (unshown := tiers.unshown(r)):
-            r = r.model_copy(update={"unshown_terms": unshown})
+            context = passage(full_description(r), unshown)
+            r = r.model_copy(update={"unshown_terms": unshown, "match_context": context})
         passes = _passes_filters(r, filters)
         cost = _hit_chars(r) if passes else 0
         # A hit that does not fit stays unhandled, so the cursor returns it next page.

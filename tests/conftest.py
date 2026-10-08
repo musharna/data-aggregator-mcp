@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from data_aggregator_mcp import _ratelimit, egress, europepmc, router, taxonomy, zenodo
+from data_aggregator_mcp import _ratelimit, egress, europepmc, models, router, taxonomy, zenodo
 
 # Every environment variable the server reads as configuration. A test's behavior must
 # not depend on which of these happen to be exported in the shell that runs it: with
@@ -53,11 +53,13 @@ def _reset_process_singletons():
     router._RESOLVE_CACHE.clear()
     taxonomy._CACHE.clear()
     zenodo._SEARCH_CACHE.clear()  # search-seeded record cache (resolve double-fetch skip)
+    models._FULL_DESCRIPTION.clear()  # uncut hit descriptions, by id (match_context)
     yield
     _ratelimit.reset()
     router._RESOLVE_CACHE.clear()
     taxonomy._CACHE.clear()
     zenodo._SEARCH_CACHE.clear()
+    models._FULL_DESCRIPTION.clear()
 
 
 @pytest.fixture(autouse=True)

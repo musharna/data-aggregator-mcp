@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, SerializerFunctionWrapHandler, field_serializer
 
+from data_aggregator_mcp._cache import MISS, TTLCache
+
 _ORCID_RE = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")
 
 
@@ -181,6 +183,12 @@ class DataResource(BaseModel):
     # PXD055071 showed only "nutrient stress" while its protocol held "nitrogen
     # depletion", and agents shown it in both R5 runs left it out (2026-10-06).
     unshown_terms: list[str] = Field(default_factory=list)
+    # On a hit with unshown_terms: the passage of its description, past the cut the hit
+    # shows, that names one of them; None when the description names none (the source
+    # matched a protocol it does not send, or a synonym). GEO's GSE165901 named single-cell RNA-seq
+    # only past the 500 characters a hit shows, and the agent shown it in 3 of 4 R2 runs
+    # left it out (2026-10-07).
+    match_context: str | None = None
 
 
 class TaxonAlternative(BaseModel):
@@ -402,6 +410,19 @@ class FetchResult(BaseModel):
 
 SEARCH_DESC_LIMIT = 500
 
+# Each compacted hit's description as the source gave it, by record id: where the router
+# looks for ``match_context``. Kept off the record, so two hits sending the same fields
+# still compare equal; a search hit reaches the router within the call.
+_FULL_DESCRIPTION: TTLCache = TTLCache(maxsize=4096, ttl=600)
+
+
+def full_description(r: DataResource) -> str:
+    """``r``'s description as its source gave it, before :func:`compact` cut it; for a
+    record never compacted (or compacted over ten minutes ago), what it holds now."""
+    cached = _FULL_DESCRIPTION.get(r.id)
+    return str(cached) if cached is not MISS else r.description or ""
+
+
 # How many items of each list a search hit keeps. Uncapped, one GBIF hit carried 400k
 # characters of links, and a page holding it never reached the agent (the 2026-10-05
 # head-to-head). A cut list is named in ``truncated``; resolve returns the whole record.
@@ -435,6 +456,7 @@ def compact(r: DataResource) -> DataResource:
             truncated[field] = f"{note} ({truncated[field]})" if field in truncated else note
     if truncated != r.truncated:
         update["truncated"] = truncated
+    _FULL_DESCRIPTION.set(r.id, full_description(r))
     return r.model_copy(update=update)
 
 

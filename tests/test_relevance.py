@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from data_aggregator_mcp._ontology import FacetGroup
-from data_aggregator_mcp._relevance import MatchTiers, query_phrase, query_terms
+from data_aggregator_mcp._relevance import MatchTiers, passage, query_phrase, query_terms
 from data_aggregator_mcp.models import DataResource, Taxon
 
 _ORGANISM = FacetGroup(
@@ -116,3 +116,41 @@ def test_unshown_lists_the_query_terms_a_hit_does_not_name_in_query_order() -> N
     # an empty query.
     assert tiers.unshown(_rec("Chlamydomonas proteomics under nitrogen starvations")) == []
     assert MatchTiers("", []).unshown(hit) == []
+
+
+_PROTOCOL = (
+    "Cells were grown in TAP medium to mid-log phase and harvested by centrifugation. "
+    "Subcellular fractions were then prepared from N-starved cultures after 48 h of "
+    "nitrogen depletion, and lipid droplets were isolated on a sucrose gradient before "
+    "digestion with trypsin and analysis on an Orbitrap mass spectrometer."
+)
+
+
+def test_passage_is_the_stretch_around_the_first_term_the_text_names() -> None:
+    got = passage(_PROTOCOL, ["proteome", "nitrogen depletion"], width=80)
+    assert got is not None
+    assert "nitrogen depletion" in got
+    # Cut at spaces, with an ellipsis on each cut side; within the width plus the marks.
+    assert got.startswith("…") and got.endswith("…")
+    inner = got[1:-1]
+    assert inner in _PROTOCOL
+    at = _PROTOCOL.index(inner)
+    assert _PROTOCOL[at - 1] == " " and _PROTOCOL[at + len(inner)] == " "
+    assert len(got) <= 82
+    # Text before the match is kept, so the reader sees what it is about.
+    assert got.index("nitrogen") > 5
+    # The first place named wins, whichever term names it.
+    assert "Subcellular" in (passage(_PROTOCOL, ["lipid droplet", "subcellular"], width=60) or "")
+
+
+def test_passage_reads_terms_as_whole_words_with_a_plural() -> None:
+    # "cell" is named by "Cells", never inside "Subcellular".
+    first = passage(_PROTOCOL, ["cell"], width=40)
+    assert first is not None and first.startswith("Cells were")
+    assert passage(_PROTOCOL, ["cellular", "sub"]) is None
+    # Punctuation between a term's words: "n starved" is named by "N-starved".
+    assert "N-starved" in (passage(_PROTOCOL, ["n starved"], width=60) or "")
+    # A term the text does not name, and an empty term list: nothing to show.
+    assert passage(_PROTOCOL, ["proteome"]) is None
+    assert passage(_PROTOCOL, []) is None
+    assert passage(_PROTOCOL, ["droplet"], width=len(_PROTOCOL) + 10) == _PROTOCOL
