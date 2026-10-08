@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A search hit that lists `unshown_terms` now also carries `match_context`: about 240
+  characters of its description, past the 500 a hit shows, around the first place it
+  names one of those words. GEO's GSE165901 showed only frogs in its first 500
+  characters and said single-cell RNA-seq after them; agents shown it left it out in 3
+  of 4 runs. When the description names none of the words (the source matched a
+  protocol it does not send, or a synonym), there is no passage.
+
 ## [0.69.1] - 2026-10-07
 
 ### Fixed
