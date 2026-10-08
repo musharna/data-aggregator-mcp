@@ -27,9 +27,12 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
-from data_aggregator_mcp._ontology import FacetGroup
 from data_aggregator_mcp.models import DataResource
+
+if TYPE_CHECKING:  # _ontology imports taxonomy, which imports this module
+    from data_aggregator_mcp._ontology import FacetGroup
 
 _NON_WORD = re.compile(r"[\W_]+")
 # A double-quoted phrase or a run of non-space characters; neither nests a quantifier.

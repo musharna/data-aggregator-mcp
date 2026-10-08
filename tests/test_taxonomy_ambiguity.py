@@ -57,7 +57,9 @@ class _NCBI:
     async def esearch(self, client, db, term, *, retmax, retstart=0):
         assert client is self.client, (db, term)
         if db == "taxonomy":
-            ids = self.names.get(term.strip().lower(), [])
+            names = re.findall(r'"([^"]+)"\[All Names\]', term)
+            assert names, term
+            ids = self.names.get(names[0].lower(), [])
             return len(ids), [str(i) for i in ids[:retmax]]
         assert db == "nuccore" and retmax == 0, (db, retmax)
         self.counted.append(term)
@@ -206,3 +208,37 @@ async def test_live_ambiguous_names_resolve_to_the_best_known_taxon(
         assert alternatives and taxid not in alternatives
     if alternative is not None:
         assert alternative in alternatives
+
+
+def test_a_name_is_asked_for_whole_and_with_its_last_word_plural() -> None:
+    """Sent as written, esearch drops a phrase it cannot find ("water bear" became
+    ``bear[All Names]``), and NCBI names Tardigrada only in the plural."""
+    assert taxonomy._name_term(["water", "bear"]) == (
+        '"water bear"[All Names] OR "water bears"[All Names]'
+    )
+    assert taxonomy._name_term(["tardigrade"]) == (
+        '"tardigrade"[All Names] OR "tardigrades"[All Names]'
+    )
+    # a last word that takes no plural is asked for as written
+    assert taxonomy._name_term(["Arabidopsis"]) == '"Arabidopsis"[All Names]'
+    assert taxonomy._name_term(["SARS-CoV-2"]) == '"SARS-CoV-2"[All Names]'
+
+
+async def test_a_quote_in_the_name_cannot_end_the_quoted_term_early(ncbi) -> None:
+    info = await taxonomy.resolve_taxon(ncbi.client, '"Arabidopsis thaliana"')
+    assert info is not None and info.taxid == 3702
+
+
+@live_only
+@pytest.mark.parametrize("name", ["tardigrade", "water bear"])
+async def test_live_names_ncbi_holds_only_in_the_plural_resolve(name: str) -> None:
+    """Probed 2026-10-07: as written, esearch answers "tardigrade" with nothing and
+    "water bear" with Ursus sp. (9641). Of 28 common names, these two alone changed."""
+    taxonomy._CACHE.clear()
+    async with httpx.AsyncClient(timeout=30) as client:
+        _count, as_written = await taxonomy._eutils.esearch(client, "taxonomy", name, retmax=10)
+        info = await taxonomy.resolve_taxon(client, name)
+        mouse = await taxonomy.resolve_taxon(client, "mouse")
+    assert "42241" not in as_written  # the query as written misses Tardigrada upstream
+    assert info is not None and info.taxid == 42241
+    assert mouse is not None and mouse.taxid == 10090  # positive control: unchanged
