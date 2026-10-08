@@ -23,6 +23,7 @@ from defusedxml import ElementTree as ET  # remote XML: entity-expansion safe
 
 from data_aggregator_mcp import _eutils
 from data_aggregator_mcp._cache import MISS, TTLCache
+from data_aggregator_mcp._relevance import _pluralisable
 from data_aggregator_mcp.errors import UpstreamUnavailableError
 
 
@@ -131,6 +132,19 @@ async def _best_known(client: httpx.AsyncClient, key: str, taxa: list[TaxonInfo]
     return min(top, key=lambda t: (-wide[t.taxid], t.taxid))
 
 
+def _name_term(words: list[str]) -> str:
+    """The esearch term for a name of ``words``, asked for as a whole name and with its
+    last word plural: ``"water bear"[All Names] OR "water bears"[All Names]``. Sent as
+    written, esearch dropped a phrase it could not find and searched what was left:
+    "water bear" became ``bear[All Names]`` and resolved to Ursus sp. And NCBI names
+    Tardigrada only in the plural ("tardigrades", "water bears"), so "tardigrade" matched
+    nothing (2026-10-07)."""
+    forms = [" ".join(words)]
+    if _pluralisable(words[-1]):
+        forms.append(" ".join([*words[:-1], words[-1] + "s"]))
+    return " OR ".join(f'"{form}"[All Names]' for form in forms)
+
+
 _NEG = object()  # cached "no match" (distinct from a missing key)
 _CACHE = TTLCache(maxsize=4096, ttl=3600.0)
 
@@ -143,12 +157,14 @@ async def resolve_taxon(client: httpx.AsyncClient, name: str) -> TaxonInfo | Non
     failures propagate (the caller surfaces them); they are NOT cached.
     """
     key = name.strip().lower()
-    if not key:
+    words = name.replace('"', " ").split()
+    if not words:
         return None
     cached = _CACHE.get(key)
     if cached is not MISS:
         return None if cached is _NEG else cached
-    _count, ids = await _eutils.esearch(client, "taxonomy", name, retmax=_MAX_CANDIDATES)
+    term = _name_term(words)
+    _count, ids = await _eutils.esearch(client, "taxonomy", term, retmax=_MAX_CANDIDATES)
     if not ids:
         _CACHE.set(key, _NEG)
         return None

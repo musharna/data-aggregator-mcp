@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `organism="water bear"` resolved to a bear (*Ursus* sp.) and filtered the search to it,
+  and `organism="tardigrade"` resolved to nothing: NCBI Taxonomy dropped the words it
+  could not find, and names Tardigrada only in the plural. An organism is now looked up
+  as a whole name, singular or plural; both resolve to Tardigrada. Of 28 common names
+  checked, no other resolution changed.
+
 ## [0.69.0] - 2026-10-07
 
 ### Changed
