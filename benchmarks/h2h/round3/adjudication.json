@@ -1,0 +1,137 @@
+{
+ "T1": {
+  "reject": [
+   "10.1184/r1/6103952.v1",
+   "10.1184/r1/6103952",
+   "10.5281/zenodo.18791231",
+   "dandi:000555",
+   "10.5061/dryad.3cs6v",
+   "zenodo:4996058",
+   "10.17863/cam.56487",
+   "DANDI:001252"
+  ],
+  "alias": {
+   "S27": [
+    "j2932-aaf14"
+   ]
+  }
+ },
+ "T2": {
+  "reject": [
+   "GSE150482",
+   "PRJNA1113655",
+   "GSE209948",
+   "PRJCA069718",
+   "GSE241505"
+  ],
+  "alias": {
+   "S2": [
+    "838d4660-3d62-4b08-b32d-dc5cbd93919d"
+   ]
+  }
+ },
+ "T3": {
+  "reject": [
+   "dataone:doi:10.18739/A2QJ7801N",
+   "10.5281/zenodo.17953152",
+   "zenodo:17953152",
+   "10.18739/A2QJ7801N",
+   "10.6082/amywk-yn616",
+   "datacite:10.6082/amywk-yn616",
+   "10.6082/fbkht-fb431",
+   "10.18739/A2NP1WK35",
+   "dataone:sha256:57b36f40c2db874393125602a042ca6a10780824d23190b60d305cf61d2907f3",
+   "datacite:10.6082/fbkht-fb431",
+   "dataone:doi:10.18739/A2NP1WK35",
+   "10.15485/2336866",
+   "doi:10.1594/PANGAEA.922399"
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "10.6084/m9.figshare.13385246",
+     "10.6084/m9.figshare.13385246.v2",
+     "10.6084/m9.figshare.13848026",
+     "10.6084/m9.figshare.13848026.v1",
+     "figshare:13385246"
+    ]
+   }
+  ],
+  "alias": {
+   "S18": [
+    "figshare:19251593"
+   ],
+   "S1": [
+    "https://data.mendeley.com/datasets/5rn4zf274r"
+   ],
+   "S24": [
+    "apgc:isotopic-composition-of-ground-ice-ebullition-gases-and-thermokarst-lake-water-alaska"
+   ]
+  }
+ },
+ "T4": {
+  "reject": [
+   "comvis-hust.github.io/datasets/pollenbee.html",
+   "oist.repo.nii.ac.jp/records/2024",
+   "roboflow:beedetect-mp0kz/bee_mite_v1",
+   "10.15482/usda.adc/29825570",
+   "github.com/piperod/beepose",
+   "10.5281/zenodo.4507648",
+   "datasetninja:bee-image",
+   "10.5281/zenodo.19241078"
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "10.54718/JCHW9401",
+     "scholarsjunction.msstate.edu/gri-publications/4"
+    ]
+   }
+  ],
+  "alias": {
+   "S23": [
+    "ieee-dataport:carniolan-grey-honeybees-dataset"
+   ],
+   "S7": [
+    "10.5281/zenodo.8209337"
+   ],
+   "S27": [
+    "hf:timm/bee-dataset"
+   ],
+   "S21": [
+    "researchdata.edu.au/honeybee-video-tracking"
+   ],
+   "S13": [
+    "10.1016/j.dib.2024.110060"
+   ],
+   "S2": [
+    "10.5281/zenodo.7093276"
+   ]
+  }
+ },
+ "T5": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "10.5281/zenodo.17116571",
+     "10.5281/zenodo.17116572"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "10.5066/P13IQRXZ",
+     "10.5066/p13iqrxz"
+    ]
+   }
+  ],
+  "reject": [
+   "10.5281/zenodo.15681195"
+  ]
+ }
+}
