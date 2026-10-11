@@ -1,0 +1,251 @@
+task: T4
+prompt: >-
+  Find every public labeled image or video dataset, in any archive, of honey bees (Apis mellifera) made for
+  computer vision or machine learning: images or video of bees with labels such as Varroa mite presence,
+  pollen-bearing, health, caste or behaviour, or bee detection, tracking, pose or segmentation annotations, at
+  the hive entrance, on frames or elsewhere. Unlabeled image dumps, audio- or sensor-only hive data, datasets
+  whose labelled objects are not bees (comb cells, sticky boards, pollen pellets, isolated wings), general
+  insect sets where honey bee is one class among many, other bee species, and papers without a public download
+  do not count; copies of a dataset on other sites count as the same dataset.
+criteria: >-
+  Included: a public, downloadable release in a data archive or dataset platform (Zenodo, Figshare and
+  institutional Figshare such as Monash Bridges, Mendeley Data, IEEE DataPort, Kaggle, Hugging Face, Roboflow
+  Universe, or a GitHub repository that holds the data under a license) whose images or video show Apis
+  mellifera bees and carry labels made for CV/ML: image-level classes (varroa infested vs healthy, pollen vs
+  no pollen, health status, caste, behaviour) or object annotations (boxes, points, polygons, keypoints,
+  tracks) on bees. The release must say what the images and labels are (a paper's or data paper's dataset, a
+  benchmark, or a record whose description documents source and annotation). Unit = one dataset release by one
+  group; re-uploads by the same or other users are aliases. A later release by the same group counts as a
+  separate study only when it is substantially new data (the 2025 Kaggle EV2 image/video release, 37,890
+  frames, versus the 2024 Zenodo EV2 set, 5,170 images). Borderline: data hosted only in a GitHub LFS
+  repository with the original host down (BeeAlarmed), labels that sit on derived trajectories or dance
+  events rather than plain image annotations (waggle drift), records whose content could not be opened
+  (bee MOT set), and hyperspectral scenes labelled only by folder (BUT-HS1). Excluded: comb or brood cell
+  images, sticky boards, pollen pellets, wing-venation or queen morphometric photos (the labelled objects are
+  not bees); detection or trajectory outputs without images or human labels (RoboRoyale CSVs, BeesBook
+  tracks, Bozek 2021 tracks); multi-taxon pollinator or insect sets and ants-vs-bees or bee-vs-wasp toy sets;
+  other species (Apis cerana, stingless bees, Andrena, bumblebees); unlabeled or audio/sensor-only data;
+  synthetic images and derived features; data available only on request, behind a national login, or on a
+  personal Google Drive; and undescribed personal uploads on Kaggle, Roboflow and Hugging Face that give no
+  source or label description.
+studies:
+  - key: S1
+    title: "PollenDataset: pollen-bearing vs non-pollen-bearing honey bees at the hive entrance"
+    year: 2018
+    ids: ["ivanfel/honey-bee-pollen", "github.com/piperod/PollenDataset"]
+    archives: [Kaggle, GitHub]
+    evidence: "Rodriguez, Mégret et al. (WACV 2018) bee crops from entrance video at Gurabo, Puerto Rico, with the class (P or NP) in each file name. The Kaggle card lists PollenDataset/images. The GitHub repo holds Dataset.zip under CC-BY-SA-4.0."
+  - key: S2
+    title: "The BeeImage Dataset: Annotated Honey Bee Images"
+    year: 2018
+    ids: ["jenny18/honey-bee-annotated-images", "10.5281/zenodo.7101934", "10.5281/zenodo.7093275", "unsunnedsnow/honeybees-simplified", "shaylynnmorphew/bee-images-separated", "ambarish/beeslittledataset"]
+    archives: [Kaggle, Zenodo]
+    evidence: "Kaggle (Jenny Yang): bee_imgs plus bee_data.csv with health (varroa, ants, robbing, missing queen), pollen and subspecies labels. Zenodo TuringREGConnectionsWorkshop_HoneyBees is a re-upload with a byte-identical bee_data.csv (496,983 B). The other Kaggle slugs say they are subsets or splits of this set."
+  - key: S3
+    title: "VarroaDataset: images of healthy and Varroa-infested honey bees"
+    year: 2020
+    ids: ["10.5281/zenodo.4085044", "10.5281/zenodo.4085043", "github.com/schurist/VarroaDataset", "benxelua/varroa", "kureijicolonel/varroa", "lamkiet/varroadatasets", "nguyenquangnhat2100/varroadetection", "ohmahler91/varroadataset", "yudel2/varroa-segmentation", "duyem54/varoadataset", "giapng/varroa-restructured"]
+    archives: [Zenodo, GitHub, Kaggle]
+    evidence: "Schurischuster and Kampel: 13,509 bee crops (3,947 infested) with gt.csv labels and boxes, plus train/val/test splits. Zenodo is the download host, and the GitHub README carries samples and points to Zenodo. The Kaggle copies are about 1.16 GB with the same 2017 video bee_id file layout."
+  - key: S4
+    title: "EV2 Dataset (EdgeVision against Varroa), Zenodo release"
+    year: 2024
+    ids: ["10.5281/zenodo.13771384", "10.5281/zenodo.10875856"]
+    archives: [Zenodo]
+    evidence: "Zenodo (Pusceddu, Floris, Satta, De Rango, Colosimo): 1,987 healthy and 3,183 infested bee images, with bee bounding boxes and Varroa-visible flags."
+  - key: S5
+    title: "EV2 Image Dataset and EV2 Video Dataset (ALCOR Lab)"
+    year: 2025
+    ids: ["alcor-lab/ev2-image-dataset", "alcor-lab/ev2-video-dataset", "10.34740/kaggle/dsv/11159683"]
+    archives: [Kaggle]
+    evidence: "Kaggle only. The image set has 37,890 frames (4,424 with Varroa visible), each with an infestation label and a bee bounding box. The frames come from the video set: 306 infested and 301 healthy RGB videos plus thermal .seq files. This is substantially more data than the 2024 Zenodo EV2 set (S4)."
+  - key: S6
+    title: "In-hive Varroa destructor imaging: dataset, mite-level re-inspection layer, cross-validation splits, evaluation code and model weights"
+    year: 2026
+    ids: ["10.5281/zenodo.23099411", "10.5281/zenodo.23099412", "10.5281/zenodo.23276947", "10.5281/zenodo.20488016", "10.5281/zenodo.20488015", "github.com/Soda0603/varroa-in-hive-imaging"]
+    archives: [Zenodo, GitHub]
+    evidence: "Zenodo (Su, Gao, Lee, Wu): 2,823 in-hive frames from Taiwan with YOLO boxes on bees, labelled bee with or without a visible mite. 20488016 is the earlier 2,810-image release, and v2 states isNewVersionOf it. GitHub mirrors the code and small files."
+  - key: S7
+    title: "Honeybee positions (dense honeybee detection and tracking frames)"
+    year: 2018
+    ids: ["kport354041/honeybee-positions"]
+    archives: [Kaggle]
+    evidence: "Kaggle only (Bozek et al., OIST): 720 comb frames from 30 fps and 70 fps recordings, with text files of hand-marked bee positions and orientation angles. Used in 'Towards dense object tracking in a 2D honeybee hive' (arXiv 1712.08324)."
+  - key: S8
+    title: "gernat2018: annotated images of barcoded honeybees in observation hives"
+    year: 2024
+    ids: ["10.5281/zenodo.13991237", "10.5281/zenodo.13991236"]
+    archives: [Zenodo]
+    evidence: "Zenodo (Geissmann, Gernat, Robinson): 38 hive images with every bee annotated as a COCO polygon in instances_default.json, from the Robinson Lab 2018 tracking rig."
+  - key: S9
+    title: "High Quality Honey Bee Dataset"
+    year: 2024
+    ids: ["10.6084/m9.figshare.26999512", "10.6084/m9.figshare.26999512.v1"]
+    archives: [Figshare]
+    evidence: "Figshare (Borlinghaus): 157,529 cropped 512 px images of 85 individuals across 3,430 trajectories. Folder names give worker or drone and pollen or no pollen, and a CSV gives crop coordinates."
+  - key: S10
+    title: "BEEHIVE: a public dataset of Apis mellifera images to empower honeybee monitoring research"
+    year: 2024
+    ids: ["10.17632/5yz78xxpmy", "10.17632/5yz78xxpmy.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley (Micheli, Nuzzi et al.; Data in Brief, PMC11546424): about 3,500 in-hive 'Frame' and 'Bottom' camera images with YOLOv8 box annotations and 70/20/10 splits. CC BY 4.0."
+  - key: S11
+    title: "Bee Dataset BUT-1"
+    year: 2023
+    ids: ["imonbilk/bee-dataset-but-1", "10.34740/kaggle/dsv/5609865", "10.34740/kaggle/dsv/7091270", "10.34740/kaggle/dsv/7091285"]
+    archives: [Kaggle]
+    evidence: "Kaggle only (Brno University of Technology, Bee Visual Inspector, github boortel/Bee-Health-Monitor): 1,153 manually annotated images, with classes bee_complete_in, bee_head, bee_abdomen, bee_cluster and bee_complete_out. The annotations folder is listed in the file index."
+  - key: S12
+    title: "Bee Dataset BUT-HS2"
+    year: 2025
+    ids: ["masuel/bee-hyperspectral-dataset", "10.34740/kaggle/dsv/10996316", "10.34740/kaggle/dsv/11239539", "10.34740/kaggle/dsv/12033050"]
+    archives: [Kaggle]
+    evidence: "Kaggle only: 647 multispectral photos (white, 500 nm and 780 nm LED) of bees, Varroa mites and bees with mites, before and after fumigation, with PNG segmentation masks and YOLO boxes (AnotationIR folders listed)."
+  - key: S13
+    title: "Labeled dataset for bee detection and direction estimation on beehive landing boards"
+    year: 2024
+    ids: ["10.17632/8gb9r2yhfc", "10.17632/8gb9r2yhfc.6"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley (Sledevic): 7,200 landing-board frames with YOLO bee boxes, 2,300 crops for direction segmentation, and a head-to-stinger keypoint pose set. This is the data of PMC11856287 (Visual recognition of honeybee behavior patterns at the hive entrance)."
+  - key: S14
+    title: "Labeled Dataset for Detecting Fanning Behavior of Honeybees at the Hive Entrance"
+    year: 2025
+    ids: ["10.5281/zenodo.15622032", "10.5281/zenodo.15622033"]
+    archives: [Zenodo]
+    evidence: "Zenodo (Sledevic): 18,000 landing-board frames from 4 hives, with 57,597 annotated fanning-bee instances."
+  - key: S15
+    title: "Labeled Dataset for Detecting Trophallaxis Behavior of Honeybees at the Hive Entrance"
+    year: 2025
+    ids: ["10.5281/zenodo.15813172", "10.5281/zenodo.15813173"]
+    archives: [Zenodo]
+    evidence: "Zenodo (Sledevic, Vdoviak): 20,480 frames from 8 hives, with 22,189 annotated trophallaxis instances."
+  - key: S16
+    title: "Labeled Dataset for Detecting Defensive Behavior of Honeybees at the Hive Entrance"
+    year: 2026
+    ids: ["10.5281/zenodo.23077518", "10.5281/zenodo.23077519"]
+    archives: [Zenodo]
+    evidence: "Zenodo (Sledevic, Vdoviak): frames from 87 entrance videos at 20 hives, with labels.zip holding defensive-behaviour annotations and image parts 1-4."
+  - key: S17
+    title: "BEE4EXP: test videos and ground truth for detection of flying honeybees in UAV videos"
+    year: 2020
+    ids: ["10.5281/zenodo.4400650", "10.5281/zenodo.7253878"]
+    archives: [Zenodo]
+    evidence: "Zenodo (Stojnić, Risojević et al., Remote Sensing): 3 test videos with .npy ground-truth honeybee detections, plus background videos for generating synthetic training data."
+  - key: S18
+    title: "Bee Detection in the Wild (Roboflow 100 'bees-jt5in')"
+    year: 2022
+    ids: ["birdy654/bee-detection-in-the-wild", "lara311/bee-detection-dataset", "eedouble/bee-detection", "omlande/bee-object-detection-dataset-coco-format", "Francesco/bees-jt5in", "LibreYOLO/bees-jt5in", "object-detection/bees-jt5in"]
+    archives: [Kaggle, Hugging Face, Roboflow]
+    evidence: "Bird et al. (Nottingham Trent; arXiv 2405.15428): bounding boxes on bees from apiculture video streams. The Roboflow 100 version has 8,080 images with one class, 'bees', under CC BY 4.0, per its Roboflow page. The Kaggle copies and HF repos list the same rf-hashed image names, or cite the Roboflow homepage."
+  - key: S19
+    title: "Bees Dataset: boxes on bees and pollen (BeeLivingSensor)"
+    year: 2023
+    ids: ["ashfaqsyed/bees-dataset"]
+    archives: [Kaggle]
+    evidence: "Kaggle (CDLA-Permissive): 4,993 hive-entrance images with Pascal VOC XML boxes on bees and pollen loads, about 50,000 annotations, from the BeeLivingSensor project. The original host was not found."
+  - key: S20
+    title: "To bee or not to bee? (labelled close-range hive images for bee counting)"
+    year: 2019
+    ids: ["jonathanbyrne/to-bee-or-not-to-bee"]
+    archives: [Kaggle]
+    evidence: "Kaggle only (Byrne): 600 labelled top-down picam images of bees at a hive, built on Mat Kelcey's bee-counting FCN, plus about 7,000 unlabelled images. The labelled folder is listed."
+  - key: S21
+    title: "Honeybee video tracking data (HyDaT)"
+    year: 2020
+    ids: ["10.26180/5f4c8d5815940", "figshare:12895433"]
+    archives: [Figshare]
+    evidence: "Monash Bridges, a Figshare instance (Ratnayake, Dyer, Dorin; PLOS ONE 2021 PMC7877608): videos of honeybees foraging in ground covers, Training_Datasets.zip (15 GB) and honeybee tracks. Its data statement says all training, experimental and video data are there."
+  - key: S22
+    title: "SCIBee: Honeybee Entrance Corridor Image Dataset for Object Detection in Precision Beekeeping"
+    year: 2026
+    ids: ["10.21227/gwm7-m820"]
+    archives: [IEEE DataPort]
+    evidence: "IEEE DataPort (Škulj, Pleterski, Podržaj), CC BY 4.0: ESP32-S3 camera images of honeybees in one entrance corridor, annotated for object detection."
+  - key: S23
+    title: "Carniolan (Carnolian) Grey Honeybees dataset"
+    year: 2021
+    ids: ["10.21227/x8fr-b747", "10.21227/42s6-9764"]
+    archives: [IEEE DataPort]
+    evidence: "IEEE DataPort (Pilipović, Zlatečan), CC BY 4.0: 65 frames of 2688x1504 px at a Ljubljana hive entrance with 1,040 ground-truth honeybee boxes. It was published twice, and both DOIs carry the same description."
+  - key: S24
+    title: "Varroa mites detection (BEPROJ), redistributed in Roboflow 100-VL"
+    year: 2022
+    ids: ["beproj/varroa-mites-detection", "beproj/varroa-mites-detection--test-set", "beproj/varroa-mites-detection--train-set", "rf100-vl/varroa-mites-detection-test-set-1irzb-gsig-8ecee", "roboflow100vl-full/varroa-mites-detection-test-set-lnea-r012y"]
+    archives: [Roboflow]
+    evidence: "Roboflow Universe: BEPROJ project with 451 images, class varroa_mite, CC BY 4.0. The Roboflow 100-VL copy (942 images, MIT) states it annotates Varroa mites on honey bees, with annotator instructions. Only the benchmark copy is documented."
+  - key: S25
+    title: "Classifying the Queen's Behavior: A Data-Driven and CNN-Based Approach to Analyzing the Honey Bee Queen's Oviposition Behavior (code and data)"
+    year: 2025
+    ids: ["10.5281/zenodo.15757295", "10.5281/zenodo.15757296"]
+    archives: [Zenodo]
+    evidence: "Zenodo (Fedotoff, RoboRoyale; 24 GB): candidate queen events extracted from observation-hive recordings, with raw annotations and the ground-truth train split used to train the oviposition CNN reported in Ulrich et al. 2024 Science Robotics."
+  - key: S26
+    title: "Bee Detection from Video Frames (ApiSense Bee Detection)"
+    year: 2026
+    ids: ["rowlettheowlet/bee-detection-from-video-frames"]
+    archives: [Kaggle]
+    evidence: "Kaggle only (MIT): 1,352 hive-entrance frames from an IMX708 camera 40 cm above hives in California, with YOLO 'bee' boxes. The card documents the annotation rules."
+  - key: S27
+    confidence: borderline
+    title: "BeeAlarmed BeeDataset (TFDS bee_dataset): multi-label bee images (varroa, pollen, cooling, wasps)"
+    year: 2021
+    ids: ["github.com/BeeAlarmed/BeeDataset", "tfds:bee_dataset"]
+    archives: [GitHub, TensorFlow Datasets]
+    evidence: "Hickert / raspbee.de: 7,490 bee crops with four binary labels (cooling, pollen, varroa, wasp). The TFDS source URL raspbee.de failed TLS on 2026-10-11, and no TFDS GCS copy exists. BeeDataset_20201121.zip (202 MB) is a Git LFS object in the GPL-3.0 GitHub repo and downloads (HTTP 206). Borderline because the data sit in repo LFS, not a release or archive."
+  - key: S28
+    confidence: borderline
+    title: "Data used in 'Machine learning reveals the waggle drift's role in the honey bee dance communication system'"
+    year: 2023
+    ids: ["10.5281/zenodo.7928121", "10.5281/zenodo.7928120"]
+    archives: [Zenodo]
+    evidence: "Zenodo (Dormagen, Wild, Wario, Landgraf; BeesBook): dance-classifier labels (203 MB) and a waggle-phase classifier ground truth (3.2 GB zip) built from observation-hive video. Borderline because the labels sit on detected waggle events and trajectories, not plain image annotations."
+  - key: S29
+    confidence: borderline
+    title: "training dataset of honeybee / bee test set of MOT"
+    year: 2024
+    ids: ["10.5281/zenodo.10827406", "10.5281/zenodo.10827405", "10.5281/zenodo.10828561", "10.5281/zenodo.10828560"]
+    archives: [Zenodo]
+    evidence: "Zenodo (Lei Chaokai): training.zip (1.3 GB) titled as a honeybee training dataset, and test_set_MOT.zip described as bee video annotated in MOT16 format with DarkLabel. Borderline because the zip contents could not be opened and the species is stated only in the title."
+  - key: S30
+    confidence: borderline
+    title: "Bee Dataset BUT-HS1 (hyperspectral images of honey bees, Varroa mites and detritus)"
+    year: 2024
+    ids: ["imonbilk/bee-dataset-but-hs", "10.34740/kaggle/dsv/7845514"]
+    archives: [Kaggle]
+    evidence: "Kaggle only (Brno; manuscript arXiv 2403.14359): six hyperspectral scenes of Apis mellifera, Varroa and detritus, laid out as BeesOnly, MitesOnly and mixed folders with letter marks. Borderline because the labels are scene and folder level, not per-object annotation files."
+near_misses:
+  - {ids: ["10.5281/zenodo.19241078", "10.5281/zenodo.19241077", "10.5281/zenodo.22883902", "10.5281/zenodo.22883901", "10.5281/zenodo.21751992", "10.5281/zenodo.19011441", "10.5281/zenodo.19011439", "10.17632/db35fj73x5", "jondelvic/honey-bee-brood-dataset-deepbee-to-yolo", "10.5281/zenodo.15042164", "10.5281/zenodo.17313415", "github.com/gpaolillo94/Comb_Images", "10.15482/USDA.ADC/29825570"], why_excluded: "Comb, brood or frame cell datasets (FAIRHiveFrames-1K, which has only a README on Zenodo; GeoComb, whose 21751992 is 410 GONE; Honeycomb 7-class; DeepBee DS-COMB-SEG and its YOLO repack; RoboRoyale cell detection and comb mapping; hygienic-behaviour comb images; USDA Tucson frame reservoir). The labelled objects are cells, not bees."}
+  - {ids: ["10.5281/zenodo.18384103", "10.5281/zenodo.18282787"], why_excluded: "HoneyNet wax-moth infestation: labelled images of infested combs and moth stages, not bees."}
+  - {ids: ["10.5281/zenodo.10231845", "10.5281/zenodo.10231844", "varroa-counter/varroa-counter", "varroa-counter/varroa-board"], why_excluded: "Varroa on sticky boards (Divasón 2024 and the Roboflow varroa-counter projects). Mites on boards, no bees in the images."}
+  - {ids: ["10.6084/m9.figshare.21679949", "10.5281/zenodo.10017446", "10.5281/zenodo.10018087", "10.6084/m9.figshare.23065052"], why_excluded: "Corbicular pollen-pellet images and pollen-grain or pellet colour sets. The labelled objects are pollen, not bees."}
+  - {ids: ["10.5281/zenodo.7244070", "smaciu/bee-wings-small", "smaciu/bee-wings-large", "10.25338/B8T032", "10.5281/zenodo.13340594", "10.5281/zenodo.8071014", "10.5281/zenodo.22984606", "10.5061/dryad.931zcrk0p", "10.5683/SP3/OFMOTA"], why_excluded: "Wing-venation image collections (landmarks and origin labels for subspecies morphometrics) and queen morphometric photos. These are isolated body parts or specimen photos, not CV datasets of bees. Many more Oleksa/Tofilski 'fore wings of honey bees from <country>' Zenodo records fall in this class."}
+  - {ids: ["10.5281/zenodo.15042229", "10.5281/zenodo.15026488", "10.5281/zenodo.15682344", "10.5281/zenodo.13801588", "10.5281/zenodo.4507648", "10.5281/zenodo.6045860", "10.5281/zenodo.7298798", "10.5281/zenodo.4438013", "10.5281/zenodo.5582779", "10.26180/21533760"], why_excluded: "Detection, trajectory or interaction tables with no annotated images: RoboRoyale queen-search, comb-state and queen-movement CSVs (the readmes list only detection columns); the Science Robotics bundle; Bozek 2021 tracks and supplementary movies; BeesBook lifetime tracks and social networks; Gernat trophallaxis interactions; and Monash SMIBA multi-insect tracks."}
+  - {ids: ["10.5281/zenodo.21529070", "10.5281/zenodo.17279440"], why_excluded: "Waggle-dance framerate study: 60 fps videos with small dance ground-truth files, made to test framerate effects. It is a methods record, not a labelled training set."}
+  - {ids: ["10.5281/zenodo.7395751", "10.5281/zenodo.7725940", "10.5281/zenodo.7725970", "10.5281/zenodo.8325383", "arXiv:2508.19762", "rabbitcuteking/honey-bee-vs-bumble-bee-dataset", "lazuardinfl/honeybee-vs-bumblebee", "jerzydziewierz/bee-vs-wasp", "delima87/beesvsants", "uisikdag/hymenoptera-ants-bees", "hemanthsai7/ants-vs-bees", "ayeshaanamsiddiqui/flying-insect-image-dataset", "abdelhakimkhaouiti/bee-and-asian-hornet-detection", "hajardoukhou/bee-asianhornet-detection"], why_excluded: "Multi-taxon insect or pollinator sets (Bjerge camera-trap benchmark, Insect Detect, BuzzSet with no public download found), honey bee vs bumblebee or wasp classifiers, the PyTorch ants-vs-bees tutorial copies, and hornet-and-bee sets. Honey bee is one class among others."}
+  - {ids: ["10.1371/journal.pone.0319968", "10.17632/6tjd3zrs4d", "10.5281/zenodo.19737813", "10.5281/zenodo.22235293", "eliassantosmartins/jatai-bees-tracking-dataset", "danielacalvus/andrena-vaga-bees-indoor", "MikeTrizna/bees"], why_excluded: "Other species: Apis cerana segmentation and flight tracks, stingless bees, Andrena vaga, and the USNM bumblebee specimens."}
+  - {ids: ["10.15482/USDA.ADC/29622290", "10.5281/zenodo.22802907", "PMC10784501", "PMC12390549", "PMC11766059", "PMC13607679"], why_excluded: "Papers without a public image download: the USDA larval-diagnosis images are proprietary (only PRJNA1285920 16S is deposited); Choi 2026 uses AI-Hub No. 71667, which is login-gated and not redistributed; the rest offer data on request or in the article only."}
+  - {ids: ["comvis-hust.github.io/datasets/pollenbee.html"], why_excluded: "VnPollenBee pollen-bearing bee detection set (Ecological Informatics 2024): hosted only in a personal Google Drive folder with no license, not in an archive."}
+  - {ids: ["imonbilk/bee-dataset-but-2", "mxfxmm/bees-at-their-beehives", "maryammeda/apiarist-inaturalist-bees", "jeevajoji/uvg-honeybee", "Kimid0r1/bees", "10.5281/zenodo.18736319", "10.5281/zenodo.13375378", "10.5281/zenodo.20641893"], why_excluded: "Unlabeled images or video (BUT-2 camera logs, the 'not annotated' OpenCV competition set, iNaturalist scrape, UVG codec test clip, an undescribed video zip), figures only, or software and sample media (Api-TRACE, Hive Observation System)."}
+  - {ids: ["sammynorman/synthetic-images-of-honeybees-infested-with-varroa", "alicianoriega/varroadestructor-legendrefouriermoments", "kevinhardin/george-augmented-dataset", "anaisabelcaicedoc/varroa-detection-with-discrete-variables"], why_excluded: "Synthetic or augmented images, derived features, or synthetic tabular data."}
+  - {ids: ["10.5281/zenodo.1321278", "10.5281/zenodo.11398835", "annajyang/beehive-sounds", "augustin23/beetogether", "10.5281/zenodo.19293834", "10.5281/zenodo.22306866", "Codec-SUPERB/beehive_states_synth"], why_excluded: "Audio, sensor or fused-score hive data with no labelled images."}
+  - {ids: ["10.34740/kaggle/dsv/4738309", "10.34740/kaggle/dsv/5135390"], why_excluded: "Kaggle 'Bee Image Object Detection' and 'Bee Audio Object Detection' (AndrewL): the DOIs redirect to deleted-dataset-version."}
+  - {ids: ["gabshaw/bee-counting", "jonathanbyrne/see-the-bees", "baghdadidjawad/bee-detection-roboflow", "shahrukhkhan77/honey-bee", "omaloo/bees-dataset", "yanghuiwonhannah/bees-dataset", "julesespinoux/mebees", "ssalijoshua/mach-bees", "hotrandinhnguyen/new-bee", "lihuashun/new-bees", "chelbizineb/bee-counter", "ahmadjawwad903/bees-data", "hoanghung2004/varroa-dataset", "truonghoangvuk18dn/varroa-yolo", "thanhtung1511/bee-queen", "kickadroid/bradbeehivew", "sarafatalammozumder/insect-tracking-video-bees", "waelatalla/bee-detection", "sulaimank/honeybee_image_dataset", "duyle2408/varroa_data", "HoangTrungNguyen/Varroa_ASRM_training", "sagi-beewise/bee_frames_masked", "invertabrate-behavior-and-ecology-lab/bee-dudkk", "usdaars-zawsg/bee-b43lr", "pollinator-combined-dataset/honey-bee-p9sxs", "erin-tomassoni-workspace/bee-health-data", "gratheon/varroa-gasbl"], why_excluded: "Undescribed personal uploads: empty Kaggle descriptions, Roboflow pages saying 'a description for this project has not been published yet' or giving only class names, and HF repos with no card. Source, species and labels cannot be checked. gabshaw (point annotations, source unstated) and see-the-bees (VOC boxes, no description) are the closest calls. The roughly 140 other Roboflow 'bee', 'honey' and 'varroa' projects in the search lists are in this class too. HoangTrungNguyen and duyle2408 are model-run packages that appear to repack VarroaDataset."}
+  - {ids: ["tfds:bee_dataset (raspbee.de/BeeDataset_20201121.zip)"], why_excluded: "Note: the TFDS primary download host is unreachable (TLS error, 2026-10-11). The data still resolve via the GitHub LFS copy, which is kept as S27."}
+queries:
+  - "Hugging Face https://huggingface.co/api/datasets?search=<q>&limit=200 (id substring search): bee 200 (capped), bees 114, honeybee 8, honey-bee 10, honeybees 1, varroa 38, apis 152, pollen 37, beehive 6, hive 143, apiary 1, abeja 4, mellifera 0, abelha 0, abeille 0. 28 candidate repos opened via /api/datasets/<id> plus README; hits were RF100 bees-jt5in mirrors, wing images, undescribed zips and varroa model-run repos"
+  - "Zenodo https://zenodo.org/api/records?q=... (top 100 per query screened): '+honeybee +(image images video dataset)' 185; '+\"honey bee\" +(image images video)' 95; '+varroa +(image images detection)' 60; '+bee +pollen +(image video detection)' 115; '+bee +(yolo annotated annotation bounding \"deep learning\" \"object detection\" \"computer vision\")' 1583; '+(beehive hive) +entrance +(video image camera)' 14; '+(honeybee \"honey bee\" bee) +(tracking re-identification reidentification pose keypoint segmentation)' 264; '+(comb brood) +cell +(image classification detection)' 375; '+(beesbook \"waggle dance\") +(image video detection)' 14; '+\"Apis mellifera\" +(\"machine learning\" \"deep learning\" \"neural network\" convolutional)' 19; 'beesbook' 2; '+(honeybee \"honey bee\" bees) +(re-identification reid identities)' 102; '+pollen +(bearing foraging) +(bees honeybee) +(image images video)' 27. About 45 records opened via /api/records/<id>"
+  - "Figshare API POST /v2/articles/search: 'honeybee image dataset' 9; 'honey bee images' 119; 'varroa' 300 (capped). Title lookups and /v2/articles/<id> for High Quality Honey Bee Dataset, Pollen detection dataset, USDA larval diagnosis, Beewise colony assessment, colony quantitative method, waggle-dance PLOS item, and Monash 12895433 files"
+  - "DataCite https://api.datacite.org/dois?query=(honeybee OR \"honey bee\" OR \"honey bees\" OR honeybees OR \"Apis mellifera\") AND (image OR images OR video OR videos) AND (dataset OR annotated OR annotations OR labeled OR labelled OR detection OR classification OR \"deep learning\" OR \"machine learning\" OR yolo): 483; varroa AND (image OR images OR detection OR yolo OR \"deep learning\"): 135. These surfaced BEEHIVE, SCIBee, Carniolan Grey, Sledevic, BEE4EXP and the Monash records"
+  - "DataCite prefix scans query='bee OR bees OR honeybee OR honeybees OR varroa OR beehive OR apis': Mendeley 10.17632 683 (first 200 by date screened, found 8gb9r2yhfc); IEEE DataPort 10.21227 45 (SCIBee, Carniolan Grey x2, Honeybees and wasps); Kaggle 10.34740 21 (BUT-1, HS1, HS2, deleted AndrewL sets)"
+  - "Mendeley Data search API https://data.mendeley.com/api/research-data/search returned HTTP 500; covered via DataCite prefix 10.17632 plus paper data statements"
+  - "Dryad https://datadryad.org/api/v2/search: 'honey bee images' 8; 'honeybee video' 4; 'varroa image' 0; 'bee detection' 150 (first 50 screened); 'honey bee computer vision' 1; 'apis mellifera tracking' 5. No qualifying deposits"
+  - "Harvard Dataverse https://dataverse.harvard.edu/api/search?type=dataset: 'honeybee AND (image OR images OR video)' 0; '\"honey bee\" AND (image OR images OR video)' 2; 'varroa' 6; 'beehive AND image' 0. None qualify (queen morphometric photos are a near miss)"
+  - "OpenML full list https://www.openml.org/api/v1/json/data/list/limit/10000/offset/{0..60000}/status/all: 24,410 datasets, name regex bee|honey|varroa|apis|hive|pollen|mellif gives 15 (pollen, Epilobee mortality, beer reviews). 0 image datasets"
+  - "Kaggle https://www.kaggle.com/api/v1/datasets/list?search=<q> (anonymous, 5 pages): 'honey bee' 36, 'honeybee' 45, 'bee images' 66, 'varroa' 25, 'bee pollen' 7, 'beehive' 19, 'bee detection' 31, 'apis mellifera' 2, 'bee annotated' 11, 'bees' 100; union 223 slugs. Second pass: 'bee alarmed' 0, 'raspbee' 0, 'pollen bearing' 2, 'queen bee' 7, 'bee tracking' 5, 'hive entrance' 2, 'bee health' 22, 'bee varroa' 11, 'bee image object detection' 6. About 45 candidates opened via /api/v1/datasets/view and /datasets/list (description and file index)"
+  - "Roboflow Universe https://universe.roboflow.com/search?q=<q> (headless Chromium, the page shows the top 50): 'honey bee' 50, 'honeybee' 50, 'varroa' 50, giving 148 unique project links. The 'bee pollen', 'apis mellifera' and 'beehive' queries timed out. 7 project pages opened (bees-jt5in, RF100-VL varroa, beproj, usdaars, invertebrate lab, pollinator-combined, honeybee-tracking)"
+  - "Europe PMC search TITLE_ABS:(honeybee|honey bee(s)|honeybees|Apis mellifera|varroa) AND TITLE_ABS:(deep learning|computer vision|YOLO|convolutional|object detection|image dataset|machine vision|neural network|image analysis|video tracking): 165 hits. Data statements and URLs extracted from 15 PMC full texts (found 8gb9r2yhfc, Monash, the Bozek and Gernat Zenodo records, Comb_Images, and the on-request-only papers)"
+  - "arXiv API abs:(honeybee OR honeybees OR \"honey bee\" OR \"honey bees\" OR varroa) AND abs:(dataset OR detection OR tracking OR images): 66 (gave BuzzSet, BUT-HS, YUDO, re-ID and the Bird et al. abstract)"
+  - "GitHub: gh search repos varroa (30 screened; found schurist/VarroaDataset and BeeAlarmed/BeeDataset); gh api repo contents for piperod/PollenDataset and BeeAlarmed/BeeDataset (Git LFS pointer, LFS download HTTP 206)"
+  - "TensorFlow Datasets catalog bee_dataset page and builder source: URL https://raspbee.de/BeeDataset_20201121.zip (TLS failure); gs://tfds-data/datasets/bee_dataset is empty"
+  - "WebSearch (to locate, then verified at the host): 'BuzzSet v1.0 dataset ...' (paper only, no host); 'BeeLivingSensor dataset ...' (no original host; led to VnPollenBee and Kulyukin BeeVid); 'VnPollenBee dataset ...' (Google Drive only); 'Kulyukin BeeVid dataset ...' (no public host found); 'honeybee re-identification dataset Chan Mégret 2022 ...' (no data host found); 'Unraveling Honey Bee's Waggle Dances ... dataset' (no data host found)"
+size_verdict: ok

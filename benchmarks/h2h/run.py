@@ -26,7 +26,7 @@ import time
 from pathlib import Path
 
 MODEL = "claude-sonnet-5-5"
-TOOLUNIVERSE = "tooluniverse==1.5.4"
+TOOLUNIVERSE = "tooluniverse==1.5.6"  # round 3; rounds 1 and 2 ran 1.5.4
 RUN_TIMEOUT_S = 15 * 60
 BUDGET_USD = "3"
 

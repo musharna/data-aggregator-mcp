@@ -1,0 +1,244 @@
+task: T1
+prompt: >-
+  Find every public dataset, in any archive, that holds extracellular electrophysiology (single units, LFP,
+  tetrodes, silicon probes, Neuropixels) or calcium/voltage imaging recorded from the mouse olfactory bulb in living
+  animals (awake or anesthetized) while odors were presented. Raw or processed neural data both count. Slice or other
+  in-vitro-only recordings, other species, other brain regions without olfactory-bulb recordings, behavior-only data,
+  code-only repositories, and papers without deposited data do not count.
+criteria: >-
+  Topic: PRIMARY (in vivo odor-evoked recordings from the mouse olfactory bulb). Included: a public deposit in an archive
+  (DANDI, CRCNS, Zenodo, Figshare, Dryad, Mendeley Data, GigaDB, NYU UltraViolet, SSBD, etc.) holding extracellular
+  electrophysiology (units, LFP) or calcium/voltage imaging (GCaMP widefield or two-photon) recorded in vivo from the
+  olfactory bulb of Mus musculus while odorants (monomolecular odors, mixtures, plumes, conspecific/neutral chemical
+  stimuli) were delivered. Imaging of any element inside the OB counts: OSN axon terminals in glomeruli, mitral/tufted,
+  external tufted, periglomerular, dopaminergic and granule cells. Imaging of cortical feedback axons inside the OB is
+  kept but flagged confidence: borderline (it records in the OB, but not OB neurons). Processed data count, including
+  per-figure source-data tables of odor-evoked dF/F or spike data. Deposits whose OB neural data could not be confirmed
+  in the file listing, and single-example-image deposits, are flagged borderline. Species, region and odor condition were
+  confirmed from the deposit text or, if silent, from the linked paper's methods (Europe PMC full text or preprint
+  abstract). Excluded: slice / ex vivo / semi-intact recordings; rat, human, Drosophila, locust, zebrafish, trout;
+  piriform, AON, tubercle, hippocampus or other regions without OB recordings; OB recordings with no odor presentation
+  (sleep, spontaneous, nasal airflow, optogenetic 'synthetic odors' only); intrinsic-optical-signal and synaptopHluorin
+  imaging (neither ephys nor calcium/voltage); behavior-only and code-only deposits; journal supplement PDFs; DOIs that do
+  not resolve. Unit = study: copies, versions, Dryad-to-Zenodo mirrors, concept/version DOIs, and multiple DOIs or parts of
+  the same dataset are aliases of one study. Qualifying deposits from the same paper are grouped as one study; sibling
+  deposits from the same paper that hold only behavior, histology or code are not listed as aliases (they are near misses
+  where examined).
+studies:
+  - key: S1
+    title: "Mesoscale Two-Photon Calcium Imaging of Population Level Odor Responses from the Mouse Olfactory Bulb"
+    year: 2025
+    ids: ["DANDI:001170", "10.48324/dandi.001170/0.251111.1532", "10.48324/dandi.001170/0.260528.1016"]
+    archives: [DANDI]
+    evidence: "DANDI API: Mus musculus, NWB TwoPhotonSeries + segmentation of odor-evoked activity in OB mitral, tufted and granule cells (Reimer/Arenkiel labs, bioRxiv 10.1101/2023.04.24.538157); 12 files, 352 GB; both version DOIs listed in DataCite."
+  - key: S2
+    title: "Simultaneous extracellular recordings from mice olfactory bulb (OB) and piriform cortex (PCx) and respiration data in response to odor stimuli and optogenetic stimulation of OB (pcx-1)"
+    year: 2018
+    ids: ["10.6080/K00C4SZB", "crcns:pcx-1"]
+    archives: [CRCNS]
+    evidence: "CRCNS about-pcx-1 page: extracellular OB and PCx recordings in mice responding to odors at varying concentrations, raw binary + Matlab, ~407 GB (Bolding & Franks 2018 Science). The Piriform cortex category is missing from the CRCNS sitemap; the DOI resolves to crcns.org/data-sets/pcx/pcx-1."
+  - key: S3
+    title: "Recurrent circuitry is required to stabilize piriform cortex odor representations across brain states"
+    year: 2020
+    ids: ["10.5061/dryad.n2z34tmtj", "zenodo:3998118"]
+    archives: [Dryad, Zenodo]
+    evidence: "Dryad/Zenodo mirror: head-fixed mice, OB odor responses under awake vs ketamine/xylazine, with bulb.zip (7.7 GB) plus pcx.zip (Bolding et al. 2020 eLife 10.7554/eLife.53125)."
+  - key: S4
+    title: "Data from: Embryonic and postnatal neurogenesis produce functionally distinct subclasses of dopaminergic neuron"
+    year: 2019
+    ids: ["10.5061/dryad.b5hg8d6", "zenodo:5031361"]
+    archives: [Dryad, Zenodo]
+    evidence: "Files include 'Figure 9-10 - in vivo imaging' (15 GB) of OB dopaminergic neuron responses to odorant stimuli in mice (Galliano et al. 2018 eLife 10.7554/elife.32373); slice files are also present."
+  - key: S5
+    title: "Dataset for: Synchronized Activity in The Main and Accessory Olfactory Bulbs and Vomeronasal Amygdala Elicited by Chemical Signals in Freely Behaving Mice"
+    year: 2017
+    ids: ["10.5281/zenodo.10528914", "10.5281/zenodo.10528913"]
+    archives: [Zenodo]
+    evidence: "Zenodo: OLFVN_Recordings.zip (284 MB) of electrophysiology in main and accessory OB and vomeronasal amygdala of freely behaving mice exploring neutral and conspecific chemical stimuli (Pardo-Bellver et al. 2017 Sci Rep, PMC5577179)."
+  - key: S6
+    title: "Neuronal calcium, RBC velocities and fUS responses to odorant stimuli in the mouse olfactory bulb"
+    year: 2019
+    ids: ["10.5281/zenodo.3381353", "10.5281/zenodo.3381352", "10.5281/zenodo.3773863", "10.5281/zenodo.4319024", "10.5281/zenodo.4319023"]
+    archives: [Zenodo]
+    evidence: "Two HDF5 files (VT31.h5, XV4.h5) with two-photon GCaMP6f calcium from mitral-cell dendritic tufts in OB glomeruli during odorant delivery (Aydin et al. 2020 Nat Commun, PMC7290037). Record 3773863 is a version of concept 3381352. Record 4319024 (Iliski example data) re-uploads the same two files, so all are aliases."
+  - key: S7
+    title: "The oxygen initial dip in the brain of anesthetized and awake mice"
+    year: 2021
+    ids: ["10.5281/zenodo.5804933", "10.5281/zenodo.5804932"]
+    archives: [Zenodo]
+    evidence: "Data.zip (503 MB) for Aydin et al. 2022 PNAS (PMC9169103): two-photon calcium, blood flow and pO2 in an OB glomerulus during ethyl tiglate stimulation in awake and anesthetized mice. Separate paper and deposit from S6."
+  - key: S8
+    title: "Data from: Value-related learning in the olfactory bulb occurs through pathway-dependent peri-somatic inhibition of mitral cells"
+    year: 2024
+    ids: ["10.5061/dryad.r4xgxd2m9", "zenodo:10629625"]
+    archives: [Dryad, Zenodo]
+    evidence: "Per-figure mat/csv of two-photon imaging of mitral and tufted cells in head-fixed mice doing go/no-go odor-mixture discrimination (PLoS Biol 10.1371/journal.pbio.3002536)."
+  - key: S9
+    title: "Behavioral discrimination and olfactory bulb encoding of odor plume intermittency"
+    year: 2024
+    ids: ["10.5061/dryad.crjdfn387", "zenodo:10903705"]
+    archives: [Dryad, Zenodo]
+    evidence: "Dryad methods: Neuroplex optical imaging of the dorsal OB in head-fixed mice expressing GCaMP6f in OSNs or M/T cells during an intermittency task, plus anesthetized artificial-sniffing imaging (Artificial_Sniffing.zip 2.9 GB; eLife 10.7554/elife.85303)."
+  - key: S10
+    title: "Structure-Function Mapping of Olfactory Bulb Circuits With Synchrotron X-ray Nanotomography (curated 2P datasets)"
+    year: 2025
+    ids: ["10.5281/zenodo.15150149", "10.5281/zenodo.15041593", "10.5281/zenodo.15041592"]
+    archives: [Zenodo]
+    evidence: "Zenodo .npy cell/glomerulus response arrays for three mice. Preprint 10.1101/2025.04.24.650439: in vivo two-photon imaging of M/TC responses to 47 monomolecular odours in mouse OB."
+  - key: S11
+    title: "Mice discriminate odour source distance via sub-sniff temporal features of odour plumes"
+    year: 2025
+    ids: ["10.5281/zenodo.15390336", "10.5281/zenodo.15390335"]
+    archives: [Zenodo]
+    evidence: "Files include imaging_traces_plume_features.pkl (1.5 GB) and Traces_df_all.pkl (2.9 GB). Preprint 10.1101/2025.05.14.653752 (Marin, Ackels et al.): two-photon calcium imaging of OB mitral/tufted cells during plume delivery."
+  - key: S12
+    title: "Decorrelation by gain control in the mouse olfactory bulb"
+    year: 2025
+    ids: ["10.5281/zenodo.17359151", "10.5281/zenodo.17359150"]
+    archives: [Zenodo]
+    evidence: "Files glom_omp_data.h5 and glom_tbet_data.h5 (OSN input vs M/T output glomeruli). Preprint 10.64898/2026.05.07.722633: in vivo two-photon calcium imaging of glomerular input and output responses to 47 odours in mice."
+  - key: S13
+    title: "Rapid temporal processing in the olfactory bulb underlies concentration invariant odor identification and signal decorrelation"
+    year: 2026
+    ids: ["10.5281/zenodo.18402902", "10.5281/zenodo.18402901"]
+    archives: [Zenodo]
+    evidence: "Zenodo mat files (13- and 8-odor sessions) of glomerular and mitral/tufted cell imaging; paper PMC13156029 (Nat Neurosci) records MTC responses to 12 odors at 2 concentrations in awake mice."
+  - key: S14
+    title: "Long-range GABAergic projections contribute to cortical feedback control of sensory processing (processed imaging data)"
+    year: 2022
+    ids: ["10.5281/zenodo.7050088", "10.5281/zenodo.7050087"]
+    archives: [Zenodo]
+    evidence: "Registered, trial-sorted data (MCexp, TCexp, GLexp .mat). Mazo et al. 2022 Nat Commun (PMC9653434): in vivo imaging of odor-evoked activity of OB mitral, tufted and glomerular-layer neurons with cortical GABAergic feedback stimulation."
+  - key: S15
+    title: "Zak et al. 2024 Nature Communications imaging data (Distinct information conveyed to the olfactory bulb by feedforward input from the nose and feedback from the cortex)"
+    year: 2024
+    ids: ["10.5281/zenodo.10697363", "10.5281/zenodo.10697362"]
+    archives: [Zenodo]
+    evidence: "Zenodo GitHub release 'Imaging_Data_v1.2', described as all imaging datasets of the paper. PMC11021479: multiphoton calcium imaging of OSN axons and cortical feedback axons in mouse OB with odorant mixtures and concentration series."
+  - key: S16
+    title: "Data and Code for NCOMMS-25-57165A (Generalization of fear learning is shaped by inhibitory sensory processing in mice)"
+    year: 2026
+    ids: ["10.5281/zenodo.18809358", "10.5281/zenodo.18809357"]
+    archives: [Zenodo]
+    evidence: "xls.zip holds per-animal, per-odor mean calcium increases for OSN, PG and mitral imaging groups. PMC13223235: in vivo widefield GCaMP6f imaging of OB OSN terminals, PG cells and mitral cells in anesthetized mice during odor presentation."
+  - key: S17
+    title: "Kunkhyen et al 'Non-uniform endogenous regeneration of olfactory sensory neuron axons across the mouse olfactory bulb' dataset"
+    year: 2026
+    ids: ["10.5281/zenodo.19717585", "10.5281/zenodo.19717584"]
+    archives: [Zenodo]
+    evidence: "Source-data xlsx (24 KB). Sheet 'Figure 2' has odor-evoked dF/F (EB, IAA) per glomerulus and grid for saline vs MMZ mice. PMC13377051: repeated in vivo two-photon imaging of OSN axons in OMP-GCaMP6s mice. Processed only."
+  - key: S18
+    title: "Parent-glomerulus-identified, second order cells olfactory responses to odorants in awake mice"
+    year: 2018
+    ids: ["10.6084/m9.figshare.5877474", "10.6084/m9.figshare.5877474.v2"]
+    archives: [Figshare]
+    evidence: "m72_spikes.tar.gz (1.4 GB) of mitral/tufted unit recordings in actively sniffing mice probed with M72 ligands (Arneodo et al. 2018 Nat Commun 10.1038/s41467-018-03837-1)."
+  - key: S19
+    title: "Odor concentration series electrophysiology data"
+    year: 2018
+    ids: ["10.6084/m9.figshare.5325340", "10.6084/m9.figshare.5325340.v1"]
+    archives: [Figshare]
+    evidence: "ephys_concentration_data.tar.gz (3.3 GB) of OB mitral/tufted responses across odor concentrations. It is cited in the data statement of Wilson et al. 2017 Nat Commun 'A primacy code for odor identity' (PMC5684307)."
+  - key: S20
+    title: "Rule reversal aPCx-to-OB feedback data"
+    year: 2024
+    ids: ["10.6084/m9.figshare.26999638", "10.6084/m9.figshare.26999638.v1"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (imaged elements are piriform feedback axon boutons inside the OB, not OB neurons). Multiphoton imaging of aPCx-to-OB boutons in head-fixed mice in an odor/sound rule-reversal task (Hernandez-Trejo et al., Nat Commun, PMC11754465). Feedback responses.zip is 2.7 GB."
+  - key: S21
+    title: "Matlab scripts and associated datasets for 'Conserved post-odor dynamics in the olfactory systems of mice and locusts'"
+    year: 2026
+    ids: ["10.6084/m9.figshare.31435543", "10.6084/m9.figshare.31435543.v2"]
+    archives: [Figshare]
+    evidence: "Figshare (typed software) holds glomData2/filtData2 .mat files. The description states the mouse data are two-photon calcium imaging of M/T dendrites in OB glomeruli during and after odor presentations (paper PMC13066794)."
+  - key: S22
+    title: "Dataset for Perception and neural representation of intermittent odor stimuli in mice"
+    year: 2026
+    ids: ["10.6084/m9.figshare.31792705", "10.6084/m9.figshare.31792705.v1"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (could not confirm that the OB data are in the deposit). The paper (PMC13304163) includes wide-field GCaMP3 imaging of OSN terminals in OB glomeruli in awake mice and names this Figshare item as its data deposit. The 21 listed files are named for aPCx units, behavior and breathing, with no file clearly holding the OB imaging."
+  - key: S23
+    title: "In vivo electrophysiological recordings from the olfactory bulb"
+    year: 2026
+    ids: ["10.17632/zdvxwzxdpz", "10.17632/zdvxwzxdpz.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley public API lists per-unit AI01.mat files. The linked paper (PMC12877839, iScience 2026) pools awake head-fixed mouse M/T single units recorded with tetrodes/microelectrodes during odor delivery, plus sniffing. Data statement link was a draft URL, but the DOI is findable in DataCite."
+  - key: S24
+    title: "Sister External Tufted Cells Form Dynamic Intraglomerular Ensembles Representing Odor Identity and Concentration"
+    year: 2025
+    ids: ["10.17632/g973zgjmzd", "10.17632/g973zgjmzd.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley files hold per-animal, per-odor cell result csv/mat (e.g. ani101 Butanal green/red cells). Paper PMC12341726: in vivo two-photon calcium imaging of OB external tufted cells across odors and concentrations in mice."
+  - key: S25
+    title: "Gregory et al. 2026 calcium imaging and source data (Immature olfactory sensory neurons provide complementary input in the intact olfactory system)"
+    year: 2026
+    ids: ["10.17632/4rd8hwfvsk.1", "10.17632/4rd8hwfvsk", "10.17632/zbt2t7438g.1", "10.17632/zbt2t7438g", "10.5281/zenodo.19235831", "10.5281/zenodo.19235830"]
+    archives: [Mendeley Data, Zenodo]
+    evidence: "Two Mendeley parts (Gg8-hM4Di - 1/2 and tetO-hM4Di zips, ~20 GB) are raw calcium imaging files. The Zenodo source-data xlsx has 'Mouse/Glom calcium odor responses' sheets. PMC13635011: in vivo GCaMP6s imaging of odor-evoked OB glomerular-layer responses before and after CNO. Other Mendeley deposits of this paper (videos, histology) are not keyed."
+  - key: S26
+    title: "Supporting data for 'Learning improves decoding of odor identity with phase-referenced oscillations in the olfactory bulb'"
+    year: 2020
+    ids: ["10.5524/100699", "GigaDB:100699"]
+    archives: [GigaDB]
+    evidence: "DataCite/GigaDB: OB LFP (theta/gamma/beta phase-amplitude coupling) recorded in mice learning to discriminate odorants (Losacco et al. 2020 eLife 10.7554/elife.52583); gigadb.org/dataset/100699 resolves."
+  - key: S27
+    title: "Calcium imaging of glomeruli in the olfactory bulb of the mouse in response to thirty-five monomolecular odors"
+    year: 2024
+    ids: ["10.58153/j2932-aaf14", "10.58153/t54j2-9cw97"]
+    archives: [NYU UltraViolet]
+    evidence: "DataCite: wide-field 1-photon calcium imaging at 100 Hz in head-fixed Thy1-GCaMP6f mice with cranial windows, 35 odors (Agarwal, Harvey, Nakayama, Dhar, Rinberg). The two DOIs share title, authors and description, so they are aliases. doi.org redirects to ultraviolet.library.nyu.edu, which refused connections from this host."
+  - key: S28
+    title: "Images of organoids, brain slices and in the brains of mice using minimally invasive optical clearing media, SeeDB-Live (dataset Fig5f_odor_SDL)"
+    year: 2026
+    ids: ["SSBD:484-Inagaki-SeeDBLive", "SSBD:Fig5f_odor_SDL", "SSBD-OMERO:dataset-18806"]
+    archives: [SSBD]
+    evidence: "confidence: borderline (methods paper; the OB odor part is one example figure dataset). SSBD page: in vivo two-photon time-lapse of Thy1-GCaMP6f mitral cells in mouse OB during 1% pentanal (valeraldehyde) delivery; one .tif, 25.9 MB, CC BY, downloads page resolves."
+near_misses:
+  - {ids: ["DANDI:001433"], why_excluded: "Breathing rhythm and place dataset: OB electrophysiology in freely behaving mice 'given no stimulus, reward, or task' (no odor presentation)."}
+  - {ids: ["DANDI:000785"], why_excluded: "Piriform cortex calcium imaging; OB appears only as a retrograde-labeling target."}
+  - {ids: ["DANDI:000167", "DANDI:000931"], why_excluded: "Piriform cortex only (two-photon imaging; Dehaquani et al. 2024 units)."}
+  - {ids: ["DANDI:001539", "10.6084/m9.figshare.19620783"], why_excluded: "Hippocampal-prefrontal-OB recordings during odor-place task, but in rats."}
+  - {ids: ["DANDI:001789"], why_excluded: "Rat OB current/voltage clamp (adenosine, in vitro synaptic study)."}
+  - {ids: ["DANDI:000217", "DANDI:001863"], why_excluded: "Olfactory search behavior and sniffing only, no neural recordings."}
+  - {ids: ["10.5281/zenodo.12352"], why_excluded: "Mouse OB intrinsic optical signal imaging of odor maps (Soelter et al. 2014), not ephys or calcium/voltage imaging."}
+  - {ids: ["10.5281/zenodo.1297377", "10.5281/zenodo.1297376"], why_excluded: "Glomerular odor responses by intrinsic optical signal and synaptopHluorin imaging, not calcium/voltage imaging."}
+  - {ids: ["10.5061/dryad.8m6n5fs", "zenodo:5010564"], why_excluded: "OB gamma LFP in freely moving mice for sleep scoring/anesthesia; no odor presentation; figure tables only."}
+  - {ids: ["10.5061/dryad.01br7", "zenodo:4991509"], why_excluded: "Files are 'data on all stimuli and mouse performance' for optogenetic virtual-odor discrimination; behavior only."}
+  - {ids: ["10.5061/dryad.3cs6v", "zenodo:4996058"], why_excluded: "Single xlsx of go/no-go behavioral detection of retronasal odor; the paper's OB imaging is not deposited."}
+  - {ids: ["10.5061/dryad.3tx95x6t8"], why_excluded: "Decoding OB output: closed-loop optogenetic stimulation with behavioral readout, no odor-evoked recordings."}
+  - {ids: ["10.5061/dryad.6t1g1jx4x", "zenodo:10424145"], why_excluded: "Heartbeat-entrained OB activity: rat semi-intact preparation plus awake recordings without odor stimulation."}
+  - {ids: ["10.5281/zenodo.3876083"], why_excluded: "Chong et al. 2020: mitral-cell responses to optogenetic spot stimulation ('synthetic odors') and behavior, no odorant-evoked recordings (archive listing checked)."}
+  - {ids: ["10.5061/dryad.j0zpc86g2", "zenodo:5771519", "10.5061/dryad.dt5h4m1"], why_excluded: "Piriform / anterior piriform cortex units only."}
+  - {ids: ["10.6084/m9.figshare.21365598"], why_excluded: "Ottenheimer et al. 2023: Neuropixels in PFC, AON/DP/TTd, motor cortex and striatum, not OB."}
+  - {ids: ["10.6084/m9.figshare.c.6000757"], why_excluded: "Winkelmeier et al. 2022: fMRI maps and olfactory tubercle single units, not OB."}
+  - {ids: ["10.17632/pbtf7bbnb8"], why_excluded: "Single units in AON, aPCx, LEC, CA1 and subiculum, not OB."}
+  - {ids: ["10.5281/zenodo.15824561"], why_excluded: "Lo et al. 2025 miniscope recordings in anterior piriform cortex and tubercle, not OB."}
+  - {ids: ["10.5061/dryad.xd2547dr6", "10.5061/dryad.t4b8gtj04", "10.5061/dryad.mgqnk98wq", "10.5281/zenodo.6259698", "10.18742/rdm01-757", "10.18742/21163747", "10.17863/cam.102763", "10.17863/cam.114886", "10.12751/g-node.vd9c21"], why_excluded: "Acute slice / ex vivo OB recordings (EPL interneurons, granule cells, PG cells, dopaminergic neurons, olfactory nerve, AOB mitral cells)."}
+  - {ids: ["10.6084/m9.figshare.2061156", "10.6084/m9.figshare.14877780", "10.18150/n97au1", "10.17605/osf.io/a67mu"], why_excluded: "In vivo OB recordings in rats, not mice."}
+  - {ids: ["10.5281/zenodo.18791231", "10.5281/zenodo.18791230"], why_excluded: "Theta oscillations in the OB: human data (CT/MRI and intracranial odor-cue recordings), not mouse."}
+  - {ids: ["10.6084/m9.figshare.25365442", "10.6084/m9.figshare.22656154", "10.5281/zenodo.7449170", "10.5281/zenodo.14697474", "10.17605/OSF.IO/NFWQB", "10.17605/OSF.IO/ZYSVP", "10.3929/ethz-b-000736106"], why_excluded: "Odor-evoked recordings in other species (locust, Drosophila, rainbow trout); 14697474 also returns HTTP 410."}
+  - {ids: ["10.6084/m9.figshare.33136013"], why_excluded: "Nose-to-brain anxiety paper: LFP/photometry in non-OB targets under nasal airflow or optogenetic OSN stimulation, no odors."}
+  - {ids: ["10.6084/m9.figshare.5325310"], why_excluded: "Sibling of S19 (Wilson et al. 2017): behavioral optogenetic-masking dataset only."}
+  - {ids: ["10.5281/zenodo.14291006", "10.5281/zenodo.13755624", "10.5281/zenodo.5137816", "10.5281/zenodo.5110826"], why_excluded: "Code-only GitHub releases (Hernandez-Trejo 2024 analysis code; Gonzalez 2024 iScience and Craft et al. 2021 code reusing pcx-1/rat data; OB biophysical model)."}
+  - {ids: ["10.5281/zenodo.21081559"], why_excluded: "Statistical summary table for the sTC/mitral insulin-sensing paper (slice work); the Dryad DOI 10.5061/dryad.h44j0zpzn cited in that paper does not resolve (doi.org 404)."}
+  - {ids: ["10.5061/dryad.p2ngf1vrh"], why_excluded: "Cited as the data deposit of 'State-dependent representations of mixtures by the olfactory bulb' (PMC8937304), but the DOI returns 404 at doi.org, DataCite and Dryad."}
+  - {ids: ["10.5281/zenodo.12774850", "10.5281/zenodo.10420620", "10.5281/zenodo.15697351", "10.17632/mxt98vfd52", "10.21985/n2-sd06-qn69"], why_excluded: "OB histology, MERFISH, migration or structural spine imaging, with no odor-evoked activity recordings."}
+  - {ids: ["10.6084/m9.figshare.14516913", "10.6084/m9.figshare.c.5327881", "10.6084/m9.figshare.c.6679787", "10.6084/m9.figshare.c.7710528", "10.3929/ethz-b-000321292", "10.13016/m2ez93-c56n"], why_excluded: "Journal supplement PDFs/docs or repository copies of articles, not data deposits (Frontiers plume paper supplement, BMC/Springer additional files, ETH and UMD article copies)."}
+  - {ids: ["10.6084/m9.figshare.5311090"], why_excluded: "Ano2 odor-tracking behavior movies only."}
+  - {ids: ["10.12751/g-node.h77etj"], why_excluded: "Human audio-olfactory conditioning EEG/behavior."}
+queries:
+  - "DANDI https://api.dandiarchive.org/api/dandisets/?search=<term>&embargoed=false&empty=false: 'olfactory bulb' 4; olfactory 16; odor 19; odour 0; mitral 2; glomerul 3; 'tufted cell' 2; piriform 3; olfaction 7; bulb 4; sniff 4; respiration 1; odorant 2; lab names (Franks, Rinberg, Albeanu, Mizrahi, Fukunaga, Schaefer, Wachowiak, Restrepo, Shusterman, Gire, Bhalla, Ackels) 0; Urban 1; Kay 17; Smear 3; Datta 3; Murthy 2; Zak 4; Kato 10. Candidate dandisets' version metadata fetched (10)."
+  - "CRCNS https://crcns.org/data-sets list + sitemap: 27 categories / 179 links, no olfactory category; direct probe found the unlisted Piriform cortex category and pcx-1. DataCite prefix:10.6080 (CRCNS DOIs): 147 records, regex olfact|odor|bulb|piriform: 1 OB hit (K00C4SZB)."
+  - "Zenodo https://zenodo.org/api/records?q=<q> (top 100 each, OR semantics): '\"olfactory bulb\" odor' 2762; '\"olfactory bulb\" odour' 1479; '\"olfactory bulb\" mouse' 15859; '\"olfactory bulb\" calcium imaging' 62141; '\"olfactory bulb\" recordings' 12219; '\"olfactory bulb\" electrophysiology' 1832; 'mitral cells odor' 98792; '\"mitral and tufted\" odor' 2530; 'glomerular imaging odor mouse' 67541; '\"olfactory bulb\" Neuropixels' 358; '\"olfactory bulb\" two-photon' 276032; '\"olfactory bulb\" GCaMP' 349; '\"olfactory bulb\" LFP' 921; '\"olfactory bulb\" unit' 86683."
+  - "Zenodo field/type-filtered, fully paged: '(title OR description:\"olfactory bulb\") AND resource_type.type:dataset' 50; ':other' 3; ':software' 13; mitral/tufted description AND dataset 7; '\"olfactory bulb\" AND resource_type.type:dataset' 58; same :software 17; '\"piriform\" AND dataset' 12; '(odor OR odour OR odorant OR odors OR odours OR olfactory OR olfaction) AND resource_type.type:dataset' 984 (all paged); same AND :other 85. 1441 unique records title/description regex-screened."
+  - "Figshare POST https://api.figshare.com/v2/articles/search (all item types / item_type=3): ':description: \"olfactory bulb\"' 1913 / 500; ':title: glomerular odor' 3000 / 1298; ':keyword: \"olfactory bulb\"' 545 / 140; ':description: \"mitral cells\" AND :description: odor' 85 / 18; ':description: \"olfactory bulb\" AND :description: odor' 218 / 102; ':title: \"olfactory bulb\"' and ':title: \"mitral cells\"' 0. Plain search_for queries returned 500-capped date-sorted noise. 5540 unique items title-screened; 15 article and 4 collection records fetched."
+  - "Dryad https://datadryad.org/api/v2/search?q=: 'olfactory bulb' 43; 'olfactory bulb odor' 8; 'mitral cells' 8; 'mitral tufted' 4; 'glomeruli odor' 2; 'olfactory bulb imaging' 8; 'olfactory bulb recordings' 11; 'odor mouse calcium imaging' 1; 'odor evoked mouse' 0; piriform 9; olfactory 393; odor 242 (532 unique screened; 17 dataset records + file lists fetched). File downloads need a bearer token, so READMEs were not read."
+  - "DataCite https://api.datacite.org/dois?query=: '(titles.title:\"olfactory bulb\" OR descriptions.description:\"olfactory bulb\") AND types.resourceTypeGeneral:Dataset' 386; same with (Software OR Other OR Collection) 304; mitral/tufted/glomerul title or description AND odor AND (Dataset OR Collection OR Other) 60; '(odor OR odour OR odorant OR odorants) AND (mouse OR mice) AND (imaging OR recordings OR electrophysiology OR neuropixels OR tetrode OR calcium) AND Dataset/Collection' 79; '\"olfactory bulb\" AND (odor OR odour OR odorant)' 363; 'client.uid:tib.g-node AND (olfactory OR odor OR odour OR bulb OR mitral)' 50 (GIN DOIs); title odor/olfactory/sniff AND Dataset AND description mouse/mice 135. 1122 unique DOIs screened; 35 candidate DOIs fetched individually."
+  - "GIN https://gin.g-node.org/api/v1/repos/search?q=: 'olfactory bulb' 1; olfactory 6; odor 3; odour 2; mitral 1; glomeruli 0; bulb 1; piriform 0; sniff 0 (no qualifying repo)."
+  - "Harvard Dataverse https://dataverse.harvard.edu/api/search?type=dataset&q=: '\"olfactory bulb\"' 3; '\"olfactory bulb\" AND (odor OR odour OR odorant)' 1; 'mitral AND odor' 0; 'olfactory AND (calcium OR electrophysiology OR recordings)' 2 (none qualify)."
+  - "OpenNeuro GraphQL advancedSearch(query:{keywords:[...], publicOnly:true}): olfactory 6; odor 1448 (fuzzy); 'olfactory bulb' 651 (fuzzy); mitral 51; smell 467; odour 480; species Mouse 38 (all MRI/PET). No mouse electrophysiology or optical-physiology datasets."
+  - "EBRAINS KG POST https://search.kg.ebrains.eu/api/search?group=public&type=Dataset&q=: 'olfactory bulb' 1; odor 1; odour 0; mitral 0; olfactory 4; piriform 22 (none qualify)."
+  - "Europe PMC search: '\"olfactory bulb\" AND (mouse OR mice) AND (odor...) AND (calcium imaging/two-photon/GCaMP/single unit/extracellular/tetrode/Neuropixels/silicon probe/LFP/voltage imaging/unit recordings) AND (zenodo OR figshare OR dryad OR dandiarchive OR DANDI OR g-node OR crcns OR dataverse OR openneuro OR osf.io OR mendeley OR ebrains OR repository DOI prefixes)' 198; title/abstract 'olfactory bulb' + recording + odor + repository terms 61; union 208 papers, 157 OA full texts fetched (fullTextXML) and regex-scanned for repository ids (143 had at least one). Core query without the repository clause: 7035; with recording terms: 3190."
+  - "Europe PMC full-text checks of linked-paper methods for species, in vivo vs slice, region and odor: PMC12877839, PMC13635011, PMC13619131, PMC12708639, PMC10723750, PMC13304163, PMC13223235, PMC13488935, PMC13330860, PMC11974548, PMC13506056, PMC12341726, PMC13156029, PMC13377051, PMC9653434, PMC11021479, PMC9169103, PMC9177857, PMC10328514, PMC7290037, PMC9145232, PMC10157098, PMC4219419; preprint abstracts PPR1022361, PPR1210708, PPR1010578."
+  - "WebSearch (lead-finding only): 'olfactory bulb mouse odor dataset DANDI Neuropixels mitral tufted dandiset'; '\"olfactory bulb\" odor responses mice data available zenodo OR figshare OR gin two-photon mitral cells dataset' (led to SSBD 484-Inagaki-SeeDBLive, verified on ssbd.riken.jp); '\"olfactory bulb\" \"data are available\" dandiarchive.org ...'; 'gin.g-node.org olfactory bulb odor mouse calcium imaging data repository'. Papers surfaced (Dasgupta 2022 J Neurosci, Shani-Narkiss 2023, Adam 2014) have no archive deposit."
+size_verdict: "ok: 28 distinct studies (3 borderline) across 9 archives (studies per archive: Zenodo 16, of which 4 are Zenodo mirrors of Dryad deposits and 1 is the Gregory source-data part; Dryad 4; Figshare 5; Mendeley Data 3; DANDI 1; CRCNS 1; GigaDB 1; NYU UltraViolet 1; SSBD 1), within the 5-30 range with at least 3 archives, so the backup topic was not used."

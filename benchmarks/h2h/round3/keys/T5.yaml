@@ -1,0 +1,282 @@
+task: T5
+prompt: >-
+  Find every public dataset, in any archive, that holds metabolomics data (untargeted or targeted LC-MS, GC-MS or NMR,
+  raw files or processed metabolite/feature tables; lipidomics-only counts) from reef-building stony corals
+  (Scleractinia: whole holobiont, or host or Symbiodiniaceae fractions taken from corals) where at least one sampled
+  condition is thermal stress (experimental heating or a marine heatwave) or bleaching. Proteomics-only and
+  transcriptomics-only data, sea anemones (Aiptasia/Exaiptasia), soft corals, jellyfish, Symbiodiniaceae grown only in
+  culture, and papers without deposited data do not count.
+criteria: >-
+  Topic: PRIMARY (coral thermal-stress / bleaching metabolomics); the backup topic was not needed. Included: a public
+  deposit in an archive (MetaboLights, Metabolomics Workbench, MassIVE/GNPS, MetaboBank, Zenodo, Figshare, Dryad, OSF,
+  BCO-DMO, PANGAEA, institutional repositories) of mass-spectrometry or NMR metabolomics or lipidomics data (raw files,
+  peak/feature tables or quantified metabolite tables; volatilome GC-MS counts) from scleractinian corals or from host
+  or symbiont fractions isolated from scleractinian corals, where at least one sampled group is heat-treated (any
+  elevated-temperature exposure, including acute CBASS-style ramps), sampled during or after a natural marine heatwave,
+  or visibly bleached. Species and condition were confirmed from the deposit's own metadata, sample sheet or file names,
+  or, if silent, from the linked paper's methods (Europe PMC full text). Flagged confidence: borderline (kept in the
+  key, can be scored separately or dropped): deposits with no sample sheet where the heat/bleaching subset could not be
+  confirmed; a non-heat primary design (bleaching-history parents, Vibrio co-culture at two temperatures, coral
+  exudate DOM rather than tissue); data shipped inside a software/R package; journal-supplement tables on a publisher
+  Figshare portal (no raw data); a private OSF project reachable only via the view-only link printed in the paper.
+  Excluded: proteomics-only and transcriptomics-only deposits (including MassIVE proteomics deposits whose titles look
+  like metabolomics); Exaiptasia/Aiptasia, soft corals (Sarcophyton, Clavularia-only), giant clams, fish; Symbiodiniaceae
+  or bacteria grown only in culture; coral metabolomics with no heat/bleaching group (genotype, disease, light, cold,
+  nutrients, predation, ocean acidification alone); bulk lipid content, fatty-acid or isotope physiology tables that are
+  not metabolite profiles; supplements that are PDFs only; embargoed or private ids; papers with no deposit. Unit = study:
+  a MassIVE MSV and its 10.25345 DOI and GNPS task, a Metabolomics Workbench ST and its PR and 10.21228 DOI, a Figshare
+  item and its versions, a Zenodo concept and version DOIs, and an OSF project with the GitHub/Zenodo release of the same
+  paper's data are aliases of one study. Sibling deposits from one paper in one archive that split one experiment
+  (untargeted + targeted BCO-DMO tables; a re-uploaded Figshare item) are grouped. Separate MassIVE deposits stay
+  separate studies even when one paper cites both (S5/S6). A workshop demo subset of another MSV is listed as its alias.
+studies:
+  - key: S1
+    title: "Coral symbiotic bacterial community and metabolites changes under thermal stress: A case of laboratory experiment with heating treatment"
+    year: 2023
+    ids: [MTBLS5272]
+    archives: [MetaboLights]
+    evidence: "MetaboLights protocol: Acropora digitifera held at 32 °C vs 25 °C for 13 days, LC-MS metabolomics (Sun et al. 2023 Sci Total Environ, 10.1016/j.scitotenv.2023.164258); public study resolves via ws/studies."
+  - key: S2
+    title: "13C metabolomics reveals widespread change in carbon fate during coral bleaching"
+    year: 2017
+    ids: [MTBLS538]
+    archives: [MetaboLights]
+    evidence: "s_ file factor 'Temperature treatment' Heated vs Control aquarium: Acropora aspera host and Symbiodinium fractions, 13C-labelled GC-MS (Hillyer et al. 2017 Metabolomics, 10.1007/s11306-017-1306-8)."
+  - key: S3
+    title: "Lineage-Specific Thermal Tolerance Mechanisms in Stony and Soft Corals: Insights from Photophysiology and Metabolomics"
+    year: 2025
+    ids: [ST004143, PR002606, "10.21228/M8SS0Z"]
+    archives: [Metabolomics Workbench]
+    evidence: "mwTab: Galaxea fascicularis (stony) plus the soft coral Clavularia, 33 °C for 72 h vs 27 °C control, LC-MS; released 2025-09-22, REST summary resolves."
+  - key: S4
+    title: "Acute heat stress redirects coral carbon budgets: integrative evidence from physiology and metabolomics"
+    year: 2025
+    ids: [ST004329, PR002743, "10.21228/M83G2D"]
+    archives: [Metabolomics Workbench]
+    evidence: "mwTab factors: Acropora hyacinthus, Pocillopora damicornis and Porites lutea under control, moderate and severe heat, LC-MS; released 2025-11-07."
+  - key: S5
+    title: "GNPS - Hawaiian Coral Metabolome Project"
+    year: 2020
+    ids: [MSV000085272, "10.25345/c5b392", "GNPS task 0d1c421088ac4ca395ad9e8b585a289e"]
+    archives: [MassIVE]
+    evidence: "Metadata Temperature_treatment Control / Pulse / Pulse Increase / Pulse High / Constant for tank corals plus wild Bleached vs Not Bleached colonies (Montipora capitata, Porites). Cited with S6 by Bean/Drury et al. 2022 Commun Biol (PMC9120509)."
+  - key: S6
+    title: "GNPS - Bleached coral and symbiont cultures"
+    year: 2020
+    ids: [MSV000085925, "10.25345/c5416c", "GNPS task c6c52f892e2145d8a867d270ef386a02"]
+    archives: [MassIVE]
+    evidence: "Metadata file: Montipora capitata biopsies labelled Pre-bleached vs Bleached plus symbiont pellets; raw LC-MS/MS. Second MSV named in the PMC9120509 data statement."
+  - key: S7
+    title: "GNPS GCMS Heat stress decreases the diversity, abundance and functional potential of coral gas emissions"
+    year: 2020
+    ids: [MSV000086299, "10.25345/c5wn38", "GNPS task 11f075790a8d4d5aa6cf3ea62b4dd158"]
+    archives: [MassIVE]
+    evidence: "GC-MS volatilome (BVOCs) of Acropora intermedia and Pocillopora damicornis under control vs heat stress (Lawson et al. 2021 Glob Change Biol); volatile metabolites, counted as metabolomics."
+  - key: S8
+    title: "GNPS Metabolomics of thermal stress-induced coral blenching"
+    year: 2021
+    ids: [MSV000088564, "10.25345/c5g00v", "GNPS task f8ab9cd9a9f54b50aa17cc0f04bfb103"]
+    archives: [MassIVE]
+    evidence: "Pavona decussata ramped 26 to 35 °C; metadata groups 35° vs 26°, LC-MS/MS."
+  - key: S9
+    title: "GNPS - Stable isotope tracing reveals compartmentalized nitrogen assimilation in scleractinian corals"
+    year: 2022
+    ids: [MSV000090231, "10.25345/c5q52fh70", "GNPS task ec2ae6be788c4f03b9f24bc0e222f1b3"]
+    archives: [MassIVE]
+    evidence: "Montipora capitata, Pocillopora acuta (and Porites compressa) from ambient vs heated tanks, 15N-tracing LC-MS; file names carry the code (e.g. TP1_Mcap_A_Tank-1, TP1_Pacuta_H_Tank-1) plus quant tables."
+  - key: S10
+    title: "Acropora pharaonis Endozoicomonas symbiotic interaction MS data"
+    year: 2023
+    ids: [MSV000092488, "10.25345/c5nk36g1n", "GNPS task da116d65109445c39f5d50fd133e23da"]
+    archives: [MassIVE]
+    evidence: "metadata/Coral_meta_pub_noD.csv: A. pharaonis holobiont sampled across a heating ramp (Time column 27.1, 32 and 34 °C), LC-MS mzML."
+  - key: S11
+    title: "Metaproteome analysis of the coral holobiont demonstrates algal symbiont quiescence under thermal stress"
+    year: 2024
+    ids: [MSV000094832, "10.25345/c5x05xq3t", "GNPS task 54947e09d02d41e8995fdbc01d88a4b5"]
+    archives: [MassIVE]
+    evidence: "Despite the title, the deposit is metabolomics: description 'Raw metabolomic Mass spectrometry data from thermal stress experiment', mzXML pos/neg plus Peaks_Pos/Neg.csv; sample sheet has Acropora hyacinthus, Porites lobata and Stylophora pistillata, Treatment Hot 48 vs Amb 48 at TP0-TP2. Cited by Ecol Evol 2026 (10.1002/ece3.73275)."
+  - key: S12
+    title: "GNPS - Heat-induced Stress Modulates Cell Surface Glycans and Membrane Lipids of Coral Symbionts"
+    year: 2024
+    ids: [MSV000095167, "10.25345/c5mw28r9b", "GNPS task c4f26e3ca3934a16b97928f0c9a9ef77"]
+    archives: [MassIVE]
+    evidence: "Cladocopium/Durusdinium freshly isolated from Montipora capitata fragments held at ambient (A) vs heated (H) treatment, T0-T2, lipidomics LC-MS/MS (ISME J 2025, 10.1093/ismejo/wraf073, PMC12077390). Symbionts come from a coral heat experiment, not culture."
+  - key: S13
+    title: "GNPS - Population wide metabolomic analysis identifies peptide polymers as markers of coral stress independent of genotype"
+    year: 2024
+    ids: [MSV000096582, "10.25345/c5d50g886", "GNPS task cf242b11e0114fe4aab2a8bddc51d00d"]
+    archives: [MassIVE]
+    evidence: "Description: M. capitata and P. acuta genotypes after thermal and pH stress; files ATAC/ATHC/HTAC/HTHC (ambient/high temperature x ambient/high CO2) at 24 h-12 wk, untargeted LC-MS/MS."
+  - key: S14
+    title: "GNPS - NASTE DOM and coral tissue nutrient dosing experiment"
+    year: 2024
+    ids: [MSV000096609, "10.25345/c5x05xq9q", "GNPS task 3b560004163a4d0f9474e278dcbcd841"]
+    archives: [MassIVE]
+    evidence: "Description: Porites and Montipora tissue metabolites plus DOM; three weeks of nutrient dosing, then three weeks of increased temperature 'to simulate future warming', then recovery (folder NASTE_DOM_35oC_mzML), LC-MS/MS."
+  - key: S15
+    title: "GNPS - Resilience of Tropical Eastern Pacific corals"
+    year: 2026
+    ids: [MSV000101299, "10.25345/c5pg1j26b", "GNPS task c82dc8ff715a4614a8ec7dd71b43d676"]
+    archives: [MassIVE]
+    evidence: "Description: tagged colonies of two cauliflower corals (Pocillopora; grandis/verrucosa per metadata) sampled before, during and after a natural marine heatwave, untargeted LC-MS/MS (numeric file names)."
+  - key: S16
+    title: "Untargeted / targeted metabolomic data collected during a thermal stress experiment using reef building corals collected in Kāne'ohe Bay, O'ahu, Hawai'i"
+    year: 2023
+    ids: ["10.26008/1912/bco-dmo.886427.1", "10.26008/1912/bco-dmo.886420.1", "bco-dmo dataset 886427", "bco-dmo dataset 886420", "hdl:1912/29646", "hdl:1912/29640"]
+    archives: [BCO-DMO]
+    evidence: "Montipora capitata and Pocillopora acuta held 2.7-3.2 °C above ambient for 5 weeks vs ambient; 886427 is the untargeted table and 886420 the targeted one (Williams et al. 2021 Sci Adv 10.1126/sciadv.abd4210, whose data statement says its files S1/S2 go to BCO-DMO). Found only via DataCite, not the BCO-DMO search."
+  - key: S17
+    title: "Montipora capitata multi-omics dataset"
+    year: 2022
+    ids: ["10.5281/zenodo.6861688", "10.5281/zenodo.6861687"]
+    archives: [Zenodo]
+    evidence: "Zenodo record: Data S2 processed metabolite data, 4 M. capitata colonies per treatment and time point of a heat-stress time series (Stephens et al. 2023 iScience 10.1016/j.isci.2023.107623, PMC10482995). The paper's MSV000088443 is the proteomics part (near miss)."
+  - key: S18
+    title: "Comparative lipidomics of a temperate and a subtropical coral under acute temperature stress."
+    year: 2026
+    ids: ["10.5281/zenodo.19041113", "10.5281/zenodo.19041112"]
+    archives: [Zenodo]
+    evidence: "CBASS acute high and low temperature exposures (11-32 °C) of Plesiastrea versipora and Pocillopora aliciae, LC-MS lipidomics NormalizedArea tables (La Motta & Matthews 2026)."
+  - key: S19
+    title: "Species-specific variation in the metabolomic profiles of Acropora hyachintus and Acropora millepora mask acute temperature stress effects in adult coral colonies"
+    year: 2020
+    ids: ["10.6084/m9.figshare.13234874", "10.6084/m9.figshare.13234874.v1", "10.6084/m9.figshare.13122056", "10.6084/m9.figshare.13122056.v1"]
+    archives: [Figshare]
+    evidence: "Author-deposited NMR and LC-MS metabolite tables (experiment 2 control vs acute temperature stress) for Sweet et al. 2021 Front Mar Sci (10.3389/fmars.2021.574292); 13122056 and 13234874 are the same author's upload and re-upload, grouped."
+  - key: S20
+    title: "Metabolomic response of Montipora capitata larvae to elevated temperature using stable isotope metabolomics"
+    year: 2024
+    ids: ["10.17605/OSF.IO/TE6S2", "osf.io/te6s2", "10.5281/zenodo.13835295"]
+    archives: [OSF, Zenodo]
+    evidence: "Public OSF project with 'Metabolomics Raw Data Files' (.raw/.mzXML) for M. capitata larvae reared at high (max 30.9 °C) vs ambient temperature; data statement of Huffmyer et al. 2024 PLoS Biol (10.1371/journal.pbio.3002875, PMC11556732), which also cites the GitHub release on Zenodo 13835295 (aliased; holds Mcap2021/Data/Metabolomics/metabolite_data.xlsx and metadata)."
+  - key: S21
+    confidence: borderline
+    title: "GNPS - Coral response to environmental and endogenous stimuli"
+    year: 2015
+    ids: [MSV000079130, "GNPS task a6f91175de794d9e940fa439b6391617", MSV000085035, "10.25345/c5z69p"]
+    archives: [MassIVE]
+    evidence: "Borderline: no sample sheet. Acropora yongei experiments (Hartmann/Quinn) whose description includes bleaching among the stimuli; which files are bleached could not be confirmed. MSV000085035 ('Coral Workshop Data Hawaii Institute of Marine Biology') reuses identical file names (e.g. AIN100_GA4_01_1916.mzXML), so it is listed as an alias."
+  - key: S22
+    confidence: borderline
+    title: "GNPS - Metabolomes from O. patagonica - V. mediterranei - V. coralliilyticus co-cultures"
+    year: 2019
+    ids: [MSV000083610, "10.25345/c5wp74", "GNPS task d96124588a77422dadaaff684860aaa4"]
+    archives: [MassIVE]
+    evidence: "Borderline: the scleractinian Oculina patagonica with Vibrio pathogens at 20 vs 28 °C (metadata 20C/28C groups, keyword 'Coral bleaching'); the design is pathogen co-culture, and 28 °C is the bleaching-season temperature (mBio 2020, PMC7374056)."
+  - key: S23
+    confidence: borderline
+    title: "Transgenerational metabolomic signature of coral bleaching history"
+    year: 2021
+    ids: [MSV000087311, "10.25345/c50b9c", "GNPS task fb20b57ddcf943149be0bc7059b5b906"]
+    archives: [MassIVE]
+    evidence: "Borderline: Montipora capitata gametes and embryos from parents with bleached (B) vs non-bleached (NB) history; no heat at the time of sampling (Nat Commun 2025, 10.1038/s41467-025-61102-8, PMC12214687)."
+  - key: S24
+    confidence: borderline
+    title: "GNPS - Decoding the lipid signaling molecular network of marine symbiosis (Marina corals metabolomics project)"
+    year: 2026
+    ids: [MSV000100981, "10.25345/c51g0j79r", "GNPS task 882b7e28425d4cdd80c0b765ac677e99"]
+    archives: [MassIVE]
+    evidence: "Borderline: Isopora palifera and other corals sampled 'mainly during the marine heat wave of 2024'; mixed species and no sample sheet, so no heat-vs-control contrast can be confirmed."
+  - key: S25
+    confidence: borderline
+    title: "Supplementary material from 'Metabolomic signatures of corals thriving across extreme reef habitats reveal strategies of heat stress tolerance'"
+    year: 2023
+    ids: ["10.6084/m9.figshare.c.6403960", "10.6084/m9.figshare.c.6403960.v1", "10.6084/m9.figshare.21967024", "10.6084/m9.figshare.21967024.v1"]
+    archives: [Figshare]
+    evidence: "Borderline: publisher (Royal Society) Figshare supplement; the SI docx has Tables S6/S7 of GC-MS metabolite means ± SEM for Pocillopora acuta from mangrove vs reef sites at t1 and t2 of a 5-day heat stress (Haydon et al. 2023 Proc R Soc B, 10.1098/rspb.2022.1877). No raw deposit."
+  - key: S26
+    confidence: borderline
+    title: "coralclass: Classification of Coral Phenotypes"
+    year: 2020
+    ids: ["10.5281/zenodo.3894132"]
+    archives: [Zenodo]
+    evidence: "Borderline: a software record (R package, 60 MB) that ships the preprocessed LC-MS data of Gordon PhD chapter 4, effects of ocean acidification and warming (simulated bleaching) on the Acropora aspera metabolome."
+  - key: S27
+    confidence: borderline
+    title: "Predicting the Photosynthetic Efficiency of Acropora aspera"
+    year: 2020
+    ids: ["10.5281/zenodo.3898432"]
+    archives: [Zenodo]
+    evidence: "Borderline: a software record (R package, 9 MB) holding the data of Gordon PhD chapter 5, LC-MS metabolomes of A. aspera under elevated temperature used to predict Fv/Fm."
+  - key: S28
+    confidence: borderline
+    title: "Thermal stress-induced metabolic reprogramming in two hard coral species"
+    year: 2026
+    ids: ["osf.io/t4xd9"]
+    archives: [OSF]
+    evidence: "Borderline: the OSF node is not public (API: public False, 401 without the key); it resolves only via the view-only link printed in Montalbetti et al. 2026 iScience (10.1016/j.isci.2026.116207, PMC13259630). Files Metabolomics_Raw Data.zip, Metadata_metabolomics.xlsx, Metabolomics_analysis.csv; Pocillopora damicornis and Stylophora pistillata at 25 °C vs 31 °C for 1, 3 and 10 days."
+  - key: S29
+    confidence: borderline
+    title: "GNPS Experimental and Environmental Metabolomics of Coral Reef DOM from Moorea, French Polynesia (2019)"
+    year: 2021
+    ids: [MSV000088021, "10.25345/c53g1n", "GNPS task 8c5d25906b2742df99d45d07f36fafe5"]
+    archives: [MassIVE]
+    evidence: "Borderline: the samples are seawater DOM (PPL extracts), not coral tissue. They include exudates of corals held 6 days at ambient (28.6 °C) vs elevated (32 °C) temperature (Sparagon et al. 2024 Commun Biol, 10.1038/s42003-023-05730-0, PMC10864316), alongside reef environmental samples."
+near_misses:
+  - {ids: [MTBLS116, MTBLS862, MTBLS342], why_excluded: "Coral or reef-related MetaboLights studies with no heat or bleaching group."}
+  - {ids: [MTBLS768], why_excluded: "Coral metabolomics under light treatments only."}
+  - {ids: [MTBLS2424], why_excluded: "Coral growth anomalies (disease), no thermal condition."}
+  - {ids: [MTBLS6890], why_excluded: "Cultured Cladocopium exposed to benzophenone-3, not from corals and not heat."}
+  - {ids: [MTBLS8982], why_excluded: "Pavona decussata field acclimatization metabolomics (PMC12080138); not heat-treated and the study is private (ws returns 'no permission')."}
+  - {ids: [ST001116, ST001163, ST001645, PR000747], why_excluded: "Acropora cervicornis genotype metabolomics with no heat treatment."}
+  - {ids: [ST002870], why_excluded: "Coral C/N feedback experiment, no heat."}
+  - {ids: [ST002933, "10.21228/M8Z132"], why_excluded: "Cultured symbionts with bacteria (PMC10611727), not coral samples."}
+  - {ids: [MSV000084436, MSV000086797], why_excluded: "Volatilomes of cultured Symbiodiniaceae, not from a coral experiment."}
+  - {ids: [MSV000079091], why_excluded: "Acropora yongei interaction experiments with algae and cold temperatures only."}
+  - {ids: [MSV000094920], why_excluded: "Transient high-light stress only (PMC11182861)."}
+  - {ids: [MSV000097641], why_excluded: "Endozoicomonas bacterial cultures only."}
+  - {ids: [MSV000101404, MSV000103390, "10.5281/zenodo.14053065", "10.5281/zenodo.14863121", "MTBLS11107", "10.5281/zenodo.13824742"], why_excluded: "Exaiptasia/Aiptasia anemone models (not Scleractinia)."}
+  - {ids: [MSV000088443, MSV000085863, MSV000086098, MSV000086530, MSV000087874, MSV000092379, MSV000102116, MSV000089240], why_excluded: "Proteomics-only coral deposits (mzid/mzTab or iTRAQ/TMT files), including heat or bleaching experiments."}
+  - {ids: [MSV000098923], why_excluded: "Lipidomics/metabolomics of healthy Pocillopora verrucosa colour morphs along a latitude gradient; no heat or bleaching group."}
+  - {ids: [MSV000091585, MSV000091586, MSV000095217, MSV000098452, MSV000098990, MSV000089999], why_excluded: "Field coral metabolomics (Fore-C survey, land use, predation acclimation, life history) with no heat or bleaching group."}
+  - {ids: [MSV000088819, MSV000089980, MSV000087471, MSV000089633], why_excluded: "Stony coral tissue loss disease (SCTLD) metabolomics, not thermal."}
+  - {ids: [MSV000092127, MSV000096512], why_excluded: "Volatiles of temperate benthic taxa / in situ BVOC method; no heat or bleaching contrast."}
+  - {ids: ["10.17632/cpr9skxb4j"], why_excluded: "Mendeley lipidome of cultured Symbiodiniaceae (Botana), not from corals."}
+  - {ids: ["10.5281/zenodo.10936598"], why_excluded: "Copy of the Rosset 2019 Coral Reefs paper PDF (symbiont lipidome); no data files."}
+  - {ids: ["10.17630/d5659eaf-c400-4e9a-b8f0-0e541f65a185"], why_excluded: "St Andrews deposit of Seriatopora/Stylophora GC-MS lipids at 25.5 vs 28.5 °C; files embargoed until 2027-02-23, so not public."}
+  - {ids: ["10.5066/P13IQRXZ"], why_excluded: "USGS Drury transplant data: metabolomics taken after outplanting, heat only in a separate stress test."}
+  - {ids: ["10.6084/m9.figshare.27085615"], why_excluded: "Total lipid content and isotopes, not lipid profiling."}
+  - {ids: ["10.6084/m9.figshare.14300945"], why_excluded: "Frontiers Data_Sheet_1 PDF of the Sweet study (S19); PDF only."}
+  - {ids: ["10.6084/m9.figshare.30988314"], why_excluded: "ACS supplement PDF (Zhang 2026 ES&T); no data deposit."}
+  - {ids: ["10.6084/m9.figshare.6194858"], why_excluded: "Soft coral (Sarcophyton) bleaching metabolomics, not Scleractinia."}
+  - {ids: ["10.6084/m9.figshare.19167272"], why_excluded: "Proteomics of bleached coral."}
+  - {ids: ["10.6084/m9.figshare.22130477", "10.6084/m9.figshare.27595239", "10.6084/m9.figshare.27492615", "10.6084/m9.figshare.23432183"], why_excluded: "Repository copies of Hillyer papers/thesis chapter; no data files."}
+  - {ids: ["10.6084/m9.figshare.13344758"], why_excluded: "Mussismilia hispida microbiome-manipulation heat study (PMC8363143): Figshare holds transcripts; metabolomics only in the journal supplement."}
+  - {ids: ["10.5281/zenodo.21679335"], why_excluded: "Dissertation supplementary tables (Ulithi field, transcriptomic drivers), no heat-contrast metabolite data."}
+  - {ids: ["10.5281/zenodo.21237626"], why_excluded: "Cold-tolerance study PDF/image, not heat."}
+  - {ids: ["10.5281/zenodo.4429583"], why_excluded: "Rädecker heat-stress NanoSIMS and physiology data, not metabolomics."}
+  - {ids: ["10.5281/zenodo.20801028"], why_excluded: "Transcriptomics/16S heat and pathogen challenge."}
+  - {ids: ["10.5281/zenodo.15681195"], why_excluded: "Sterol-fed coral larvae lipidomics (PMC12550023): lipidomics samples were taken after feeding, before the 31 °C exposure; heat data are survival only."}
+  - {ids: ["10.5281/zenodo.18945614", "10.5281/zenodo.18945613"], why_excluded: "Heat-evolved symbiont study: FTIR macromolecular profiles and physiology, not metabolomics."}
+  - {ids: ["10.5281/zenodo.15880518"], why_excluded: "CBASS thermal tolerance of nursery Acropora: physiology data and code only."}
+  - {ids: ["10.5281/zenodo.7947274"], why_excluded: "Spatial metabolomics (MSI) of Galaxea fascicularis and Exaiptasia at ambient 27 °C only."}
+  - {ids: ["10.5281/zenodo.3953883"], why_excluded: "coralmz: literature table of coral mass spectral features, not experimental data."}
+  - {ids: ["10.5061/dryad.612r4t8", "10.5061/dryad.n02v6wwwg"], why_excluded: "Stylophora fatty-acid profiles not under heat (Bellworthy)."}
+  - {ids: ["10.5061/dryad.x3ffbg7t8"], why_excluded: "Proteomics."}
+  - {ids: ["10.5061/dryad.5dd3g91", "10.5061/dryad.nn8kv"], why_excluded: "Lipid content / ocean acidification only, not metabolite profiles under heat."}
+  - {ids: ["10.1594/PANGAEA.874081", "10.1594/PANGAEA.878128", "10.1594/PANGAEA.833874", "10.1594/PANGAEA.860316", "10.1594/PANGAEA.963327"], why_excluded: "Bulk lipid / biochemical composition tables, not metabolomics."}
+  - {ids: ["10.26008/1912/bco-dmo.914498.1", "10.26008/1912/bco-dmo.959971.1"], why_excluded: "Bulk physiology and total lipids, not metabolomics."}
+  - {ids: ["10.25921/kx8p-8m95"], why_excluded: "NOAA total lipid measurements."}
+  - {ids: [MSV000078598, "10.5281/zenodo.60414"], why_excluded: "Meta-mass shift profiling of coral reef metabolomes (PMC5676912); no heat or bleaching treatment."}
+  - {ids: [MSV000100426], why_excluded: "Cassiopea (jellyfish) strobilation, not Scleractinia."}
+  - {ids: ["10.5281/zenodo.7199493"], why_excluded: "Soft coral Sarcophyton heat/light photophysiology."}
+queries:
+  - "EBI Search metabolights domain (https://www.ebi.ac.uk/ebisearch/ws/rest/metabolights): coral 82; corals 13; bleaching 7; Symbiodinium OR Symbiodiniaceae OR zooxanthellae 3; scleractinia 2; genus list (Acropora OR Pocillopora OR Porites OR Montipora OR Stylophora ...) 8; 'heat stress AND reef' 1; 'thermal stress AND coral' 3; holobiont 11; reef 20"
+  - "MetaboLights EB-eye full dump eb_eye_metabolights_studies.xml (3521 entries vs 3524 in ws/studies), regex coral|scleractin|symbiodin|zooxanth|genus names: 26 hits, each checked via ws/studies"
+  - "Metabolomics Workbench REST study/study_id/ST/summary (4623 studies) + species list (4906 rows), regex-screened: 11 coral hits; study_title coral 4, Acropora 3, thermal 3, heat 27; mwTab read for every candidate"
+  - "MassIVE QueryDatasets full_search_input (all pages): coral 138, corals 53, bleaching 12, bleached 2, Symbiodinium 6, Symbiodiniaceae 13, zooxanthellae 3, scleractinian 2, Scleractinia 6, Acropora 17, Pocillopora 16, Porites 18, Montipora 20, Stylophora 2, Orbicella 10, Montastraea 11, Galaxea 0, Platygyra 1, Turbinaria 1, Pavona 0, Seriatopora 1, Goniopora 0, Siderastrea 0, Astrangia 0, Oculina 1, Agaricia 0, Mussismilia 0, Cladocopium 6, Durusdinium 10, Breviolum 11, holobiont 17, heatwave 3, 'heat stress' 885, 'thermal stress' 732, reef 50 (union 1056, 146 coral-matching); Isopora 1, Leptoseris 0, Plesiastrea 1, Desmophyllum 1, Anthozoa 6, 'stony coral' 138, Diploria 1, Colpophyllia 1, Madracis 1, Favia 1, Astroides 2, other genera 0"
+  - "GNPS2 datasetcache filename table (https://datasetcache.gnps2.org/datasette/database/filename.json?dataset__exact=MSV...) for file lists of 25 candidate MSVs; ProteoSAFe DownloadResultFile for metadata/sample sheets (e.g. MSV000094832 'HSI Aus 2023_Sample Info.csv')"
+  - "DataCite query '\"MSV0000xxxxx\"' for each keyed MSV: 10.25345 DOIs for 16 of 17 (none for MSV000079130)"
+  - "OmicsDI coral AND omics_type:Metabolomics 106; + (heat OR thermal OR bleaching) 10; Symbiodinium/Symbiodiniaceae 7; genus list 52 - nothing new"
+  - "MetaboBank via DDBJ Search API /search/api/entries/metabobank: 116 entries total; coral, Acropora, Symbiodinium, heat, bleaching 0"
+  - "Zenodo API: +coral +(metabolomics metabolome metabolite lipidomics) +(bleaching heat thermal warming) 31; +coral +(LC-MS GC-MS NMR mass spectrometry) +(bleaching heat thermal) 183; +Symbiodiniaceae +(metabolomics ...) 8; +genera +(metabolomics ...) 13; +coral +bleaching +(metabolite metabolites metabolic) 20; plus lipid and volatile variants"
+  - "Figshare API search: 'coral bleaching metabolomics' 19, 'coral heat stress metabolites' 14, 'coral metabolomics' 125, 'coral lipidomics' 16, 'coral metabolome' 111, 'coral lipid heat stress' 15, 'Symbiodiniaceae metabolomics' 12, 'Symbiodiniaceae lipidomics' 2, 'coral thermal stress metabolomic' 17, 'coral heatwave metabolite' 4, 'coral GC-MS heat' 4, 'coral NMR metabolomics' 16, Acropora 10, Pocillopora 9, Montipora 5, Stylophora 1, Porites 6, 'coral fatty acids heat' 8, 'coral bleaching lipids' 49"
+  - "Dryad API v2 search: coral 918, corals 918, Symbiodiniaceae 36, Symbiodinium 65, bleaching 104 (all titles screened); targeted metabolomics/lipid queries 0-5 each"
+  - "DataCite: coral AND (metabolom* OR lipidom* OR metabolite*) 457; Symbiodin* AND ... 52; coral AND (bleaching OR heat) AND (lipid OR mass spectrometry OR NMR OR volatile) 130; genera AND (metabolom* OR lipids) 164 (union 635, 105 coral+metabolite+heat non-text); publisher BCO-DMO query 26 (found S16); publisher PANGAEA query 49"
+  - "BCO-DMO ERDDAP/search: 'coral metabolomic' 5, 'coral metabolite' 21, 'coral lipid' 32, 'coral heat' 63, 'coral thermal' 100, 'coral bleaching' 86, Symbiodiniaceae 11 (886420/886427 not surfaced here)"
+  - "PANGAEA search: 'coral metabolomics' 4, 'coral metabolome' 1, 'coral lipidomics' 8307 (ranked, top screened), 'coral fatty acids temperature' 43, 'coral lipid heat' 33, 'Symbiodinium lipid' 8, 'coral bleaching lipid' 5, 'coral bleaching metabolite' 1"
+  - "OSF API v2 nodes te6s2 (public, files listed) and t4xd9 (401 without view_only key; files listed with it)"
+  - "Europe PMC: (coral* OR scleractin* OR Acropora OR ... ) AND (heat OR thermal OR bleaching OR warming OR heatwave) AND (metabolom* OR lipidom* OR GC-MS OR LC-MS OR NMR) 1371 hits (1318 with PMCID); same AND repository terms 847; fullTextXML of the open-access set scanned for MTBLS/ST/PR/MSV/Zenodo/Figshare/Dryad/BCO-DMO/PANGAEA/OSF ids: 1318 fetched, 224 without OA full text (HTTP 500); 65 coral+heat+metabolomics papers with accessions reviewed by hand (surfaced S11 reclassification, S20, S28, S29); a looser pass (coral>=3 mentions + any accession) added 37 more, none new"
+  - "Europe PMC search for each keyed accession in quotes (e.g. \"MSV000085272\"): linked papers for MSV000085272/85925, 87311, 95167, 94832, 83610; 0 for the rest"
+size_verdict: ok
