@@ -95,6 +95,52 @@ async def test_search_text_does_not_join_fields_into_new_words():
     assert (await _search([col], "lungatlas"))[0] == 0
 
 
+# Head-to-head round 3 (2026-10-11): the hamstring tendon atlas (d2684035) is named
+# "Single nucleus and spatial transcriptomic profiling of human healthy hamstring tendon";
+# the agent's "tendon single-nucleus human" found nothing in CELLxGENE, "tendon single
+# cell" found it 2nd. The server reads a hyphen as a space everywhere else (_relevance).
+_HAMSTRING = {
+    "collection_id": _A,
+    "name": "Single nucleus and spatial transcriptomic profiling of human healthy hamstring tendon",
+}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "query",
+    [
+        "tendon single-nucleus human",  # hyphen in the query, a space in the record
+        "single nucleus tendon",  # positive control: the record's own spelling
+        "profiling of the tendon",  # stop words are not words a record must hold
+        "hamstring OR tendon",  # an operator is not a word either
+        '"healthy hamstring" tendon',  # a quoted phrase is one term
+        "transcriptom",  # still a substring match: a word stem finds what it found before
+    ],
+)
+async def test_search_reads_the_query_as_the_server_does(query):
+    other = {"collection_id": _B, "name": "Human lung atlas"}
+    total, recs = await _search([_HAMSTRING, other], query)
+    assert (total, [r.id for r in recs]) == (1, [f"cellxgene:{_A}"])
+
+
+@pytest.mark.asyncio
+async def test_search_still_needs_every_word():
+    # "scRNA-seq" is in no CELLxGENE record's text (assays are "10x 3' v3", "Smart-seq2"),
+    # and dropping a word the record lacks would turn this source into an any-word search.
+    assert (await _search([_HAMSTRING], "tendon scRNA-seq"))[0] == 0
+    assert (await _search([_HAMSTRING], '"hamstring healthy" tendon'))[0] == 0  # phrase order
+    assert (await _search([_HAMSTRING], "tendon"))[0] == 1  # positive control
+
+
+@pytest.mark.asyncio
+async def test_a_quoted_phrase_matches_the_record_hyphenated():
+    # The record's text is read as the query is: a phrase needs it, a lone word does not.
+    col = {"collection_id": _A, "name": "Single-cell atlas of tendon", "doi": "10.1038/XY-1"}
+    assert (await _search([col], '"single cell" tendon'))[0] == 1
+    assert (await _search([col], '"10.1038/xy-1"'))[0] == 1
+    assert (await _search([col], '"single cell" ligament'))[0] == 0  # control: other tissue
+
+
 @pytest.mark.asyncio
 async def test_search_drops_collections_without_an_id_and_windows_by_size():
     cols = [{"name": "No id"}, "junk"] + [
