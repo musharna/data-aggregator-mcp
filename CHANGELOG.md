@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- CELLxGENE read a query as raw words split on spaces: "tendon single-nucleus human" found
+  nothing although a collection is named "Single nucleus and spatial transcriptomic
+  profiling of human healthy hamstring tendon", "A OR B" needed the word "or", and a quoted
+  phrase kept its quotes. It now reads a query as the rest of the server does: hyphens and
+  punctuation as spaces, a quoted phrase whole, no operators or stop words. Over the 398
+  live collections and 40 queries, no match was lost and 191 were added ("T-cell",
+  "single-cell", "alzheimer's"). When a search of two or more words empties CELLxGENE,
+  `errors["all_words"]` now names it, as it does GEO and OmicsDI.
+
 ## [0.69.1] - 2026-10-07
 
 ### Fixed
