@@ -6,8 +6,22 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `massive`, MassIVE searched natively. The round-3 coral study MSV000101299 names its
+  marine heatwave only in its description; OmicsDI's copy of MassIVE lags, and DataCite
+  holds every MassIVE DOI with the title alone, so no source found it for a heat-stress
+  search. MassIVE's own search reads titles, descriptions, keywords and species, but ORs
+  words and matches inside them ("heat" finds "wheat"), so the rarest word's datasets are
+  read and a dataset is kept when it names every word. A dataset MassIVE, DataCite and
+  OmicsDI all return is listed once. `resolve` adds the DOI and FTP location.
+  Discovery-only.
+
 ### Fixed
 
+- A JSON answer that is not UTF-8 failed as an outage. MassIVE labels its answers
+  ISO-8859-1 and sends that, so any answer holding a "±" was unreadable. A body now falls
+  back to the charset its server declares.
 - On Python 3.14, every `operate` query stopped at the wall-clock limit logged
   "InterruptException exception in shielded future": from 3.14 a cancelled `asyncio.shield`
   logs the stopped query's error itself. The query is now awaited without `shield`, and CI

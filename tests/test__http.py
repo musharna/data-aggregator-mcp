@@ -112,6 +112,37 @@ async def test_request_json_terminal_malformed_raises_upstream(
             await _http.request_json(client, "GET", "https://x.test/jj", service="t", expect=dict)
 
 
+async def test_request_json_reads_a_body_that_is_not_utf8_in_its_declared_charset(
+    httpx_mock: HTTPXMock, monkeypatch
+) -> None:
+    """MassIVE's servlets declare and send ISO-8859-1, so "café" arrives as the byte 0xE9,
+    which httpx's ``json()`` reads as UTF-8 whatever the charset says: every answer holding
+    an accented letter was a malformed body, then an outage. A body that is not UTF-8 is
+    read in the charset it declares; one that declares none is still malformed."""
+    from data_aggregator_mcp.errors import UpstreamUnavailableError
+
+    async def _no_sleep(*_a, **_k):
+        return None
+
+    monkeypatch.setattr("data_aggregator_mcp._http.asyncio.sleep", _no_sleep)
+    latin1 = '{"title": "caf\u00e9"}'.encode("iso-8859-1")
+    declared = {"content-type": "application/json;charset=ISO-8859-1"}
+    httpx_mock.add_response(url="https://x.test/latin", content=latin1, headers=declared)
+    # UTF-8 bytes under a Latin-1 label (a servlet default) are read as UTF-8, as before.
+    utf8 = '{"title": "caf\u00e9"}'.encode()
+    httpx_mock.add_response(url="https://x.test/mislabelled", content=utf8, headers=declared)
+    for _ in range(3):
+        httpx_mock.add_response(
+            url="https://x.test/bare", content=latin1, headers={"content-type": "application/json"}
+        )
+    async with httpx.AsyncClient() as client:
+        for url in ("https://x.test/latin", "https://x.test/mislabelled"):
+            body = await _http.request_json(client, "GET", url, service="t", expect=dict)
+            assert body == {"title": "caf\u00e9"}
+        with pytest.raises(UpstreamUnavailableError, match="unparseable 200 body"):
+            await _http.request_json(client, "GET", "https://x.test/bare", service="t", expect=dict)
+
+
 async def test_request_xml_retries_malformed_then_succeeds(
     httpx_mock: HTTPXMock, monkeypatch
 ) -> None:

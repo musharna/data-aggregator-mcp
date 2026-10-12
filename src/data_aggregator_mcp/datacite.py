@@ -126,6 +126,15 @@ _LANDING_AWARE = frozenset({"dataverse"})
 _ZENODO_DOI_RE = re.compile(r"10\.5281/zenodo\.(\d+)", re.IGNORECASE)
 # A Zenodo record minted under another prefix ends in zenodo.<record number>.
 _ZENODO_RECID_RE = re.compile(r"zenodo\.(\d+)$")
+# MassIVE's DOIs carry its dataset accession only in the title ("MassIVE MSV000101299 -
+# GNPS - Resilience of ..."); read it so the copy is one deposit with the massive source's.
+_MASSIVE_DOI_PREFIX = "10.25345/"
+_MASSIVE_TITLE_RE = re.compile(r"MassIVE (MSV[0-9]{9}) - ")
+
+
+def _massive_accession(doi: str, title: str) -> list[str]:
+    m = _MASSIVE_TITLE_RE.match(title) if doi.lower().startswith(_MASSIVE_DOI_PREFIX) else None
+    return [m[1]] if m else []
 
 
 def _main(items: list[dict[str, Any]] | None, key: str, type_key: str, main: str | None) -> Any:
@@ -319,11 +328,12 @@ def _normalize(item: dict[str, Any]) -> DataResource:
     rights = a.get("rightsList") or []
     license_ = _license_from_rights(rights)
     doi = a["doi"]
+    title = _main(a.get("titles"), "title", "titleType", None) or ""
     return DataResource(
         id=f"datacite:{doi}",
         source=_source_for_client(client_id),
         kind=_KIND_MAP.get(str(rt), _pushdown.OTHER_KIND),  # absent → "None" → other
-        title=_main(a.get("titles"), "title", "titleType", None) or "",
+        title=title,
         creators=[c for c in map(_creator, a.get("creators") or []) if c is not None],
         funding=[
             FundingRef(funder=f["funderName"], award=f.get("awardNumber") or f.get("awardTitle"))
@@ -333,6 +343,7 @@ def _normalize(item: dict[str, Any]) -> DataResource:
         year=_year(a.get("publicationYear")),
         description=_main(a.get("descriptions"), "description", "descriptionType", "Abstract"),
         doi=doi,
+        accessions=_massive_accession(doi, title),
         subjects=[s["subject"] for s in (a.get("subjects") or []) if s.get("subject")],
         license=license_,
         access=_access_from_rights(rights),

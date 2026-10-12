@@ -36,6 +36,7 @@ from data_aggregator_mcp import (
     gwas,
     huggingface,
     literature,
+    massive,
     mwb,
     nasacmr,
     ngdc,
@@ -523,6 +524,23 @@ SOURCES: tuple[SourceSpec, ...] = (
         description="Metabolomics Workbench (NIH) - metabolomics studies (ST accessions), searched natively so studies past OmicsDI's copy (which stops at ST002490) are found; matches words in the title, species, analysis type and institute, not the description.",
     ),
     _spec(
+        "massive",
+        massive,
+        # The upstream ORs words and the rarest word's rows are filtered here for every
+        # word, so an ontology expansion would require every synonym of the organism.
+        boolean_query=False,
+        layer="omics",
+        kinds=("study",),
+        rate_limit="public; courtesy only",
+        status="live (MassIVE dataset query: each word counted, the rarest word's rows read and filtered for every word)",
+        fetchable=False,
+        fetchable_notes="Discovery-only: the record names its dataset (MSV accession), species, keywords and landing page; resolve adds the DOI and FTP location. Files are on FTP, which fetch does not speak.",
+        id_example="massive:MSV000101299",
+        # No default_license: neither a dataset row nor MassiveServlet carries a licence
+        # field (2026-10-12), and none is assumed.
+        description="MassIVE (UCSD) - mass-spectrometry datasets (MSV accessions: GNPS metabolomics, proteomics), searched natively in title, description, keywords and species; DataCite holds MassIVE DOIs with titles only, and OmicsDI's copy lags.",
+    ),
+    _spec(
         "nasacmr",
         nasacmr,
         boolean_query=False,
@@ -614,6 +632,7 @@ CATALOG_ORDER: tuple[str, ...] = (
     "cellxgene",
     "ngdc",
     "mwb",
+    "massive",
 )
 
 if set(CATALOG_ORDER) != set(_BY_NAME):  # a new source must be given a catalog position
