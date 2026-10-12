@@ -1402,56 +1402,85 @@ async def test_live_search_synonym_expansion_fires() -> None:
 
 @_live_only
 async def test_live_pagination_walks_zenodo_datacite(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Real-execution boundary probe: page 2 (via next_cursor) resumes each live source
+    """Real-execution boundary probe: page 2 (via next_cursor) resumes each live stream
     at the position the cursor recorded and repeats nothing from page 1.
 
-    A live index can move a record across the page boundary between the two requests
-    (DataCite records with tied relevance swap order). A repeat is traced to its cause
-    from what each upstream returned (``_repeat_cause``): a record the cursor never
-    recorded, or one page 2 emitted from a position the cursor marked as returned, is the
-    router's fault and fails at once; a record the upstream served again at a new
-    position means the upstream moved it, and the walk is retried."""
+    Zenodo and DataCite are each searched as three streams (title-matched deposits, other
+    title matches, the rest; 0b0e1a1), each with its own offset in the cursor. A call is
+    filed under its stream by the query the router sent it. A live index can move a record
+    across the page boundary between the two requests (DataCite records with tied
+    relevance swap order). A repeat is traced to its cause from what each upstream
+    returned (``_repeat_cause``): a record the cursor never recorded, or one page 2 emitted
+    from a position the cursor marked as returned, is the router's fault and fails at
+    once; a record the upstream served again at a new position means the upstream moved
+    it, and the walk is retried."""
     from data_aggregator_mcp import datacite, zenodo
 
     names = ("zenodo", "datacite")
-    returned: dict[tuple[str, int], list[str]] = {}  # (source, offset) -> ids, upstream order
+    page = [1]
+    # (page, stream, offset) -> ids, upstream order
+    returned: dict[tuple[int, str, int], list[str]] = {}
 
-    def recording(name, real):
-        async def search(*args, **kwargs):
-            total, recs = await real(*args, **kwargs)
-            returned[(name, kwargs.get("offset", 0))] = [r.id for r in recs]
+    def stream_of(name: str, deposits: str, query: str) -> str:
+        if query.endswith(f" AND NOT {deposits}"):
+            return f"{name}/title"
+        if query.endswith(f" AND {deposits}"):
+            return f"{name}/deposits"
+        return name
+
+    def recording(name, module):
+        real = module.search
+
+        async def search(client, query, *args, **kwargs):
+            total, recs = await real(client, query, *args, **kwargs)
+            key = (page[0], stream_of(name, module.DEPOSIT_CLAUSE, query), kwargs.get("offset", 0))
+            returned[key] = [r.id for r in recs]
             return total, recs
 
         return search
 
-    monkeypatch.setattr(zenodo, "search", recording("zenodo", zenodo.search))
-    monkeypatch.setattr(datacite, "search", recording("datacite", datacite.search))
+    monkeypatch.setattr(zenodo, "search", recording("zenodo", zenodo))
+    monkeypatch.setattr(datacite, "search", recording("datacite", datacite))
 
     moved: list[str] = []
     for _ in range(3):
         returned.clear()
         async with httpx.AsyncClient() as client:
+            page[0] = 1
             p1 = await router.search_page(client, query="climate", size=5, sources=list(names))
             assert p1.next_cursor is not None
             state = _cursor.decode(p1.next_cursor)
+            page[0] = 2
             p2 = await router.search_page(client, cursor=p1.next_cursor)
         offsets, ahead = state["offsets"], state.get("ahead", {})
+        streams = {s for s in offsets if s.split("/", 1)[0] in names}
+        # Positive control: the split is live, so the per-stream checks below see streams.
+        assert {"zenodo/deposits", "datacite/deposits"} <= streams, offsets
+        first = {s: returned.get((1, s, 0), []) for s in streams}
         ids1 = [r.id for r in p1.results]
         ids2 = {r.id for r in p2.results}
         assert ids1 and ids2
-        for name in names:
-            took = [i for i in ids1 if i.startswith(f"{name}:")]
-            assert not took or offsets[name] > 0, (name, took, offsets)
-        # Page 2 asked every source to resume exactly where the cursor said.
-        assert {k for k in returned if k[1]} == {(n, offsets[n]) for n in names if offsets[n]}
+        # Every page-1 record sits at a position its stream's cursor marks as returned.
+        for rid in ids1:
+            homes = [s for s in streams if rid in first[s]]
+            assert homes, (rid, "emitted on page 1 but no stream returned it")
+            assert any(
+                first[s].index(rid) < offsets[s]
+                or first[s].index(rid) - offsets[s] in ahead.get(s, [])
+                for s in homes
+            ), (rid, homes, offsets, ahead)
+        # Page 2 asked every stream to resume exactly where the cursor said.
+        assert {(s, o) for p, s, o in returned if p == 2 and o} == {
+            (s, offsets[s]) for s in streams if offsets[s]
+        }
         repeats = [i for i in ids1 if i in ids2]
         if not repeats:
             return
         causes = {}
         for rid in repeats:
-            n = rid.split(":", 1)[0]
+            s = next(s for s in streams if rid in first[s])
             causes[rid] = _repeat_cause(
-                rid, returned[(n, 0)], returned[(n, offsets[n])], offsets[n], ahead.get(n, [])
+                rid, first[s], returned.get((2, s, offsets[s]), []), offsets[s], ahead.get(s, [])
             )
         router_faults = {r: c for r, c in causes.items() if c != "upstream"}
         assert not router_faults, (router_faults, state)
@@ -1462,13 +1491,13 @@ async def test_live_pagination_walks_zenodo_datacite(monkeypatch: pytest.MonkeyP
 def _repeat_cause(
     rid: str, page1: list[str], page2: list[str], offset: int, ahead: list[int]
 ) -> str:
-    """Why one source's record ``rid`` is on both pages. ``page1`` is the source's reply
+    """Why one stream's record ``rid`` is on both pages. ``page1`` is the stream's reply
     at offset 0, ``page2`` its reply at the cursor's ``offset`` (index 0 = that
     position), ``ahead`` the positions past ``offset`` the cursor marked as returned."""
     pos = page1.index(rid)
     if not (pos < offset or pos - offset in ahead):
         return "router: emitted on page 1 but not recorded in the cursor"
-    if page2.index(rid) in ahead:
+    if rid in page2 and page2.index(rid) in ahead:
         return "router: re-emitted a position the cursor marked as returned"
     return "upstream"  # the cursor was right; the upstream served the record again
 
@@ -1495,10 +1524,14 @@ async def test_live_relate_emits_real_hint() -> None:
     search, take its SRA study accession, and search that accession for a sibling run.
     Relating the top search results instead passed only when two of them happened to come
     from one study; on 2026-09-29 the top 8 came from 8 studies and no hint fired.
+    Runs come from the SRA stream itself: through ``search_page`` the ranking lists records
+    naming every query word first, and run titles rarely say "RNA-seq" (2026-10-12: the
+    first SRA run was 30th of 56, behind BioProject and GEO, so the top 20 held none).
     """
+    from data_aggregator_mcp import omics
+
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        res = await router.search_page(client, query="RNA-seq", size=20, sources=["omics"])
-        runs = [r.id for r in res.results if r.id.startswith("sra:")]
+        runs = [r.id for r in (await omics.search_subsource(client, "sra", "RNA-seq", size=20))[1]]
         study_of: dict[str, str] = {}
         pair: list[str] = []
         for rid in runs:
@@ -1507,8 +1540,8 @@ async def test_live_relate_emits_real_hint() -> None:
             if studies:
                 study_of[rid] = studies[0]
             if studies and not pair:
-                sib = await router.search_page(client, query=studies[0], size=10, sources=["omics"])
-                sibs = [x.id for x in sib.results if x.id.startswith("sra:") and x.id != rid]
+                sib = (await omics.search_subsource(client, "sra", studies[0], size=10))[1]
+                sibs = [x.id for x in sib if x.id != rid]
                 # A text search can return a run from another study; pair only a sibling
                 # whose own record carries the study, so a missing hint can only be relate's.
                 for sid in sibs:
