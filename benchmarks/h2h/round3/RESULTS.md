@@ -25,6 +25,11 @@ judge did not know which arm listed them) by the subagent that built that task's
 - 3 borderline;
 - 35 did not qualify.
 
+A second study the key had missed, T5 A2 (an NGDC/OMIX coral heat-stress metabolome,
+PRJCA028562), was listed by the dam rerun on #278 and judged the same way afterwards. No
+round-3 run listed it, so it lowers every arm's T5 recall by 21/22; the scores below
+include it.
+
 Per-run data: `scores_2026-10-11.json`.
 
 | task | need | studies in key | dam | tu | web |
@@ -33,26 +38,26 @@ Per-run data: `scores_2026-10-11.json`.
 | T2 | human tendon/ligament single-cell RNA-seq | 22 | 0.64 / 0.91 | 0.41 / 0.46 | 0.50 / 0.55 |
 | T3 | methane from thermokarst lakes and ponds | 27 | 0.59 / 0.63 | 0.26 / 0.30 | 0.26 / 0.26 |
 | T4 | labeled honey bee images for ML | 26 | 0.35 / 0.27 | 0.12 / 0.08 | 0.31 / 0.23 |
-| T5 | coral heat-stress metabolomics | 21 | 0.19 / 0.71 | 0.38 / 0.38 | 0.52 / 0.48 |
+| T5 | coral heat-stress metabolomics | 22 | 0.18 / 0.68 | 0.36 / 0.36 | 0.50 / 0.45 |
 
 | arm | mean recall | median recall | precision | duplicates | median tool calls | median input tokens | cost (10 runs) |
 |---|---|---|---|---|---|---|---|
 | dam | 0.50 | 0.48 | 0.82 | 1 | 12 | 505k | $5.56 |
 | tu | 0.27 | 0.28 | 0.97 | 1 | 28 | 789k | $6.13 |
-| web | 0.36 | 0.29 | 0.89 | 0 | 20 | 230k | $4.44 |
+| web | 0.35 | 0.29 | 0.89 | 0 | 20 | 230k | $4.44 |
 
 ## What it shows
 
 - **The lead holds on held-out tasks.** dam has the highest mean recall on 4 of the 5
-  tasks and overall (0.50 vs web 0.36), meeting the round's test (dam's mean recall at
+  tasks and overall (0.50 vs web 0.35), meeting the round's test (dam's mean recall at
   or above web's). The gap is widest on T3 (0.61 vs 0.26), where the studies sit in
   PANGAEA, the Arctic Data Center, Nordicana D and ORNL DAAC.
-- **All arms score far lower than in round 2.** These keys are larger (21 to 27 scored
+- **All arms score far lower than in round 2.** These keys are larger (22 to 27 scored
   studies, against 8 to 13 for four of round 2's five tasks) and were built to be
   exhaustive, so no arm comes close to them.
-- **T5 is the exception, and dam's runs disagree with each other.** dam scored 0.19 in
-  one run (6 tool calls) and 0.71 in the other (24); web scored about 0.50 both times.
-  dam's mean is 0.45, against web's 0.50.
+- **T5 is the exception, and dam's runs disagree with each other.** dam scored 0.18 in
+  one run (6 tool calls) and 0.68 in the other (24); web scored about 0.50 both times.
+  dam's mean is 0.43, against web's 0.48.
 - **dam lists more entries that don't qualify.** Its precision is 0.82, against 0.89
   for web and 0.97 for tu; 30 of dam's 159 entries were rejected.
 - **T4 has a ceiling for dam.** 7 of the 26 scored studies are only on Kaggle, which
@@ -64,9 +69,9 @@ Per-run data: `scores_2026-10-11.json`.
 
 ## Caveats
 
-- Two runs per cell; dam's T2 and T5 runs differ by 0.27 and 0.52.
+- Two runs per cell; dam's T2 and T5 runs differ by 0.27 and 0.50.
 - Each key's builder also judged the pooled entries for that key. Judging was blind to
-  arm, and it did add a study the key had missed (T5 A1), but it is not an independent
+  arm, and it did add two studies the key had missed (T5 A1, A2), but it is not an independent
   second judge.
 - The T3 key was first built on the backup topic (microplastics in lake sediment cores,
   3 firm studies) because the primary passed the 30-study cap; it was rebuilt on the

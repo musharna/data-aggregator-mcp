@@ -122,6 +122,7 @@ _SEARCH_LABELS = {
     "nasacmr": "NASA CMR",
     "biostudies": "BioStudies",
     "ngdc": "NGDC",
+    "mwb": "Metabolomics Workbench",
 }
 
 

@@ -197,6 +197,9 @@ def _normalize(d: dict) -> DataResource:
         kind="study",
         title=d.get("title") or "",
         description=d.get("description"),
+        # The repository's own accession: a Workbench study (ST...) is the same deposit as
+        # the mwb source's record of it, and the router's dedup reads it from here.
+        accessions=[acc],
         links=[Link(rel="landing_page", target_id=_LANDING.format(source=source, acc=acc))],
     )
 
@@ -217,6 +220,7 @@ def _record(resource_id: str, source: str, acc: str, body: dict) -> DataResource
         organism=_str_list(additional, _ORGANISM_KEYS),
         doi=_own_doi(additional),
         identifiers={"pmid": pmid} if pmid else {},
+        accessions=[acc],
         links=links,
     )
 

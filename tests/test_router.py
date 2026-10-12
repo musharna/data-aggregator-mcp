@@ -100,6 +100,7 @@ def test_available_sources_lists_all_adapters() -> None:
         "uniprot",
         "gwas",
         "ngdc",
+        "mwb",
         "nasacmr",
         "biostudies",
     ]
@@ -534,6 +535,11 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
         json=json.loads(
             (Path(__file__).parent / "fixtures" / "ngdc_search_empty.json").read_text()
         ),
+    )
+    # and mwb, whose no-hit answer is a bare [] (verbatim, 2026-10-11)
+    httpx_mock.add_response(
+        url="https://www.metabolomicsworkbench.org/rest/study/study_title/rna/summary",
+        json=[],
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "rna")

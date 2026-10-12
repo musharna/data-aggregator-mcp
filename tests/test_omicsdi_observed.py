@@ -106,6 +106,7 @@ async def test_search_reads_each_hit_whole():
         kind="study",
         title=HIT["title"],
         description=long[:SEARCH_DESC_LIMIT],
+        accessions=["PXD006873"],
         links=[
             Link(rel="landing_page", target_id="https://www.omicsdi.org/dataset/pride/PXD006873")
         ],
@@ -152,6 +153,7 @@ async def test_resolve_sends_exactly_one_request_and_reads_the_record_whole():
         description=MSV000081764["description"],
         creators=[Creator(name="Akhilesh Pandey")],
         organism=["Homo Sapiens (ncbitaxon:9606)"],
+        accessions=["MSV000081764"],
         links=[
             Link(
                 rel="landing_page",

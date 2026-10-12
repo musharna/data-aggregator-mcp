@@ -36,6 +36,7 @@ from data_aggregator_mcp import (
     gwas,
     huggingface,
     literature,
+    mwb,
     nasacmr,
     ngdc,
     omics,
@@ -505,6 +506,23 @@ SOURCES: tuple[SourceSpec, ...] = (
         description="NGDC (China National Center for Bioinformation) - BioProjects deposited in China (PRJCA), with their Genome Sequence Archive read sets (CRA); INSDC mirrors are left to the omics source.",
     ),
     _spec(
+        "mwb",
+        mwb,
+        # Each word is its own title search and a study must name them all, so an
+        # ontology expansion would require every synonym of the organism.
+        boolean_query=False,
+        layer="omics",
+        kinds=("study",),
+        rate_limit="public; courtesy only",
+        status="live (Metabolomics Workbench REST: one title search per query word, every word required)",
+        fetchable=False,
+        fetchable_notes="Discovery-only: the record names its study (ST accession), species, analysis type and landing page; Workbench file download is not wired.",
+        id_example="mwb:ST004329",
+        # No default_license: every study summary carries its own (CC BY 4.0 on all
+        # 4,623, 2026-10-11), read into the record.
+        description="Metabolomics Workbench (NIH) - metabolomics studies (ST accessions), searched natively so studies past OmicsDI's copy (which stops at ST002490) are found; matches words in the title, species, analysis type and institute, not the description.",
+    ),
+    _spec(
         "nasacmr",
         nasacmr,
         boolean_query=False,
@@ -595,6 +613,7 @@ CATALOG_ORDER: tuple[str, ...] = (
     "biostudies",
     "cellxgene",
     "ngdc",
+    "mwb",
 )
 
 if set(CATALOG_ORDER) != set(_BY_NAME):  # a new source must be given a catalog position

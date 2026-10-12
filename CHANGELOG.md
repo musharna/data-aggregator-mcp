@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `mwb`, the Metabolomics Workbench searched natively. The Workbench was reached only
+  through OmicsDI, whose copy stops at ST002490 while the Workbench is at ST005288, so 2,455
+  newer studies could not be found; the round-3 benchmark's coral heat-stress studies
+  ST004143 and ST004329 were two of them. The Workbench searches titles only, so each word
+  of a query is its own title search, and a study is kept when its title, species,
+  analysis type and institute name every word. A study both sources return ("diabetes":
+  23) is listed once, and OmicsDI records now carry their accession. Discovery-only.
+
 ### Fixed
 
 - CELLxGENE read a query as raw words split on spaces: "tendon single-nucleus human" found
