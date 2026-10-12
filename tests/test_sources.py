@@ -235,7 +235,7 @@ BOOLEAN_PROBE_QUERY = {
     "nasacmr": "sea surface temperature",
     "biostudies": "arabidopsis",
     "ngdc": "axolotl",
-    "mwb": "coral",
+    "mwb": "zebrafish",  # 21 studies: more than one page of 3
 }
 
 
