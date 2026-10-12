@@ -208,9 +208,14 @@ def test_no_advertised_id_example_is_a_placeholder():
 # --- boolean_query: a declaration about someone else's parser, so probe it live ------
 
 # One query per registered source that has hits on its own upstream. The live probe
-# below sends it plain and inside a semantically NEUTRAL ontology-shaped expansion
-# ``(q) AND ("q" OR "q")``: a boolean parser returns hits for both, a keyword-only one
-# substring-matches the literal (0 hits) or rejects it (HTTP 4xx/5xx).
+# below sends it plain, inside a semantically NEUTRAL ontology-shaped expansion
+# ``(q) AND ("q" OR "q")``, and inside one whose OR names a word in no record,
+# ``(q) AND ("q" OR "zzqxnonword")``. A boolean parser returns hits for all three; a
+# keyword-only one substring-matches the literal (0 hits), rejects it (HTTP 4xx/5xx), or
+# drops the operators and needs every word (0 for the second expansion). A source of
+# that last kind passes either declaration: whether to send it the expansion is a
+# choice. pdb keeps it, since entries name both of an organism's names ("hemoglobin"
+# 9,213, organism=human 1,620; 2026-10-11); cellxgene does not.
 BOOLEAN_PROBE_QUERY = {
     "zenodo": "arabidopsis",
     "dataone": "soil",
@@ -243,7 +248,9 @@ def test_every_source_has_a_boolean_probe_query():
 
 
 def test_keyword_only_set_is_the_live_probed_set():
-    """Pinned from the live probe (2026-09-27; plain → expanded hits): cellxgene 58→0,
+    """Pinned from the live probe (2026-09-27; plain → expanded hits): cellxgene 58→0
+    (since #277 it reads the operators away and needs every word: 58, then 0 for an OR
+    with a word in no record),
     dandi 325→0, huggingface 5→0, openml 5→HTTP 500, gwas 148→0, nasacmr 4115→HTTP 400;
     every other source kept its hits (pdb 9193→4112, omics 504008→435752 — phrase
     matching, still parsed)."""
@@ -271,22 +278,30 @@ async def test_live_boolean_query_declaration_matches_the_upstream(spec) -> None
     from data_aggregator_mcp.errors import RateLimitError, UpstreamUnavailableError
 
     q = BOOLEAN_PROBE_QUERY[spec.name]
-    expanded = f"({q}) AND ({_ontology.or_group([q, q])})"
     async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
         try:
             total, recs = await spec.module.search(client, q, size=3)
         except (RateLimitError, UpstreamUnavailableError) as e:
             pytest.skip(f"{spec.name}: plain-query control unavailable, probe inconclusive: {e}")
         assert total > 0 and recs, f"{spec.name}: probe query {q!r} has no hits — pick another"
-        try:
-            etotal, erecs = await spec.module.search(client, expanded, size=3)
-            parses = etotal > 0 and bool(erecs)
-        except UpstreamUnavailableError:  # 4xx/5xx on the boolean string = cannot parse
-            parses = False
-    assert parses == spec.boolean_query, (
-        f"{spec.name}: boolean_query={spec.boolean_query} but the expansion "
-        f"{'kept' if parses else 'lost'} its hits ({total} plain)"
-    )
+
+        async def keeps_hits(other: str) -> bool:
+            expanded = f"({q}) AND ({_ontology.or_group([q, other])})"
+            try:
+                etotal, erecs = await spec.module.search(client, expanded, size=3)
+            except UpstreamUnavailableError:  # 4xx/5xx on the boolean string = cannot parse
+                return False
+            return etotal > 0 and bool(erecs)
+
+        if spec.boolean_query:
+            # Sent the expansion, it must not zero: gwas 148 → 0, dandi 66 → 0 (M9).
+            assert await keeps_hits(q), f"{spec.name}: the expansion lost its hits ({total} plain)"
+        else:
+            # Withheld it, it must not honour OR, or the facets were withheld for nothing.
+            assert not await keeps_hits("zzqxnonword"), (
+                f"{spec.name}: boolean_query=False but an OR with a word in no record kept "
+                f"its hits ({total} plain)"
+            )
 
 
 _EXAMPLES = [
