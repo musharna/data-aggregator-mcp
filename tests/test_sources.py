@@ -46,7 +46,7 @@ def test_fetch_gate_matches_the_historical_hand_maintained_set():
 
 
 def test_discovery_only_is_the_non_fetchable_sources():
-    assert frozenset({"gwas", "nasacmr", "ngdc"}) == sources.DISCOVERY_ONLY
+    assert frozenset({"gwas", "mwb", "nasacmr", "ngdc"}) == sources.DISCOVERY_ONLY
     assert router._DISCOVERY_ONLY_SOURCES is sources.DISCOVERY_ONLY
 
 
@@ -215,7 +215,7 @@ def test_no_advertised_id_example_is_a_placeholder():
 # drops the operators and needs every word (0 for the second expansion). A source of
 # that last kind passes either declaration: whether to send it the expansion is a
 # choice. pdb keeps it, since entries name both of an organism's names ("hemoglobin"
-# 9,213, organism=human 1,620; 2026-10-11); cellxgene does not.
+# 9,213, organism=human 1,620; 2026-10-11); cellxgene and mwb do not.
 BOOLEAN_PROBE_QUERY = {
     "zenodo": "arabidopsis",
     "dataone": "soil",
@@ -235,6 +235,7 @@ BOOLEAN_PROBE_QUERY = {
     "nasacmr": "sea surface temperature",
     "biostudies": "arabidopsis",
     "ngdc": "axolotl",
+    "mwb": "coral",
 }
 
 
@@ -261,6 +262,7 @@ def test_keyword_only_set_is_the_live_probed_set():
         "nasacmr",
         "gwas",
         "dandi",
+        "mwb",
     } == sources.KEYWORD_ONLY
     # positive control: the boolean-capable majority still gets the expansion
     assert {"zenodo", "datacite", "omics", "pdb", "uniprot"}.isdisjoint(sources.KEYWORD_ONLY)
