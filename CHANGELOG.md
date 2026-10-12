@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.71.0] - 2026-10-12
+
 ### Added
 
 - `massive`, MassIVE searched natively. The round-3 coral study MSV000101299 names its
