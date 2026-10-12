@@ -1,0 +1,1186 @@
+[
+ {
+  "id": "T1",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds extracellular electrophysiology (single units, LFP, tetrodes, silicon probes, Neuropixels) or calcium/voltage imaging recorded from the mouse olfactory bulb in living animals (awake or anesthetized) while odors were presented. Raw or processed neural data both count. Slice or other in-vitro-only recordings, other species, other brain regions without olfactory-bulb recordings, behavior-only data, code-only repositories, and papers without deposited data do not count.",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "DANDI:001170",
+     "10.48324/dandi.001170/0.251111.1532",
+     "10.48324/dandi.001170/0.260528.1016"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "10.6080/K00C4SZB",
+     "crcns:pcx-1"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.5061/dryad.n2z34tmtj",
+     "zenodo:3998118"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "10.5061/dryad.b5hg8d6",
+     "zenodo:5031361"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "10.5281/zenodo.10528914",
+     "10.5281/zenodo.10528913"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.5281/zenodo.3381353",
+     "10.5281/zenodo.3381352",
+     "10.5281/zenodo.3773863",
+     "10.5281/zenodo.4319024",
+     "10.5281/zenodo.4319023"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "10.5281/zenodo.5804933",
+     "10.5281/zenodo.5804932"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "10.5061/dryad.r4xgxd2m9",
+     "zenodo:10629625"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.5061/dryad.crjdfn387",
+     "zenodo:10903705"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.5281/zenodo.15150149",
+     "10.5281/zenodo.15041593",
+     "10.5281/zenodo.15041592"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "10.5281/zenodo.15390336",
+     "10.5281/zenodo.15390335"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "10.5281/zenodo.17359151",
+     "10.5281/zenodo.17359150"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.5281/zenodo.18402902",
+     "10.5281/zenodo.18402901"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.5281/zenodo.7050088",
+     "10.5281/zenodo.7050087"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.5281/zenodo.10697363",
+     "10.5281/zenodo.10697362"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "10.5281/zenodo.18809358",
+     "10.5281/zenodo.18809357"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "10.5281/zenodo.19717585",
+     "10.5281/zenodo.19717584"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "10.6084/m9.figshare.5877474",
+     "10.6084/m9.figshare.5877474.v2"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "10.6084/m9.figshare.5325340",
+     "10.6084/m9.figshare.5325340.v1"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "10.6084/m9.figshare.31435543",
+     "10.6084/m9.figshare.31435543.v2"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "10.17632/zdvxwzxdpz",
+     "10.17632/zdvxwzxdpz.1"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "10.17632/g973zgjmzd",
+     "10.17632/g973zgjmzd.1"
+    ]
+   },
+   {
+    "key": "S25",
+    "ids": [
+     "10.17632/4rd8hwfvsk.1",
+     "10.17632/4rd8hwfvsk",
+     "10.17632/zbt2t7438g.1",
+     "10.17632/zbt2t7438g",
+     "10.5281/zenodo.19235831",
+     "10.5281/zenodo.19235830"
+    ]
+   },
+   {
+    "key": "S26",
+    "ids": [
+     "10.5524/100699",
+     "GigaDB:100699"
+    ]
+   },
+   {
+    "key": "S27",
+    "ids": [
+     "10.58153/j2932-aaf14",
+     "10.58153/t54j2-9cw97"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S20",
+    "ids": [
+     "10.6084/m9.figshare.26999638",
+     "10.6084/m9.figshare.26999638.v1"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "10.6084/m9.figshare.31792705",
+     "10.6084/m9.figshare.31792705.v1"
+    ]
+   },
+   {
+    "key": "S28",
+    "ids": [
+     "SSBD:484-Inagaki-SeeDBLive",
+     "SSBD:Fig5f_odor_SDL",
+     "SSBD-OMERO:dataset-18806"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T2",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds single-cell or single-nucleus RNA-seq of human tendon or ligament tissue (healthy, injured, degenerated or tendinopathic; any tendon or ligament, including ACL, Achilles, rotator cuff, hamstring and spinal ligaments such as the ligamentum flavum; entheses count if tendon or ligament cells were profiled). Cells cultured from tendon count only if freshly isolated tissue was also profiled in the same deposit. Bulk RNA-seq, spot-based spatial data, other species and papers without deposited data do not count.",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "GSE317327",
+     "PRJNA1406746",
+     "SRP665658",
+     "cellxgene:7b9ae565-a781-433d-98d4-430394e7802a",
+     "hca:032880e5-2b44-4bfb-8eef-25bb48e7453f",
+     "10.5281/zenodo.18403632"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "cellxgene:d2684035-a36e-458e-96af-8e37930bfdf6",
+     "hca:838d4660-3d62-4b08-b32d-dc5cbd93919d"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "cellxgene:579203e2-182f-47bc-8230-7aa47247e2a4",
+     "hca:8dcbd84a-6243-4501-a684-0dcd084bb536"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "cellxgene:a7e81820-297d-4086-8123-cc7dde64e495",
+     "hca:893c8fb6-bf65-4527-b83b-8233de59244c"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "GSE213803",
+     "PRJNA882465",
+     "SRP398281"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "GSE199280",
+     "PRJNA819151",
+     "SRP365553"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "GSE283098",
+     "PRJNA1191862",
+     "SRP548230"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "GSE292866",
+     "PRJNA1241782",
+     "SRP572974"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "E-MTAB-15133",
+     "PRJEB89728",
+     "ERP172743"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "GSE294458",
+     "PRJNA1249490",
+     "SRP577799"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "GSE267819",
+     "PRJNA1113314",
+     "SRP508557"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "GSE271018",
+     "PRJNA1129430",
+     "SRP516755"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "PRJNA1067846",
+     "SRP485335"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "HRA009395",
+     "PRJCA032386",
+     "10.5281/zenodo.13934807"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "PRJNA975881",
+     "SRP500128"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "PRJNA904233",
+     "SRP409172"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "PRJNA1269128",
+     "PRJNA1269127",
+     "SRP608192",
+     "phs004076"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "HRA002325",
+     "PRJCA009240"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "HRA001687",
+     "PRJCA007614"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "HRA003746",
+     "PRJCA014157"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "HRA007394",
+     "PRJCA026050"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "E-MTAB-15400"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S23",
+    "ids": [
+     "HRA002803",
+     "PRJCA004125"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "E-MTAB-12529"
+    ]
+   },
+   {
+    "key": "S25",
+    "ids": [
+     "GSE250414",
+     "PRJNA1054006",
+     "SRP478574"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T3",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, with field measurements of methane (dissolved or ice-trapped concentrations, diffusive or bubble fluxes, or the composition or isotopes of collected CH4) from thermokarst lakes or ponds, or other lakes and ponds formed by permafrost thaw. Compilations that include such measurements count. Lab incubations, model or remote-sensing estimates, wetland- or soil-only fluxes, and lakes in permafrost regions that are not identified as thaw lakes do not.",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "10.17632/3z2dgtjt5n",
+     "10.17632/3z2dgtjt5n.1",
+     "10.17632/3z2dgtjt5n.2",
+     "10.17632/3z2dgtjt5n.3",
+     "10.17632/3z2dgtjt5n.4",
+     "10.17632/5rn4zf274r",
+     "10.17632/5rn4zf274r.1",
+     "10.17632/5rn4zf274r.2",
+     "10.17632/5rn4zf274r.3",
+     "10.17632/5rn4zf274r.4",
+     "10.17632/ff22rbpc4y",
+     "10.17632/ff22rbpc4y.1",
+     "10.17632/ff22rbpc4y.2",
+     "10.17632/ff22rbpc4y.3"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.18739/A28G8FH70"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "10.18739/A25717Q0T"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "10.5063/AA/nceas.891.3",
+     "10.5063/AA/nceas.891.1",
+     "10.5063/AA/nceas.891.2"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.18739/A2HX15R89"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "10.18739/A2RN3083Q"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "10.5885/45588CE-5A12A84DFAAF4D36"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.5281/zenodo.19337194",
+     "10.5281/zenodo.19337195",
+     "10.5281/zenodo.21850931"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "10.5281/zenodo.7078790",
+     "10.5281/zenodo.7078791"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "10.5281/zenodo.18507510",
+     "10.5281/zenodo.18507511"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.4211/hs.41faf3d6c3f245259ea820740291789c"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.6084/m9.figshare.22351381",
+     "10.6084/m9.figshare.22351381.v1"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.6084/m9.figshare.22743968",
+     "10.6084/m9.figshare.22743968.v1"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "10.6084/m9.figshare.13114433",
+     "10.6084/m9.figshare.13114433.v1",
+     "10.6084/m9.figshare.13114433.v2"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "10.6084/m9.figshare.28236848",
+     "10.6084/m9.figshare.28236848.v1"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "10.6084/m9.figshare.19251593",
+     "10.6084/m9.figshare.19251593.v1",
+     "10.6084/m9.figshare.19251593.v2"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "10.5683/SP3/KCX9KV"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "10.5683/SP3/RCRCTT"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "10.3334/ORNLDAAC/1778"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "10.3334/ORNLDAAC/1870"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "10.1594/PANGAEA.808037",
+     "10.1594/PANGAEA.808036",
+     "10.1594/PANGAEA.808035"
+    ]
+   },
+   {
+    "key": "S25",
+    "ids": [
+     "10.1594/PANGAEA.913642"
+    ]
+   },
+   {
+    "key": "S26",
+    "ids": [
+     "10.1594/PANGAEA.939906"
+    ]
+   },
+   {
+    "key": "S27",
+    "ids": [
+     "10.1594/PANGAEA.949183",
+     "10.1594/PANGAEA.950973",
+     "10.1594/PANGAEA.950969",
+     "10.1594/PANGAEA.950972",
+     "10.1594/PANGAEA.965512",
+     "10.1594/PANGAEA.965909",
+     "10.1594/PANGAEA.966242",
+     "10.1594/PANGAEA.966243"
+    ]
+   },
+   {
+    "key": "S28",
+    "ids": [
+     "10.17632/yvdcp63s55",
+     "10.17632/yvdcp63s55.1"
+    ]
+   },
+   {
+    "key": "S29",
+    "ids": [
+     "10.17632/rsvjjb4dyp",
+     "10.17632/rsvjjb4dyp.1",
+     "10.17632/8pcmr7szpz",
+     "10.17632/8pcmr7szpz.1"
+    ]
+   },
+   {
+    "key": "S30",
+    "ids": [
+     "10.17632/b59cxnypjs",
+     "10.17632/b59cxnypjs.1"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S2",
+    "ids": [
+     "10.18739/A2PH1X"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.5885/45615CE-1A0AFEFB748D4457"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "10.3334/ORNLDAAC/2393"
+    ]
+   },
+   {
+    "key": "S31",
+    "ids": [
+     "10.5281/zenodo.4153049",
+     "10.5281/zenodo.4153050"
+    ]
+   },
+   {
+    "key": "S32",
+    "ids": [
+     "10.1371/journal.pone.0078204.t001",
+     "https://plos.figshare.com/articles/dataset/_Surface_water_physicochemical_properties_of_the_four_ponds_sampled_for_archaeal_communities_between_19_and_26_July_2009_including_dissolved_organic_carbon_DOC_mg_L_8722_1_soluble_reactive_phosphorus_SRP_181_g_L_8722_1_total_phosphorus_TP_181_g_L_8722_1_t/850145",
+     "10.1371/journal.pone.0078204.t002",
+     "https://plos.figshare.com/articles/dataset/_Compilation_of_thaw_ponds_samples_collected_each_year_/850144",
+     "10.1371/journal.pone.0078204.s001",
+     "https://plos.figshare.com/articles/dataset/_Small_Thaw_Ponds_An_Unaccounted_Source_of_Methane_in_the_Canadian_High_Arctic_/850146"
+    ]
+   },
+   {
+    "key": "S33",
+    "ids": [
+     "10.1371/journal.pone.0188223.t002",
+     "https://plos.figshare.com/articles/dataset/Concentrations_of_i_pmoA_i_transcripts_methane_and_oxygen_and_methane_in_the_sampled_thaw_ponds_/5641264"
+    ]
+   },
+   {
+    "key": "S34",
+    "ids": [
+     "10.18739/A2DN3ZX1R",
+     "10.18739/A27H1DN5S"
+    ]
+   },
+   {
+    "key": "S35",
+    "ids": [
+     "10.5281/zenodo.8265740",
+     "10.5281/zenodo.8265741",
+     "10.5281/zenodo.10586832",
+     "10.5281/zenodo.11054180"
+    ]
+   },
+   {
+    "key": "S36",
+    "ids": [
+     "10.6084/m9.figshare.29146295",
+     "10.6084/m9.figshare.29146295.v1",
+     "10.6084/m9.figshare.29146295.v2",
+     "10.6084/m9.figshare.29146295.v3",
+     "10.6084/m9.figshare.29146283",
+     "10.6084/m9.figshare.29146283.v1",
+     "10.6084/m9.figshare.29146283.v2",
+     "10.6084/m9.figshare.29146283.v3"
+    ]
+   },
+   {
+    "key": "S37",
+    "ids": [
+     "10.5281/zenodo.3832030",
+     "10.5281/zenodo.3832031"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T4",
+  "kind": "list",
+  "prompt": "Find every public labeled image or video dataset, in any archive, of honey bees (Apis mellifera) made for computer vision or machine learning: images or video of bees with labels such as Varroa mite presence, pollen-bearing, health, caste or behaviour, or bee detection, tracking, pose or segmentation annotations, at the hive entrance, on frames or elsewhere. Unlabeled image dumps, audio- or sensor-only hive data, datasets whose labelled objects are not bees (comb cells, sticky boards, pollen pellets, isolated wings), general insect sets where honey bee is one class among many, other bee species, and papers without a public download do not count; copies of a dataset on other sites count as the same dataset.",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "ivanfel/honey-bee-pollen",
+     "github.com/piperod/PollenDataset"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "jenny18/honey-bee-annotated-images",
+     "10.5281/zenodo.7101934",
+     "10.5281/zenodo.7093275",
+     "unsunnedsnow/honeybees-simplified",
+     "shaylynnmorphew/bee-images-separated",
+     "ambarish/beeslittledataset"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.5281/zenodo.4085044",
+     "10.5281/zenodo.4085043",
+     "github.com/schurist/VarroaDataset",
+     "benxelua/varroa",
+     "kureijicolonel/varroa",
+     "lamkiet/varroadatasets",
+     "nguyenquangnhat2100/varroadetection",
+     "ohmahler91/varroadataset",
+     "yudel2/varroa-segmentation",
+     "duyem54/varoadataset",
+     "giapng/varroa-restructured"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "10.5281/zenodo.13771384",
+     "10.5281/zenodo.10875856"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "alcor-lab/ev2-image-dataset",
+     "alcor-lab/ev2-video-dataset",
+     "10.34740/kaggle/dsv/11159683"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.5281/zenodo.23099411",
+     "10.5281/zenodo.23099412",
+     "10.5281/zenodo.23276947",
+     "10.5281/zenodo.20488016",
+     "10.5281/zenodo.20488015",
+     "github.com/Soda0603/varroa-in-hive-imaging"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "kport354041/honeybee-positions"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "10.5281/zenodo.13991237",
+     "10.5281/zenodo.13991236"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.6084/m9.figshare.26999512",
+     "10.6084/m9.figshare.26999512.v1"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.17632/5yz78xxpmy",
+     "10.17632/5yz78xxpmy.1"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "imonbilk/bee-dataset-but-1",
+     "10.34740/kaggle/dsv/5609865",
+     "10.34740/kaggle/dsv/7091270",
+     "10.34740/kaggle/dsv/7091285"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "masuel/bee-hyperspectral-dataset",
+     "10.34740/kaggle/dsv/10996316",
+     "10.34740/kaggle/dsv/11239539",
+     "10.34740/kaggle/dsv/12033050"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.17632/8gb9r2yhfc",
+     "10.17632/8gb9r2yhfc.6"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.5281/zenodo.15622032",
+     "10.5281/zenodo.15622033"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.5281/zenodo.15813172",
+     "10.5281/zenodo.15813173"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "10.5281/zenodo.23077518",
+     "10.5281/zenodo.23077519"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "10.5281/zenodo.4400650",
+     "10.5281/zenodo.7253878"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "birdy654/bee-detection-in-the-wild",
+     "lara311/bee-detection-dataset",
+     "eedouble/bee-detection",
+     "omlande/bee-object-detection-dataset-coco-format",
+     "Francesco/bees-jt5in",
+     "LibreYOLO/bees-jt5in",
+     "object-detection/bees-jt5in"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "ashfaqsyed/bees-dataset"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "jonathanbyrne/to-bee-or-not-to-bee"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "10.26180/5f4c8d5815940",
+     "figshare:12895433"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "10.21227/gwm7-m820"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "10.21227/x8fr-b747",
+     "10.21227/42s6-9764"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "beproj/varroa-mites-detection",
+     "beproj/varroa-mites-detection--test-set",
+     "beproj/varroa-mites-detection--train-set",
+     "rf100-vl/varroa-mites-detection-test-set-1irzb-gsig-8ecee",
+     "roboflow100vl-full/varroa-mites-detection-test-set-lnea-r012y"
+    ]
+   },
+   {
+    "key": "S25",
+    "ids": [
+     "10.5281/zenodo.15757295",
+     "10.5281/zenodo.15757296"
+    ]
+   },
+   {
+    "key": "S26",
+    "ids": [
+     "rowlettheowlet/bee-detection-from-video-frames"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S27",
+    "ids": [
+     "github.com/BeeAlarmed/BeeDataset",
+     "tfds:bee_dataset"
+    ]
+   },
+   {
+    "key": "S28",
+    "ids": [
+     "10.5281/zenodo.7928121",
+     "10.5281/zenodo.7928120"
+    ]
+   },
+   {
+    "key": "S29",
+    "ids": [
+     "10.5281/zenodo.10827406",
+     "10.5281/zenodo.10827405",
+     "10.5281/zenodo.10828561",
+     "10.5281/zenodo.10828560"
+    ]
+   },
+   {
+    "key": "S30",
+    "ids": [
+     "imonbilk/bee-dataset-but-hs",
+     "10.34740/kaggle/dsv/7845514"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "T5",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds metabolomics data (untargeted or targeted LC-MS, GC-MS or NMR, raw files or processed metabolite/feature tables; lipidomics-only counts) from reef-building stony corals (Scleractinia: whole holobiont, or host or Symbiodiniaceae fractions taken from corals) where at least one sampled condition is thermal stress (experimental heating or a marine heatwave) or bleaching. Proteomics-only and transcriptomics-only data, sea anemones (Aiptasia/Exaiptasia), soft corals, jellyfish, Symbiodiniaceae grown only in culture, and papers without deposited data do not count.",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "MTBLS5272"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "MTBLS538"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "ST004143",
+     "PR002606",
+     "10.21228/M8SS0Z"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "ST004329",
+     "PR002743",
+     "10.21228/M83G2D"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "MSV000085272",
+     "10.25345/c5b392",
+     "GNPS task 0d1c421088ac4ca395ad9e8b585a289e"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "MSV000085925",
+     "10.25345/c5416c",
+     "GNPS task c6c52f892e2145d8a867d270ef386a02"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "MSV000086299",
+     "10.25345/c5wn38",
+     "GNPS task 11f075790a8d4d5aa6cf3ea62b4dd158"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "MSV000088564",
+     "10.25345/c5g00v",
+     "GNPS task f8ab9cd9a9f54b50aa17cc0f04bfb103"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "MSV000090231",
+     "10.25345/c5q52fh70",
+     "GNPS task ec2ae6be788c4f03b9f24bc0e222f1b3"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "MSV000092488",
+     "10.25345/c5nk36g1n",
+     "GNPS task da116d65109445c39f5d50fd133e23da"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "MSV000094832",
+     "10.25345/c5x05xq3t",
+     "GNPS task 54947e09d02d41e8995fdbc01d88a4b5"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "MSV000095167",
+     "10.25345/c5mw28r9b",
+     "GNPS task c4f26e3ca3934a16b97928f0c9a9ef77"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "MSV000096582",
+     "10.25345/c5d50g886",
+     "GNPS task cf242b11e0114fe4aab2a8bddc51d00d"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "MSV000096609",
+     "10.25345/c5x05xq9q",
+     "GNPS task 3b560004163a4d0f9474e278dcbcd841"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "MSV000101299",
+     "10.25345/c5pg1j26b",
+     "GNPS task c82dc8ff715a4614a8ec7dd71b43d676"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "10.26008/1912/bco-dmo.886427.1",
+     "10.26008/1912/bco-dmo.886420.1",
+     "bco-dmo dataset 886427",
+     "bco-dmo dataset 886420",
+     "hdl:1912/29646",
+     "hdl:1912/29640"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "10.5281/zenodo.6861688",
+     "10.5281/zenodo.6861687"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "10.5281/zenodo.19041113",
+     "10.5281/zenodo.19041112"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "10.6084/m9.figshare.13234874",
+     "10.6084/m9.figshare.13234874.v1",
+     "10.6084/m9.figshare.13122056",
+     "10.6084/m9.figshare.13122056.v1"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "10.17605/OSF.IO/TE6S2",
+     "osf.io/te6s2",
+     "10.5281/zenodo.13835295"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S21",
+    "ids": [
+     "MSV000079130",
+     "GNPS task a6f91175de794d9e940fa439b6391617",
+     "MSV000085035",
+     "10.25345/c5z69p"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "MSV000083610",
+     "10.25345/c5wp74",
+     "GNPS task d96124588a77422dadaaff684860aaa4"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "MSV000087311",
+     "10.25345/c50b9c",
+     "GNPS task fb20b57ddcf943149be0bc7059b5b906"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "MSV000100981",
+     "10.25345/c51g0j79r",
+     "GNPS task 882b7e28425d4cdd80c0b765ac677e99"
+    ]
+   },
+   {
+    "key": "S25",
+    "ids": [
+     "10.6084/m9.figshare.c.6403960",
+     "10.6084/m9.figshare.c.6403960.v1",
+     "10.6084/m9.figshare.21967024",
+     "10.6084/m9.figshare.21967024.v1"
+    ]
+   },
+   {
+    "key": "S26",
+    "ids": [
+     "10.5281/zenodo.3894132"
+    ]
+   },
+   {
+    "key": "S27",
+    "ids": [
+     "10.5281/zenodo.3898432"
+    ]
+   },
+   {
+    "key": "S28",
+    "ids": [
+     "osf.io/t4xd9"
+    ]
+   },
+   {
+    "key": "S29",
+    "ids": [
+     "MSV000088021",
+     "10.25345/c53g1n",
+     "GNPS task 8c5d25906b2742df99d45d07f36fafe5"
+    ]
+   }
+  ]
+ }
+]

@@ -1,0 +1,295 @@
+task: T3
+prompt: >-
+  Find every public dataset, in any archive, with field measurements of methane (dissolved or ice-trapped
+  concentrations, diffusive or bubble fluxes, or the composition or isotopes of collected CH4) from thermokarst lakes or
+  ponds, or other lakes and ponds formed by permafrost thaw. Compilations that include such measurements count. Lab
+  incubations, model or remote-sensing estimates, wetland- or soil-only fluxes, and lakes in permafrost regions that are
+  not identified as thaw lakes do not.
+criteria: >-
+  Topic: PRIMARY (field-measured CH4 from thermokarst / permafrost-thaw lakes and ponds). Included: a public deposit in a
+  repository (Arctic Data Center, KNB, PANGAEA, Nordicana D, ORNL DAAC, Zenodo, Figshare, Mendeley Data, Borealis,
+  HydroShare, etc.) holding CH4 values measured in the field. That means dissolved CH4 in water or lake ice, diffusive,
+  chamber, eddy-covariance or bubble-trap fluxes, or the 13C, D or 14C content of field-collected CH4. The waterbodies
+  must be thermokarst, thaw, yedoma or alas lakes or ponds, palsa or peat-plateau thaw ponds, or ponds left by thermokarst
+  lake drainage. Thaw origin is taken from the deposit text or, when the deposit is silent, from its linked paper; the
+  latter cases are flagged confidence: borderline. Deposits that mix thaw lakes with other sites count if the thaw-lake CH4
+  values are in the files. Multi-study compilations count only when their files identify thermokarst or thaw lakes, and
+  are flagged borderline. As in round-2 key R5, a publisher supplement mirrored on Figshare counts only when the file
+  itself tabulates the CH4 values (borderline). Excluded: lab incubations and production-potential experiments; models,
+  gridded upscaling and remote-sensing (SAR, AVIRIS) estimates; maps of ebullition hotspot locations without CH4 values;
+  CH4 fluxes from soils, bogs, fens, thaw slumps or drained lake basins with no pond or lake measurement; and microbial,
+  DOM or hydrochemistry deposits without CH4. Also excluded are lakes and ponds in permafrost terrain that the deposit and
+  paper do not identify as thaw features (Mackenzie Delta floodplain lakes, Yukon-Kuskokwim Delta and Yukon Flats lakes,
+  Lena Delta polygonal-tundra ponds, Cambridge Bay waters, where "spring thaw" means ice-out), as are restricted,
+  embargoed or login-only records, theses and papers. Unit = study. Version DOIs, concept DOIs, duplicate uploads,
+  PANGAEA parent and child datasets of one campaign, and companion deposits of one paper (scripts, literature tables,
+  supplement items) are aliases. Separate deposits from different papers are separate studies, even from the same site.
+  An umbrella project package with no data of its own is listed as a near miss and points to its keyed children.
+studies:
+  - key: S1
+    title: "Data and metadata for 'Role of methanotrophy in a high-methane emitting thermokarst lake' (Big Trail Lake, Alaska)"
+    year: 2026
+    ids: ["10.17632/3z2dgtjt5n", "10.17632/3z2dgtjt5n.1", "10.17632/3z2dgtjt5n.2", "10.17632/3z2dgtjt5n.3", "10.17632/3z2dgtjt5n.4", "10.17632/5rn4zf274r", "10.17632/5rn4zf274r.1", "10.17632/5rn4zf274r.2", "10.17632/5rn4zf274r.3", "10.17632/5rn4zf274r.4", "10.17632/ff22rbpc4y", "10.17632/ff22rbpc4y.1", "10.17632/ff22rbpc4y.2", "10.17632/ff22rbpc4y.3"]
+    archives: [Mendeley Data]
+    evidence: "Files include profundal CH4 and CO2 profiles (2022_11_21_CH4CO2_DeepShallow.xlsx), diffusive-flux calculations and raw LGR analyser data from a yedoma thermokarst lake. The 5rn4zf274r literature table and ff22rbpc4y scripts belong to the same paper and are aliases."
+  - key: S2
+    title: "Methane ebullition flux data from thermokarst lakes, 2003-2010"
+    year: 2016
+    ids: ["10.18739/A2PH1X"]
+    archives: [Arctic Data Center]
+    evidence: "confidence: borderline (the ADC package holds only readme_KWA.html, which describes the data; no data file is in the package and the external download link was not found). The readme gives bubble-trap ebullition (ml gas and mg CH4 per seep per day) from Siberian and Alaskan thermokarst lakes (Walter Anthony)."
+  - key: S3
+    title: "Methane emissions (Alaska, Canada, Sweden, Siberia) proportional to permafrost carbon thawed in Arctic lakes since the 1950s"
+    year: 2017
+    ids: ["10.18739/A28G8FH70"]
+    archives: [Arctic Data Center]
+    evidence: "113 radiocarbon dates of lake bubble methane with per-lake bubble class and lake type, from thermokarst lakes (keywords thermokarst, methane ebullition)."
+  - key: S4
+    title: "Radiocarbon ages of methane in arctic and boreal lakes (2003-2017)"
+    year: 2023
+    ids: ["10.18739/A25717Q0T"]
+    archives: [Arctic Data Center]
+    evidence: "14C ages of field-collected bubble CH4 classed by yedoma-lake hotspot, seep and background ebullition versus non-yedoma lakes (Brosius et al. 2023). Yedoma thermokarst lakes are a named class."
+  - key: S5
+    title: "Siberian lake ebullition"
+    year: 2008
+    ids: ["10.5063/AA/nceas.891.3", "10.5063/AA/nceas.891.1", "10.5063/AA/nceas.891.2"]
+    archives: [KNB]
+    evidence: "Hourly CH4 bubbling rates (mg CH4 m-2 d-1 background and mg CH4 per spot per day point-source and hotspot) from 1-m bubble traps run for a year in Siberian thermokarst lakes."
+  - key: S6
+    title: "Transport of methane in open talik thermokarst lakes in discontinuous permafrost aquifers in Interior Alaska 2015-2017"
+    year: 2020
+    ids: ["10.18739/A2HX15R89"]
+    archives: [Arctic Data Center]
+    evidence: "Long-format analyte table (LocID, Analyte, Result, Matrix, Depth) of methane and other gases sampled in and below Goldstream Valley thermokarst lakes. This is a child of the umbrella package 10.18739/A2QJ7801N."
+  - key: S7
+    title: "Vault lake thermokarst methane cycling, Goldstream valley, Spring 2013-2017"
+    year: 2021
+    ids: ["10.18739/A2RN3083Q"]
+    archives: [Arctic Data Center]
+    evidence: "Attributes include CH4 (uM), g CH4 m-2 yr-1, CH4 (%), d13C-CH4, dD-CH4 and 14C-CH4 for Vault Lake, a thermokarst lake, alongside tracer incubations. Also a child of 10.18739/A2QJ7801N."
+  - key: S8
+    title: "Concentrations of dissolved methane, carbon dioxide and oxygen in thermokarst lakes and ponds in palsa peatlands, northern Quebec, Canada"
+    year: 2020
+    ids: ["10.5885/45588CE-5A12A84DFAAF4D36"]
+    archives: [Nordicana D]
+    evidence: "Depth profiles of dissolved CH4 and CO2 in thermokarst lakes of the SAS and BON peatland valleys, plus mooring data."
+  - key: S9
+    title: "Concentrations, fluxes and isotopic signatures of greenhouse gases emitted from lakes and ponds on Bylot Island, Nunavut, Canada"
+    year: 2023
+    ids: ["10.5885/45615CE-1A0AFEFB748D4457"]
+    archives: [Nordicana D]
+    evidence: "confidence: borderline (the deposit says the ponds and lakes formed on a polygonal syngenetic-permafrost landscape; their thaw origin comes from the Bylot literature, e.g. Negandhi et al. 2013 'Small thaw ponds'). A decade of diffusive and ebullition GHG fluxes and concentrations, with 14C and stable-isotope signatures."
+  - key: S10
+    title: "Contrasting Responses of Carbon Dioxide and Methane Fluxes Following Thermokarst Erosion Across Tundra-Lake Interfaces in the Western Canadian Arctic"
+    year: 2026
+    ids: ["10.5281/zenodo.19337194", "10.5281/zenodo.19337195", "10.5281/zenodo.21850931"]
+    archives: [Zenodo]
+    evidence: "ghgflux_envars.csv holds weekly manual-chamber CO2, CH4 and N2O fluxes from 2022-2023 at tundra-thermokarst lake interfaces at Trail Valley Creek. The three DOIs are concept and versions (the first version was titled 'Opposing Responses ...')."
+  - key: S11
+    title: "GHGs data from thermokarst lakes on Tibetan Plateau"
+    year: 2022
+    ids: ["10.5281/zenodo.7078790", "10.5281/zenodo.7078791"]
+    archives: [Zenodo]
+    evidence: "CH4 and CO2 concentrations at several water depths and diffusive fluxes during ice-thaw and ice-free periods from 10 thermokarst lakes and ponds."
+  - key: S12
+    title: "Methane concentrations in the water and ice columns of thermokarst ponds in Subarctic Norway"
+    year: 2026
+    ids: ["10.5281/zenodo.18507510", "10.5281/zenodo.18507511"]
+    archives: [Zenodo]
+    evidence: "Winter 2023-2024 CH4 concentrations in water and ice of nine thermokarst ponds at the Iskoras and Aidejavri peatlands (Pismeniuk et al.)."
+  - key: S13
+    title: "Dataset for 'Water chemistry and greenhouse gas concentrations in waterbodies of a thawing permafrost peatland complex in northern Norway'"
+    year: 2025
+    ids: ["10.4211/hs.41faf3d6c3f245259ea820740291789c"]
+    archives: [HydroShare]
+    evidence: "2020-2022 GHG concentrations and CO2 diffusive fluxes from thermokarst ponds and wetland streams on the Iskoras peat plateau (Knutson et al. 2025). This is a different deposit and paper from S12."
+  - key: S14
+    title: "Anaerobic oxidation of methane does not attenuate methane emissions from thermokarst lakes"
+    year: 2023
+    ids: ["10.6084/m9.figshare.22351381", "10.6084/m9.figshare.22351381.v1"]
+    archives: [Figshare]
+    evidence: "Lotem_Pellerin_et_al_DATA.xlsx supports Lotem et al. 2023 L&O (10.1002/lno.12349): porewater and bubble CH4 from thermokarst lakes."
+  - key: S15
+    title: "Characteristics of methane emissions from alpine thermokarst lakes on the Tibetan Plateau"
+    year: 2023
+    ids: ["10.6084/m9.figshare.22743968", "10.6084/m9.figshare.22743968.v1"]
+    archives: [Figshare]
+    evidence: "'Carbon fluxes.xlsx' holds field CH4 fluxes from Tibetan thermokarst lakes, alongside methanogen gene tables (Nat Commun 10.1038/s41467-023-38907-6, whose data statement points here)."
+  - key: S16
+    title: "Concentration, 13C, and 14C of dissolved and ebullition methane, DIC, DOC, POC and sediment carbon from lakes and rivers in northern Quebec"
+    year: 2021
+    ids: ["10.6084/m9.figshare.13114433", "10.6084/m9.figshare.13114433.v1", "10.6084/m9.figshare.13114433.v2"]
+    archives: [Figshare]
+    evidence: "Dissolved and ebullition CH4 concentrations and isotopes from the thaw lakes SAS2A, SAS2B and SAS2C (August 2018, February 2019, August 2019), plus glacial-valley lakes and rivers. Version 1 was titled carbon_isotope_data_lakes_rivers_northern_quebec.xlsx."
+  - key: S17
+    title: "Methane emissions from thermokarst lakes must emphasize the ice-melting impact"
+    year: 2025
+    ids: ["10.6084/m9.figshare.28236848", "10.6084/m9.figshare.28236848.v1"]
+    archives: [Figshare]
+    evidence: "'CH4 concentrations.xlsx', 'CH4 fluxes.xlsx' and isotope data from field surveys of Tibetan Plateau thermokarst lakes during ice melt (Nat Commun 10.1038/s41467-025-57745-2, whose data statement points here)."
+  - key: S18
+    title: "Methane production controls in a young thermokarst lake formed by abrupt permafrost thaw"
+    year: 2022
+    ids: ["10.6084/m9.figshare.19251593", "10.6084/m9.figshare.19251593.v1", "10.6084/m9.figshare.19251593.v2"]
+    archives: [Figshare]
+    evidence: "data_all_figures.xlsx holds sediment porewater, bubble samples and incubations from Big Trail Lake, a young thermokarst lake (Pellerin, Lotem et al. 2022 GCB). This is a different paper from S1 and S14."
+  - key: S19
+    title: "Temporal patterns of greenhouse gas emissions from two small thermokarst lakes in Nunavik, Canada"
+    year: 2025
+    ids: ["10.5683/SP3/KCX9KV"]
+    archives: [Borealis]
+    evidence: "DISSOLVED_GHG.csv and the diffusive (FD) and ebullitive (FE) flux tables come from two lithalsa thermokarst lakes, with nearly two years of profiling."
+  - key: S20
+    title: "Bridging the gap from peat to ponds: terrestrial and aquatic greenhouse gas emissions in an evolving permafrost-associated boreal peatland"
+    year: 2025
+    ids: ["10.5683/SP3/RCRCTT"]
+    archives: [Borealis]
+    evidence: "SAS_2021-22_pondDGconc and pondDGfluxIso tables give dissolved gas concentrations and fluxes from thermokarst ponds of the SAS2 palsa peatland. Peat chamber fluxes are also included."
+  - key: S21
+    title: "ABoVE: Methane Flux across Two Thermokarst Lake Ecosystems, Interior Alaska, 2018"
+    year: 2020
+    ids: ["10.3334/ORNLDAAC/1778"]
+    archives: [ORNL DAAC]
+    evidence: "July 2018 diffusive CH4 fluxes from a mobile closed chamber (LGR analyser) over the littoral zones, shoreline and upland of two Goldstream Valley thermokarst lakes."
+  - key: S22
+    title: "Methane Fluxes from Shorelines and Differing Surfaces, Big Trail Lake, Alaska, 2019"
+    year: 2021
+    ids: ["10.3334/ORNLDAAC/1870"]
+    archives: [ORNL DAAC]
+    evidence: "2019 chamber CH4 fluxes at a hotspot on a pond shoreline next to Big Trail Lake and on other thermokarst-lake surfaces, plus a ground CH4 enhancement survey."
+  - key: S23
+    title: "ABoVE: Land Cover, Methane Flux, and Environmental Data, Big Trail Lake, Fairbanks AK"
+    year: 2026
+    ids: ["10.3334/ORNLDAAC/2393"]
+    archives: [ORNL DAAC]
+    evidence: "confidence: borderline (the 56 chamber locations are on the terrestrial margin north of the lake, not on open water). 2021-2022 chamber CH4 and CO2 fluxes around Big Trail Lake, an active thermokarst lake."
+  - key: S24
+    title: "Isotopic composition of ground ice, ebullition gases and thermokarst lake water, North America"
+    year: 2012
+    ids: ["10.1594/PANGAEA.808037", "10.1594/PANGAEA.808036", "10.1594/PANGAEA.808035"]
+    archives: [PANGAEA]
+    evidence: "Child 808036 (Table 2) gives dD-CH4 and d13C-CH4 of ebullition gas per seep class for Beringian thermokarst lakes (supplement to 10.1029/2011jg001810). The parent and the ground-ice table 808035 are aliases."
+  - key: S25
+    title: "Dissolved methane and hydrochemical parameters in ice cores from April 2017 of a bay, thermokarst lagoon, and thermokarst lake, Bykovsky Peninsula"
+    year: 2020
+    ids: ["10.1594/PANGAEA.913642"]
+    archives: [PANGAEA]
+    evidence: "Dissolved CH4 concentrations and d13C-CH4 in winter ice cores from a thermokarst lake (and lagoon and bay), supplement to 10.5194/tc-2019-304."
+  - key: S26
+    title: "The importance of inland water CO2, CH4, N2O to summertime greenhouse gas exchange with the atmosphere in Arctic tundra lowlands"
+    year: 2024
+    ids: ["10.1594/PANGAEA.939906"]
+    archives: [PANGAEA]
+    evidence: "2016-2017 dissolved CH4 in the Indigirka lowlands, including one thermokarst lake actively eroding into a Yedoma ridge, plus ponds and streams."
+  - key: S27
+    title: "Permafrost related measurements in the Mackenzie Delta, Northwest Territories, Canada, from the MOSES field campaign in September 2021"
+    year: 2022
+    ids: ["10.1594/PANGAEA.949183", "10.1594/PANGAEA.950973", "10.1594/PANGAEA.950969", "10.1594/PANGAEA.950972", "10.1594/PANGAEA.965512", "10.1594/PANGAEA.965909", "10.1594/PANGAEA.966242", "10.1594/PANGAEA.966243"]
+    archives: [PANGAEA]
+    evidence: "The collection covers 'Lake 3', a small thermokarst lake, and Swiss Cheese Lake. Its child datasets give high-resolution surface-water CH4 and CO2 concentrations and floating-chamber CH4 fluxes (Lake 3 children 950973, 966242 and 966243)."
+  - key: S28
+    title: "Diurnal cycle of C concentration and emission fluxes in small thaw ponds of frozen peatlands"
+    year: 2019
+    ids: ["10.17632/yvdcp63s55", "10.17632/yvdcp63s55.1"]
+    archives: [Mendeley Data]
+    evidence: "The 'all data' sheet has a CH4 (umol/L) column from two-day observations at thermokarst lakes and thaw ponds of the Khanymey frozen peatland, Western Siberia (Pokrovsky group)."
+  - key: S29
+    title: "Thermokarst lakes and their residual water bodies, Western Siberia Lowland"
+    year: 2025
+    ids: ["10.17632/rsvjjb4dyp", "10.17632/rsvjjb4dyp.1", "10.17632/8pcmr7szpz", "10.17632/8pcmr7szpz.1"]
+    archives: [Mendeley Data]
+    evidence: "Both records hold the same 112-row table of the same sites (CH4 umol/L, CO2 and hydrochemistry) for residual water bodies left after thermokarst lake drainage. The authors overlap and the uploads are 6 days apart, so they are aliases. The 8pcmr7szpz file is named for the paper 'Residual water bodies formed after thermokarst lake drainage ... greenhouse gas emissions'."
+  - key: S30
+    title: "Hydrochemical parameters of the peatland pools and thermokarst lakes in Northern Eurasia peatlands"
+    year: 2026
+    ids: ["10.17632/b59cxnypjs", "10.17632/b59cxnypjs.1"]
+    archives: [Mendeley Data]
+    evidence: "The 'all' sheet of 'b_table all data.xlsx' has CH4 and FCH4 columns for thermokarst lakes and peatland pools across permafrost and permafrost-free zones."
+  - key: S31
+    title: "Carbon emission from Western Siberian inland waters"
+    year: 2020
+    ids: ["10.5281/zenodo.4153049", "10.5281/zenodo.4153050"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (the deposit text does not say thermokarst; the lakes come from Serikova et al., titled 'High carbon emissions from thermokarst lakes of Western Siberia'). Data_S6 (Serikova river and lake dataset) and Data_S5 (Sabrekov lakes) list CH4 flux (g m-2 d-1) for lakes by permafrost zone."
+  - key: S32
+    title: "Small Thaw Ponds: An Unaccounted Source of Methane in the Canadian High Arctic (PLOS ONE tables and File S1)"
+    year: 2013
+    ids: ["10.1371/journal.pone.0078204.t001", "https://plos.figshare.com/articles/dataset/_Surface_water_physicochemical_properties_of_the_four_ponds_sampled_for_archaeal_communities_between_19_and_26_July_2009_including_dissolved_organic_carbon_DOC_mg_L_8722_1_soluble_reactive_phosphorus_SRP_181_g_L_8722_1_total_phosphorus_TP_181_g_L_8722_1_t/850145", "10.1371/journal.pone.0078204.t002", "https://plos.figshare.com/articles/dataset/_Compilation_of_thaw_ponds_samples_collected_each_year_/850144", "10.1371/journal.pone.0078204.s001", "https://plos.figshare.com/articles/dataset/_Small_Thaw_Ponds_An_Unaccounted_Source_of_Methane_in_the_Canadian_High_Arctic_/850146"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (a journal table mirrored on PLOS Figshare). Table 1 (t001, Figshare item 850145) lists dissolved CH4 with DOC, nutrients and CO2 for Bylot Island polygonal and runnel thaw ponds. File S1 is figures only."
+  - key: S33
+    title: "Concentrations of pmoA transcripts, methane and oxygen in the sampled thaw ponds (PLOS ONE 10.1371/journal.pone.0188223, Table 2)"
+    year: 2017
+    ids: ["10.1371/journal.pone.0188223.t002", "https://plos.figshare.com/articles/dataset/Concentrations_of_i_pmoA_i_transcripts_methane_and_oxygen_and_methane_in_the_sampled_thaw_ponds_/5641264"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (a journal table mirrored on PLOS Figshare). Table 2.xls lists CH4 (uM) at surface and bottom of subarctic thaw ponds (BGR, NASH sites)."
+  - key: S34
+    title: "BAWLD-CH4: Methane Fluxes from Boreal and Arctic Ecosystems"
+    year: 2021
+    ids: ["10.18739/A2DN3ZX1R", "10.18739/A27H1DN5S"]
+    archives: [Arctic Data Center]
+    evidence: "confidence: borderline (a compilation). The aquatic table gives diffusive and ebullitive CH4 fluxes (CH4.D.FLUX, CH4.E.FLUX) by LAKE.TYPE, which separates yedoma and thermokarst lake classes. The two DOIs are versions in one DataONE obsolescence chain."
+  - key: S35
+    title: "Cryosphere Inland Water Greenhouse Gases Database (CIWD-GHG)"
+    year: 2024
+    ids: ["10.5281/zenodo.8265740", "10.5281/zenodo.8265741", "10.5281/zenodo.10586832", "10.5281/zenodo.11054180"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (a compilation). CryoLake.xlsx has CH4 concentration and diffusive and ebullitive flux sheets. Its Sources sheet lists 27 thermokarst or thaw-lake source studies."
+  - key: S36
+    title: "Cryosphere Lake Greenhouse Gases Database 2025"
+    year: 2025
+    ids: ["10.6084/m9.figshare.29146295", "10.6084/m9.figshare.29146295.v1", "10.6084/m9.figshare.29146295.v2", "10.6084/m9.figshare.29146295.v3", "10.6084/m9.figshare.29146283", "10.6084/m9.figshare.29146283.v1", "10.6084/m9.figshare.29146283.v2", "10.6084/m9.figshare.29146283.v3"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (a compilation). CryoLake25v1.xlsx expands CIWD-GHG (S35) into a lake-only GHG database. Item 29146283 is a same-title duplicate whose DOI resolves but whose API record is gone."
+  - key: S37
+    title: "Radiocarbon content of carbon dioxide, methane, dissolved organic carbon and particulate organic carbon from the northern permafrost region"
+    year: 2020
+    ids: ["10.5281/zenodo.3832030", "10.5281/zenodo.3832031"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (a compilation). 14C_Dataset_Final_Submitted.xlsx has CH4 rows classed Lake_Karst_Alaska, Lake_Karst_Siberia and Lake_Karst_Bylot with Thermokarst = Yes (Estop-Aragones et al. 2020)."
+near_misses:
+  - {ids: ["10.18739/A2QJ7801N", "10.18739/A2028PF00", "10.18739/A2V97ZS4H"], why_excluded: "Goldstream 'Processes controlling thaw lake methane emission' umbrella package (version chain V97ZS4H -> 028PF00 -> QJ7801N). It has no data files of its own; its CH4 children are keyed as S6 and S7, and the others are hydrology, geophysics, ground temperature and shoreline maps."}
+  - {ids: ["10.18739/A2NP1WK35", "10.3334/ORNLDAAC/1861", "10.3334/ORNLDAAC/1845"], why_excluded: "Locations of ebullition hotspots in thermokarst lakes, from GPS and early-winter aerial photos, with no CH4 measurements in the files."}
+  - {ids: ["10.3334/ORNLDAAC/1790", "10.6084/m9.figshare.24963912", "10.48577/jpl.ech7dm", "10.48577/jpl.y03ivr", "10.3334/ORNLDAAC/2394"], why_excluded: "Remote-sensing products: SAR-scaled lake ebullition estimates, SI figures of a SAR-ebullition analysis, AVIRIS-NG CH4 hotspot maps and SAR seepage areas. These are not field measurements."}
+  - {ids: ["10.3334/ORNLDAAC/2178", "10.5061/dryad.kwh70rz7m"], why_excluded: "Machine-learning-predicted CH4 and CO2 fluxes for Yukon-Kuskokwim Delta waterbodies. Model output; the ponds are not identified as thaw features."}
+  - {ids: ["10.18739/A23775V7T", "10.18739/A20298", "10.18739/A2CR5NC6R", "10.18739/A2K35MF90", "10.18739/A22804Z8M", "10.18739/A2BR8MG6H", "10.18739/A2HG45", "10.18739/A2F18SH0T", "10.18739/A2513TZ15", "10.18739/A2WH2DH1B"], why_excluded: "Polaris Project and Woodwell Yukon-Kuskokwim Delta aquatic and fire datasets. They measure CH4 (uM, flux) in YKD ponds, lakes, fens and streams, but the waterbodies are described only as lying in discontinuous permafrost, not as thermokarst or thaw ponds."}
+  - {ids: ["10.18739/A2833MZ8P", "10.18739/A2MK6589W", "10.18739/A2TT4FT8D", "10.18739/A29C6S14X", "10.18739/A28911R88", "10.18739/A2X63B55J", "10.18739/A2F47GT8N", "10.18739/A21V5BD6D", "10.18739/A2127T"], why_excluded: "Year-round OsmoSampler methane in Mackenzie Delta lakes (L56, L129, L280, L520, Swiss Cheese, Manta, North Head; per-lake packages for 2015-2017). They are described as 'seasonally ice-covered permafrost lakes' of the delta floodplain, not thermokarst."}
+  - {ids: ["10.18739/A20R9M596", "10.18739/A2TH8BP79", "10.5066/P1UECHWK", "10.11575/prism/dspace/41334"], why_excluded: "Cambridge Bay / Greiner Lake watershed dissolved CH4 (ADC, USGS, and a thesis). 'Spring thaw' here is seasonal ice-out along a lake-river-bay continuum, not permafrost-thaw waterbodies."}
+  - {ids: ["10.18739/A2T43J44G"], why_excluded: "Radiocarbon and concentration of dissolved CH4 in nine Yukon Flats lakes chosen across geologic settings and permafrost coverage. They are not identified as thermokarst lakes."}
+  - {ids: ["10.1594/PANGAEA.922399", "10.1594/PANGAEA.853641", "10.1594/PANGAEA.937594", "10.1594/PANGAEA.924104", "10.1594/PANGAEA.861845", "10.1594/PANGAEA.681253", "10.1594/PANGAEA.619108", "10.1594/PANGAEA.619109", "10.1594/PANGAEA.619110", "10.1594/PANGAEA.619111", "10.1594/PANGAEA.619112", "10.1594/PANGAEA.619113", "10.1594/PANGAEA.619115", "10.1594/PANGAEA.619116", "10.1594/PANGAEA.619117"], why_excluded: "Lena Delta (Samoylov, Kurungnakh) polygonal-tundra ponds and lakes: dissolved CH4, chamber and EC fluxes, ice-core CH4, MOX, and the LENA 2002 pond emission series. Measured CH4, but the deposits describe the waterbodies as polygonal or patterned-ground ponds, not thaw features. These are the closest misses."}
+  - {ids: ["10.1594/PANGAEA.920015", "10.1594/PANGAEA.919986", "10.1594/PANGAEA.920013"], why_excluded: "Lena Delta 2016-2018 dissolved CH4 and oxidation rates, mainly from the Lena River and Tiksi Bay plus 'a permafrost lake' not described as thermokarst. The Bykovsky thermokarst-lake ice cores are keyed separately as S25."}
+  - {ids: ["10.1594/PANGAEA.993666"], why_excluded: "Kytalyk (NE Siberia) dissolved GHG and DOM in ponds, lakes and streams, 2016-2017. Status 'in review': PANGAEA returns 401 (login required), so it is not public."}
+  - {ids: ["10.7939/DVN/LF4WDG", "10.5061/dryad.sj3tx968t"], why_excluded: "CH4 fluxes and concentrations from 20 peatland lakes across a permafrost transect in Alberta and NWT (Kuhn et al.), and its metagenomics companion. The deposits give the permafrost zone but do not identify the lakes as thermokarst; the Dryad record has no CH4."}
+  - {ids: ["10.5061/dryad.rfj6q57dp"], why_excluded: "Combined microbial and biogeochemical dataset (dissolved CH4, emissions) for lakes, wetlands and soils in Alaska, Siberia and Patagonia. The lakes are not identified as thermokarst in the deposit."}
+  - {ids: ["10.5281/zenodo.6893475", "10.5281/zenodo.6893476"], why_excluded: "'Vital contribution of methane to total carbon emissions from thermokarst lakes: Data'. The record is access_right=restricted with no public files."}
+  - {ids: ["10.17632/df23tk4n6k", "10.17632/df23tk4n6k.1"], why_excluded: "GHG fluxes along a trophic gradient in thermokarst fens: wetlands, not lakes or ponds, and the files are embargoed (no public files)."}
+  - {ids: ["10.5683/SP3/ABASOQ", "10.1594/PANGAEA.928140", "10.1594/PANGAEA.974430", "10.1594/PANGAEA.967267", "10.1594/PANGAEA.984832", "10.1594/PANGAEA.969148", "10.1594/PANGAEA.972634", "10.1594/PANGAEA.974302", "10.5281/zenodo.6326854", "10.5281/zenodo.10696560", "10.6084/m9.figshare.26880526", "10.6084/m9.figshare.26892715"], why_excluded: "Lab incubations or production experiments: thermokarst lake sediments in Kuujjuarapik, Yukechi, the Mackenzie lagoons and Tibetan drained lakes; the Barrow and Peera palsa mesocosms; Lutose peat. These are not field-measured CH4. Figshare 26892715 is the code item of the Tibetan drainage study."}
+  - {ids: ["10.1021/acs.est.5c17973.s001", "10.6084/m9.figshare.30081886", "10.3389/fmicb.2019.01656.s001", "10.6084/m9.figshare.8132546", "10.5061/dryad.ngf1vhj04", "10.5063/F1P26WH3", "10.5281/zenodo.17953151"], why_excluded: "Thermokarst-lake or pond deposits with microbial, DOM or C-fixation data only. The checked files (methanogen relative abundances, MAG bins, OTU tables, DOM) contain no CH4 measurements."}
+  - {ids: ["10.6073/pasta/4ff0d5ca036fcf28e3710d86468420e7", "10.5683/SP3/SOGFQF", "10.17026/dans-29c-tdq5", "10.5281/zenodo.13480630", "10.1594/PANGAEA.968180"], why_excluded: "Thermokarst or trough pond datasets on metabolism (C and O2 sensors), hydrogeology, vegetation succession or morphology. No CH4 variable is described. The BLE EML could not be read (PASTA 403), so it was judged from its description."}
+  - {ids: ["10.17632/5gmww5ck5t", "10.17632/bc47nyds2p"], why_excluded: "Pokrovsky-group Western Siberia deposits. 'Ultra-small water bodies' (micropuddles) has CH4 but is not described as thaw ponds. The polygon-trough and ice-wedge water table has no CH4 column."}
+  - {ids: ["10.6073/pasta/c246d9ed17292fe6b0654cdd88a56deb", "10.6073/pasta/8d70a1087c85ea8aec50c5ebaa1f0fea", "10.18140/flx/1669668", "10.18140/flx/1669674", "10.18739/A2JW86N23", "10.18739/A2KH0F06W", "10.6073/pasta/2959f51f79d067ce01d2c74a8d5fbb75", "10.6073/pasta/7a715a24a19729965d7987aa759e69b9", "10.18739/A22V2CC2M", "10.18739/A26W96B49", "10.18739/A2T727H0D", "10.18739/A2222R65F", "10.18739/A2JQ0SW30", "10.18739/A2JC9B", "10.17617/3.woiqrc", "10.1594/PANGAEA.938961"], why_excluded: "CH4 from terrestrial thaw features: Bonanza Creek thermokarst bog, Eight Mile Lake tundra EC and chambers, thermokarst mounds, drained-thaw-lake-basin soils and porewater, Stordalen mire chambers and Lena thaw-slump soils. None has a lake or pond measurement."}
+  - {ids: ["10.3334/ORNLDAAC/2448", "10.5281/zenodo.17984038", "10.6084/m9.figshare.29469053", "10.6084/m9.figshare.23279855", "10.5281/zenodo.17193077"], why_excluded: "Compilations that do not identify thaw-lake CH4: ABCFlux v2 (terrestrial plus freshwater, thaw lakes not flagged in the metadata), a peatland GHG literature table, a Tibetan terrestrial CH4 compilation, a permafrost carbon-stock synthesis, and global lake-CH4 projection inputs."}
+  - {ids: ["10.3334/ORNLDAAC/2008", "10.18739/A2TX3577N", "10.4231/67yg-v518", "10.5281/zenodo.18474996", "10.5281/zenodo.14991411", "10.15485/2588214", "10.5281/zenodo.18237274"], why_excluded: "Model or gridded products: global lake CH4 climatology, panarctic lake CH4 since 18 ka, process models, a DOC-lake CH4 model, a boreal-Arctic CH4 grid, the ecosys thermokarst model, and a DVM-DOS-TEM thermokarst bog model."}
+  - {ids: ["10.5281/zenodo.14568729", "10.5885/45660CE-8B92339884C146D0"], why_excluded: "CH4 from thaw streams at Duvanny Yar, and dissolved CH4 in subarctic Quebec rivers. Streams and rivers, not lakes or ponds."}
+  - {ids: ["10.1594/PANGAEA.941155", "10.1594/PANGAEA.928132", "10.5880/gfz.3.7.2022.001", "10.1594/PANGAEA.834904"], why_excluded: "Sediment biogeochemistry beneath Yukechi thermokarst lakes and Bykovsky lakes and lagoons, and thermokarst lake inventories. No CH4 measurements."}
+  - {ids: ["10.3389/fmicb.2025.1657143.s002", "10.3389/fmicb.2024.1462941.s001", "10.3389/fenvs.2022.948529.s001"], why_excluded: "Frontiers supplements on Figshare: a thermokarst soil hotspot, thermokarst soils, and Toolik Lake (a glacial lake, not thermokarst)."}
+  - {ids: ["10.15496/publikation-104610"], why_excluded: "Thesis on iron and carbon cycling in permafrost thaw ponds, a publication rather than a dataset deposit."}
+queries:
+  - "DataCite https://api.datacite.org/dois query=thermokarst AND (methane OR CH4): 186; ('thaw lake' OR 'thaw lakes' OR 'thaw pond' OR 'thaw ponds') AND (methane OR CH4): 29; thermokarst AND (pond OR ponds OR lake OR lakes) AND (greenhouse OR ebullition OR 'dissolved gas'): 85; permafrost AND (lake OR pond) AND (methane OR CH4) AND (flux OR ebullition OR dissolved OR concentration): 195; (yedoma OR alas) AND lake AND (methane OR CH4): 22; (palsa OR 'peat plateau') AND (pond OR lake) AND (methane OR CH4 OR greenhouse): 17. Merged and de-versioned: 204 title groups from 279 non-text DOIs, all screened."
+  - "DataCite (thermokarst OR thaw OR permafrost) AND (pond OR lake) AND (methane OR CH4), resource-type dataset: 191; (thermokarst OR thaw OR 'frozen peatland(s)' OR 'permafrost peatland(s)') AND (lake* OR pond* OR 'water bodies' OR pools) AND (GHG OR 'C concentration' OR 'carbon emission' OR 'emission fluxes' OR greenhouse OR methane OR CH4): 322; ('thaw pond(s)' OR 'thermokarst pond(s)'): 110; (Tibet* OR Qinghai) AND thermokarst AND (methane OR CH4 OR greenhouse): 12; 'Western Siberia' AND (thermokarst OR lake*) AND (methane OR CH4): 5; creators Serikova/Pokrovsky/Manasypov/Shirokova AND (lake* OR thermokarst OR methane OR CH4): 45"
+  - "DataCite client cen.nordicana (191 records total): methane OR CH4 OR methane(fr): 3; greenhouse OR GES: 5; (thermokarst OR thaw) AND (lake* OR pond* OR mare*): 17. Nordicana D website publication list (133 items) title-screened for gas or methane: 3. DataCite client pdc.ccin (Polar Data Catalogue) GHG AND lake/pond/thermokarst: 2 (neither qualifies)."
+  - "DataCite prefix 10.11888 (TPDC) thermokarst / methane lake: 0, because TPDC DOIs are registered with ISTIC (doi.org/ra/10.11888)"
+  - "DataONE https://cn.dataone.org/cn/v2/query/solr text:(thermokarst AND (methane OR CH4)), current metadata only: 87 (ARCTIC, KNB, IARC, NORDICANA_D, PANGAEA, PDC, BOREALIS, EDI, ESS-DIVE nodes). Attribute names, abstracts and resource maps were then read for each ADC, KNB and EDI candidate."
+  - "PANGAEA Elasticsearch https://ws.pangaea.de/es/pangaea/panmd/_search (default_operator AND): thermokarst AND (methane OR CH4): 54; (thaw OR thermokarst OR yedoma OR alas OR palsa) AND (pond(s) OR lake(s)) AND (methane OR CH4): 56; ebullition AND (lake(s) OR pond(s)) AND (permafrost OR Siberia OR Alaska OR Arctic OR Tibet*): 3; (methane OR CH4) AND (pond OR ponds) AND permafrost: 43; (methane OR CH4) AND (lake OR lakes) AND (permafrost OR yedoma) AND (flux(es) OR dissolved OR concentration*): 67. The 140 unique hits were title-screened, and parents and children were resolved."
+  - "NASA CMR https://cmr.earthdata.nasa.gov/search/collections keyword: 'thermokarst methane' 6; 'thermokarst lake' 11; 'thaw lake methane' 3; 'lake methane ebullition' 3; 'ABoVE methane lake' 9; 'methane ponds permafrost' 0; 'yedoma lake' 1; 'thermokarst CH4' 4 (ORNL DAAC ABoVE collections 1778, 1870, 2393, 1790, 1861, 1845, 2394, 2448, 2008, 2178)"
+  - "data.gov https://catalog.data.gov/search?q= (JSON): 'thermokarst methane' 1; 'thermokarst lake' 9; 'thaw lake methane' 1 (USGS Greiner Lake); 'thaw pond methane' 0; 'lake methane ebullition Alaska' 0"
+  - "Zenodo https://zenodo.org/api/records type=dataset: thermokarst AND (methane OR CH4): 13; (thaw OR thermokarst) AND (pond(s) OR lake(s)) AND (methane OR CH4 OR greenhouse): 14; (yedoma OR alas OR palsa) AND (lake OR pond OR ponds) AND (methane OR CH4): 0; ebullition AND (Arctic OR permafrost OR Tibet OR Siberia OR Alaska): 3"
+  - "Figshare https://api.figshare.com/v2/articles/search: 'thermokarst methane' 25; 'thermokarst CH4' 18; 'thaw pond methane' 17; 'thaw lake methane' 21; 'thermokarst lake greenhouse gas' 5; 'yedoma lake methane' 4; 'permafrost pond methane' 16; 'thermokarst ebullition' 1. Publisher items (PLOS, Frontiers, ACS) were opened and their files checked for CH4 columns."
+  - "Dryad https://datadryad.org/api/v2/search: 'thermokarst methane' 1; 'thermokarst lake' 4; 'thaw pond methane' 0; 'permafrost lake methane' 3; 'yedoma lake' 0; 'ebullition lake Arctic' 0"
+  - "Mendeley Data https://data.mendeley.com/api/research-data/search (first 100 per query screened): 'thermokarst lakes methane' 656; 'thaw ponds greenhouse gas' 2380; 'thermokarst CH4 emission' 1149; 'thermokarst lakes carbon emission' 4599; 'permafrost peatland ponds methane' 671. Candidate xlsx files were downloaded and searched for CH4 columns."
+  - "Europe PMC https://www.ebi.ac.uk/europepmc/webservices/rest/search: (thermokarst OR 'thaw lake(s)' OR 'thaw pond(s)' OR yedoma OR alas OR palsa) AND (methane OR CH4) AND (lake(s) OR pond(s)): 361. The same query AND repository terms (zenodo, figshare, pangaea, Arctic Data Center, dryad, nordicana, ORNL DAAC, borealis, mendeley, dataverse, hydroshare, TPDC, DOI prefixes): 80, of which 77 OA full texts had their data DOIs and data-availability sections extracted. New dataset ids were all checked; no new qualifying deposit was found."
+  - "Borealis /api/datasets metadata and file lists read for Borealis candidates; Zenodo, Figshare and Mendeley record APIs used for file lists; compilation files (BAWLD-CH4 attributes, CIWD-GHG CryoLake.xlsx, 14C compilation xlsx) opened to confirm thermokarst-lake CH4 rows"
+  - "doi.org resolution checked for the primary id of every keyed study: all return 200, or 202 for the Figshare bot wall; the PLOS table DOIs resolve to journals.plos.org and the Figshare mirror URLs are given as aliases"
+  - "Not checkable: TPDC (JavaScript-only site, ISTIC DOIs, no public search API); Polar Data Catalogue native search (no public API; covered via DataCite pdc.ccin and DataONE urn:node:PDC); EDI PASTA search and EML (HTTP 403; covered via DataONE and DataCite); the IARC download location for 10.18739/A2PH1X"
+size_verdict: "ok: 37 studies after alias grouping (27 firm, 10 borderline), in 10 archives (Arctic Data Center, KNB, Nordicana D, Zenodo, HydroShare, Figshare, Borealis, ORNL DAAC, PANGAEA, Mendeley Data). This is within the 40-study ceiling."

@@ -1,0 +1,223 @@
+task: T2
+prompt: >-
+  Find every public dataset, in any archive, that holds single-cell or single-nucleus RNA-seq of human
+  tendon or ligament tissue (healthy, injured, degenerated or tendinopathic; any tendon or ligament, including
+  ACL, Achilles, rotator cuff, hamstring and spinal ligaments such as the ligamentum flavum; entheses count if
+  tendon or ligament cells were profiled). Cells cultured from tendon count only if freshly isolated tissue was
+  also profiled in the same deposit. Bulk RNA-seq, spot-based spatial data, other species and papers without
+  deposited data do not count.
+criteria: >-
+  Included: a public deposit (open or controlled access, as long as the record itself is released and
+  resolvable) of droplet- or plate-based single-cell or single-nucleus RNA-seq (10x, Smart-seq2, multiome GEX)
+  from Homo sapiens tendon, ligament or enthesis tissue that was freshly dissociated or snap-frozen, at any age
+  (fetal through adult) and any state (healthy, ruptured, scarred, adhesed, tendinopathic, degenerated,
+  hypertrophied or ossifying). Ligament was read broadly as any named ligament: knee (ACL), spinal (ligamentum
+  flavum, interspinous, supraspinous, posterior longitudinal) and, as borderline, the pelvic uterosacral
+  ligament. Myotendinous-junction deposits whose biopsies span muscle and tendon are kept as borderline. The
+  periodontal ligament is the backup topic's tissue and was not counted. Excluded: bulk RNA-seq (including
+  FACS-sorted populations sequenced in bulk), Visium/GeoMx spot data, deposits whose single-cell samples are only
+  cultured cells (tendon progenitor cells, cultured tendon-to-bone cells, PLL mesenchymal primary cultures, iPSC
+  tenocytes), whole-joint or whole-limb developmental atlases with tendon removed or not separable, synovium,
+  muscle, synovial fluid and blood, other species, registered-but-empty or unreleased records, and papers with
+  data only "on request" or on a lab website. Aliases (GEO series, BioProject, SRA/ENA study, CELLxGENE
+  collection, HCA project, GSA-Human HRA with its PRJCA, dbGaP phs, a Zenodo record from the same authors and
+  study) are grouped as one study. Papers that only reanalyse an existing deposit add no study.
+studies:
+  - key: S1
+    title: "Cellular and molecular landscapes of human tendons across the lifespan revealed by spatial and single-cell transcriptomics (Single nucleus transcriptomic atlas of human foetal tendon)"
+    year: 2026
+    ids: [GSE317327, PRJNA1406746, SRP665658, "cellxgene:7b9ae565-a781-433d-98d4-430394e7802a", "hca:032880e5-2b44-4bfb-8eef-25bb48e7453f", "10.5281/zenodo.18403632"]
+    archives: [GEO, SRA, CELLxGENE, HCA, Zenodo]
+    evidence: "GEO lists 15 'transcriptomic single cell' snRNA-seq samples of human foetal Achilles and quadriceps tendon (12-20 pcw). The CELLxGENE collection (91,859 nuclei, 10x 3' v3, Cell Rep 2026 10.1016/j.celrep.2026.117085) links both GSE317327 and the HCA project. Zenodo 18403632 (Kurjan/Snelling) holds the same study's spatial files."
+  - key: S2
+    title: "Single nucleus and spatial transcriptomic profiling of human healthy hamstring tendon"
+    year: 2024
+    ids: ["cellxgene:d2684035-a36e-458e-96af-8e37930bfdf6", "hca:838d4660-3d62-4b08-b32d-dc5cbd93919d"]
+    archives: [CELLxGENE, HCA]
+    evidence: "CELLxGENE dataset of 10,533 nuclei (10x 3' v3) from semitendinosus tendon of 4 healthy donors (FASEB J 2024, 10.1096/fj.202300601RRR). Its RAW_DATA link is the HCA project, which resolves in Azul with organPart 'tendon of semitendinosus'. No GEO/AE deposit found."
+  - key: S3
+    title: "Exploring cellular changes in ruptured human quadriceps tendons at single-cell resolution"
+    year: 2025
+    ids: ["cellxgene:579203e2-182f-47bc-8230-7aa47247e2a4", "hca:8dcbd84a-6243-4501-a684-0dcd084bb536"]
+    archives: [CELLxGENE, HCA]
+    evidence: "CELLxGENE snRNA-seq of 12,808 nuclei from ruptured and healthy adult quadriceps tendon (disease: injury, normal; J Physiol 10.1113/JP287812). The paper's data statement points to CELLxGENE, and the HCA project resolves in Azul."
+  - key: S4
+    title: "Fibroblast specialisation across microanatomy in a single-cell atlas of healthy human Achilles tendon"
+    year: 2026
+    ids: ["cellxgene:a7e81820-297d-4086-8123-cc7dde64e495", "hca:893c8fb6-bf65-4527-b83b-8233de59244c"]
+    archives: [CELLxGENE, HCA]
+    evidence: "CELLxGENE snRNA-seq of 64,862 nuclei of adult (45-74 y) non-tendinopathic calcaneal tendon (Am J Physiol Cell 10.1152/ajpcell.00838.2025). The HCA project with the same title resolves in Azul (organPart calcaneal tendon)."
+  - key: S5
+    title: "A single-cell multi-modal ATAC + gene expression sequencing in tendinopathy"
+    year: 2023
+    ids: [GSE213803, PRJNA882465, SRP398281]
+    archives: [GEO, SRA]
+    evidence: "GEO lists 1 'transcriptomic single cell' GEX library plus 1 ATAC library from human tendinopathic Achilles tendon (multiome; PMID 37223090)."
+  - key: S6
+    title: "Single-cell transcriptomics analysis of the repair process of ligament breaks"
+    year: 2022
+    ids: [GSE199280, PRJNA819151, SRP365553]
+    archives: [GEO, SRA]
+    evidence: "6 human samples (3 healthy tendon; tendon injured 1 week, 2 weeks and 6 months); the GEO design states 'single-cell transcriptome sequencing of injury and normal tendon tissue'. The same Qingdao group's papers (PMIDs 36148412, 40525225) report 10x data available only on request, and 39696421 reanalyses this GSE."
+  - key: S7
+    title: "Sex-Based Differences in Cell Types and Gene Expression within the Anterior Cruciate Ligament"
+    year: 2026
+    ids: [GSE283098, PRJNA1191862, SRP548230]
+    archives: [GEO, SRA]
+    evidence: "7 samples of 10x 3' scRNA-seq of FACS-sorted live cells from digested human ACL (tissue: ligament; location: anterior cruciate ligament); PMID 41587266."
+  - key: S8
+    title: "Single cell RNA sequencing of the healthy Human Spinal Enthesis"
+    year: 2025
+    ids: [GSE292866, PRJNA1241782, SRP572974]
+    archives: [GEO, SRA]
+    evidence: "8 10x scRNA-seq samples from spinal ligament entheses of 4 donors (entheseal soft tissue plus perientheseal bone), cells isolated mechanically and enzymatically. The GEO design cites Zenodo 15090823 for the integrated object, but that DOI returns 404 (unregistered). Likely the data behind the ARD 2025 CD39/CD73 enthesis paper (PMID 41058388); that link is not confirmed."
+  - key: S9
+    title: "Single cell RNA-seq of human enthesis from healthy and inflamed tissues"
+    year: 2026
+    ids: [E-MTAB-15133, PRJEB89728, ERP172743]
+    archives: [ArrayExpress, ENA]
+    evidence: "ArrayExpress: 2 10x Chromium scRNA-seq samples of human enthesis biopsies (healthy at autopsy, inflamed psoriatic-arthritis enthesis at surgery), digested fresh. The ENA study PRJEB89728/ERP172743 has the runs. The sibling E-MTAB-15134 is GeoMx (excluded)."
+  - key: S10
+    title: "Single-Cell RNA-Seq uncovers lineage-specific regulatory alterations of fibroblasts and endothelial cells in ligamentum flavum hypertrophy"
+    year: 2025
+    ids: [GSE294458, PRJNA1249490, SRP577799]
+    archives: [GEO, SRA]
+    evidence: "2 10x scRNA-seq samples of human lumbar ligamentum flavum (LSS hypertrophied vs LDH), tissue dissociated at surgery; PMID 40443657."
+  - key: S11
+    title: "Single-cell analysis reveals fibroblast heterogeneity and myofibroblast conversion in ligamentum flavum hypertrophy"
+    year: 2024
+    ids: [GSE267819, PRJNA1113314, SRP508557]
+    archives: [GEO, SRA]
+    evidence: "3 10x scRNA-seq samples of hypertrophied human ligamentum flavum from decompressive laminectomy; PMID 39653186."
+  - key: S12
+    title: "Single-cell RNA sequencing reveals the CRTAC1+ population actively contributes to the pathogenesis of spinal ligament degeneration by SPP1+ macrophage"
+    year: 2024
+    ids: [GSE271018, PRJNA1129430, SRP516755]
+    archives: [GEO, SRA]
+    evidence: "9 scRNA-seq samples (6 degenerative, 3 traumatic) of human spinal ligaments (ligamentum flavum, interspinous, supraspinous) plus bone, FACS-sorted CD45+/CD45- cells from surgical tissue; PMID 39158018."
+  - key: S13
+    title: "Ossification of Posterior Longitudinal Ligament (OPLL) single-cell transcriptome sequencing"
+    year: 2024
+    ids: [PRJNA1067846, SRP485335]
+    archives: [SRA]
+    evidence: "BioProject description: scRNA-seq of ossified and non-ossified human posterior longitudinal ligament obtained intraoperatively. 5 public runs (SRR27843322-4 ...), 10x per the sorafenib/OPLL paper (PMC11004159, PMID 38594260), whose bulk companion is PRJNA902554."
+  - key: S14
+    title: "scRNA-seq for spine ligament (A CD26+ tendon stem progenitor cell population contributes to tendon repair and heterotopic ossification)"
+    year: 2024
+    ids: [HRA009395, PRJCA032386, "10.5281/zenodo.13934807"]
+    archives: [GSA-Human, Zenodo]
+    evidence: "GSA-Human metadata: 7 'TRANSCRIPTOMIC SINGLE CELL' runs from 'single cell suspension from spinal ligaments' of 7 male donors (controlled access, released 2024-11-30). Nat Commun 2025 (PMID 39820504) cites HRA009395 for its human scRNA-seq. Zenodo 13934807 'ScRNA-seq of human ligament tissues' (Chen S., Liu H.; restricted, no files listed) is the same authors' record and is grouped here as a probable alias (confidence: borderline for that alias only)."
+  - key: S15
+    title: "Multi-omics analysis of human tendon adhesion reveals that ACKR1-regulated macrophage migration is involved in regeneration (Homo sapiens Raw sequence reads)"
+    year: 2024
+    ids: [PRJNA975881, SRP500128]
+    archives: [SRA]
+    evidence: "BioProject: 'scRNA-seq of human tendon adhesion tissue'. 17 'TRANSCRIPTOMIC SINGLE CELL' experiments: normal stage, 3 days, 10 days and 12 weeks post tendon injury. Cited by PMID 38714649. The companion PRJNA976191 is mouse and is not part of this key."
+  - key: S16
+    title: "Single cell sequencing of tendinopathy"
+    year: 2024
+    ids: [PRJNA904233, SRP409172]
+    archives: [SRA]
+    evidence: "One public 'TRANSCRIPTOMIC SINGLE CELL' run (SRR22373192, HiSeq 4000). The BioSample SAMN31833476 is human tendon from a 38-year-old male (Southwest Hospital, Third Military Medical University). No linked paper was found."
+  - key: S17
+    title: "Single cell RNA sequencing of tendon scar tissue (tenolysis)"
+    year: 2025
+    ids: [PRJNA1269128, PRJNA1269127, SRP608192, phs004076]
+    archives: [SRA, dbGaP]
+    evidence: "SRA run SRR34949361 is 'scRNA of Homo sapiens: Tenolysis scar tissue, post-repair 8 months'. BioSample SAMN50508014 is human flexor tendon, dbGaP phs004076.v1.p1 (NIAMS), which resolves as 'Single Cell RNA Sequencing of Tendon Scar Tissue (Tenolysis)'. PRJNA1269127 is the paired umbrella record."
+  - key: S18
+    title: "Integrating single-cell RNA-seq and spatial transcriptomics reveals cell heterogeneity and microenvironment alterations in human tendinopathy"
+    year: 2024
+    ids: [HRA002325, PRJCA009240]
+    archives: [GSA-Human]
+    evidence: "GSA-Human controlled-access study (released 2024-04-25) of normal and diseased human tendon scRNA-seq plus spRNA-seq: 12 samples, 104 NovaSeq files. Linked to Fu et al. 2023 BMC Biol (PMID 37280595)."
+  - key: S19
+    title: "Resolving the Pathology niche of the Human Tendinopathy"
+    year: 2025
+    ids: [HRA001687, PRJCA007614]
+    archives: [GSA-Human]
+    evidence: "GSA-Human (released 2025-08-09): 'Single-cell RNA-seq of the tendon tissue from human, including 2 healthy and 2 tendinopathy samples' (HH1-2, HT1-2; 8 files). BioProject PRJCA007614 links PMIDs 40083145 and 42058931, and the Bone Res 2026 metabolic-classification paper."
+  - key: S20
+    title: "Single-cell RNA-seq combined spatial transcriptomics analysis decipher cell atlas of human ligament and reveal the process of ligament degeneration"
+    year: 2024
+    ids: [HRA003746, PRJCA014157]
+    archives: [GSA-Human]
+    evidence: "GSA-Human metadata: 8 'Chromium Single Cell 3' v3' runs (TRANSCRIPTOMIC SINGLE CELL) plus 2 Visium runs of healthy and degenerated human ACL (L1-L10). eLife 2023 (PMID 37970848)."
+  - key: S21
+    title: "scRNAseq for cells from human rotator cuff tendon scar tissue"
+    year: 2026
+    ids: [HRA007394, PRJCA026050]
+    archives: [GSA-Human]
+    evidence: "GSA-Human (released 2026-05-11): 4 scar-tissue samples from rotator cuff revision surgery, 8 HiSeq X files. BioSample SAMC4133684 states surgical waste from rotator cuff repair revision; the BioProject data type is 'Single cell sequencing'."
+  - key: S22
+    title: "Single-nucleus RNA-seq of human tendon and myotendinous junction after acute exercise"
+    year: 2025
+    ids: [E-MTAB-15400]
+    archives: [ArrayExpress]
+    evidence: "ArrayExpress: 8 snRNA-seq (10x 3' v3) samples of healthy gracilis and semitendinosus tendon and MTJ, taken as waste tissue from ACL reconstruction after an eccentric exercise bout. Organism part 'Tendon/Myotendinous junction'; matches AJP Cell 2025 (PMID 41117483)."
+  - key: S23
+    title: "Discovery of muscle-tendon progenitor sub-population in human myotendinous junction at single-cell resolution"
+    year: 2022
+    ids: [HRA002803, PRJCA004125]
+    archives: [GSA-Human]
+    evidence: "confidence: borderline. GSA-Human controlled-access record of 2 human MTJ samples (MTJ1, MTJ2), 1,600 plate-based scRNA-seq files (Research 2022, PMID 36267539). The tissue is the muscle-tendon junction rather than tendon proper, and the GSA study type is 'Cell line related study'."
+  - key: S24
+    title: "Single-nucleus RNA-seq of the human musculotendinous unit, the myotendinous junction"
+    year: 2023
+    ids: [E-MTAB-12529]
+    archives: [ArrayExpress]
+    evidence: "confidence: borderline. ArrayExpress: snRNA-seq (10x v3.1) of 3 semitendinosus muscle-tendon biopsies spanning the MTJ (J Cell Sci 2023, PMID 36924352). The focus is MTJ myonuclei, with tendon fibroblasts present. The sibling E-MTAB-12530 is spatial (excluded)."
+  - key: S25
+    title: "Single-cell analysis of uterosacral ligament revealed cellular heterogeneity in women with pelvic organ prolapse"
+    year: 2024
+    ids: [GSE250414, PRJNA1054006, SRP478574]
+    archives: [GEO, SRA]
+    evidence: "confidence: borderline. 4 10x scRNA-seq samples of human uterosacral ligament (3 POP, 1 control; PMID 38326542). It is a named ligament, but a pelvic visceral fibromuscular one rather than a musculoskeletal ligament."
+near_misses:
+  - {ids: [GSE150482, PRJNA632551, SRP261439], why_excluded: "scRNA-seq of tendon progenitor cells cultured from normal and tendinopathic human patellar tendon (Still 2021). In vitro only; no fresh tissue in the deposit."}
+  - {ids: [GSE241505, GSE241507, PRJNA1008460], why_excluded: "OPLL type I IFN paper (PMID 39441507): Smart-seq2 of single mesenchymal cells; GEO characteristics say 'cell type: Primary culture' from thoracic PLL and LDH specimens. Cultured cells only."}
+  - {ids: [HRA002110, PRJCA007596], why_excluded: "'Dissecting tendon-to-bone cell populations using scRNA-seq': the BioSample SAMC2066468 describes 'Cultured human tendon-to-bone cells'. In vitro only (1 sample)."}
+  - {ids: [HRA020004, PRJCA069718], why_excluded: "'Single-Cell Atlas Construction of Normal and Injured ACL Tissues': the BioProject is public (2026-07-21), but GSA-Human returns 'not released' for HRA020004."}
+  - {ids: [PRJNA1113655, SRP509541], why_excluded: "'scRNA of diseased supraspinatus tendons and normal hamstring tendons': registered and listed as public in ENA, but there are no runs in SRA or ENA (0 experiments), so no data."}
+  - {ids: [HRA006534, PRJCA022721, HRA008332, PRJCA028874, HRA008281, PRJCA028742, PRJCA028737, PRJCA022825], why_excluded: "Zhejiang rotator-cuff tendinopathy RNA-seq: 154 and 72 tendon samples with paired files only (bulk, Nat Commun 2024 / Bone Res 2026), a cultured-cell model (HRA008281), and records with no released HRA."}
+  - {ids: [PRJNA1474572, PRJNA902554, GSE188760, GSE69787], why_excluded: "Bulk RNA-seq of ligamentum flavum / posterior longitudinal ligament."}
+  - {ids: [EGAS50000001454], why_excluded: "EGA long head of biceps tendon proximal vs distal: bulk RNA-seq."}
+  - {ids: [GSE233970, GSE234040, PRJNA979132], why_excluded: "Human skeletal stem cell diversity: Smart-seq2 of FACS-purified SSC populations across tissues. Only one 'SSC FetalTendon' sample, a sorted stem-cell population rather than a tendon tissue profile."}
+  - {ids: [GSE289694, PRJNA1224198], why_excluded: "Tendon/ligament stem cell in mice and humans: bulk RNA-seq of FACS-sorted TLSC/TLPC from human ligamentum flavum (plus mouse)."}
+  - {ids: [GSE271474, PRJNA1131764, PRJNA1131766, PRJNA1129055], why_excluded: "AS enthesitis/SDC1+ sheath fibroblast study: scRNA-seq is mouse SKG paw; the human data are CUT&Tag and bulk RNA-seq of cultured spinal entheseal fibroblasts."}
+  - {ids: [GSE209948, PRJNA863129], why_excluded: "Fetal whole knee joint scRNA-seq with patellar tendon and collateral ligaments removed; cruciates not separated. Whole-joint developmental atlas."}
+  - {ids: [E-MTAB-14722, PRJEB83825, E-MTAB-8813, E-MTAB-10367], why_excluded: "Embryonic finger-joint atlas (tendon removed before dissociation) and embryonic whole-limb atlas: tendon not profiled as a tissue."}
+  - {ids: [GSE156753, PRJNA658973, "hca:78d7805b-fdc8-472b-8058-d92cf886f7a4", GSE285276, GSE229008, GSE332930, PRJNA1469490], why_excluded: "iPSC-derived tenocytes / syndetome and in vitro tenogenic differentiation (incl. cultured tenolysis fibroblasts); no fresh tendon tissue."}
+  - {ids: [GSE216578], why_excluded: "Used by the ATFL-injury paper (PMID 39127696), but the scRNA-seq is talus articular cartilage, not ligament."}
+  - {ids: [GSE227548, HRA006207, PRJCA021803, GSE216544], why_excluded: "Rotator cuff / hamstring muscle scRNA and snRNA-seq: muscle, not tendon."}
+  - {ids: [GSE280537, GSE327891, GSE213095], why_excluded: "ACL-injury synovium, and synovial fluid/blood of enthesitis-related arthritis: not tendon or ligament tissue."}
+  - {ids: [GSE173252], why_excluded: "Dupuytren's disease palmar fascia scRNA-seq: fascia, not tendon or ligament."}
+  - {ids: [GSE227731, GSE224676, GSE171213, GSE306722], why_excluded: "Periodontal ligament / dental fibroblast single-cell data: the backup topic's tissue, not counted in the primary key."}
+  - {ids: ["doi:10.1016/j.heliyon.2024.e27803 (ligamentum teres snRNA-seq, PMID 38524543)"], why_excluded: "Data stated as deposited only on the lab website MSKCA (mskca.tech), not a public archive."}
+  - {ids: ["doi:10.1038/s41598-020-70786-5 (Kendal 2020)", "doi:10.1136/annrheumdis-2021-220256 (Akbar 2021)", "doi:10.1136/annrheumdis-2020-219335 (Garcia-Melchor 2021)", "PMID 42000969 (OPLL heterogeneity)", "PMID 41644521 (rotator cuff scar atlas)", "PMID 40044676 (Caveolin-1 rotator cuff)", "PMID 40525225 (ligament rupture healing)", "PMID 40139473 (healthy knee ligaments)", "PMID 41932595 (Sirt1 LF)", "PMID 42614581 (AS spinal entheses TCR)", "PMID 35916474 (cultured hamstring tenocytes CITE-seq)"], why_excluded: "Human tendon/ligament single-cell papers with no deposit found: statements are 'on request', absent or 'no new data'. Checked GEO/SRA/BioProject, ENA, ArrayExpress, NGDC, CELLxGENE, HCA and Zenodo."}
+  - {ids: ["10.6084/m9.figshare.23802963", "10.6084/m9.figshare.31241065"], why_excluded: "Figshare figure files (ACL-in-OA single-cell figure; Achilles atlas supplemental figures), not expression data."}
+  - {ids: ["10.5281/zenodo.15849406", "10.5281/zenodo.5083288"], why_excluded: "Zenodo HMBOX1 ligamentum-flavum record (embargoed, no description) and AS spinal ligament RNA-seq (restricted, bulk)."}
+queries:
+  - "GEO E-utilities db=gds: (tendon OR tendinopathy OR tenocyte* OR achilles OR 'rotator cuff' OR hamstring OR enthesis) AND (single cell/scRNA-seq/snRNA-seq/single nucleus/10x) AND Homo sapiens[Organism]: 91 hits (28 GSE)"
+  - "GEO db=gds: (ligament OR ACL OR cruciate OR 'ligamentum flavum' OR 'longitudinal ligament' OR OPLL) AND single-cell terms AND Homo sapiens: 92 hits (37 GSE)"
+  - "GEO db=gds: tendon terms AND Homo sapiens AND 'high throughput sequencing'[Platform Technology Type]: 388 hits, all GSE titles screened"
+  - "GEO db=gds: (cruciate/knee/collateral ligament OR ligamentum teres/flavum OR posterior longitudinal ligament OR interspinous) AND Homo sapiens: 192 hits; surfaced GSE241505"
+  - "NCBI BioProject: tendon/ligament/enthesis/rotator cuff/achilles/ligamentum flavum AND single-cell terms AND Homo sapiens: 45 hits"
+  - "NCBI SRA: tendon/ligament terms AND 'transcriptomic single cell'[Source] AND Homo sapiens: 131 experiments"
+  - "NCBI BioProject: palmar fascia / tenolysis / trigger finger / tenosynovitis / pulley / distal biceps: 16 hits; 'tendon scar': 3"
+  - "NCBI dbGaP db=gap (tendon OR tendinopathy OR ligament OR tenolysis OR enthesis) AND single: 86 hits, none relevant; phs004076 reached via BioSample SAMN50508014 and resolved on the dbGaP study page"
+  - "ENA portal result=study tax_eq(9606) AND title/description tendon|tendin|ligament|enthes|tenocyte|rotator cuff|achilles|myotendinous: 142 studies; result=read_study myotendinous|enthesis: 8 studies"
+  - "CELLxGENE curation API /curation/v1/collections: 398 public collections, regex on name/description/dataset tissue: 4 tendon collections, 0 ligament"
+  - "HCA Azul /index/projects (catalog dcp60, 532 projects): organ=tendon 4, organPart in tendon terms 5, selectedCellType 'tendon cell' 2 (adds the iPSC tenocyte project and Tabula Sapiens)"
+  - "BioStudies ArrayExpress /api/v1/arrayexpress/search: tendon 50, tendinopathy 59, tenocyte 5, ligament 66, enthesis 2, achilles 22, myotendinous 7, cruciate 16, ligamentum 0, hamstring 2, tenogenic 3, 'rotator cuff' 392 (unrelated noise); general BioStudies search was dominated by EPMC records"
+  - "NGDC BIG Search api/specific db=bioproject: tendon 249, ligament 265, tendinopathy 34, enthesis 22, 'rotator cuff' 35, tenocyte 19, achilles 96 (PRJCA human records opened)"
+  - "NGDC db=hra (GSA-Human): tendon 6, ligament 10, tendinopathy 5, 'rotator cuff' 4, spine 2, myotendinous 1, spondylitis 6, scar 14, OPLL/ligamentum flavum/cruciate/enthesis/achilles/tenocyte 0; PRJCA032386 -> HRA009395; PRJCA069718 -> HRA020004 (unreleased). HRA metadata xlsx downloaded for assay type"
+  - "NGDC db=gsa: tendon 500 (cap; all non-human), 'anterior cruciate' 57, 'tendon stem' 8; db=omix tendon 5 (proteomics/metabolomics only)"
+  - "Zenodo /api/records: description tendon AND single-cell terms 12; ligament AND single-cell 2; (tendon|ligament|enthesis|...) AND (single-cell|snRNA|scRNA|10x) 63; title-only tendon 557 / ligament 956 (first 100 of each scanned)"
+  - "Figshare /v2/articles/search: 'tendon single-cell' 50, 'tendon single cell RNA' 4, 'tendon snRNA-seq' 0, 'tendon scRNA-seq' 5, 'ligament scRNA-seq' 7, 'ligament single-cell' 62, 'enthesis single-cell' 6, 'tendinopathy single cell' 12, 'rotator cuff single-cell' 7: only supplements and figures"
+  - "EGA metadata API /studies paged with offset: 10,712 studies, regex tendon|ligament|enthes|rotator cuff|achilles|myotendin: 30 hits, none single-cell tendon/ligament (EGAS50000001454 biceps tendon is bulk)"
+  - "Europe PMC: TITLE tendon/ligament/enthesis/rotator cuff/achilles/ligamentum flavum AND single-cell terms AND SRC:MED: 187 hits; PMC full texts regex-scanned for GSE/PRJNA/PRJCA/HRA/CRA/E-MTAB/EGA/zenodo/figshare and data-availability statements"
+  - "Europe PMC: ABSTRACT tendon/ligament terms AND scRNA/snRNA terms AND human: 81 hits (40 new), abstracts screened"
+  - "Europe PMC full text: ('human tendon(s)' OR 'human ligament(s)' OR 'tendon tissue' OR 'ligament tissue' OR 'ligamentum flavum' OR enthesis) AND (scRNA-seq OR snRNA-seq OR ...) AND (GSE* OR HRA* OR E-MTAB OR PRJNA* OR cellxgene), 2019-2026, open access: 137 hits (86 new), full texts scanned for accessions; no new qualifying deposit"
+  - "WebSearch (locating only): 'Heterogeneity of fibroblasts ... healthy human knee ligaments single-cell data availability GEO'; 'single-cell human tendon scRNA-seq GEO accession tendinopathy rotator cuff patellar 2025'. No new accessions"
+size_verdict: "ok: 25 studies (22 firm + 3 borderline) across GEO/SRA, GSA-Human, CELLxGENE, HCA, ArrayExpress/ENA, Zenodo and dbGaP. Within 5-30 and at least 3 archives, so the backup topic was not used."
