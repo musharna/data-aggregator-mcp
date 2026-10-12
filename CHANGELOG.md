@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- On Python 3.14, every `operate` query stopped at the wall-clock limit logged
+  "InterruptException exception in shielded future": from 3.14 a cancelled `asyncio.shield`
+  logs the stopped query's error itself. The query is now awaited without `shield`, and CI
+  runs 3.14.
+
 ## [0.70.0] - 2026-10-11
 
 ### Added
