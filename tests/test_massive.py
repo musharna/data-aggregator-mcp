@@ -219,7 +219,7 @@ async def test_a_query_with_no_word_is_refused_without_a_request():
 @pytest.mark.asyncio
 async def test_a_body_in_iso_8859_1_is_read():
     """The server sends ISO-8859-1: MSV000080949's description holds "±" as byte 0xB1."""
-    raw = _raw("massive_id_MSV000080949.json")
+    raw = _raw("massive_id_MSV000080949.latin1")
     assert b"\xb1" in raw
     (_, recs), _ = await _search("variability", {"variability": raw})
     assert recs and "±" in (recs[0].description or "")
@@ -289,7 +289,7 @@ async def test_resolve_adds_the_doi_and_ftp_location():
     # A dataset with no DOI: the servlet says "null".
     other = "MSV000080949"
     answers = {
-        other: _raw("massive_id_MSV000080949.json"),
+        other: _raw("massive_id_MSV000080949.latin1"),
         f"info:{other}": _raw("massive_info_MSV000080949.json"),
     }
     async with _client(sent, answers) as c:
