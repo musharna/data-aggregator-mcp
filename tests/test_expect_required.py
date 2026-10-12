@@ -132,12 +132,13 @@ def test_only_the_http_layer_parses_a_json_body() -> None:
     so EuropePMC's 200 error envelope read as "no open-access copy", an idconv body
     without records as "not in PMC", and a Scholix outage sank the resolve it enriches;
     the `expect` scan above never saw them, since it looks only at `request_json` calls.
-    Positive control: the scan finds `_http`'s own parser."""
+    Positive control: the scan finds `_http`'s own parser (``_json_body``, which also reads
+    a body that is not UTF-8 in its declared charset)."""
     src = pathlib.Path(data_aggregator_mcp.__file__).parent
     found = [
         hit
         for path in sorted(src.glob("*.py"))
         for hit in _functions_calling_json(ast.parse(path.read_text()), path.name)
     ]
-    assert "_http.py:parse" in found
-    assert sorted(set(found) - {"_http.py:parse"} - _PARSES_JSON_ITSELF) == []
+    assert "_http.py:_json_body" in found
+    assert sorted(set(found) - {"_http.py:_json_body"} - _PARSES_JSON_ITSELF) == []

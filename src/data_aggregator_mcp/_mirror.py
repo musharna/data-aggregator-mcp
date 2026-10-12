@@ -70,18 +70,25 @@ _STUDY_ACCESSION = re.compile(r"^[SED]RP\d+$")
 # A Metabolomics Workbench study: the mwb source and OmicsDI's copy of it share no DOI,
 # only this accession ("diabetes", 2026-10-11: 23 studies returned by both).
 _WORKBENCH_STUDY = re.compile(r"^ST\d{6}$")
+# A MassIVE dataset: the massive source's row has no DOI, DataCite's copy has the DOI and,
+# in its title, this accession, and OmicsDI's copy has the accession. It keys the deposit
+# ahead of a DOI, so all three are one hit.
+_MASSIVE_DATASET = re.compile(r"^MSV\d{9}$")
 
 
 def deposit_key(r: DataResource) -> str | None:
     """What makes two search hits the same deposit: the DOI a record is a copy or version
-    of, else its own DOI; for a sequencing run with no DOI, its study; for a record with no
-    DOI that holds a Metabolomics Workbench study accession, that study. None when
+    of, else its MassIVE dataset accession, else its own DOI; for a sequencing run with no
+    DOI, its study; for a record with no DOI that holds a Metabolomics Workbench study
+    accession, that study. None when
     nothing identifies it beyond its id. Round 2 (2026-10-07): page 1 of "snow leopard" spent 7
     of 50 hits on runs of one SRA study and 6 on second and third copies of three
     deposits, while three keyed studies waited just past it."""
     for link in r.links:
         if link.rel in _SAME_DEPOSIT_RELS and link.target_id:
             return "doi:" + _DOI_PREFIX.sub("", link.target_id.strip()).casefold()
+    if dataset := next((a for a in r.accessions if _MASSIVE_DATASET.match(a)), None):
+        return f"study:{dataset}"
     if r.doi:
         return "doi:" + r.doi.casefold()
     if r.kind == "sequencing_run":

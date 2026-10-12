@@ -123,6 +123,7 @@ _SEARCH_LABELS = {
     "biostudies": "BioStudies",
     "ngdc": "NGDC",
     "mwb": "Metabolomics Workbench",
+    "massive": "MassIVE",
 }
 
 

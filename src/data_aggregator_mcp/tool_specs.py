@@ -47,7 +47,8 @@ TOOLS: list[types.Tool] = [
             "GBIF (biodiversity datasets), data.gov (US government open data), NASA CMR "
             "(Earth-science collections), UniProt (protein entries), BioStudies "
             "(EMBL-EBI study records), NGDC (BioProjects deposited in China, with "
-            "their GSA read sets), and the Metabolomics Workbench (metabolomics studies). "
+            "their GSA read sets), the Metabolomics Workbench (metabolomics studies), and "
+            "MassIVE (mass-spectrometry datasets: GNPS metabolomics, proteomics). "
             "Returns compact DataResource "
             "records (fields with no value left out; long lists cut to their first few, "
             "named in truncated{}); a page "
@@ -100,7 +101,7 @@ TOOLS: list[types.Tool] = [
                     "description": "Restrict fan-out to these sources (default: all). "
                     "Available: zenodo, dataone, gbif, cellxgene, datacite, dandi, omics, "
                     "literature, huggingface, datagov, nasacmr, omicsdi, openml, pdb, "
-                    "uniprot, gwas, biostudies, ngdc, mwb",
+                    "uniprot, gwas, biostudies, ngdc, mwb, massive",
                 },
                 "organism": {
                     "type": "string",

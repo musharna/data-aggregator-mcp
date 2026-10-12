@@ -136,8 +136,8 @@ publishes a checksum.
   **GBIF** (Darwin Core Archives), **data.gov** distributions, and **literature**
   open-access full text.
 - **Dryad**, other DataCite repos, other OmicsDI repos (MassIVE / GNPS / ...),
-  **BioProject**, **NASA CMR**, the **GWAS Catalog**, **NGDC** and the **Metabolomics
-  Workbench** are discovery-only and
+  **BioProject**, **NASA CMR**, the **GWAS Catalog**, **NGDC**, the **Metabolomics
+  Workbench** and **MassIVE** are discovery-only and
   raise `FetchNotSupportedError`.
 
 ### `list_sources()`
