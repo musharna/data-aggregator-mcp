@@ -177,12 +177,14 @@ async def test_every_genuine_cursor_shape_still_decodes(monkeypatch):
 async def test_live_page_two_continues_from_the_real_cursor_and_a_forged_one_is_refused():
     """Real execution: page 1 of a live Zenodo search through the router, page 2 from
     its own cursor (different records), then the same cursor forged two ways is refused
-    before any request is made."""
+    before any request is made. ``errors`` may carry only the ``next_page`` note (87a166d):
+    it says how many fetched hits come next, which a page with a cursor is expected to."""
+    notes = {"next_page"}
     async with httpx.AsyncClient(timeout=60) as client:
         p1 = await router.search_page(client, query="soil moisture", size=3, sources=["zenodo"])
-        assert p1.errors == {} and len(p1.results) == 3 and p1.next_cursor
+        assert set(p1.errors) <= notes and len(p1.results) == 3 and p1.next_cursor
         p2 = await router.search_page(client, cursor=p1.next_cursor)
-        assert p2.errors == {} and len(p2.results) == 3
+        assert set(p2.errors) <= notes and len(p2.results) == 3
         assert {r.id for r in p1.results}.isdisjoint(r.id for r in p2.results)
 
         state = _cursor.decode(p1.next_cursor)
@@ -202,4 +204,4 @@ async def test_live_page_two_continues_from_the_real_cursor_and_a_forged_one_is_
         assert sent == []
         # The positive control on the same hooked client: the genuine cursor still sends.
         again = await router.search_page(client, cursor=p1.next_cursor)
-        assert again.errors == {} and len(again.results) == 3 and sent
+        assert set(again.errors) <= notes and len(again.results) == 3 and sent

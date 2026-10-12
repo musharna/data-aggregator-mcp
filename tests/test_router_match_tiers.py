@@ -124,14 +124,32 @@ def _names_organism(r: DataResource) -> bool:
 
 
 @pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
-async def test_live_top_hits_name_the_organism_asked_for() -> None:
+async def test_live_top_hits_name_the_organism_asked_for(monkeypatch) -> None:
+    """A deposit ranks by the best of its fetched copies, and the copy shown is the most
+    fetchable, so a top hit is judged by its deposit: the DataONE copy of a Dryad
+    deposit has no description, while its DataCite copy names "Phelipanche aegyptiaca
+    (syn. Orobanche aegyptiaca)" among five species (2026-10-12)."""
+    from data_aggregator_mcp import _mirror
+
+    fetched: list[DataResource] = []
+
+    def dedup(records: list[DataResource]) -> list[DataResource]:
+        fetched.extend(records)
+        return _mirror.dedup_by_deposit(records)
+
+    monkeypatch.setattr(router, "_dedup", dedup)
     async with httpx.AsyncClient(timeout=60) as client:
         page = await router.search_page(
             client, query="transcriptome", organism="Orobanche aegyptiaca", size=10
         )
+    named = {_mirror.deposit_key(r) or r.id for r in fetched if _names_organism(r)}
     top = page.results[:5]
     assert len(top) == 5
-    assert all(_names_organism(r) for r in top), [(r.source, r.title[:60]) for r in top]
+    assert all((_mirror.deposit_key(r) or r.id) in named for r in top), [
+        (r.source, r.title[:60]) for r in top
+    ]
+    # Positive control: the deposit tier did not carry the page; most hits name it themselves.
+    assert sum(_names_organism(r) for r in top) >= 3, [(r.source, r.title[:60]) for r in top]
     assert len({r.source for r in top}) > 1  # ranked across sources, not one source's list
 
 

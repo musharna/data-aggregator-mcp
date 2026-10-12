@@ -123,21 +123,26 @@ async def test_live_a_reordered_author_folds_and_a_shared_given_name_does_not() 
 async def test_live_search_folds_the_researchgate_copy_of_a_zenodo_deposit() -> None:
     """A real multi-source search page that holds both copies: with collapse on, the
     ResearchGate copy (DataCite) is a mirror of the Zenodo record, not a second hit.
-    The page also holds the deposit's concept DOI through DataCite (source zenodo),
-    which matches both: it is another record of the same deposit, not a mirror, so it
-    stays a hit of its own (user decision 2026-10-04)."""
+    DataCite also returns the deposit's concept DOI, which the Zenodo version "IsVersionOf":
+    one hit per deposit (99ebd97) lists the deposit once, as the version, whether or not
+    mirrors collapse. The concept is not a mirror (user decision 2026-10-04)."""
+    from data_aggregator_mcp import datacite
+
     query = "Synapse Open Dataset warehouse robots"
     async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+        # Positive control: the upstream returns the concept, so its absence from the
+        # page below is the deposit fold, not a record the search never saw.
+        _, upstream = await datacite.search(client, query, size=20)
+        assert CONCEPT in {r.id for r in upstream}
         raw = await router.search_page(
             client, query=query, size=10, sources=["zenodo", "datacite"], collapse_mirrors=False
         )
         assert raw.errors == {}
         ids = {r.id for r in raw.results}
-        assert {"zenodo:11459539", RG, CONCEPT} <= ids, sorted(ids)
+        assert {"zenodo:11459539", RG} <= ids and CONCEPT not in ids, sorted(ids)
         page = await router.search_page(
             client, query=query, size=10, sources=["zenodo", "datacite"], collapse_mirrors=True
         )
     by_id = {r.id: r for r in page.results}
-    assert RG not in by_id
+    assert RG not in by_id and CONCEPT not in by_id
     assert [m.id for m in by_id["zenodo:11459539"].mirrors] == [RG]
-    assert by_id[CONCEPT].source == "zenodo" and by_id[CONCEPT].mirrors == []

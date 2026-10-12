@@ -260,7 +260,11 @@ async def test_live_provenance_resolve_reports_definitive_crossref_answers() -> 
     assert chain["value"] == (
         "source repository pdb; canonical id pdb:4HHB; DOI 10.2210/pdb4hhb/pdb"
     )
-    assert {"rel": "described_in", "target_id": "10.1016/0022-2836(84)90472-8"} in chain["links"]
+    # Each link is its own entity, referenced from the chain (RO-Crate 1.1, 8965fcb).
+    links = [g[ref["@id"]] for ref in chain["links"]]
+    assert ("described_in", "10.1016/0022-2836(84)90472-8") in [
+        (ent["name"], ent["value"]) for ent in links
+    ]
     assert g["#provenance-assessment"]["result"] == [
         {"@id": "#fair"},
         {"@id": "#retraction"},

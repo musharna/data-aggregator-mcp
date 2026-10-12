@@ -84,13 +84,17 @@ async def _interruptible(fn: Callable[..., dict], *args: Any) -> dict:
     cons: list[Any] = []
     task = asyncio.ensure_future(asyncio.to_thread(fn, *args, cons.append))
     try:
-        return await asyncio.shield(task)
+        # Not asyncio.shield: from Python 3.14 a cancelled shield logs the inner task's
+        # exception itself, so the interrupt was reported however its outcome was taken.
+        # A cancelled wait() leaves the task running and adds no callback of its own.
+        await asyncio.wait({task})
     except asyncio.CancelledError:
         task.add_done_callback(_discard_outcome)
         stopping = asyncio.ensure_future(_stop(task, cons))
         _STOPPING.add(stopping)
         stopping.add_done_callback(_STOPPING.discard)
         raise
+    return task.result()
 
 
 def _discard_outcome(task: asyncio.Future) -> None:

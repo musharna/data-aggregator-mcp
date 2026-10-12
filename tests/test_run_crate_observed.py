@@ -381,8 +381,11 @@ async def test_live_run_note_is_not_a_source_queried(monkeypatch: pytest.MonkeyP
     hit_sources = {h.source for h in result.results}
     assert hit_sources, "the live search returned no hits to name"
 
-    action = _graph(run_crate.render(result, now=NOW))["#search-action"]
-    assert action["errors"]["semantic"] == result.errors["semantic"]
+    graph = _graph(run_crate.render(result, now=NOW))
+    action = graph["#search-action"]
+    # Each errors entry is its own entity, referenced from the action (RO-Crate 1.1, 8965fcb).
+    disclosed = {graph[ref["@id"]]["name"]: graph[ref["@id"]]["value"] for ref in action["error"]}
+    assert disclosed == result.errors
     assert "semantic" not in action["sources_queried"]
     assert hit_sources <= set(action["sources_queried"])
     assert set(action["sources_queried"]) <= {"zenodo", "geo", "sra", "bioproject"}
