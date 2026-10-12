@@ -254,13 +254,27 @@ class UpstreamEnvelopeError(ValueError):
     """A 2xx body that parsed fine but carries the upstream's own error envelope."""
 
 
+def _json_body(resp: httpx.Response) -> Any:
+    """The JSON body. httpx's ``json()`` reads the bytes as UTF-8 whatever charset the
+    response declares, and MassIVE's servlets declare and send ISO-8859-1 ("café" is the
+    byte 0xE9). A body that is not UTF-8 is read in the charset it declares; UTF-8 under
+    a Latin-1 label (a servlet default) is still read as UTF-8, and a body that is not
+    UTF-8 and declares nothing stays malformed."""
+    try:
+        return resp.json()
+    except UnicodeDecodeError:
+        if resp.charset_encoding is None:
+            raise
+        return json.loads(resp.text)
+
+
 def _json_parser(
     expect: type | tuple[type, ...], check: Callable[[Any], None] | None
 ) -> Callable[[httpx.Response], Any]:
     names = expect.__name__ if isinstance(expect, type) else " or ".join(t.__name__ for t in expect)
 
     def parse(resp: httpx.Response) -> Any:
-        body = resp.json()
+        body = _json_body(resp)
         if not isinstance(body, expect):
             raise UnexpectedShapeError(
                 f"expected {names} JSON, got {type(body).__name__}: {resp.text[:200]}"
