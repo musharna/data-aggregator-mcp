@@ -8,7 +8,10 @@ cross-source dedup, since every dataset in a collection shares `collection_doi`.
 The curation API has NO server-side search, so `search` fetches the full collections
 list (a bare JSON array; ~3 MB, no pagination) and filters client-side over each
 collection's name/description/consortia/DOI plus its nested datasets' tissue/disease/
-organism/assay ontology labels. `resolve` re-fetches the single collection and flattens
+organism/assay ontology labels, keeping a collection whose text holds every term of the
+query as the server reads one (`_relevance.query_terms`: hyphens and punctuation as
+spaces, quoted phrases whole, no operators or stop words), each as a substring of the
+text normalized the same way. `resolve` re-fetches the single collection and flattens
 every dataset's assets into files[] (download URLs carry filesize but NO checksum →
 unverified fetch, like DANDI/PDB). kind="dataset".
 """
@@ -23,6 +26,8 @@ from urllib.parse import urlsplit
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp._relevance import _normalize as _normalize_words
+from data_aggregator_mcp._relevance import query_terms
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import (
     Creator,
@@ -45,6 +50,9 @@ MANIFEST_CAP = (
 _DESC_CAP = 500  # description truncation
 DEFAULT_TIMEOUT = 60.0  # the collections list is ~3 MB
 MAX_RETRIES = 2
+# A collection must hold every word of the query, so the router names this source when a
+# multi-word search empties it: "tendon scRNA-seq" 0, "tendon single cell" 4 (2026-10-11).
+REQUIRES_EVERY_WORD = True
 
 _ACCEPT_JSON = {"Accept": "application/json"}
 
@@ -79,7 +87,7 @@ def _searchable(collection: dict) -> str:
     parts += collection.get("consortia") or []
     parts += _labels(collection, "organism")
     parts += _subjects(collection)
-    return " ".join(parts).lower()
+    return _normalize_words(" ".join(parts))
 
 
 def _creators(pm: dict) -> list[Creator]:
@@ -178,7 +186,9 @@ async def search(
     client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
 ) -> tuple[int, list[DataResource]]:
     collections = await _collections(client)
-    terms = [t for t in query.lower().split() if t]
+    # Raw whitespace tokens missed "Single nucleus ... hamstring tendon" for "tendon
+    # single-nucleus human" and needed a literal "or" for "A OR B" (round 3, 2026-10-11).
+    terms = query_terms(query)
     matched = [c for c in collections if all(t in _searchable(c) for t in terms)]
     capped = min(size, MAX_SIZE)
     return len(matched), [compact(_normalize(c)) for c in matched[offset : offset + capped]]

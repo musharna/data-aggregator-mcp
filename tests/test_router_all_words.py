@@ -147,3 +147,21 @@ async def test_live_an_over_long_geo_query_says_why_it_is_empty() -> None:
     # positive control: one word of the same query finds GEO records
     assert any(r.id.startswith("geo:") for r in short.results)
     assert "all_words" not in short.errors
+
+
+async def test_cellxgene_is_named_when_every_word_empties_it(monkeypatch) -> None:
+    """Round 3 (2026-10-11): CELLxGENE filters on every word too, but did not say so, so
+    "tendon scRNA-seq" came back 0 from the one single-cell archive with nothing in errors."""
+    from data_aggregator_mcp import cellxgene
+
+    async def collections(client):
+        return [
+            {"collection_id": "af893e86-8e9f-41f1-a474-ef05359b1fb7", "name": "Hamstring tendon"}
+        ]
+
+    monkeypatch.setattr(cellxgene, "_collections", collections)
+    errors = await _errors(monkeypatch, {"cellxgene": cellxgene}, query="tendon scRNA-seq")
+    assert errors["all_words"].startswith("cellxgene matched nothing: it returns ")
+    # positive control: the same source, a query the record holds every word of
+    errors = await _errors(monkeypatch, {"cellxgene": cellxgene}, query="hamstring tendon")
+    assert "all_words" not in errors
