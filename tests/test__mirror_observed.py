@@ -122,3 +122,14 @@ def test_records_without_a_fingerprint_never_match_on_the_missing_part() -> None
         _r("dryad:2", source="dryad", title="Atlas", author="Ada Lovelace", year=2020),
     ]
     assert [r.id for r in _mirror.collapse_mirrors(full)] == ["zenodo:1"]
+
+
+def test_a_sequencing_run_naming_no_study_has_no_deposit_key() -> None:
+    def run(*acc: str) -> DataResource:
+        return DataResource(
+            id="sra:SRX1", source="sra", kind="sequencing_run", title="t", accessions=list(acc)
+        )
+
+    assert _mirror.deposit_key(run("SRX1", "PRJNA9")) is None
+    # Control: the same run naming its study is keyed by it.
+    assert _mirror.deposit_key(run("SRX1", "PRJNA9", "SRP9")) == "study:SRP9"
