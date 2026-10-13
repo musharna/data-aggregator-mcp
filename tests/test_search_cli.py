@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from data_aggregator_mcp import server
+from data_aggregator_mcp import http_transport, server
 
 
 def test_search_cli_emits_results_array(monkeypatch, capsys):
@@ -48,9 +48,14 @@ def test_bare_main_starts_server(monkeypatch):
         recorded["coro_name"] = getattr(coro, "__qualname__", "") or coro.cr_code.co_name
         coro.close()  # we are not actually awaiting it
 
+    def fake_serve_http(**kwargs):
+        recorded["http"] = kwargs  # a real one would bind a port and never return
+
     monkeypatch.setattr(server.asyncio, "run", fake_run)
+    monkeypatch.setattr(http_transport, "serve_http", fake_serve_http)
     server.main([])
     assert "_serve" in recorded["coro_name"]
+    assert "http" not in recorded
 
 
 def _page(results, errors):

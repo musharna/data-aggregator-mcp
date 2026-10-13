@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import contextlib
+import functools
 import json
 import logging
 import sys
@@ -71,6 +72,9 @@ _ensure_gbif_fetchable = fetch_gate.ensure_gbif_fetchable
 _ensure_datagov_fetchable = fetch_gate.ensure_datagov_fetchable
 _ensure_omicsdi_fetchable = fetch_gate.ensure_omicsdi_fetchable
 _ensure_fulltext_available = fetch_gate.ensure_fulltext_available
+# The time an export is made. Every renderer converts it to UTC, so the zone given here
+# cannot change what they write: a module constant, which mutmut leaves alone.
+_utc_now = functools.partial(datetime.now, UTC)
 
 
 # The catalog advertised by list_sources. Defined once, per-source, in sources.py —
@@ -248,7 +252,7 @@ async def _dispatch(
                 )
                 if args.get("provenance"):
                     result = result.model_copy(
-                        update={"provenance_crate": run_crate.render(result, now=datetime.now(UTC))}
+                        update={"provenance_crate": run_crate.render(result, now=_utc_now())}
                     )
                 return result.model_dump()
             case "resolve":
@@ -264,9 +268,7 @@ async def _dispatch(
                     )
                 elif fmt == "ro-crate":
                     resource = resource.model_copy(
-                        update={
-                            "ro_crate": ro_crate_mod.render(resource, created=datetime.now(UTC))
-                        }
+                        update={"ro_crate": ro_crate_mod.render(resource, created=_utc_now())}
                     )
                 if args.get("trust"):
                     signals = await trust_mod.annotate(client, resource)
@@ -293,7 +295,7 @@ async def _dispatch(
                             update={"trust": await trust_mod.annotate(client, resource)}
                         )
                     resource = resource.model_copy(
-                        update={"provenance": dossier_mod.render(resource, now=datetime.now(UTC))}
+                        update={"provenance": dossier_mod.render(resource, now=_utc_now())}
                     )
                 return resource.model_dump()
             case "fetch":
