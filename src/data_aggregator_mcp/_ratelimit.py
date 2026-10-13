@@ -217,18 +217,14 @@ def _bucket_for(service: str, url: str) -> str:
     return "ncbi" if service.startswith("NCBI") else "default"
 
 
-def _rate_for(bucket: str) -> float:
-    return _ncbi_rate() if bucket == "ncbi" else _DEFAULT_RATE
-
-
 async def acquire(service: str, url: str) -> None:
     name = _bucket_for(service, url)
     bucket = _BUCKETS.get(name)
     if bucket is None:
         if name == "ncbi":
-            bucket = SharedSchedule(state_dir() / "ncbi.schedule", _rate_for(name))
+            bucket = SharedSchedule(state_dir() / "ncbi.schedule", _ncbi_rate())
         else:
-            bucket = TokenBucket(_rate_for(name))
+            bucket = TokenBucket(_DEFAULT_RATE)
         _BUCKETS[name] = bucket
     await bucket.acquire()
 
