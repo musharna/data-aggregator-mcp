@@ -122,6 +122,9 @@ async def test_a_short_word_is_required_but_not_sent_unless_it_is_all_there_is()
     (total, recs), sent = await _search("coral lc")
     assert sent == ["study_title/coral"]
     assert [r.id for r in recs] == ["mwb:ST004329", "mwb:ST004143"]  # ST002933 is GC-MS
+    # A word of three letters is sent.
+    _, sent = await _search("coral rna")
+    assert sorted(sent) == ["study_title/coral", "study_title/rna"]
     (total, recs), sent = await _search("lc", _titles(lc=_TITLE["coral"]))
     assert sent == ["study_title/lc"]
     # Of the four coral-titled studies, the three LC-MS ones name "lc".
@@ -199,6 +202,9 @@ _MALFORMED = [
     pytest.param({"1": _study(study_title=...)}, id="no-title"),
     pytest.param({"1": _study(species=["Acropora"])}, id="species-not-a-string"),
     pytest.param(_study(license=4), id="unwrapped-license-not-a-string"),
+    pytest.param({"1": _study(institute=["UH"])}, id="institute-not-a-string"),
+    pytest.param({"1": _study(analysis_type=1)}, id="analysis-type-not-a-string"),
+    pytest.param({"1": _study(release_date=20251107)}, id="release-date-not-a-string"),
 ]
 
 
@@ -341,3 +347,32 @@ async def test_live_a_study_both_sources_return_is_one_hit():
     accs = [a for r in page.results for a in r.accessions if a.startswith("ST")]
     assert accs and len(accs) == len(set(accs)), sorted(accs)
     assert {r.source for r in page.results} >= {"mwb", "omicsdi"}
+
+
+@pytest.mark.asyncio
+async def test_every_request_has_the_source_timeout_and_a_failure_names_its_phase():
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, text=_ERROR, headers={"content-type": "text/html"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        with pytest.raises(
+            UpstreamUnavailableError,
+            match=r"^\[UpstreamUnavailableError\] Metabolomics Workbench search returned an "
+            r"unparseable 200 body",
+        ):
+            await mwb.search(c, "coral")
+        with pytest.raises(
+            UpstreamUnavailableError,
+            match=r"^\[UpstreamUnavailableError\] Metabolomics Workbench resolve returned an "
+            r"unparseable 200 body",
+        ):
+            await mwb.resolve(c, "mwb:ST004329")
+    assert {request.url.path.split("/")[3] for request in seen} == {"study_title", "study_id"}
+    want = dict.fromkeys(("connect", "read", "write", "pool"), mwb.DEFAULT_TIMEOUT)
+    assert all(request.extensions["timeout"] == want for request in seen)
+    # Positive control: the verbatim study resolves.
+    async with _client([], {"study_id/ST004329": _STUDY}) as c:
+        assert (await mwb.resolve(c, "mwb:ST004329")).id == "mwb:ST004329"
