@@ -316,7 +316,7 @@ def _source_streams(
     filters: dict[str, Any],
     pushdown: bool,
     plurals: bool,
-    title_tier: bool,
+    title_tier: bool = False,
     deposit_tier: bool = False,
     plural_streams: bool = False,
     vi: int | None = None,
@@ -371,7 +371,7 @@ def _source_streams(
         pushed: dict[str, Any] = {}
         if subs:
             limits: dict[str, int] = getattr(adapter, "OPERATOR_LIMITS", {})
-            split = plurals and plural_streams and getattr(adapter, "PLURAL_STREAM", False)
+            split = plurals and plural_streams and getattr(adapter, "PLURAL_STREAM", None)
             parts = []
             for sub in subs:
                 sq = _within_limit(f"{name}/{sub}", q, plain, groups, limits.get(sub), notes)
@@ -416,7 +416,7 @@ def _source_streams(
             else:
                 parts = [(name, name, _adapter_call(client, adapter, q, plurals, pushed))]
         residual = any(k not in pushed for k in wanted)
-        every_word = getattr(adapter, "REQUIRES_EVERY_WORD", False)
+        every_word = bool(getattr(adapter, "REQUIRES_EVERY_WORD", None))
         for skey, src, fn in parts:
             key, label = (skey, skey) if vi is None else (_comp_key(vi, skey), f"{skey}#v{vi}")
             out.append(
@@ -443,7 +443,7 @@ def _adapter_call(
     off, and sent ``pushed`` filters only when there are some (with none the call is
     exactly the unfiltered one)."""
     call = functools.partial(adapter.search, client, query)
-    if not plurals and getattr(adapter, "QUERY_PLURALS", False):
+    if not plurals and getattr(adapter, "QUERY_PLURALS", None):
         call = functools.partial(call, plurals=False)
     if pushed:
         call = functools.partial(call, filters=pushed)
@@ -525,9 +525,15 @@ _ENRICH_CHARS_PER_ORGANISM = 130
 def _hit_chars(r: DataResource) -> int:
     """Characters ``r`` will take in the page, as compacted, enriched and sent."""
     organisms = min(len(r.organism), SEARCH_LIST_LIMITS["organism"])
+    # Equivalent mutants: every field a search hit carries dumps alike in "json" and
+    # "python" mode (the Any-typed export dicts are set on resolve only), and
+    # ensure_ascii=None reads as False. test_the_budget_counts_a_hit_as_it_is_sent pins the
+    # form: Claude Code hands the model compact JSON with accents unescaped (R2 logs).
+    # pragma: no mutate start
     sent = json.dumps(
         dense(compact(r).model_dump(mode="json")), separators=(",", ":"), ensure_ascii=False
     )
+    # pragma: no mutate end
     return len(sent) + _ENRICH_CHARS_PER_ORGANISM * organisms
 
 
@@ -853,9 +859,8 @@ async def _multi_query_page(
             pushdown=pushdown,
             plurals=plurals,
             plural_streams=plural_streams,
-            # Each variant already fans out to every source; the title split would
-            # double that again. It is for the single query (R4 measured that path).
-            title_tier=False,
+            # No title_tier: each variant already fans out to every source, and the title
+            # split would double that again. It is for the single query (R4 measured that path).
             vi=vi,
             groups=groups,
             notes=notes,

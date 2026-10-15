@@ -9,6 +9,7 @@ advisory note.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections import Counter
 from unittest.mock import AsyncMock
@@ -27,9 +28,20 @@ from data_aggregator_mcp import (
     taxonomy,
 )
 from data_aggregator_mcp.errors import UpstreamUnavailableError, ValidationError
-from data_aggregator_mcp.models import DataResource, Link, QueryUnderstanding, Taxon
+from data_aggregator_mcp.models import (
+    SEARCH_LIST_LIMITS,
+    DataResource,
+    Link,
+    QueryUnderstanding,
+    Taxon,
+    compact,
+    dense,
+)
 from data_aggregator_mcp.query_understanding import ParsedRewrite
 from tests._title_split import title_half, whole
+from tests.test_query_plurals import _ncbi
+from tests.test_router_operator_limit import _NOTE, _SKIN, _serve_literature
+from tests.test_search_page_budget import _adapter
 
 _FACETS = {
     "organism": "Zea mays",
@@ -914,3 +926,124 @@ def test_cache_ttl_reads_the_environment_and_falls_back_to_an_hour(monkeypatch) 
     assert router._cache_ttl() == 12.5
     monkeypatch.setenv("CACHE_TTL_SECONDS", "soon")
     assert router._cache_ttl() == 3600.0
+
+
+# --- #88 burn-down of router (0.71.0): the page budget, operator limits, plural streams ---
+
+
+def _dated(i: int, year: int) -> DataResource:
+    return DataResource(
+        id=f"zenodo:{i}", source="zenodo", kind="dataset", title=f"survey {i}", year=year
+    )
+
+
+async def test_a_page_fills_its_budget_exactly_and_a_filtered_hit_costs_nothing(
+    monkeypatch,
+) -> None:
+    """Two hits that make up the budget to the character both fit; a hit the filter drops
+    takes no room, so it is handled even with the budget spent; the next hit is cut and
+    the cursor starts at it."""
+    first, second, old, cut = _dated(1, 2020), _dated(2, 2021), _dated(3, 1990), _dated(4, 2022)
+    monkeypatch.setattr(router, "_ADAPTERS", {"zenodo": _adapter([first, second, old, cut])})
+    budget = router._hit_chars(first) + router._hit_chars(second)
+    monkeypatch.setattr(router, "SEARCH_PAGE_CHARS", budget)
+    async with _client() as client:
+        page = await router.search_page(
+            client, query="q", size=10, sources=["zenodo"], published_after=2000
+        )
+        nxt = await router.search_page(client, cursor=page.next_cursor)
+    assert [r.id for r in page.results] == ["zenodo:1", "zenodo:2"]
+    assert page.errors["page_size"] == (
+        f"2 of the 10 hits asked for fit in one tool result (~{budget:,} characters); "
+        "next_cursor continues with the rest"
+    )
+    # zenodo:3 was handled (filtered out), so the next page starts at zenodo:4
+    assert _cursor.decode(page.next_cursor)["offsets"] == {"zenodo": 3}
+    assert [r.id for r in nxt.results] == ["zenodo:4"] and nxt.next_cursor is None
+
+
+def test_a_hit_s_budget_is_its_sent_form_plus_room_for_each_organism_enriched() -> None:
+    cap = SEARCH_LIST_LIMITS["organism"]
+    bare = _rec("zenodo:1")
+    named = _rec("zenodo:1", organism=[f"Species {i}" for i in range(cap + 2)])
+    sent = len(json.dumps(dense(compact(named).model_dump()), separators=(",", ":")))
+    assert router._hit_chars(named) == sent + 130 * cap  # the organisms past the cap are cut
+    assert router._hit_chars(bare) == len(
+        json.dumps(dense(compact(bare).model_dump()), separators=(",", ":"))
+    )
+
+
+async def test_an_expansion_using_exactly_the_operator_limit_is_sent_whole(monkeypatch) -> None:
+    """OpenAIRE accepts four AND/OR/NOT words: a query with four is sent as it is, with
+    no note; one more and it is shortened."""
+    calls = _serve_literature(monkeypatch)
+    pages = []
+    for synonyms in [("iecur", "hepar", "jecur"), ("iecur", "hepar", "jecur", "foie")]:
+        liver = anatomy.UberonInfo(uberon_id="UBERON:0002107", canonical="liver", synonyms=synonyms)
+        monkeypatch.setattr(anatomy, "resolve_uberon", AsyncMock(return_value=liver))
+        async with _client() as client:
+            pages.append(
+                await router.search_page(
+                    client, query="rna", tissue="liver", sources=["literature"]
+                )
+            )
+    four = '(rna) AND ("liver" OR "iecur" OR "hepar" OR "jecur")'
+    assert calls["openaire"][0] == calls["pubmed"][0] == (four, 0)
+    assert pages[0].errors == {}
+    # positive control: five are shortened, and the note says so
+    assert calls["pubmed"][1] == (
+        '(rna) AND ("liver" OR "iecur" OR "hepar" OR "jecur" OR "foie")',
+        0,
+    )
+    assert calls["openaire"][1] == (four, 0)
+    assert pages[1].errors == {
+        "operator_limit": "literature/openaire accepts at most 4 AND/OR/NOT operators, so it "
+        "was searched with a shorter expansion that left out 'foie'"
+    }
+
+
+async def test_operator_limit_notes_of_two_variants_are_joined_once_each(monkeypatch) -> None:
+    monkeypatch.setattr(anatomy, "resolve_uberon", AsyncMock(return_value=_SKIN))
+    monkeypatch.setattr(
+        router.query_understanding_mod,
+        "expand",
+        AsyncMock(return_value=["scRNA-seq", "droplet AND scRNA-seq"]),
+    )
+    _serve_literature(monkeypatch)
+    async with _client() as client:
+        page = await router.search_page(
+            client,
+            query="single-cell",
+            tissue="skin",
+            sources=["literature"],
+            multi_query=True,
+            size=4,
+        )
+    # variants 0 and 1 leave out the same names: one note; variant 2 has an AND of its own
+    assert page.errors["operator_limit"] == (
+        f"{_NOTE}; literature/openaire accepts at most 4 AND/OR/NOT operators, so it was "
+        "searched with a shorter expansion that left out 'region of skin', 'skin region', "
+        "'skin zone'"
+    )
+
+
+async def test_every_multi_query_variant_gets_its_own_plural_stream(monkeypatch) -> None:
+    """The plural stream (test_query_plurals.py) is sent for each variant of a multi-query
+    search too, and its cursor keeps it."""
+    sent: list[str] = []
+    monkeypatch.setattr(router, "_ADAPTERS", {"ncbi": _ncbi(sent)})
+    monkeypatch.setattr(
+        router.query_understanding_mod, "expand", AsyncMock(return_value=["Panthera uncia"])
+    )
+    async with _client() as client:
+        page = await router.search_page(client, query="snow leopard", size=3, multi_query=True)
+        first = sorted(set(sent))
+        sent.clear()
+        await router.search_page(client, cursor=page.next_cursor)
+    assert first == [
+        "((Panthera OR Pantheras) (uncia OR uncias)) NOT (Panthera uncia)",
+        "((snow OR snows) (leopard OR leopards)) NOT (snow leopard)",
+        "Panthera uncia",
+        "snow leopard",
+    ]
+    assert sorted(set(sent)) == first
