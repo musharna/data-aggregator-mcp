@@ -184,3 +184,14 @@ def test_a_wrong_typed_resource_type_is_refused_not_read_as_other():
     rec["metadata"]["resource_type"]["type"] = 7
     with pytest.raises(_http.UpstreamEnvelopeError, match="no Zenodo record in"):
         zenodo._check_record(rec)
+
+
+def test_an_empty_concept_doi_links_no_concept():
+    concept = "10.5281/zenodo.1491531"
+    versioned = zenodo._normalize({**_FULL, "conceptdoi": concept})
+    assert [(lnk.rel, lnk.target_id) for lnk in versioned.links if lnk.rel == "is_version_of"] == [
+        ("is_version_of", concept)
+    ]
+    # An empty string is no concept, not a link to "".
+    blank = zenodo._normalize({**_FULL, "conceptdoi": ""})
+    assert not any(lnk.rel == "is_version_of" for lnk in blank.links)

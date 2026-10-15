@@ -26,7 +26,7 @@ from typing import Any
 import httpx
 import pytest
 
-from data_aggregator_mcp import _eutils, _http, omics, pubmed
+from data_aggregator_mcp import _eutils, _http, europepmc, omics, pubmed
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import Creator, DataResource
 
@@ -297,6 +297,30 @@ async def test_the_note_names_every_capped_db() -> None:
         "links": f"first {cap} of {cap + 1} linked sra records; first {cap} of {cap + 7} linked bioproject records"
     }
     assert len(r.links) == 2 * cap
+
+
+async def test_the_note_names_a_capped_db_and_a_capped_text_mining_together(monkeypatch) -> None:
+    cap = omics.MAX_LINKED_RUNS
+    mined_cut = f"first {europepmc.MAX_LINKS} of 140 data accessions named in the text"
+
+    async def _capped_mining(client, *, pmid=None, pmcid=None):
+        return [], mined_cut, None
+
+    monkeypatch.setattr(europepmc, "mined_links", _capped_mining)
+    links = {"sra": [str(i) for i in range(cap + 1)], "gds": [], "bioproject": []}
+    sent: list[httpx.Request] = []
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(_linking_ncbi(links, sent))
+    ) as client:
+        both = await pubmed.resolve(client, "pubmed:42802988")
+    assert both.truncated == {"links": f"first {cap} of {cap + 1} linked sra records; {mined_cut}"}
+    # Control: the text-mining cut alone is the whole note.
+    links["sra"] = []
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(_linking_ncbi(links, sent))
+    ) as client:
+        alone = await pubmed.resolve(client, "pubmed:42802988")
+    assert alone.truncated == {"links": mined_cut}
 
 
 _WRONG = ["x", "", 7, True, 1.5, [1], {"k": 1}, None]
