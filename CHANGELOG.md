@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.72.0] - 2026-10-15
+
 ### Added
 
 - A search hit ranked on another copy of the same deposit now names that copy in
