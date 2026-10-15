@@ -206,8 +206,44 @@ async def test_a_deposit_ranks_by_its_best_described_copy(monkeypatch, described
             client, query="snow leopard", size=1, sources=["nasacmr", "dataone", "datacite"]
         )
     assert [r.id for r in page.results] == ["dataone:sha256:1"]  # the kept copy, first
+    # it names the copy its rank came from, and only when that is another copy
+    assert page.results[0].ranked_by_copy == (twin.id if described == "datacite" else None)
     # both copies are handled, so DataCite moves on
     assert router._cursor.decode(page.next_cursor)["offsets"]["datacite"] == 1
+
+
+async def test_a_hit_ranked_on_its_twin_s_organism_names_the_twin(monkeypatch) -> None:
+    """Live 2026-10-12: DataONE's copy of a Dryad deposit, with no description, topped
+    "transcriptome" in Orobanche aegyptiaca on the species list of its DataCite twin, so
+    the hit showed nothing of the organism asked for."""
+    monkeypatch.setattr(taxonomy, "resolve_taxon", AsyncMock(return_value=_TAXON))
+    doi = "10.5061/dryad.x"
+    title = "A reference genome and transcriptome of haustorial development"
+    bare = DataResource(id="dataone:1", source="dataone", kind="dataset", title=title, doi=doi)
+    twin = DataResource(
+        id=f"datacite:{doi}", source="dryad", kind="dataset", title=title, doi=doi,
+        organism=["Phelipanche aegyptiaca"],
+    )  # fmt: skip
+    # a third copy, as bare as the first, comes after the twin: the twin is still named
+    late = DataResource(id="zenodo:1", source="zenodo", kind="dataset", title=title, doi=doi)
+    _serve(monkeypatch, "dataone", [bare])
+    _serve(monkeypatch, "datacite", [twin])
+    _serve(monkeypatch, "zenodo", [late])
+    _serve(monkeypatch, "gbif", _GBIF)
+    async with _client() as client:
+        page = await router.search_page(
+            client,
+            query="transcriptome",
+            organism="Orobanche aegyptiaca",
+            sources=["dataone", "datacite", "zenodo", "gbif"],
+        )
+    by_id = {r.id: r for r in page.results}
+    shown = [r.id for r in page.results if r.doi == doi]
+    assert len(shown) == 1 and len(page.results) == 3, [r.id for r in page.results]
+    assert by_id[shown[0]].ranked_by_copy == twin.id
+    # Positive control: hits that name the search themselves carry no note.
+    assert by_id["gbif:1"].ranked_by_copy is None
+    assert by_id["gbif:2"].ranked_by_copy is None
 
 
 @pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")

@@ -8,11 +8,19 @@
    "10.5061/dryad.3cs6v",
    "zenodo:4996058",
    "10.17863/cam.56487",
-   "DANDI:001252"
+   "DANDI:001252",
+   "DANDI:001369",
+   "doi:10.25417/uic.19346756",
+   "zenodo:18791231"
   ],
   "alias": {
    "S27": [
     "j2932-aaf14"
+   ],
+   "S16": [
+    "10.6084/m9.figshare.31075552",
+    "10.6084/m9.figshare.31075552.v1",
+    "doi:10.6084/m9.figshare.31075552"
    ]
   }
  },
@@ -24,7 +32,8 @@
    "PRJCA069718",
    "GSE241505",
    "ngdc:PRJCA007596",
-   "PRJCA007596"
+   "PRJCA007596",
+   "GSE289694"
   ],
   "alias": {
    "S2": [
@@ -46,7 +55,20 @@
    "datacite:10.6082/fbkht-fb431",
    "dataone:doi:10.18739/A2NP1WK35",
    "10.15485/2336866",
-   "doi:10.1594/PANGAEA.922399"
+   "doi:10.1594/PANGAEA.922399",
+   "sha256:3c53e1a616e2f3d1e096aa60b8c154cf8fda114c286491a7272f833c432918e7",
+   "dataone:sha256:a347f69df971ef6a5f03f1abb893cb832d7c1701f61100c7330da8b434afb908",
+   "sha256:57b36f40c2db874393125602a042ca6a10780824d23190b60d305cf61d2907f3",
+   "sha256:52235f488ec29b08e9f2a2d105df4f6f5de614555eeb1064fd16b33e0e763f7b",
+   "sha256:0a3655a5dd98e54a6d6a567ba96f3cac072280121ff0a9c1d9bfe95ab336f4ac",
+   "dataone:sha256:853083d4dd2c3f71224d849b808a1e89d071e667c8760084a74ca7573468040f",
+   "doi:10.3334/ORNLDAAC/1861",
+   "10.5061/dryad.rfj6q57dp",
+   "doi:10.1594/PANGAEA.920013",
+   "sha256:a347f69df971ef6a5f03f1abb893cb832d7c1701f61100c7330da8b434afb908",
+   "dataone:sha256:3c53e1a616e2f3d1e096aa60b8c154cf8fda114c286491a7272f833c432918e7",
+   "sha256:853083d4dd2c3f71224d849b808a1e89d071e667c8760084a74ca7573468040f",
+   "doi:10.1594/PANGAEA.919986"
   ],
   "optional": [
    {
@@ -62,15 +84,54 @@
   ],
   "alias": {
    "S18": [
-    "figshare:19251593"
+    "figshare:19251593",
+    "https://figshare.com/articles/dataset/Pellerin_Lotem_et_al_/19251593",
+    "10.6084/m9.figshare.19251593"
    ],
    "S1": [
     "https://data.mendeley.com/datasets/5rn4zf274r"
    ],
    "S24": [
-    "apgc:isotopic-composition-of-ground-ice-ebullition-gases-and-thermokarst-lake-water-alaska"
+    "apgc:isotopic-composition-of-ground-ice-ebullition-gases-and-thermokarst-lake-water-alaska",
+    "sha256:6b31fba11b3c6ec19e4bb3f0bbbd332e3a913512695d611f94cea8afa1dd1518",
+    "10.1594/PANGAEA.808036",
+    "85b1c5a40b85131f7df2a07bee1f34b6",
+    "d4771853ab36e906b2c8ce2c5f3c3e87",
+    "10.1594/PANGAEA.808037"
+   ],
+   "S9": [
+    "sha256:8478ea538d2b095d7b7d44b9266fcdb2044aaf26c0292dff9850347ace5a3716",
+    "10.5885/45615CE-1A0AFEFB748D4457",
+    "Nordicana D69"
+   ],
+   "S13": [
+    "sha256:5929fb08a280d174b9fc68643d7ca34fcdc003394a508bbaa8390f53810d0868",
+    "10.4211/hs.41faf3d6c3f245259ea820740291789c",
+    "sha256:eb6a63a4e0240e56f4c8b10d60008aa8e055e70743c6e9f3f7a97e3c803f80c4"
+   ],
+   "S8": [
+    "sha256:f1d8e6c30b835905e2afe379daf414de4c1a5d1e467aea68d4042fb037adc1ee",
+    "10.5885/45588CE-5A12A84DFAAF4D36"
+   ],
+   "S25": [
+    "sha256:00536817b916bc5c8c3fd4cc6385f9a468321be88e95aeea5a8a8e0bd6bf122f",
+    "10.1594/PANGAEA.913642"
+   ],
+   "S14": [
+    "https://figshare.com/articles/dataset/Anaerobic_oxidation_of_methane_does_not_attenuate_methane_emissions_from_thermokarst_lakes/22351381",
+    "10.6084/m9.figshare.22351381"
    ]
-  }
+  },
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "doi:10.5281/zenodo.5895255",
+     "10.5281/zenodo.5895255",
+     "10.5281/zenodo.5895254"
+    ]
+   }
+  ]
  },
  "T4": {
   "reject": [
@@ -81,7 +142,15 @@
    "github.com/piperod/beepose",
    "10.5281/zenodo.4507648",
    "datasetninja:bee-image",
-   "10.5281/zenodo.19241078"
+   "10.5281/zenodo.19241078",
+   "roboflow:bees-31jk6/bee-health-data-2.0-jgnjn-n6xrc",
+   "roboflow:erin-tomassoni-workspace/final-bee-health-model-v3",
+   "doi:10.3390/s26082518",
+   "comvis-hust:pollenbee",
+   "roboflow:varroa-j8231/varroa4yolo",
+   "roboflow:erin-tomassoni-workspace/bee-health-data-2.0",
+   "zenodo:21529070",
+   "10.5281/zenodo.15682344"
   ],
   "optional": [
    {
@@ -90,6 +159,14 @@
      "10.54718/JCHW9401",
      "scholarsjunction.msstate.edu/gri-publications/4"
     ]
+   },
+   {
+    "key": "B2",
+    "ids": [
+     "roboflow:beedataset/honey-bee-detection-model-zgjnb-dmdag",
+     "roboflow:matt-nudi/honey-bee-detection-model-zgjnb",
+     "github.com/mattnudi/bee-detection"
+    ]
    }
   ],
   "alias": {
@@ -97,21 +174,73 @@
     "ieee-dataport:carniolan-grey-honeybees-dataset"
    ],
    "S7": [
-    "10.5281/zenodo.8209337"
+    "10.5281/zenodo.8209337",
+    "oist:honeybee_tracking_datasets",
+    "kport354041/honeybee-positions",
+    "oist.jp/node/43475"
    ],
    "S27": [
-    "hf:timm/bee-dataset"
+    "hf:timm/bee-dataset",
+    "github:BeeAlarmed/BeeDataset",
+    "github.com/BeeAlarmed/BeeDataset",
+    "tfds:bee_dataset"
    ],
    "S21": [
     "researchdata.edu.au/honeybee-video-tracking"
    ],
    "S13": [
-    "10.1016/j.dib.2024.110060"
+    "10.1016/j.dib.2024.110060",
+    "mendeley.8gb9r2yhfc",
+    "10.17632/8gb9r2yhfc",
+    "PMC10831503"
    ],
    "S2": [
     "10.5281/zenodo.7093276"
+   ],
+   "S16": [
+    "Labeled Dataset for Detecting Defensive Behavior of Honeybees at the Hive Entrance (Sledevic and Vdoviak; DOI not retrieved)",
+    "10.5281/zenodo.23077519",
+    "10.5281/zenodo.23077518"
+   ],
+   "S9": [
+    "figshare:26999512",
+    "10.6084/m9.figshare.26999512"
+   ],
+   "S14": [
+    "doi:10.3390/agriculture15151609",
+    "10.5281/zenodo.15622033",
+    "zenodo.15622033"
+   ],
+   "S10": [
+    "mendeley.5yz78xxpmy",
+    "10.17632/5yz78xxpmy"
+   ],
+   "S6": [
+    "zenodo.23099412",
+    "10.5281/zenodo.23099412"
+   ],
+   "S17": [
+    "zenodo.4400651",
+    "10.5281/zenodo.4400650",
+    "10.5281/zenodo.4400651"
    ]
-  }
+  },
+  "add": [
+   {
+    "key": "A2",
+    "ids": [
+     "github:apic-ai/apic-bee-pose-dataset",
+     "github.com/apic-ai/apic-bee-pose-dataset"
+    ]
+   },
+   {
+    "key": "A1",
+    "ids": [
+     "10.5281/zenodo.14929559",
+     "10.5281/zenodo.14929560"
+    ]
+   }
+  ]
  },
  "T5": {
   "add": [
@@ -141,7 +270,16 @@
    }
   ],
   "reject": [
-   "10.5281/zenodo.15681195"
-  ]
+   "10.5281/zenodo.15681195",
+   "MSV000096718",
+   "MSV000103071"
+  ],
+  "alias": {
+   "S28": [
+    "PMC13259630 (OSF)",
+    "osf.io/t4xd9",
+    "10.1016/j.isci.2026.116207"
+   ]
+  }
  }
 }

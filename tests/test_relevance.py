@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from data_aggregator_mcp._ontology import FacetGroup
-from data_aggregator_mcp._relevance import MatchTiers, query_phrase, query_terms
+from data_aggregator_mcp._relevance import MatchTiers, _text, query_phrase, query_terms
 from data_aggregator_mcp.models import DataResource, Taxon
 
 _ORGANISM = FacetGroup(
@@ -116,3 +116,10 @@ def test_unshown_lists_the_query_terms_a_hit_does_not_name_in_query_order() -> N
     # an empty query.
     assert tiers.unshown(_rec("Chlamydomonas proteomics under nitrogen starvations")) == []
     assert MatchTiers("", []).unshown(hit) == []
+
+
+def test_a_hit_without_a_description_is_read_from_its_other_fields_alone() -> None:
+    assert _text(_rec("Soil moisture", subjects=["drought"])) == " soil moisture drought "
+    # Control: a description is read between the title and the subjects.
+    hit = _rec("Soil moisture", description="Sahel plots", subjects=["drought"])
+    assert _text(hit) == " soil moisture sahel plots drought "

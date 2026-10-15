@@ -624,10 +624,12 @@ async def _fetch_page(
         return (*tiers.score(r), int(r.kind in _DEPOSIT_KINDS))
 
     best: dict[str, tuple[int, ...]] = {}
+    best_copy: dict[str, str] = {}  # the copy that set each deposit's rank, first if tied
     for c in unique:
         if dk := _deposit_key(c[2]):
             hit = score(c[2])
-            best[dk] = max(best.get(dk, hit), hit)
+            if dk not in best or hit > best[dk]:
+                best[dk], best_copy[dk] = hit, c[2].id
 
     def rank(c: tuple[str, int, DataResource]) -> tuple[int, ...]:
         dk = _deposit_key(c[2])
@@ -658,6 +660,9 @@ async def _fetch_page(
         # in text it leaves out; without the note the hit reads as off-topic.
         if key in every_word and (unshown := tiers.unshown(r)):
             r = r.model_copy(update={"unshown_terms": unshown})
+        # Ranked on another copy's text, the hit shows less than set its rank: name that copy.
+        if (dk := _deposit_key(r)) and best[dk] > score(r):
+            r = r.model_copy(update={"ranked_by_copy": best_copy[dk]})
         passes = _passes_filters(r, filters)
         cost = _hit_chars(r) if passes else 0
         # A hit that does not fit stays unhandled, so the cursor returns it next page.

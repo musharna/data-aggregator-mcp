@@ -112,12 +112,14 @@ def _normalize(s: dict) -> DataResource:
 
 
 async def _get(client: httpx.AsyncClient, field: str, value: str, *, service: str):
+    # A word holds letters, digits and spaces only (``query_terms``), and an id is checked
+    # before it gets here, so no value has a "/" for `safe` to decide on; quoting every
+    # character keeps it one path segment regardless.
+    segment = quote(value, safe="")  # pragma: no mutate
     body = await _http.request_json(
         client,
         _GET,
-        # A word holds letters, digits and spaces only (``query_terms``), and an id is
-        # checked before it gets here; quoting keeps either one path segment regardless.
-        f"{API}/{field}/{quote(value, safe='')}/summary",
+        f"{API}/{field}/{segment}/summary",
         service=service,
         headers=_ACCEPT_JSON,
         expect=(list, dict),

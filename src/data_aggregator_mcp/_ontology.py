@@ -107,15 +107,17 @@ def within_operator_limit(
         return None
     ordered = [_typed_name_first(g) for g in groups]
     kept = [1] * len(ordered)
-    while spare and any(k < len(o) for k, o in zip(kept, ordered, strict=True)):
+    # One pass per depth: each facet that still has a term at that depth takes one
+    # spare slot, so every facet keeps a second name before any keeps a third.
+    for depth in range(1, max(map(len, ordered))):
         for i, terms in enumerate(ordered):
-            if spare and kept[i] < len(terms):
+            if spare and depth < len(terms):
                 kept[i] += 1
                 spare -= 1
     query, left_out = plain, []
-    for terms, k in zip(ordered, kept, strict=True):
-        query = and_group(query, terms[:k])
-        left_out += terms[k:]
+    for i, terms in enumerate(ordered):
+        query = and_group(query, terms[: kept[i]])
+        left_out += terms[kept[i] :]
     return query, left_out
 
 

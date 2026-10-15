@@ -431,3 +431,98 @@ async def test_live_the_dataset_and_its_datacite_doi_are_one_hit():
     assert "datacite:10.25345/c5pg1j26b" in {r.id for r in alone.results}
     holding = [r.id for r in page.results if S15 in r.accessions]
     assert len(holding) == 1, holding
+
+
+# --- what each request carries, and what a failure says ------------------------------------
+
+_BAD = b'{"detail": "Internal error"}'
+
+
+async def _failing(phase: str, call):
+    """Run ``call`` on a client whose answer for ``phase`` is malformed and every other
+    answer is verbatim: "count" (pageSize=1), "rows", "query" (resolve's dataset query)
+    or "info" (the servlet). Returns the requests sent and the error raised, if any."""
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        params = request.url.params
+        if request.url.path.endswith("/MassiveServlet"):
+            body = _BAD if phase == "info" else _raw("massive_info_MSV000101299.json")
+            return httpx.Response(200, content=body)
+        text = json.loads(params["query"])["full_search_input"]
+        if text == S15:
+            body = _BAD if phase == "query" else _raw("massive_id_MSV000101299.json")
+        elif params["pageSize"] == "1":
+            body = _BAD if phase == "count" else _COUNT["heatwave"]
+        else:
+            body = _BAD if phase == "rows" else _ALL["heatwave"]
+        return httpx.Response(200, content=body, headers=_LATIN1)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        try:
+            await call(c)
+        except UpstreamUnavailableError as exc:
+            return seen, str(exc)
+    return seen, None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("phase", "service", "message"),
+    [
+        ("count", "MassIVE search", "no MassIVE dataset list in"),
+        ("rows", "MassIVE search", "no MassIVE dataset list in"),
+        ("query", "MassIVE resolve", "no MassIVE dataset list in"),
+        ("info", "MassIVE resolve", "no MassIVE record of MSV000101299 in"),
+    ],
+)
+async def test_a_malformed_answer_names_the_service_and_what_was_missing(phase, service, message):
+    async def call(c):
+        if phase in ("count", "rows"):
+            await massive.search(c, "heatwave")
+        else:
+            await massive.resolve(c, f"massive:{S15}")
+
+    seen, error = await _failing(phase, call)
+    assert error is not None and error.startswith(
+        f"[UpstreamUnavailableError] {service} returned an unparseable 200 body after "
+    ), error
+    # The message quotes the body, so its repr is double-quoted.
+    assert f'UpstreamEnvelopeError("{message} {{' in error, error
+    # Every request carries the source's own timeout.
+    want = dict.fromkeys(("connect", "read", "write", "pool"), massive.DEFAULT_TIMEOUT)
+    assert seen and all(request.extensions["timeout"] == want for request in seen)
+    # Positive control: with every answer verbatim the same call succeeds.
+    seen, error = await _failing("none", call)
+    assert error is None and all(request.extensions["timeout"] == want for request in seen)
+
+
+@pytest.mark.asyncio
+async def test_a_word_of_three_letters_is_sent():
+    _, sent = await _search("pocillopora rna")
+    assert {s[0] for s in sent[:2]} == {"pocillopora", "rna"}
+
+
+@pytest.mark.asyncio
+async def test_a_blank_text_field_reads_as_absent():
+    blank = _row(description="   ", keywords=" ", px="  ")
+    (_, recs), _ = await _search("resilience", {"resilience": _answer([blank])})
+    assert (recs[0].description, recs[0].subjects, recs[0].accessions) == (None, [], [S15])
+    # Every reader tests the value for truth, so the contract is checked where it is made.
+    assert massive._value(blank, "description") is None
+    assert massive._value(blank, "title") == blank["title"]  # positive control
+
+
+@pytest.mark.asyncio
+async def test_resolve_needs_the_dataset_query_to_hold_it_even_when_the_servlet_answers():
+    """A dataset the query does not list is not public, whatever the servlet says."""
+    sent: list[tuple[str, int, int]] = []
+    answers: dict[str, object] = {f"info:{S15}": _raw("massive_info_MSV000101299.json")}
+    async with _client(sent, answers) as c:
+        with pytest.raises(NotFoundError, match=f"MassIVE has no public dataset {S15}"):
+            await massive.resolve(c, f"massive:{S15}")
+    # Positive control: listed by the query too, it resolves.
+    answers[S15] = _raw("massive_id_MSV000101299.json")
+    async with _client(sent, answers) as c:
+        assert (await massive.resolve(c, f"massive:{S15}")).id == f"massive:{S15}"

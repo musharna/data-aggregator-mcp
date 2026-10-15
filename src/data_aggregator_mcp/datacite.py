@@ -133,7 +133,8 @@ _MASSIVE_TITLE_RE = re.compile(r"MassIVE (MSV[0-9]{9}) - ")
 
 
 def _massive_accession(doi: str, title: str) -> list[str]:
-    m = _MASSIVE_TITLE_RE.match(title) if doi.lower().startswith(_MASSIVE_DOI_PREFIX) else None
+    # The prefix has no letters, so the DOI's case cannot change the match.
+    m = _MASSIVE_TITLE_RE.match(title) if doi.startswith(_MASSIVE_DOI_PREFIX) else None
     return [m[1]] if m else []
 
 

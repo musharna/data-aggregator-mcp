@@ -111,7 +111,9 @@ def _value(r: dict, field: str) -> str | None:
     """A text field, None when absent, empty or the string "null" (a 2014 row's
     description is "null")."""
     v = r.get(field)
-    return v.strip() if isinstance(v, str) and v.strip() not in ("", "null") else None
+    if not isinstance(v, str) or v.strip() == "null":
+        return None
+    return v.strip() or None
 
 
 def _list(r: dict, field: str) -> list[str]:
@@ -156,7 +158,8 @@ async def search(
     counts = await asyncio.gather(
         *(_query(client, t, size=1, offset=0, service="MassIVE search") for t in sent)
     )
-    total, term = min((c[0], t) for c, t in zip(counts, sent, strict=True))
+    # gather() returns one count per word sent, so strict= cannot change behaviour.
+    total, term = min((c[0], t) for c, t in zip(counts, sent, strict=True))  # pragma: no mutate
     if total == 0:
         return 0, []
     n = min(total, MAX_ROWS)
