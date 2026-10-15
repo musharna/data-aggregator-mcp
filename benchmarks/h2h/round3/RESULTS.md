@@ -76,3 +76,38 @@ Per-run data: `scores_2026-10-11.json`.
 - The T3 key was first built on the backup topic (microplastics in lake sediment cores,
   3 firm studies) because the primary passed the 30-study cap; it was rebuilt on the
   primary, with a 40-study cap, before any run.
+
+## Rerun on 0.71.0, 2026-10-12
+
+The same five tasks, three arms and two runs, after the fixes the gap audit led to: CELLxGENE
+reads queries as the rest of the server does (#277), and the Metabolomics Workbench
+(#278) and MassIVE (#281) are searched natively. ToolUniverse and the web arm were
+unchanged. The 53 new entries the rerun listed were judged blind in the same way, by
+three judges who did not build the keys: 3 new qualifying studies (T3 A1, T4 A1, T4 A2),
+1 borderline (T4 B2), 22 copies of keyed studies and 27 that did not qualify. Both days
+are scored on the enlarged key, so the 0.69.1 numbers below are a little lower than in
+the table above (`scores_2026-10-11_rescored.json`, `scores_2026-10-12_071.json`).
+
+| task | dam 0.69.1 → 0.71.0 | tu | web |
+|---|---|---|---|
+| T1 | 0.36 → 0.48 | 0.16 → 0.12 | 0.24 → 0.32 |
+| T2 | 0.77 → 0.77 | 0.43 → 0.39 | 0.52 → 0.48 |
+| T3 | 0.59 → 0.61 | 0.27 → 0.39 | 0.25 → 0.27 |
+| T4 | 0.29 → 0.25 | 0.09 → 0.23 | 0.27 → 0.39 |
+| T5 | 0.43 → 0.66 | 0.36 → 0.36 | 0.48 → 0.70 |
+| **mean** | **0.49 → 0.55** | **0.26 → 0.30** | **0.35 → 0.43** |
+| precision | 0.82 → 0.86 | 0.97 → 0.89 | 0.89 → 0.82 |
+
+- **dam still leads, but the gain is not separable from day-to-day variation.** The two
+  arms that did not change moved by +0.04 (tu) and +0.08 (web), about as much as dam
+  (+0.07). With two runs per cell, this rerun cannot credit the fixes with a number.
+- **T5 is where the fixes aimed.** dam found S4 (Workbench) and S15 (MassIVE) in both
+  runs and S3 (Workbench) in one, none of which it found on 0.69.1; its T5 recall rose
+  from 0.43 to 0.66. web's rose about as much (0.48 to 0.70).
+- **NCBI was failing during the rerun.** Its taxonomy efetch answered about half of all
+  requests with HTTP 400 and a garbled body (11 of 20 plain requests at 17:08 EDT), so 8 of
+  dam's 10 runs carried `errors.taxonomy` and searched without organism resolution, so
+  dam's 0.71.0 numbers are a lower bound. 7 of tu's 10 runs also called NCBI; whether
+  they were hit was not checked.
+- A local mutation run used 8 of 22 cores for most of the rerun, so its wall times are
+  not comparable with round 3's.
