@@ -181,6 +181,13 @@ class DataResource(BaseModel):
     # PXD055071 showed only "nutrient stress" while its protocol held "nitrogen
     # depletion", and agents shown it in both R5 runs left it out (2026-10-06).
     unshown_terms: list[str] = Field(default_factory=list)
+    # On a search hit: the id of another copy of the same deposit (same DOI, accession or
+    # concept) that names more of the search than this one. A deposit ranks by its best
+    # copy, and the copy shown is the most fetchable; resolve the named one to see what
+    # matched. DataONE's
+    # copy of a Dryad deposit has no description, and topped "transcriptome" in Orobanche
+    # aegyptiaca on its DataCite twin's species list with nothing to say so (2026-10-12).
+    ranked_by_copy: str | None = None
 
 
 class TaxonAlternative(BaseModel):

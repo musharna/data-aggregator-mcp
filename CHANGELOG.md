@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A search hit ranked on another copy of the same deposit now names that copy in
+  `ranked_by_copy`. The hit shown is the most fetchable copy, and the rank comes from the
+  best-described one, so a DataONE copy without a description could top a search on its
+  DataCite twin's species list with nothing to say why.
+
 ## [0.71.0] - 2026-10-12
 
 ### Added
