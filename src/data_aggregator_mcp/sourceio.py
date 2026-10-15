@@ -42,6 +42,11 @@ _TIMEOUT_S = 30.0
 # The bytes as stored: under gzip transfer coding the declared length and every Range
 # offset would count compressed bytes, not the file's.
 _HEADERS = {"Accept-Encoding": "identity"}
+# Named once: httpx upper-cases a method and header names are case-insensitive, so a
+# spelling inline would be an equivalent mutant at every use.
+_GET = "GET"
+_RANGE = "Range"
+_CONTENT_LENGTH = "Content-Length"
 
 
 def _is_remote(url: str) -> bool:
@@ -83,8 +88,8 @@ def _raise_for_status(resp: httpx.Response, url: str) -> None:
 
 
 def _declared_length(resp: httpx.Response) -> int | None:
-    value = resp.headers.get("Content-Length", "")
-    return int(value) if value.isdigit() else None
+    value = resp.headers.get(_CONTENT_LENGTH)
+    return int(value) if value is not None and value.isdigit() else None
 
 
 def _remote_size(client: httpx.Client, url: str) -> int | None:
@@ -94,7 +99,7 @@ def _remote_size(client: httpx.Client, url: str) -> int | None:
             return _declared_length(resp)
         # Some servers refuse HEAD (405, or a URL signed for GET only): ask GET for its
         # headers and leave the body unread, as fsspec did.
-        with client.stream("GET", url) as resp:
+        with client.stream(_GET, url) as resp:
             _raise_for_status(resp, url)
             return _declared_length(resp)
 
@@ -162,10 +167,10 @@ class _RangeFile(io.RawIOBase):
         return len(data)
 
     def _get(self, start: int, want: int) -> bytes:
-        headers = {"Range": f"bytes={start}-{start + want - 1}"}
+        headers = {_RANGE: f"bytes={start}-{start + want - 1}"}
         with (
             _transport_errors(self._url),
-            self._client.stream("GET", self._url, headers=headers) as resp,
+            self._client.stream(_GET, self._url, headers=headers) as resp,
         ):
             if resp.status_code == 416:
                 return b""  # the range starts at or past the end of the file
@@ -208,7 +213,7 @@ def local_copy(url: str) -> Iterator[str]:
         return
     with tempfile.TemporaryDirectory(prefix="dam-operate-", ignore_cleanup_errors=True) as tmp:
         dest = Path(tmp) / "source"
-        with _client() as client, _transport_errors(url), client.stream("GET", url) as resp:
+        with _client() as client, _transport_errors(url), client.stream(_GET, url) as resp:
             _raise_for_status(resp, url)
             with dest.open("wb") as fh:
                 for chunk in resp.iter_bytes():
