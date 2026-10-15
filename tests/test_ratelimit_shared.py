@@ -21,7 +21,7 @@ import pytest
 
 from data_aggregator_mcp import _ratelimit
 from data_aggregator_mcp._ratelimit import SharedSchedule
-from tests.test_ratelimit import FakeClock
+from tests.test_ratelimit import FakeClock, InjectedSleepOnly
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _RATE = 100.0  # 600 slots fill 6 s, inside the 30 s queue horizon
@@ -116,9 +116,14 @@ async def test_an_unusable_slot_is_replaced_by_now(tmp_path, content, why) -> No
     assert waits == [pytest.approx(5.0)], why
 
 
-async def test_an_unlockable_schedule_paces_this_process_and_says_why(tmp_path, caplog) -> None:
+async def test_an_unlockable_schedule_paces_this_process_and_says_why(
+    tmp_path, caplog, monkeypatch
+) -> None:
+    monkeypatch.setattr(_ratelimit, "TokenBucket", InjectedSleepOnly)
     blocker = tmp_path / "a-file"
     blocker.write_text("")
+    with pytest.raises(OSError) as refused:  # what the claim will meet
+        blocker.mkdir(parents=True, exist_ok=True)
     clk = FakeClock()
     schedule = SharedSchedule(blocker / "ncbi.schedule", 2.0, now=clk.now, sleep=clk.sleep)
     with caplog.at_level(logging.WARNING, logger="data_aggregator_mcp._ratelimit"):
@@ -127,7 +132,7 @@ async def test_an_unlockable_schedule_paces_this_process_and_says_why(tmp_path, 
     warnings = [r.getMessage() for r in caplog.records]
     assert len(warnings) == 1, warnings  # said once, not per request
     assert warnings[0].startswith("NCBI requests are paced in this process only: cannot lock ")
-    assert str(blocker / "ncbi.schedule") in warnings[0]
+    assert warnings[0].endswith(f"cannot lock {blocker / 'ncbi.schedule'} ({refused.value})")
     # It still paces, with no burst: one slot free, the next half a second on.
     assert schedule._local is not None
     assert (schedule._local.rate, schedule._local.capacity) == (2.0, 1.0)

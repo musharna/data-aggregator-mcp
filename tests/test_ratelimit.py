@@ -1,20 +1,47 @@
+import time
+from collections.abc import Awaitable, Callable
+
 import pytest
 
 from data_aggregator_mcp import _ratelimit
-from data_aggregator_mcp._ratelimit import TokenBucket, _bucket_for, _rate_for
+from data_aggregator_mcp._ratelimit import TokenBucket, _bucket_for, _ncbi_rate
 
 
 class FakeClock:
-    """Deterministic clock: sleep() advances virtual time instead of waiting."""
+    """Deterministic clock: sleep() advances virtual time instead of waiting. A token
+    never needs more than a few waits, so a loop that keeps sleeping (often for 0 s)
+    without ever spending one fails here instead of spinning forever."""
 
     def __init__(self) -> None:
         self.t = 0.0
+        self.naps = 0
 
     def now(self) -> float:
         return self.t
 
     async def sleep(self, dt: float) -> None:
+        self.naps += 1
+        assert self.naps < 50, f"acquire is spinning: slept {self.naps} times, last {dt} s"
         self.t += dt
+
+
+class InjectedSleepOnly(TokenBucket):
+    """A bucket whose default ``sleep`` fails. ``SharedSchedule``'s per-process fallback
+    must pass its own sleep down; a bucket left on ``asyncio.sleep`` waits for real on a
+    fake clock that never moves, so the test would hang rather than fail."""
+
+    def __init__(
+        self,
+        rate: float,
+        capacity: float | None = None,
+        *,
+        now: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], Awaitable[None]] | None = None,
+    ) -> None:
+        async def not_passed_down(dt: float) -> None:
+            raise AssertionError(f"waited {dt} s on asyncio.sleep, not the injected sleep")
+
+        super().__init__(rate, capacity, now=now, sleep=sleep or not_passed_down)
 
 
 @pytest.fixture(autouse=True)
@@ -77,9 +104,9 @@ def test_ncbi_rate_responds_to_api_key(monkeypatch):
     """Two thirds of NCBI's ceiling: 3/s keyless, 10/s with a key."""
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     monkeypatch.delenv("NCBI_EMAIL", raising=False)
-    assert _rate_for("ncbi") == pytest.approx(2.0)
+    assert _ncbi_rate() == pytest.approx(2.0)
     monkeypatch.setenv("NCBI_API_KEY", "abc")
-    assert _rate_for("ncbi") == pytest.approx(20 / 3)
+    assert _ncbi_rate() == pytest.approx(20 / 3)
 
 
 def test_ncbi_rate_email_only_is_still_keyless(monkeypatch):
@@ -87,8 +114,6 @@ def test_ncbi_rate_email_only_is_still_keyless(monkeypatch):
     not elevated access, so the rate stays at the keyless one."""
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     monkeypatch.setenv("NCBI_EMAIL", "user@example.com")
-    from data_aggregator_mcp._ratelimit import _ncbi_rate
-
     assert _ncbi_rate() == pytest.approx(2.0)
 
 

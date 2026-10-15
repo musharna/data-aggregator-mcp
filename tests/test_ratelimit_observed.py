@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 import pytest
 
 from data_aggregator_mcp import _ratelimit
 from data_aggregator_mcp._ratelimit import TokenBucket
-from tests.test_ratelimit import FakeClock
+from tests.test_ratelimit import FakeClock, InjectedSleepOnly
 
 
 @pytest.fixture(autouse=True)
@@ -139,3 +140,53 @@ async def test_an_unparseable_url_is_paced_by_its_label() -> None:
     await _ratelimit.acquire("Zenodo search", "http://[::1")
     assert list(_ratelimit._BUCKETS) == ["ncbi", "default"]
     assert _ratelimit._BUCKETS["ncbi"].rate == pytest.approx(_ratelimit._ncbi_rate())
+
+
+async def test_without_flock_the_schedule_paces_this_process_and_touches_no_file(
+    tmp_path, caplog, monkeypatch
+) -> None:
+    """Windows has no ``fcntl``: the schedule paces this process alone from the start,
+    with no burst, through the sleep it was given, and never opens the lock file."""
+    monkeypatch.setattr(_ratelimit, "fcntl", None)
+    monkeypatch.setattr(_ratelimit, "TokenBucket", InjectedSleepOnly)
+    clk = FakeClock()
+    path = tmp_path / "state" / "ncbi.schedule"
+    schedule = _ratelimit.SharedSchedule(path, 2.0, now=clk.now, sleep=clk.sleep)
+    with caplog.at_level(logging.WARNING, logger="data_aggregator_mcp._ratelimit"):
+        for _ in range(3):
+            await schedule.acquire()
+    assert clk.t == pytest.approx(1.0)  # positive control: one free slot, then 0.5 s apart
+    assert clk.naps == 2
+    assert not path.parent.exists()
+    assert caplog.records == []  # nothing failed, so nothing to say
+
+
+async def test_a_missing_state_directory_is_created_with_its_parents(tmp_path, caplog) -> None:
+    """A fresh machine has no ``~/.cache`` either: the claim creates the whole path, so the
+    schedule is shared from the first request instead of falling back per process."""
+    clk = FakeClock()
+    clk.t = 1000.0
+    path = tmp_path / "cache" / "data-aggregator-mcp" / "ncbi.schedule"
+    schedule = _ratelimit.SharedSchedule(path, 4.0, now=clk.now, sleep=clk.sleep)
+    with caplog.at_level(logging.WARNING, logger="data_aggregator_mcp._ratelimit"):
+        await schedule.acquire()
+        await schedule.acquire()
+    assert caplog.records == []
+    assert schedule._local is None  # still the shared schedule
+    assert float(path.read_bytes()) == 1000.5  # two slots claimed from the file
+    assert clk.t == 1000.25  # the second waited one period
+
+
+async def test_a_slot_exactly_the_horizon_ahead_is_honoured(tmp_path) -> None:
+    clk = FakeClock()
+    clk.t = 1000.0
+    path = tmp_path / "s"
+    path.write_bytes(repr(1000.0 + _ratelimit._MAX_AHEAD).encode())
+    await _ratelimit.SharedSchedule(path, 4.0, now=clk.now, sleep=clk.sleep).acquire()
+    assert clk.t == 1000.0 + _ratelimit._MAX_AHEAD  # a full queue, waited out
+    # Control: a quarter second further ahead is a jumped clock, replaced by now.
+    path.write_bytes(repr(clk.t + _ratelimit._MAX_AHEAD + 0.25).encode())
+    before = clk.t
+    await _ratelimit.SharedSchedule(path, 4.0, now=clk.now, sleep=clk.sleep).acquire()
+    assert clk.t == before
+    assert float(path.read_bytes()) == before + 0.25
