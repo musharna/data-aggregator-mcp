@@ -25,15 +25,18 @@ query word also matches its plural with "s".
 
 from __future__ import annotations
 
+import math
 import re
-from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from collections import Counter
+from collections.abc import Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, TypeVar
 
 from data_aggregator_mcp.models import DataResource
 
 if TYPE_CHECKING:  # _ontology imports taxonomy, which imports this module
     from data_aggregator_mcp._ontology import FacetGroup
 
+_T = TypeVar("_T")
 _NON_WORD = re.compile(r"[\W_]+")
 # A double-quoted phrase or a run of non-space characters; neither nests a quantifier.
 _PHRASE_OR_WORD = re.compile(r'"([^"]*)"|(\S+)')
@@ -148,6 +151,33 @@ def any_word(query: str) -> str | None:
         return None
     kept = [w for w in words if w.casefold() not in _STOP_WORDS]
     return " OR ".join(kept) if len(kept) > 1 else None
+
+
+def holding_words(
+    items: Iterable[_T],
+    holds: Callable[[_T, str], bool],
+    terms: Sequence[str],
+    *,
+    some_words: bool = False,
+) -> list[_T]:
+    """The ``items`` holding every one of ``terms``, in their order. With
+    ``some_words``, those holding only some of them instead: the any-word fill of a
+    source that matches words in our code. Its page is fetched from the top, so the best
+    come first: those holding more of the words, then those holding rarer ones (fewer
+    of ``items`` hold them). For "tendon scRNA-seq" every collection of the fill holds
+    one word, and CELLxGENE's list order put the 4 holding "tendon" past the first page,
+    behind 63 holding "scRNA-seq" (2026-10-16)."""
+    held = [([t for t in terms if holds(item, t)], item) for item in items]
+    if not some_words:
+        return [item for words, item in held if len(words) == len(terms)]
+    some = [h for h in held if 0 < len(h[0]) < len(terms)]
+    df = Counter(t for words, _ in some for t in words)
+
+    def rank(h: tuple[list[str], _T]) -> tuple[int, float]:
+        return len(h[0]), -sum(math.log(df[t]) for t in h[0])
+
+    # Stable: items holding words as many and as rare keep their order.
+    return [item for _, item in sorted(some, key=rank, reverse=True)]
 
 
 def _text(record: DataResource) -> str:

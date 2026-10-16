@@ -36,6 +36,10 @@ QUERY_PLURALS = True
 # nitrogen" 255, "+ starvation" 71, "+ phosphoproteomics" 4; probed 2026-10-05), so the
 # router names this source when a multi-word search comes back empty.
 REQUIRES_EVERY_WORD = True
+# Its records holding only some of the words are searched too, below those holding every
+# one (``router._source_streams``): the agents' round-3 coral queries that found no key
+# study there found one in the top 10 with the words ORed (5 of 27, probed 2026-10-16).
+ANY_WORD_FILL = True
 MAX_RETRIES = 2
 _ACCEPT_JSON = {"Accept": "application/json"}
 # A module constant: mutmut does not mutate those, and a lower-cased method is the same

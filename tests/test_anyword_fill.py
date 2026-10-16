@@ -14,7 +14,7 @@ import types
 import httpx
 import pytest
 
-from data_aggregator_mcp import _cursor, datacite, router
+from data_aggregator_mcp import _cursor, cellxgene, datacite, mwb, omicsdi, router
 from data_aggregator_mcp.models import DataResource
 
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
@@ -152,8 +152,45 @@ async def test_every_word_sources_with_and_without_the_fill_are_named_apart(monk
     )
 
 
-def test_datacite_declares_every_word_and_the_fill() -> None:
-    assert datacite.REQUIRES_EVERY_WORD is True and datacite.ANY_WORD_FILL is True
+def test_the_sources_declaring_the_fill() -> None:
+    """Probed 2026-10-16 over the round-3 agents' queries: NCBI's ORed words hold millions
+    of records, newest first, and no key study in their top 50, so NCBI has no fill.
+    MassIVE's would cost a request per word, and the probe drew HTTP 429."""
+    filled = {n for n, a in router._ADAPTERS.items() if getattr(a, "ANY_WORD_FILL", False)}
+    assert filled == {"cellxgene", "datacite", "mwb", "omicsdi"}
+    in_code = {n for n, a in router._ADAPTERS.items() if getattr(a, "FILLS_IN_CODE", False)}
+    assert in_code == {"cellxgene", "mwb"}
+    every = {n for n, a in router._ADAPTERS.items() if getattr(a, "REQUIRES_EVERY_WORD", False)}
+    assert filled <= every
+
+
+async def test_a_source_matching_words_in_code_is_asked_for_some_words(monkeypatch) -> None:
+    calls: list[tuple[str, bool]] = []
+
+    async def search(client, q, *, size=10, offset=0, some_words=False):
+        calls.append((q, some_words))
+        hits = [_hit("c", "s1", "bee")] if some_words else []
+        return len(hits), hits
+
+    monkeypatch.setattr(
+        router,
+        "_ADAPTERS",
+        {
+            "c": types.SimpleNamespace(
+                search=search,
+                PREFIXES=frozenset(),
+                REQUIRES_EVERY_WORD=True,
+                ANY_WORD_FILL=True,
+                FILLS_IN_CODE=True,
+            )
+        },
+    )
+    async with httpx.AsyncClient() as c:
+        page = await router.search_page(c, query=_Q, size=10)
+    # The query as written, twice: never an OR form it cannot read.
+    assert sorted(calls) == [(_Q, False), (_Q, True)]
+    assert [r.id for r in page.results] == ["c:s1"] and page.total == 0
+    assert page.errors["all_words"].startswith("c held no record with every word")
 
 
 @pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
@@ -169,3 +206,29 @@ async def test_live_datacite_fill_finds_a_study_missing_one_query_word() -> None
     assert any(i.startswith(hydat) for i in ids), ids
     assert page.total == 0
     assert page.errors["all_words"].startswith("datacite held no record with every word")
+
+
+_CORAL = "coral lipidomics thermal stress"
+
+
+@pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+@pytest.mark.parametrize(
+    ("source", "every_word", "query", "key"),
+    [
+        # Round 3 T2 S2 (Hamstring tendon single-nucleus atlas).
+        ("cellxgene", cellxgene.search, "tendon scRNA-seq", "d2684035-a36e-458e-96af-8e37930bfdf6"),
+        # Round 3 T5 S4 (acute heat stress, coral carbon budgets) and S1 (MetaboLights).
+        ("mwb", mwb.search, _CORAL, "ST004329"),
+        ("omicsdi", omicsdi.search, _CORAL, "MTBLS5272"),
+    ],
+)
+async def test_live_the_fill_finds_a_key_study_the_query_as_written_misses(
+    source, every_word, query, key
+) -> None:
+    async with httpx.AsyncClient(timeout=90) as c:
+        total, _ = await every_word(c, query, size=1)
+        page = await router.search_page(c, query=query, sources=[source], size=10)
+    assert total == 0  # control: the words as written find nothing
+    found = {i for r in page.results for i in (r.id, *r.accessions)}
+    assert any(key in i for i in found), sorted(found)
+    assert page.errors["all_words"].startswith(f"{source} held no record with every word")

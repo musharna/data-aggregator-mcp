@@ -295,12 +295,36 @@ async def test_the_router_names_mwb_when_every_word_empties_it(monkeypatch):
     sent: list[str] = []
     async with _client(sent, _titles(**_TITLE)) as c:
         monkeypatch.setattr(router, "_ADAPTERS", {"mwb": mwb})
-        page = await router.search_page(c, query="coral zebrafish", sources=["mwb"])
+        page = await router.search_page(c, query="zebrafish gills", sources=["mwb"])
         assert page.errors["all_words"].startswith("mwb matched nothing: it returns ")
+        # The coral studies name one of the words: they are shown, and the note says so.
+        page = await router.search_page(c, query="coral zebrafish", sources=["mwb"])
+        assert page.errors["all_words"].startswith("mwb held no record with every word")
+        assert page.total == 0
+        assert [r.id for r in page.results] == ["mwb:ST004329", "mwb:ST004143", "mwb:ST002933"]
         # Positive control: words a study names are no note.
-        page = await router.search_page(c, query="coral heat", sources=["mwb"])
+        page = await router.search_page(c, query="coral heat", sources=["mwb"], size=3)
     assert "all_words" not in page.errors
-    assert [r.id for r in page.results] == ["mwb:ST004329"]
+    assert page.results[0].id == "mwb:ST004329"
+
+
+@pytest.mark.asyncio
+async def test_some_words_keeps_the_studies_naming_only_some_naming_more_first():
+    (total, recs), _ = await _search("coral heat zebrafish")
+    assert (total, recs) == (0, [])
+    (total, recs), sent = await _search("coral heat zebrafish", some_words=True, size=50)
+    assert sent == ["study_title/coral", "study_title/heat", "study_title/zebrafish"]
+    ids = [r.id for r in recs]
+    # ST004329 names coral and heat; then the 2 naming coral alone, the rarer word (3 of
+    # the 22 name it, 20 heat); then those naming heat, newest first.
+    assert ids[:3] == ["mwb:ST004329", "mwb:ST004143", "mwb:ST002933"]
+    assert ids[3:] == sorted(ids[3:], reverse=True)
+    assert total == len(ids) == 22
+    # A study naming every word is not among them.
+    (_, every), _ = await _search("coral heat")
+    (_, some), _ = await _search("coral heat", some_words=True, size=50)
+    assert [r.id for r in every] == ["mwb:ST004329"]
+    assert "mwb:ST004329" not in {r.id for r in some} and len(some) == 21
 
 
 # --- live ---------------------------------------------------------------------------------

@@ -374,7 +374,11 @@ def _source_streams(
     T4, DataCite's top 50 for the agents' own queries held 8 of the 24 key studies it
     holds, and 16 with the words ORed, the 8 among them (2026-10-15). With ``any_words``
     off (a cursor minted before, or a multi-query variant) or a query of one word or with
-    syntax, there is no such stream."""
+    syntax, there is no such stream. An adapter that also declares ``FILLS_IN_CODE``
+    matches the words in our code, which reads no OR, so the fill asks it for the query
+    with ``some_words=True`` instead: CELLxGENE and the Metabolomics Workbench, where the
+    agents' round-3 queries that found no key study found one at rank 1 or 2 so asked
+    (5 of 23 and 10 of 27, probed 2026-10-16)."""
     wanted = _pushdown.active(filters)
     out: list[_Stream] = []
     for name, adapter in adapters.items():
@@ -432,7 +436,13 @@ def _source_streams(
                 any_word(plain) if any_words and getattr(adapter, "ANY_WORD_FILL", None) else None
             )
             if some:
-                fill = _adapter_call(client, adapter, f"({some}) AND NOT ({q})", plurals, pushed)
+                fill = (
+                    functools.partial(
+                        _adapter_call(client, adapter, q, plurals, pushed), some_words=True
+                    )
+                    if getattr(adapter, "FILLS_IN_CODE", None)
+                    else _adapter_call(client, adapter, f"({some}) AND NOT ({q})", plurals, pushed)
+                )
                 parts.append((f"{name}/any", name, fill))
         residual = any(k not in pushed for k in wanted)
         every_word = bool(getattr(adapter, "REQUIRES_EVERY_WORD", None))

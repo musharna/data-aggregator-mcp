@@ -160,8 +160,11 @@ async def test_cellxgene_is_named_when_every_word_empties_it(monkeypatch) -> Non
         ]
 
     monkeypatch.setattr(cellxgene, "_collections", collections)
-    errors = await _errors(monkeypatch, {"cellxgene": cellxgene}, query="tendon scRNA-seq")
+    errors = await _errors(monkeypatch, {"cellxgene": cellxgene}, query="kidney scRNA-seq")
     assert errors["all_words"].startswith("cellxgene matched nothing: it returns ")
+    # The collection holds "tendon", so it is shown as holding only some of the words.
+    errors = await _errors(monkeypatch, {"cellxgene": cellxgene}, query="tendon scRNA-seq")
+    assert errors["all_words"].startswith("cellxgene held no record with every word")
     # positive control: the same source, a query the record holds every word of
     errors = await _errors(monkeypatch, {"cellxgene": cellxgene}, query="hamstring tendon")
     assert "all_words" not in errors
