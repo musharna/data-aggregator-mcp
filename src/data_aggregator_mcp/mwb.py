@@ -28,7 +28,7 @@ from urllib.parse import quote
 import httpx
 
 from data_aggregator_mcp import _http
-from data_aggregator_mcp._relevance import _names, query_terms
+from data_aggregator_mcp._relevance import _names, holding_words, query_terms
 from data_aggregator_mcp._relevance import _normalize as _normalize_words
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.license_compat import normalize_spdx
@@ -45,6 +45,10 @@ MAX_SIZE = 50
 # A study must name every word of the query, so the router names this source when a
 # multi-word search empties it.
 REQUIRES_EVERY_WORD = True
+# Its studies naming only some of the words are searched too, below those naming every
+# one (``router._source_streams``); matched here, so asked for with some_words.
+ANY_WORD_FILL = True
+FILLS_IN_CODE = True
 # A substring of one or two letters is in most titles, and the answer's cost grows with
 # its size ("metabolomics" 912 studies in 5.9 s, the whole list 91 s; 2026-10-11). Such a
 # word is still required of every study kept; it is sent only when it is all there is.
@@ -134,10 +138,16 @@ def _text(s: dict) -> str:
 
 
 async def search(
-    client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
+    client: httpx.AsyncClient,
+    query: str,
+    *,
+    size: int = DEFAULT_SIZE,
+    offset: int = 0,
+    some_words: bool = False,
 ) -> tuple[int, list[DataResource]]:
-    """Workbench studies naming every word of ``query``, newest first: (total, compact
-    resources)."""
+    """Workbench studies naming every word of ``query``, newest first; with
+    ``some_words``, those naming only some of them, the ones naming more first: (total,
+    compact resources)."""
     terms = query_terms(query)
     if not terms:
         raise ValueError(
@@ -148,11 +158,8 @@ async def search(
         *(_get(client, "study_title", t, service="Metabolomics Workbench search") for t in sent)
     )
     studies = {s["study_id"]: s for page in pages for s in page}
-    matched = sorted(
-        (s for s in studies.values() if all(_names(_text(s), t) for t in terms)),
-        key=lambda s: s["study_id"],
-        reverse=True,
-    )
+    newest = sorted(studies.values(), key=lambda s: s["study_id"], reverse=True)
+    matched = holding_words(newest, lambda s, t: _names(_text(s), t), terms, some_words=some_words)
     capped = min(size, MAX_SIZE)
     return len(matched), [compact(_normalize(s)) for s in matched[offset : offset + capped]]
 

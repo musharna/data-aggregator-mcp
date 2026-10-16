@@ -6,6 +6,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- OmicsDI, CELLxGENE and the Metabolomics Workbench, which like DataCite match only
+  records holding every query word, are now also searched for records holding only some
+  of them, ranked below the hits naming more. Over round 3's agent queries, the queries
+  that found no key study there found one in the top 10: 5 of 27 on OmicsDI, 5 of 23 on
+  CELLxGENE, 10 of 27 on the Workbench. CELLxGENE and the Workbench put the records
+  holding more of the words, then rarer ones, first: "tendon scRNA-seq" now finds the
+  tendon atlases. NCBI omics has no such search (its words ORed hold millions of
+  records, newest first, with no key study in the top 50), nor MassIVE (a request per
+  word). The `search` description names which sources do what. A cursor from an earlier
+  version pages on without the new searches.
+
 ## [0.73.1] - 2026-10-16
 
 ### Fixed

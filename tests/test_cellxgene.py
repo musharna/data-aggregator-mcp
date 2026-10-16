@@ -109,6 +109,25 @@ async def test_search_all_terms_must_match_and_paginates():
         assert total2 == 2 and recs2[0].id == "cellxgene:col-brain-2"  # 2nd of 2 "normal" matches
 
 
+@pytest.mark.asyncio
+async def test_some_words_keeps_collections_holding_only_some_holding_more_first():
+    async def handler(request):
+        return httpx.Response(200, json=_COLLECTIONS)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        # The brain collection holds cortex, single and cell; the lung one only human.
+        assert await cellxgene.search(c, "human cortex single cell") == (0, [])
+        total, recs = await cellxgene.search(c, "human cortex single cell", some_words=True)
+        assert total == 2
+        assert [r.id for r in recs] == ["cellxgene:col-brain-2", "cellxgene:col-lung-1"]
+        # A collection holding every word is not among them; one holding none neither.
+        total, recs = await cellxgene.search(c, "mouse cortex", some_words=True)
+        assert (total, recs) == (0, [])
+        # Holding one word each, they keep the list's order.
+        total, recs = await cellxgene.search(c, "mouse lung", some_words=True)
+        assert [r.id for r in recs] == ["cellxgene:col-lung-1", "cellxgene:col-brain-2"]
+
+
 # Collection ids are UUIDs (resolve rejects anything else before the network).
 _LUNG = "af893e86-8e9f-41f1-a474-ef05359b1fb7"
 _DETAIL = {

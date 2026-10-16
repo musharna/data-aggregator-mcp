@@ -27,7 +27,7 @@ import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp._relevance import _normalize as _normalize_words
-from data_aggregator_mcp._relevance import query_terms
+from data_aggregator_mcp._relevance import holding_words, query_terms
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import (
     Creator,
@@ -53,6 +53,10 @@ MAX_RETRIES = 2
 # A collection must hold every word of the query, so the router names this source when a
 # multi-word search empties it: "tendon scRNA-seq" 0, "tendon single cell" 4 (2026-10-11).
 REQUIRES_EVERY_WORD = True
+# Its collections holding only some of the words are searched too, below those holding
+# every one (``router._source_streams``); matched here, so asked for with some_words.
+ANY_WORD_FILL = True
+FILLS_IN_CODE = True
 
 _ACCEPT_JSON = {"Accept": "application/json"}
 
@@ -183,13 +187,22 @@ async def _collections(client: httpx.AsyncClient) -> list[dict]:
 
 
 async def search(
-    client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
+    client: httpx.AsyncClient,
+    query: str,
+    *,
+    size: int = DEFAULT_SIZE,
+    offset: int = 0,
+    some_words: bool = False,
 ) -> tuple[int, list[DataResource]]:
+    """Collections holding every term of ``query``; with ``some_words``, those holding
+    only some of them, the ones holding more first: (total, compact resources)."""
     collections = await _collections(client)
     # Raw whitespace tokens missed "Single nucleus ... hamstring tendon" for "tendon
     # single-nucleus human" and needed a literal "or" for "A OR B" (round 3, 2026-10-11).
     terms = query_terms(query)
-    matched = [c for c in collections if all(t in _searchable(c) for t in terms)]
+    matched = holding_words(
+        collections, lambda c, t: t in _searchable(c), terms, some_words=some_words
+    )
     capped = min(size, MAX_SIZE)
     return len(matched), [compact(_normalize(c)) for c in matched[offset : offset + capped]]
 
