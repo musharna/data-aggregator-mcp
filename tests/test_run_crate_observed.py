@@ -307,12 +307,14 @@ def test_failed_source_names_every_real_router_stream(vi: int | None) -> None:
     streams = router._source_streams(
         None,  # type: ignore[arg-type]  # the calls are only built, never awaited
         sources.ADAPTERS,
-        expanded="q",
-        plain="q",
+        expanded="snow leopard",
+        plain="snow leopard",
         filters={},
         pushdown=False,
         plurals=True,
         title_tier=True,
+        deposit_tier=True,
+        any_words=True,
         vi=vi,
     )
     named = {s.label: run_crate._failed_source(s.label) for s in streams}
@@ -321,6 +323,9 @@ def test_failed_source_names_every_real_router_stream(vi: int | None) -> None:
     # The title half of a split source is that source, not a sub-source called "title".
     assert named[f"zenodo/title{suffix}"] == "zenodo"
     assert named[f"datacite/title{suffix}"] == "datacite"
+    assert named[f"datacite/deposits{suffix}"] == "datacite"
+    if vi is None:  # a multi-query variant has no fill (``_source_streams``)
+        assert named["datacite/any"] == "datacite"
     assert named[f"omics/sra{suffix}"] == "sra"
     assert named[f"literature/openaire{suffix}"] == "openaire"
     # every stream the router can fail is named as a source
@@ -333,6 +338,13 @@ def test_a_title_key_names_a_source_only_for_an_adapter_with_a_title_field() -> 
     # Control: an adapter with no TITLE_FIELD has no title half, so the key is no source.
     assert run_crate._failed_source("gbif/title") is None
     assert run_crate._failed_source("gbif") == "gbif"
+
+
+def test_a_deposits_key_names_a_source_only_for_an_adapter_with_a_deposit_clause() -> None:
+    assert run_crate._failed_source("datacite/deposits") == "datacite"
+    assert run_crate._failed_source("zenodo/deposits") == "zenodo"
+    # Control: an adapter with no DEPOSIT_CLAUSE has no deposits stream.
+    assert run_crate._failed_source("gbif/deposits") is None
 
 
 def test_sources_queried_lists_sources_not_run_notes() -> None:

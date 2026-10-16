@@ -6,6 +6,31 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- DataCite matches only records holding every query word, so a long query found nothing
+  there when a record lacked one word: 10 of the 18 queries agents sent in round 3's
+  honeybee task returned no DataCite hit, and its top 50 held 10 of that task's key
+  studies. DataCite is now also asked for the records holding only some of the words,
+  which rank below the hits naming more; over the same queries its top 50 held 19, none
+  lost, and the all-source first page 15 where it held 9. `total` still counts only the
+  records holding every word. DataCite now reports `errors.all_words` and
+  `unshown_terms` like the other every-word sources.
+- The `search` description says DataCite needs every word and that `sources` is best
+  left unset, since a dataset is often held only by a general archive: in round 3, two
+  coral studies were missed by searches sent only to the metabolomics sources.
+
+### Fixed
+
+- A query holding a word that ends in a colon, as a pasted title does ("BEEHIVE: a
+  public dataset of Apis mellifera images ..."), found nothing on DataCite, whose query
+  language read "BEEHIVE:" as a field name; Zenodo read it the same way. DataCite and
+  Zenodo are now sent such a colon escaped, and the BEEHIVE study ranks first for its own
+  title. A field with its value attached (`title:wolf`) is sent as written.
+- A search run with `provenance=true` left a failed DataCite or Zenodo deposits stream
+  out of the Run Crate's failed sources, so the crate named the run as complete for that
+  source.
+
 ## [0.72.0] - 2026-10-15
 
 ### Added

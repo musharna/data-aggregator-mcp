@@ -17,7 +17,7 @@ import httpx
 
 from data_aggregator_mcp import _http, _pushdown
 from data_aggregator_mcp._cache import MISS, TTLCache
-from data_aggregator_mcp._relevance import with_plurals
+from data_aggregator_mcp._relevance import escape_stray_colons, with_plurals
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import (
     Creator,
@@ -282,6 +282,7 @@ async def search(
     unchanged.
     """
     capped = min(size, MAX_SIZE)
+    query = escape_stray_colons(query)
     params = {
         "q": _pushdown.with_clauses(
             with_plurals(query) if plurals else query, _filter_clauses(filters or {})

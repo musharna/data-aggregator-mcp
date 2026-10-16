@@ -87,13 +87,19 @@ def _errors(result: SearchResult) -> list[dict[str, Any]]:
     ]
 
 
+# The streams the router splits off one adapter's search, by the declaration that makes each.
+_SPLITS = {"title": "TITLE_FIELD", "deposits": "DEPOSIT_CLAUSE", "any": "ANY_WORD_FILL"}
+
+
 def _failed_source(key: str) -> str | None:
     """The data source a ``SearchResult.errors`` key reports as failed, named as that
     source's records name it, or None when the key is not a source.
 
     The router keys a failed stream by the adapter (``zenodo``) or, for a composite
-    adapter, ``<adapter>/<sub>`` (``omics/sra``, whose records say ``sra``), or, for the
-    title half of an adapter with a ``TITLE_FIELD``, ``<adapter>/title``, with ``#v<n>``
+    adapter, ``<adapter>/<sub>`` (``omics/sra``, whose records say ``sra``), or, for a
+    stream the router splits off one adapter's search, ``<adapter>/<split>`` (``title``
+    for a ``TITLE_FIELD``, ``deposits`` for a ``DEPOSIT_CLAUSE``, ``any`` for an
+    ``ANY_WORD_FILL``), with ``#v<n>``
     appended for a multi-query variant (``router._source_streams``). Every
     other key is a note about the run (``filters``, ``semantic``, ``query_syntax``,
     ``understand``, ``multi_query``) or a failed ontology lookup (``taxonomy``,
@@ -105,7 +111,7 @@ def _failed_source(key: str) -> str | None:
     adapter = sources.ADAPTERS.get(name)
     if adapter is None:
         return None
-    if not sub_mark or (sub == "title" and getattr(adapter, "TITLE_FIELD", None)):
+    if not sub_mark or (sub in _SPLITS and getattr(adapter, _SPLITS[sub], None)):
         return name
     return sub if sub in getattr(adapter, "SUBSOURCES", ()) else None
 

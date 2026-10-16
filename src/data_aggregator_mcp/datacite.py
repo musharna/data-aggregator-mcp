@@ -32,7 +32,7 @@ from data_aggregator_mcp import (
     osf,
     zenodo,
 )
-from data_aggregator_mcp._relevance import with_plurals
+from data_aggregator_mcp._relevance import escape_stray_colons, with_plurals
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.license_compat import host_matches
 from data_aggregator_mcp.models import (
@@ -61,6 +61,12 @@ QUERY_PLURALS = True
 # For "snow leopard": 221 of the 480 hits hold it in a title, and 221 + 259 with
 # "AND NOT" the clause = 480 (probed 2026-10-06).
 TITLE_FIELD = "titles.title"
+# Matches only records holding every query word: "honey bee images dataset" 92 hits, its
+# words ORed 10.5M (probed 2026-10-15), and 10 of the 18 queries an agent sent in round 3
+# T4 found nothing here. So the router also asks for the records holding only some of
+# the words, which rank below those naming more.
+REQUIRES_EVERY_WORD = True
+ANY_WORD_FILL = True
 
 # DataCite types.resourceTypeGeneral → DataResource.kind
 _KIND_FIELD = "types.resourceTypeGeneral"
@@ -401,6 +407,7 @@ async def search(
     DataCite evaluates them and ``total_hits`` is the filtered total. None/empty sends
     ``query`` unchanged."""
     capped = min(size, MAX_SIZE)
+    query = escape_stray_colons(query)
     words = with_plurals(query) if plurals else query
     q = _pushdown.with_clauses(words, _filter_clauses(filters or {}))
     # With no sort (or an unknown one) DataCite orders by most recently updated, so a

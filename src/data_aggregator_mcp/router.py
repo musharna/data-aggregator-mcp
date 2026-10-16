@@ -47,7 +47,7 @@ from data_aggregator_mcp import query_understanding as query_understanding_mod
 from data_aggregator_mcp import relate as relate_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
-from data_aggregator_mcp._relevance import MatchTiers, title_clause, with_plurals
+from data_aggregator_mcp._relevance import MatchTiers, any_word, title_clause, with_plurals
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import (
     SEARCH_LIST_LIMITS,
@@ -305,6 +305,9 @@ class _Stream:
     # The upstream matches only records holding every query word (the adapter's
     # ``REQUIRES_EVERY_WORD``), so an extra word can empty it (errors["all_words"]).
     every_word: bool = False
+    # The records of an every-word upstream holding only some of the query words
+    # (``ANY_WORD_FILL``): its total, any record holding one word, is not the search's.
+    fill: bool = False
 
 
 def _source_streams(
@@ -319,6 +322,7 @@ def _source_streams(
     title_tier: bool = False,
     deposit_tier: bool = False,
     plural_streams: bool = False,
+    any_words: bool = False,
     vi: int | None = None,
     groups: Sequence[FacetGroup] = (),
     notes: list[str] | None = None,
@@ -361,7 +365,16 @@ def _source_streams(
     221 snow leopard title matches of every type, and ranked the figshare datasets S29 and
     S32 120th and 114th among them, behind papers; among its 62 datasets they are 42nd
     and 39th (2026-10-07). With ``deposit_tier`` off (a cursor minted before), or a kind
-    filter already sent upstream, the title matches stay one stream."""
+    filter already sent upstream, the title matches stay one stream.
+
+    An adapter declaring ``ANY_WORD_FILL`` (its upstream needs every word) is also sent
+    the records holding only some of a plain-words query's words, as a stream of its own
+    (``<name>/any``: the words ORed, NOT the query), so a record lacking one word of a
+    long query is still found; the ranking puts it below the hits naming more. In round 3
+    T4, DataCite's top 50 for the agents' own queries held 8 of the 24 key studies it
+    holds, and 16 with the words ORed, the 8 among them (2026-10-15). With ``any_words``
+    off (a cursor minted before, or a multi-query variant) or a query of one word or with
+    syntax, there is no such stream."""
     wanted = _pushdown.active(filters)
     out: list[_Stream] = []
     for name, adapter in adapters.items():
@@ -415,9 +428,16 @@ def _source_streams(
                 ]
             else:
                 parts = [(name, name, _adapter_call(client, adapter, q, plurals, pushed))]
+            some = (
+                any_word(plain) if any_words and getattr(adapter, "ANY_WORD_FILL", None) else None
+            )
+            if some:
+                fill = _adapter_call(client, adapter, f"({some}) AND NOT ({q})", plurals, pushed)
+                parts.append((f"{name}/any", name, fill))
         residual = any(k not in pushed for k in wanted)
         every_word = bool(getattr(adapter, "REQUIRES_EVERY_WORD", None))
         for skey, src, fn in parts:
+            filling = skey == f"{name}/any"
             key, label = (skey, skey) if vi is None else (_comp_key(vi, skey), f"{skey}#v{vi}")
             out.append(
                 _Stream(
@@ -426,7 +446,8 @@ def _source_streams(
                     call=fn,
                     source=src,
                     post_filtered=residual,
-                    every_word=every_word,
+                    every_word=every_word and not filling,
+                    fill=filling,
                 )
             )
     return out
@@ -579,7 +600,7 @@ async def _fetch_page(
             fetched[s.key], totals[s.key] = [], 0
             continue
         stream_total, recs = outcome
-        total += stream_total
+        total += 0 if s.fill else stream_total
         fetched[s.key], totals[s.key] = list(recs), stream_total
     # A source is empty when every one of its streams (one per query variant) answered
     # and matched nothing; a variant that found something, or failed, says otherwise.
@@ -1026,6 +1047,8 @@ async def search_page(
         deposit_tier = bool(st.get("dt"))
         # And one minted before NCBI's plural streams holds no offsets for them.
         plural_streams = bool(st.get("ps"))
+        # And one minted before the any-word fill holds no offsets for it.
+        any_words = bool(st.get("aw"))
         errors: dict[str, str] = {}
     else:
         if query is None:
@@ -1198,6 +1221,7 @@ async def search_page(
         title_tier = True
         deposit_tier = True
         plural_streams = True
+        any_words = True
 
     adapters = _select(sources)
     names = list(adapters)
@@ -1213,6 +1237,7 @@ async def search_page(
         title_tier=title_tier,
         deposit_tier=deposit_tier,
         plural_streams=plural_streams,
+        any_words=any_words,
         groups=groups,
         notes=notes,
     )
@@ -1260,6 +1285,7 @@ async def search_page(
                 "tt": title_tier,
                 "dt": deposit_tier,
                 "ps": plural_streams,
+                "aw": any_words,
             }
             | ({"fg": _encode_groups(groups)} if groups else {})
         )
