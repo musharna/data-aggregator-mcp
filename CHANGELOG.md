@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- When DataCite held no record with every word of a query but did hold records with
+  some of them, a search returned those records with `total: 0` and nothing in
+  `errors`, so it read as a fault: the records holding some words counted as DataCite
+  matching the query, which kept `errors.all_words` from being given. It is now given,
+  and says that DataCite's hits hold only some of the words and that `total` does not
+  count them.
+
 ## [0.73.0] - 2026-10-16
 
 ### Changed
