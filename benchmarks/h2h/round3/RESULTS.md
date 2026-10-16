@@ -30,7 +30,8 @@ PRJCA028562), was listed by the dam rerun on #278 and judged the same way afterw
 round-3 run listed it, so it lowers every arm's T5 recall by 21/22; the scores below
 include it.
 
-Per-run data: `scores_2026-10-11.json`.
+Per-run data: `scores_2026-10-11.json`. Raw transcripts are kept outside the repo, in
+`~/data-aggregator-mcp-artifacts/h2h/r3_runs/` (and `r3_071/` for the 0.71.0 rerun below).
 
 | task | need | studies in key | dam | tu | web |
 |---|---|---|---|---|---|

@@ -25,7 +25,8 @@ wrong and missing one is not a miss. Every entry an arm listed that the key did 
 cover (29) was judged afterwards from the archive record, without knowing which arm
 listed it (`adjudication.json`, reasons in `adjudication_reasons.yaml`): none was a
 new qualifying study, 4 were copies of keyed studies, 3 were borderline, 22 did not
-qualify. Per-run data: `scores_2026-10-05.json`.
+qualify. Per-run data: `scores_2026-10-05.json`. Raw transcripts (session logs and the
+files each run wrote) are kept outside the repo, in `~/data-aggregator-mcp-artifacts/h2h/r2_runs/`.
 
 | task | need | studies in key | dam | tu | web |
 |---|---|---|---|---|---|
