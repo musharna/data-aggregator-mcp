@@ -16,7 +16,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   holding more of the words, then rarer ones, first: "tendon scRNA-seq" now finds the
   tendon atlases. NCBI omics has no such search (its words ORed hold millions of
   records, newest first, with no key study in the top 50), nor MassIVE (a request per
-  word). The `search` description names which sources do what.
+  word). The `search` description names which sources do what. A cursor from an earlier
+  version pages on without the new searches.
 
 ## [0.73.1] - 2026-10-16
 
