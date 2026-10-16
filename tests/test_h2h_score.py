@@ -129,3 +129,22 @@ def test_every_arm_gets_no_settings_and_the_same_system_prompt() -> None:
     tools = {arm: cmd[cmd.index("--tools") + 1] for arm, cmd in cmds.items()}
     assert tools == {"dam": "Write", "tu": "Write", "web": "WebSearch,WebFetch,Bash,Read,Write"}
     assert run.MODEL == "claude-opus-5-5"
+
+
+def test_build_tasks_reproduces_round3_and_sorts_borderline_studies(tmp_path: Path) -> None:
+    import build_tasks
+
+    round3 = H2H / "round3"
+    assert build_tasks.build(round3) == json.loads((round3 / "tasks.json").read_text())
+    keys = tmp_path / "keys"
+    keys.mkdir()
+    (keys / "U9.yaml").write_text(
+        "task: U9\nprompt: >-\n  Find every\n  dataset.\nstudies:\n"
+        "  - {key: S1, ids: [GSE1], evidence: firm}\n"
+        "  - {key: S2, ids: [GSE2], evidence: 'confidence: borderline (x)'}\n"
+        "  - {key: S3, ids: [GSE3], confidence: borderline, evidence: y}\n"
+    )
+    (u9,) = build_tasks.build(tmp_path, frozen="2026-10-16")
+    assert u9["prompt"] == "Find every dataset." and u9["frozen"] == "2026-10-16"
+    assert [s["key"] for s in u9["studies"]] == ["S1"]  # control: the firm study is scored
+    assert [s["key"] for s in u9["optional"]] == ["S2", "S3"]
