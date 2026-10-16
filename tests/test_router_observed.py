@@ -196,6 +196,7 @@ async def test_every_search_setting_survives_into_the_page_after_next(monkeypatc
         "tt": True,
         "dt": True,
         "ps": True,
+        "aw": True,
     }
     assert _settings(c2) == _settings(c1)
     # Page 2 searched the same expanded query's two halves with the same pushed filters,

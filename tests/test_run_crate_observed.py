@@ -314,6 +314,7 @@ def test_failed_source_names_every_real_router_stream(vi: int | None) -> None:
         plurals=True,
         title_tier=True,
         deposit_tier=True,
+        any_words=True,
         vi=vi,
     )
     named = {s.label: run_crate._failed_source(s.label) for s in streams}
@@ -323,6 +324,8 @@ def test_failed_source_names_every_real_router_stream(vi: int | None) -> None:
     assert named[f"zenodo/title{suffix}"] == "zenodo"
     assert named[f"datacite/title{suffix}"] == "datacite"
     assert named[f"datacite/deposits{suffix}"] == "datacite"
+    if vi is None:  # a multi-query variant has no fill (``_source_streams``)
+        assert named["datacite/any"] == "datacite"
     assert named[f"omics/sra{suffix}"] == "sra"
     assert named[f"literature/openaire{suffix}"] == "openaire"
     # every stream the router can fail is named as a source

@@ -40,11 +40,15 @@ def _halves(field: str, deposits: str | None = None) -> tuple[str, ...]:
     return (*titled, f"{_WORDS} AND NOT {clause}")
 
 
+# What DataCite (``ANY_WORD_FILL``) is also sent: the records holding only some words.
+_FILL = f"((soil OR soils) OR (moisture OR moistures)) AND NOT {_WORDS}"
+
+
 async def _sent(
     httpx_mock: HTTPXMock, body: dict, param: str, n: int, **kw
 ) -> tuple[httpx.Request, ...]:
     """Run a one-source search and return its ``n`` upstream requests: the deposits, the
-    other title matches, then the rest."""
+    other title matches, the rest, then any fill."""
     httpx_mock.add_response(json=body, is_reusable=True)
     async with httpx.AsyncClient() as client:
         await router.search_page(client, query="soil moisture", **kw)
@@ -52,15 +56,23 @@ async def _sent(
     assert len(reqs) == n
     return tuple(
         sorted(
-            reqs, key=lambda r: (" AND NOT title" in (q := r.url.params[param]), " AND NOT " in q)
+            reqs,
+            key=lambda r: (
+                "soils) OR (moisture" in (q := r.url.params[param]),
+                " AND NOT title" in q,
+                " AND NOT " in q,
+            ),
         )
     )
 
 
-def _with_halves(expected: str, field: str, deposits: str | None = None) -> list[str]:
+def _with_halves(
+    expected: str, field: str, deposits: str | None = None, fill: bool = False
+) -> list[str]:
     """``expected`` (the query with its filter clauses) for each part of the split."""
     assert expected.startswith(_WORDS)
-    return [f"({half}){expected[len(_WORDS) :]}" for half in _halves(field, deposits)]
+    parts = [*_halves(field, deposits), *([_FILL] if fill else [])]
+    return [f"({part}){expected[len(_WORDS) :]}" for part in parts]
 
 
 # --- the upstream requests carry the filters ----------------------------------------
@@ -143,21 +155,22 @@ async def test_datacite_request_carries_the_filters(
         httpx_mock,
         _DATACITE_EMPTY,
         "query",
-        2 if deposits is None else 3,
+        3 if deposits is None else 4,
         sources=["datacite"],
         **filters,
     )
+    # The fill carries the filters too, so its hits are what the filters allow.
     assert [r.url.params["query"] for r in reqs] == _with_halves(
-        expected_query, "titles.title", deposits
+        expected_query, "titles.title", deposits, fill=True
     )
 
 
 async def test_datacite_request_without_filters_is_unchanged(httpx_mock: HTTPXMock) -> None:
     """Positive control: no filter clause is added, each half with the relevance sort."""
-    reqs = await _sent(httpx_mock, _DATACITE_EMPTY, "query", 3, sources=["datacite"])
+    reqs = await _sent(httpx_mock, _DATACITE_EMPTY, "query", 4, sources=["datacite"])
     assert [dict(r.url.params) for r in reqs] == [
         {"query": h, "sort": "relevance", "page[size]": "10"}
-        for h in _halves("titles.title", datacite.DEPOSIT_CLAUSE)
+        for h in (*_halves("titles.title", datacite.DEPOSIT_CLAUSE), _FILL)
     ]
 
 

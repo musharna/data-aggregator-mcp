@@ -138,6 +138,18 @@ def title_clause(query: str, field: str) -> str | None:
     return f'{field}:("{phrase}" OR "{phrase}s")'
 
 
+def any_word(query: str) -> str | None:
+    """``query``'s words joined by OR, stop words left out: ``honey OR bee OR pollen``.
+    None unless ``query`` is plain words, two or more of them not stop words; an
+    operator, quote, field or wildcard means the caller already wrote the query they
+    want, and one word ORed is the query itself."""
+    words = query.split()
+    if not _PLAIN_WORDS.fullmatch(" ".join(words)) or any(w in _OPERATORS for w in words):
+        return None
+    kept = [w for w in words if w.casefold() not in _STOP_WORDS]
+    return " OR ".join(kept) if len(kept) > 1 else None
+
+
 def _text(record: DataResource) -> str:
     return _normalize(
         " ".join(
