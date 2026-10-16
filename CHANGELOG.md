@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.74.0] - 2026-10-16
+
 ### Changed
 
 - OmicsDI, CELLxGENE and the Metabolomics Workbench, which like DataCite match only
