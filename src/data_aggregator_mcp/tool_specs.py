@@ -35,7 +35,9 @@ TOOLS: list[types.Tool] = [
             "Search public research-data archives, omics registries, and the "
             "literature for datasets, software, publications, and sequencing data. "
             "Fans out across Zenodo, DataCite (Dryad, Figshare, Dataverse, OSF, "
-            "Mendeley, OpenNeuro), NCBI omics (GEO, SRA, BioProject), literature (PubMed + "
+            "Mendeley, OpenNeuro; it matches only records holding every query word, so its "
+            "records holding only some of them are searched too and rank below hits naming "
+            "more), NCBI omics (GEO, SRA, BioProject), literature (PubMed + "
             "OpenAIRE), HuggingFace Hub (datasets), DataONE (eco/environmental federation), "
             "OmicsDI (proteomics/metabolomics; it and NCBI omics match only records "
             "holding every query word, so keep queries to them short, and errors.all_words "
@@ -99,6 +101,8 @@ TOOLS: list[types.Tool] = [
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Restrict fan-out to these sources (default: all). "
+                    "A dataset is often held only by a general archive (DataCite, Zenodo, "
+                    "DataONE), so leave this unset unless the user names the archives. "
                     "Available: zenodo, dataone, gbif, cellxgene, datacite, dandi, omics, "
                     "literature, huggingface, datagov, nasacmr, omicsdi, openml, pdb, "
                     "uniprot, gwas, biostudies, ngdc, mwb, massive",
