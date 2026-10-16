@@ -96,6 +96,19 @@ def with_plurals(query: str) -> str:
     return _QUERY_TOKEN.sub(plural, query)
 
 
+# A colon closing a word, before a space or the end: a field needs its value attached.
+_STRAY_COLON = re.compile(r"(?<=[^\s\\]):(?=\s|$)")
+
+
+def escape_stray_colons(query: str) -> str:
+    """``query`` with each colon that ends a word escaped, for an upstream whose query
+    language reads ``word:`` as a field. A pasted title "BEEHIVE: a public dataset of
+    Apis mellifera images ..." found nothing on DataCite, which searched a field named
+    BEEHIVE; escaped, the study ranked first (probed 2026-10-15). A field with its value
+    attached (``title:wolf``), a URL and a time are sent as written."""
+    return _STRAY_COLON.sub(r"\\:", query)
+
+
 def _pluralisable(word: str) -> bool:
     return (
         word.isalpha()

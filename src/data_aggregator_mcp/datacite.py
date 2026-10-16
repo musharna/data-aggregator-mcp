@@ -32,7 +32,7 @@ from data_aggregator_mcp import (
     osf,
     zenodo,
 )
-from data_aggregator_mcp._relevance import with_plurals
+from data_aggregator_mcp._relevance import escape_stray_colons, with_plurals
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.license_compat import host_matches
 from data_aggregator_mcp.models import (
@@ -401,6 +401,7 @@ async def search(
     DataCite evaluates them and ``total_hits`` is the filtered total. None/empty sends
     ``query`` unchanged."""
     capped = min(size, MAX_SIZE)
+    query = escape_stray_colons(query)
     words = with_plurals(query) if plurals else query
     q = _pushdown.with_clauses(words, _filter_clauses(filters or {}))
     # With no sort (or an unknown one) DataCite orders by most recently updated, so a
