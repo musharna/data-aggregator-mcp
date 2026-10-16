@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.73.0] - 2026-10-16
+
 ### Changed
 
 - DataCite matches only records holding every query word, so a long query found nothing
