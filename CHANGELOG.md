@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.73.1] - 2026-10-16
+
 ### Fixed
 
 - When DataCite held no record with every word of a query but did hold records with
