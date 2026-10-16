@@ -471,20 +471,33 @@ def _adapter_call(
     return call
 
 
-def _all_words_note(empty: list[str], query: str | None) -> str | None:
+def _all_words_note(empty: list[str], query: str | None, filled: Sequence[str] = ()) -> str | None:
     """Advisory for streams whose upstream requires every query word and matched
     nothing: without it, a source's 0 next to errors{} reads as "no such data", when the
     words only failed to meet in one record (GEO: "tardigrade" 221, "tun" 464,
     "tardigrade dehydration tun" 0; probed 2026-10-05). Only for a query of two or more
-    words; one word cannot be dropped."""
+    words; one word cannot be dropped. A source in ``filled`` was searched for records
+    holding only some of the words, so it says that its hits are those, which ``total``
+    does not count: its 0 beside them read as a fault."""
     words = query.split() if query else []
     if not empty or len(words) < 2:
         return None
-    return (
-        f"{', '.join(empty)} matched nothing: {'they return' if len(empty) > 1 else 'it returns'}"
-        " only records holding every word of the query, so a search with fewer words may"
-        " find some"
-    )
+    none = [s for s in empty if s not in filled]
+    some = [s for s in empty if s in filled]
+    parts = []
+    if none:
+        they = "they return" if len(none) > 1 else "it returns"
+        parts.append(
+            f"{', '.join(none)} matched nothing: {they} only records holding every word of "
+            "the query, so a search with fewer words may find some"
+        )
+    if some:
+        parts.append(
+            f"{', '.join(some)} held no record with every word of the query, so "
+            f"{'their' if len(some) > 1 else 'its'} hits here hold only some of the words, "
+            "and `total` does not count them"
+        )
+    return "; ".join(parts)
 
 
 def _within_limit(
@@ -567,6 +580,8 @@ class _Page:
     more: bool
     # Labels of every-word streams that answered with a total of 0 (not failed).
     empty_every_word: list[str] = field(default_factory=list)
+    # Those of them whose fill found records holding only some of the words.
+    filled: list[str] = field(default_factory=list)
 
 
 async def _fetch_page(
@@ -603,12 +618,19 @@ async def _fetch_page(
         total += 0 if s.fill else stream_total
         fetched[s.key], totals[s.key] = list(recs), stream_total
     # A source is empty when every one of its streams (one per query variant) answered
-    # and matched nothing; a variant that found something, or failed, says otherwise.
+    # and matched nothing; a variant that found something, or failed, says otherwise. Its
+    # fill matched only some of the words, so is not one of them: counted, its hits hid
+    # that DataCite held no record with every word (2026-10-16).
     answered = [s for s in streams if s.label not in errors]
     empty_every_word = [
         src
         for src in dict.fromkeys(s.source for s in answered if s.every_word)
-        if all(totals[s.key] == 0 for s in answered if s.source == src)
+        if all(totals[s.key] == 0 for s in answered if s.source == src and not s.fill)
+    ]
+    filled = [
+        src
+        for src in empty_every_word
+        if any(totals[s.key] for s in answered if s.source == src and s.fill)
     ]
 
     prior = {s.key: set(ahead.get(s.key, [])) for s in streams}
@@ -739,7 +761,7 @@ async def _fetch_page(
     more = any(remaining) and any(fetched.values())
     if note := _filters_note(streams, removed, filters, more=more):
         errors["filters"] = note
-    return _Page(emitted, total, new_offsets, new_ahead, more, empty_every_word)
+    return _Page(emitted, total, new_offsets, new_ahead, more, empty_every_word, filled)
 
 
 def _filters_note(
@@ -904,7 +926,7 @@ async def _multi_query_page(
         errors=errors,
         tiers=MatchTiers(original_query, groups),
     )
-    if note := _all_words_note(page.empty_every_word, original_query):
+    if note := _all_words_note(page.empty_every_word, original_query, page.filled):
         errors["all_words"] = note
     emitted, total = page.emitted, page.total
     next_cursor = (
@@ -1260,7 +1282,7 @@ async def search_page(
         errors=errors,
         tiers=MatchTiers(query, groups),
     )
-    if note := _all_words_note(page.empty_every_word, query):
+    if note := _all_words_note(page.empty_every_word, query, page.filled):
         errors["all_words"] = note
     emitted, total = page.emitted, page.total
     next_cursor = (

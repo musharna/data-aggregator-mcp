@@ -37,8 +37,11 @@ def _source(sent: list[str], answers: dict[str, list[DataResource]], **flags):
     return types.SimpleNamespace(search=search, PREFIXES=frozenset(), **flags)
 
 
-def _sources(monkeypatch, dc: list[str], loose: list[str], fill: int = 2) -> None:
+def _sources(
+    monkeypatch, dc: list[str], loose: list[str], fill: int = 2, every_word: bool = True
+) -> None:
     every = [_hit("dc", "e1", "honey bee pollen loads"), _hit("dc", "e2", "honey bee hive")]
+    every = every if every_word else []
     some = [_hit("dc", "f1", "bee pollen images"), _hit("dc", "f2", "honey production")]
     some += [_hit("dc", f"f{i}", f"bee {i}") for i in range(3, fill + 1)]
     monkeypatch.setattr(
@@ -109,6 +112,46 @@ async def test_a_cursor_minted_before_the_fill_has_none(monkeypatch) -> None:
     assert dc == [_Q, _FILL, _Q, _FILL, _Q]
 
 
+async def test_a_source_holding_no_record_with_every_word_says_its_hits_hold_some(
+    monkeypatch,
+) -> None:
+    # Live 0.73.0 (HyDaT query, 2026-10-16): total 0 beside 34 DataCite hits and nothing in
+    # errors: the fill's hits counted as DataCite matching, so all_words was not given.
+    dc: list[str] = []
+    _sources(monkeypatch, dc, [], every_word=False)
+    async with httpx.AsyncClient() as c:
+        page = await router.search_page(c, query=_Q, size=10)
+    assert {"dc:f1", "dc:f2"} <= {r.id for r in page.results}
+    assert page.total == 1  # loose's one hit; the fill's are not counted
+    assert page.errors["all_words"] == (
+        "dc held no record with every word of the query, so its hits here hold only some "
+        "of the words, and `total` does not count them"
+    )
+    # Positive control: the same search where dc holds records with every word.
+    _sources(monkeypatch, dc, [])
+    async with httpx.AsyncClient() as c:
+        page = await router.search_page(c, query=_Q, size=10)
+    assert "all_words" not in page.errors
+
+
+async def test_every_word_sources_with_and_without_the_fill_are_named_apart(monkeypatch) -> None:
+    _sources(monkeypatch, [], [], every_word=False)
+    router._ADAPTERS["strict"] = _source([], {}, REQUIRES_EVERY_WORD=True)
+    async with httpx.AsyncClient() as c:
+        page = await router.search_page(c, query=_Q, size=10)
+    assert page.errors["all_words"] == (
+        "strict matched nothing: it returns only records holding every word of the query, "
+        "so a search with fewer words may find some; dc held no record with every word of "
+        "the query, so its hits here hold only some of the words, and `total` does not "
+        "count them"
+    )
+    two = router._all_words_note(["a", "b"], _Q, ["a", "b"])
+    assert two == (
+        "a, b held no record with every word of the query, so their hits here hold only some "
+        "of the words, and `total` does not count them"
+    )
+
+
 def test_datacite_declares_every_word_and_the_fill() -> None:
     assert datacite.REQUIRES_EVERY_WORD is True and datacite.ANY_WORD_FILL is True
 
@@ -124,3 +167,5 @@ async def test_live_datacite_fill_finds_a_study_missing_one_query_word() -> None
     assert every == 0  # control: the words as written find nothing
     ids = [r.id.lower() for r in page.results]
     assert any(i.startswith(hydat) for i in ids), ids
+    assert page.total == 0
+    assert page.errors["all_words"].startswith("datacite held no record with every word")
