@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A query holding a word that ends in a colon, as a pasted title does ("BEEHIVE: a
+  public dataset of Apis mellifera images ..."), found nothing on DataCite, whose query
+  language read "BEEHIVE:" as a field name; Zenodo read it the same way. DataCite and
+  Zenodo are now sent such a colon escaped, and the BEEHIVE study ranks first for its own
+  title. A field with its value attached (`title:wolf`) is sent as written.
+
 ## [0.72.0] - 2026-10-15
 
 ### Added
