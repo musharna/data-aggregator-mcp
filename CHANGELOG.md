@@ -13,6 +13,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   language read "BEEHIVE:" as a field name; Zenodo read it the same way. DataCite and
   Zenodo are now sent such a colon escaped, and the BEEHIVE study ranks first for its own
   title. A field with its value attached (`title:wolf`) is sent as written.
+- A search run with `provenance=true` left a failed DataCite or Zenodo deposits stream
+  out of the Run Crate's failed sources, so the crate named the run as complete for that
+  source.
 
 ## [0.72.0] - 2026-10-15
 
