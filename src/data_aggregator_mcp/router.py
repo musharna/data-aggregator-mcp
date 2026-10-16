@@ -1273,6 +1273,11 @@ async def search_page(
         groups=groups,
         notes=notes,
     )
+    if cursor is not None:
+        # Every stream a search ran has an offset in its cursor. A fill stream without one
+        # came after the cursor was minted (OmicsDI's, for a 0.73 cursor), and the parent
+        # source's offset would stand in for it, skipping its first records.
+        streams = [s for s in streams if not s.fill or s.key in offsets]
     if note := _query_syntax_note(names, [query], [effective_query]):
         errors["query_syntax"] = note
     if note := _operator_limit_note(notes):

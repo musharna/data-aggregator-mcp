@@ -152,6 +152,29 @@ async def test_every_word_sources_with_and_without_the_fill_are_named_apart(monk
     )
 
 
+async def test_a_cursor_minted_before_a_source_had_the_fill_continues_without_it(
+    monkeypatch,
+) -> None:
+    # 0.73.x cursors have "aw" but no offset for OmicsDI's fill (0.74.0): the parent's
+    # offset stood in for it, so page 2 began the fill past its first records.
+    dc: list[str] = []
+    loose: list[str] = []
+    _sources(monkeypatch, dc, loose, fill=24)
+    async with httpx.AsyncClient() as c:
+        page = await router.search_page(c, query=_Q, size=2)
+        state = _cursor.decode(page.next_cursor)
+        assert "dc/any" in state["offsets"]  # control: a fresh cursor holds the fill
+        state["offsets"].pop("dc/any")
+        # Positive control: a stream that is not a fill still runs without an offset of
+        # its own (it falls back to its source's: omics/geo on a pre-split cursor).
+        state["offsets"].pop("loose")
+        dc.clear()
+        loose.clear()
+        page = await router.search_page(c, cursor=_cursor.encode(state))
+    assert dc == [_Q] and loose == [_Q]
+    assert all(not r.id.startswith("dc:f") for r in page.results)
+
+
 def test_the_sources_declaring_the_fill() -> None:
     """Probed 2026-10-16 over the round-3 agents' queries: NCBI's ORed words hold millions
     of records, newest first, and no key study in their top 50, so NCBI has no fill.
