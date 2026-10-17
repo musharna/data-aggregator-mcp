@@ -178,11 +178,12 @@ async def test_a_cursor_minted_before_a_source_had_the_fill_continues_without_it
 def test_the_sources_declaring_the_fill() -> None:
     """Probed 2026-10-16 over the round-3 agents' queries: NCBI's ORed words hold millions
     of records, newest first, and no key study in their top 50, so NCBI has no fill.
-    MassIVE's would cost a request per word, and the probe drew HTTP 429."""
+    MassIVE's cost a request per word and drew HTTP 429; since 2026-10-17 its counts are
+    kept and shared with the every-word search, and it reads at most 3 words' rows."""
     filled = {n for n, a in router._ADAPTERS.items() if getattr(a, "ANY_WORD_FILL", False)}
-    assert filled == {"cellxgene", "datacite", "mwb", "omicsdi"}
+    assert filled == {"cellxgene", "datacite", "massive", "mwb", "omicsdi"}
     in_code = {n for n, a in router._ADAPTERS.items() if getattr(a, "FILLS_IN_CODE", False)}
-    assert in_code == {"cellxgene", "mwb"}
+    assert in_code == {"cellxgene", "massive", "mwb"}
     every = {n for n, a in router._ADAPTERS.items() if getattr(a, "REQUIRES_EVERY_WORD", False)}
     assert filled <= every
 
