@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- MassIVE also finds datasets naming only some of the query's words, ranked below those
+  naming every one, as DataCite, OmicsDI, CELLxGENE and the Metabolomics Workbench do.
+  Each word costs MassIVE a request, so the fill runs only while fewer than 10 datasets
+  name every word, reads the rows of at most the 2 rarest words, and shares the
+  every-word search's requests: at most 2 more a search. Over the 27 round-3 coral
+  heat-stress queries, the key studies MassIVE returned in its first 50 rose from 92 to
+  225 (30 to 39 distinct of 47), and the queries finding one from 18 to 25; the
+  MassIVE search's median time rose from 4.5 to 11.0 s. A third word's rows cost 11
+  more requests and found fewer (220).
+
 ### Fixed
 
 - MassIVE no longer holds up a search page. It counts each word of a query with its own
