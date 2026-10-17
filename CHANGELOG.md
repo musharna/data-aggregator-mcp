@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `errors.all_words` no longer says a source matched nothing when part of its search
+  failed. GEO, SRA and BioProject each send their query as written and, separately,
+  the plurals it adds; when the first failed and the second answered with nothing, the
+  note named the database as empty next to its own error. A source is now named only
+  when every one of its searches answered with nothing.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
