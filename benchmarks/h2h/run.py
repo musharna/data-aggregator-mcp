@@ -1,8 +1,8 @@
 """Head-to-head: the same agent finds and downloads datasets through one MCP server.
 
 Each run is a headless ``claude -p`` session with exactly one arm's tools: ``dam``
-(data-aggregator-mcp), ``tu`` (ToolUniverse) or ``web`` (no MCP: web search, web fetch
-and a shell). The harness, not the agent, scores the run from the session's stream-json
+(data-aggregator-mcp), ``tu`` (ToolUniverse), ``web`` (no MCP: web search, web fetch
+and a shell) or ``bare`` (no way to search at all: the from-memory floor). The harness, not the agent, scores the run from the session's stream-json
 log and the files it left on disk (see ``score``).
 
 Isolation (round 4 on): every run starts in a fresh ``mktemp`` directory under /tmp
@@ -74,7 +74,36 @@ def server_spec(arm: str, cfg: argparse.Namespace) -> str | None:
     return None
 
 
-def mcp_config(arm: str, cfg: argparse.Namespace) -> dict:
+# Built-in tools per arm, for list tasks (one-dataset tasks drop Write). Every arm that
+# searches gets Read: Claude Code saves a tool result too large to return to a file and
+# hands the agent its path, and without Read that page is lost (ToolUniverse hit it in 24
+# of 30 round-3 runs; rounds 1 to 3 gave the server arms Write only). ``bare`` has no
+# data tools at all: what the model lists from memory, a floor for the other arms.
+ARM_TOOLS = {
+    "dam": ("Read", "Write"),
+    "tu": ("Read", "Write"),
+    "web": ("WebSearch", "WebFetch", "Bash", "Read", "Write"),
+    "bare": ("Write",),
+}
+ARM_SERVER = {"dam": "data-aggregator", "tu": "tooluniverse"}
+# The calls that count as using the arm's data tools; bare has none to use.
+DATA_TOOLS = {"web": frozenset({"WebSearch", "WebFetch", "Bash"})}
+
+
+# What rounds 1 to 3 and the round-4 pilot gave each arm (their meta.json does not say;
+# every init event of theirs matches this). The validity rule checks old runs against it.
+ARM_TOOLS_BEFORE_READ = {
+    "dam": ("Write",),
+    "tu": ("Write",),
+    "web": ("WebSearch", "WebFetch", "Bash", "Read", "Write"),
+}
+
+
+def arm_tools(arm: str, writes_list: bool) -> list[str]:
+    return [t for t in ARM_TOOLS[arm] if writes_list or t != "Write"]
+
+
+def mcp_config(arm: str, cfg: argparse.Namespace, state: Path | None = None) -> dict:
     pin = ["--exclude-newer", cfg.exclude_newer]
     if arm == "dam":
         if cfg.dam_dir:  # a checkout under development, not a release: say so in rows
@@ -85,11 +114,19 @@ def mcp_config(arm: str, cfg: argparse.Namespace) -> dict:
         return {"mcpServers": {"data-aggregator": server}}
     if arm == "tu":
         # ToolUniverse's README configuration, pinned to the release under test.
-        server = {
-            "command": "uvx",
-            "args": [*pin, f"tooluniverse=={cfg.tu_version}"],
-            "env": {"PYTHONIOENCODING": "utf-8"},
-        }
+        env = {"PYTHONIOENCODING": "utf-8"}
+        if state is not None:
+            # ToolUniverse keeps a persistent result cache (~/.tooluniverse/cache.sqlite)
+            # and a workspace across processes: a later run would read an earlier run's
+            # answers. Each run gets its own, deleted with it. CACHE_PATH outranks
+            # CACHE_DIR in ToolUniverse 1.5.7, so an inherited one must be overridden too.
+            env |= {
+                "TOOLUNIVERSE_HOME": str(state / "home"),
+                "TOOLUNIVERSE_CACHE_DIR": str(state / "cache"),
+                "TOOLUNIVERSE_CACHE_PATH": str(state / "cache" / "cache.sqlite"),
+                "TOOLUNIVERSE_TMPDIR": str(state / "tmp"),
+            }
+        server = {"command": "uvx", "args": [*pin, f"tooluniverse=={cfg.tu_version}"], "env": env}
         return {"mcpServers": {"tooluniverse": server}}
     return {"mcpServers": {}}
 
@@ -126,12 +163,9 @@ def command(
         "--permission-mode",
         "bypassPermissions",
     ]
-    if arm == "web":
-        cmd += ["--tools", "WebSearch,WebFetch,Bash,Read,Write"]
-    else:
-        # No built-in tools: the server is the only way to search or download. A list
-        # task adds Write, which neither searches nor downloads, for datasets.json.
-        cmd += ["--tools", "Write" if writes_list else ""]
+    # Server arms get no built-in tool that searches or downloads: the server is their
+    # only way to the archives.
+    cmd += ["--tools", ",".join(arm_tools(arm, writes_list))]
     return cmd
 
 
@@ -142,49 +176,64 @@ def claude_version() -> str:
 
 def run_one(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace) -> Path:
     run_dir = root / arm / task["id"] / f"r{rep}"
-    log = run_dir / "session.jsonl"
-    if log.exists() and any('"type":"result"' in line for line in log.open()):
-        return run_dir  # finished earlier; rerun by deleting the directory
+    if (run_dir / "meta.json").exists():
+        # Finished, whatever the outcome: a timeout, a budget stop or an error is a
+        # result (scored invalid), never silently re-run.
+        return run_dir
     if run_dir.exists():
-        shutil.rmtree(run_dir)  # an unfinished run: start it again from nothing
+        # The harness itself died mid-run (no meta.json). The same rule for every arm:
+        # keep the attempt under _aborted/, log it, and run again.
+        n = len(list((root / "_aborted").glob(f"{arm}-{task['id']}-r{rep}-*")))
+        dest = root / "_aborted" / f"{arm}-{task['id']}-r{rep}-{n + 1}"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(run_dir), dest)
+        with (root / "aborted.jsonl").open("a") as fh:
+            fh.write(
+                json.dumps({"arm": arm, "task": task["id"], "rep": rep, "kept": str(dest)}) + "\n"
+            )
     run_dir.mkdir(parents=True)
+    log = run_dir / "session.jsonl"
     # A fresh, empty working directory outside any project: no CLAUDE.md above it, no
     # earlier run's files. The answer is copied back into run_dir afterwards. /tmp, not
     # $TMPDIR: a session's TMPDIR can sit under ~/.claude, which holds settings.
     # mkdtemp makes a fresh 0700 directory with a random name, so nothing can pre-place it.
     cwd = Path(tempfile.mkdtemp(prefix="h2h-", dir="/tmp"))  # nosec B108 - see above
-    out = cwd / "out"
-    out.mkdir()
-    config = run_dir / "mcp.json"
-    config.write_text(json.dumps(mcp_config(arm, cfg)))
-    tail = LIST_TAIL if task.get("kind") == "list" else PROMPT_TAIL
-    prompt = task["prompt"] + tail.format(out=out)
-    started = time.monotonic()
-    with log.open("w") as fh:
-        try:
-            proc = subprocess.run(
-                command(
-                    arm,
-                    prompt,
-                    config,
-                    task.get("kind") == "list",
-                    model=cfg.model,
-                    budget=cfg.budget_usd,
-                ),
-                cwd=cwd,
-                stdout=fh,
-                stderr=subprocess.PIPE,
-                text=True,
-                timeout=RUN_TIMEOUT_S,
-                # One run must not leave notes a later run reads.
-                env={**os.environ, "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"},
-            )
-            status = proc.returncode
-            err = proc.stderr[-4000:]
-        except subprocess.TimeoutExpired:
-            status, err = "timeout", ""
-    shutil.copytree(out, run_dir / "out")
-    shutil.rmtree(cwd)
+    state = Path(tempfile.mkdtemp(prefix="h2h-state-", dir="/tmp"))  # nosec B108 - as cwd
+    try:
+        out = cwd / "out"
+        out.mkdir()
+        config = run_dir / "mcp.json"
+        config.write_text(json.dumps(mcp_config(arm, cfg, state)))
+        tail = LIST_TAIL if task.get("kind") == "list" else PROMPT_TAIL
+        prompt = task["prompt"] + tail.format(out=out)
+        started = time.monotonic()
+        with log.open("w") as fh:
+            try:
+                proc = subprocess.run(
+                    command(
+                        arm,
+                        prompt,
+                        config,
+                        task.get("kind") == "list",
+                        model=cfg.model,
+                        budget=cfg.budget_usd,
+                    ),
+                    cwd=cwd,
+                    stdout=fh,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=RUN_TIMEOUT_S,
+                    # One run must not leave notes a later run reads.
+                    env={**os.environ, "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"},
+                )
+                status = proc.returncode
+                err = proc.stderr[-4000:]
+            except subprocess.TimeoutExpired:
+                status, err = "timeout", ""
+        shutil.copytree(out, run_dir / "out")
+    finally:  # whatever happened, no run's files or ToolUniverse state outlive it
+        shutil.rmtree(cwd)
+        shutil.rmtree(state)
     meta = {
         "exit": status,
         "stderr": err,
@@ -193,6 +242,7 @@ def run_one(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace)
         "model_requested": cfg.model,
         "claude_code": cfg.claude_code,
         "server": server_spec(arm, cfg),
+        "tools": arm_tools(arm, task.get("kind") == "list"),
     }
     (run_dir / "meta.json").write_text(json.dumps(meta))
     return run_dir
@@ -214,8 +264,54 @@ def _norm(s: str) -> str:
     return s
 
 
+# The URL forms an agent writes for a record whose id is a DOI or a prefixed id the URL
+# does not contain, each mapped to the ids it names. A URL that already contains the id
+# (doi.pangaea.de/10.1594/..., ncbi.nlm.nih.gov/geo/...?acc=GSE1) needs no rule: ids
+# match as whole tokens anywhere in the entry.
+_URL_FORMS: tuple[tuple[re.Pattern[str], tuple[str, ...]], ...] = tuple(
+    (re.compile(pattern), templates)
+    for pattern, templates in (
+        (r"zenodo\.org/(?:records?|deposit|uploads)/(\d+)", ("10.5281/zenodo.{0}",)),
+        (
+            r"figshare\.com/articles/(?:[a-z_]+/)?(?:[^/\s]+/)?(\d{5,})",
+            ("10.6084/m9.figshare.{0}", "figshare:{0}"),
+        ),
+        (r"osf\.io/([a-z0-9]{5})(?![a-z0-9])", ("10.17605/osf.io/{0}", "osf:{0}")),
+        (r"data\.mendeley\.com/datasets/([a-z0-9]{10})(?![a-z0-9])", ("10.17632/{0}",)),
+        (r"dandiarchive\.org/dandiset/(\d{6})", ("dandi:{0}",)),
+        (r"10\.48324/dandi\.(\d{6})", ("dandi:{0}",)),
+        (r"openneuro\.org/datasets/(ds\d{6})", ("openneuro:{0}",)),
+        (r"cellxgene\.cziscience\.com/(?:collections|e)/([0-9a-f-]{36})", ("cellxgene:{0}",)),
+        (r"humancellatlas\.org/explore/projects/([0-9a-f-]{36})", ("hca:{0}",)),
+        (r"crcns\.org/data-sets/[a-z0-9]+/([a-z0-9-]+)", ("crcns:{0}",)),
+    )
+)
+# DOI registries whose versions are versions of ONE deposit: a listed version also names
+# the version-less DOI. Accessions are not folded: GCA_002006685.2 is a different
+# assembly from GCA_002006685.1, and a key may hold them as different studies.
+_SAME_DEPOSIT_VERSION = re.compile(
+    r"(?:(10\.6084/m9\.figshare\.\d+)\.v\d+"
+    r"|(10\.17632/[a-z0-9]{10})\.\d+"
+    r"|(10\.18112/openneuro\.ds\d{6})\.v\d+(?:\.\d+)*)(?![0-9a-z])"
+)
+_HEX_ID = re.compile(
+    r"(?<![0-9a-f])(?:[0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})(?![0-9a-f])"
+)
+
+
+def _canonical(text: str) -> str:
+    """``text`` (an entry's ids, normalized) plus the ids its URL forms and versioned
+    same-deposit DOIs name, so ``https://osf.io/hx2sj/`` matches ``10.17605/OSF.IO/HX2SJ``."""
+    extra = [t.format(*m.groups()) for rx, ts in _URL_FORMS for m in rx.finditer(text) for t in ts]
+    extra += [next(g for g in m.groups() if g) for m in _SAME_DEPOSIT_VERSION.finditer(text)]
+    return " ".join([text, *extra])
+
+
 def _aliases(ids: list[str]) -> list[str]:
-    """A study's ids, plus the other ways an agent writes a Zenodo record."""
+    """A study's ids, plus the other ways an agent writes them: a Zenodo record's DOI,
+    ``zenodo:N`` and URL forms; the version-less DOI of a same-deposit version; the local
+    part of a prefixed id when it is distinctive (``openneuro:ds003498`` -> ``ds003498``);
+    a UUID or 32-hex id inside a longer one (``GNPS task <hash>``)."""
     out = [_norm(i) for i in ids]
     for i in list(out):
         m = re.fullmatch(r"(?:10\.5281/zenodo\.|zenodo:)(\d+)", i)
@@ -227,12 +323,21 @@ def _aliases(ids: list[str]) -> list[str]:
                 f"zenodo.org/records/{n}",
                 f"zenodo.org/record/{n}",
             ]
+        out += [g for m in _SAME_DEPOSIT_VERSION.finditer(i) for g in m.groups() if g]
+        prefix, sep, local = i.partition(":")
+        distinctive = len(local) >= 6 and any(c.isdigit() for c in local)
+        if sep and "/" not in prefix and not prefix.startswith("http") and distinctive:
+            out.append(local)
+        out += _HEX_ID.findall(i)
     return sorted(set(out))
 
 
 def _mentions(text: str, alias: str) -> bool:
-    # Whole token only, so GSE12 does not match GSE123.
-    return re.search(rf"(?<![0-9a-z]){re.escape(alias)}(?![0-9a-z])", text) is not None
+    """Whole token only, so GSE12 does not match GSE123. A version-less id does not match
+    a versioned one either (``GCA_002006685`` is not ``GCA_002006685.2``); same-deposit
+    DOI versions reach their version-less form through ``_canonical`` instead."""
+    rx = rf"(?<![0-9a-z]){re.escape(alias)}(?![0-9a-z])(?!\.v?\d)"
+    return re.search(rx, text) is not None
 
 
 def score_list(task: dict, run_dir: Path, adjudication: dict) -> dict:
@@ -261,11 +366,22 @@ def score_list(task: dict, run_dir: Path, adjudication: dict) -> dict:
         listed, json_ok = [], False
     if not json_ok:
         listed = []
+    return score_entries(listed, studies, optional, rejected, json_ok)
+
+
+def score_entries(
+    listed: list[dict],
+    studies: list[dict],
+    optional: list[dict],
+    rejected: list[str],
+    json_ok: bool = True,
+) -> dict:
+    """``score_list`` on entries already read: what the oracle and the baselines use."""
     hits: dict[str, int] = {}
     relevant, irrelevant, pending = 0, 0, []
     for entry in listed:
         ids = [entry.get("id"), *(entry.get("same_as") or [])]
-        text = " ".join(_norm(str(i)) for i in ids if i)
+        text = _canonical(" ".join(_norm(str(i)) for i in ids if i))
         matched = [s["key"] for s in studies if any(_mentions(text, a) for a in _aliases(s["ids"]))]
         for key in matched:
             hits[key] = hits.get(key, 0) + 1
@@ -295,6 +411,40 @@ def score_list(task: dict, run_dir: Path, adjudication: dict) -> dict:
     }
 
 
+def oracle(task: dict) -> dict[str, dict]:
+    """The scorer's positive and negative controls for one task, with no agent.
+
+    ``key``: every keyed study listed once, by all its ids -> recall 1.0, precision 1.0,
+    no duplicates, nothing pending. ``wrong``: ids no study in the key has (each id with
+    a suffix that makes it another record) -> recall 0.0.
+    """
+    every = [*task["studies"], *task.get("optional", [])]
+    key = [{"id": s["ids"][0], "same_as": s["ids"][1:]} for s in every]
+    wrong = [{"id": f"{s['ids'][0]}9x"} for s in every]
+    return {
+        "key": score_entries(key, task["studies"], task.get("optional", []), []),
+        "wrong": score_entries(wrong, task["studies"], task.get("optional", []), []),
+    }
+
+
+def oracle_problems(tasks: list[dict]) -> list[str]:
+    """Every task whose key the scorer cannot score as 100% (or a wrong list above 0%)."""
+    out = []
+    for t in tasks:
+        if t.get("kind") != "list":
+            continue
+        o = oracle(t)
+        k, w = o["key"], o["wrong"]
+        if not (k["recall"] == 1.0 and k["precision"] == 1.0 and k["duplicates"] == 0
+                and not k["pending"]):  # fmt: skip
+            out.append(
+                f"{t['id']}: key scores {k['recall']}/{k['precision']}, dup {k['duplicates']}"
+            )
+        if w["recall"] != 0.0 or w["relevant"]:
+            out.append(f"{t['id']}: a wrong list scores recall {w['recall']}")
+    return out
+
+
 def _result_sources(events: list[dict]) -> list[str]:
     """Distinct ``source`` values in this server's tool results: did the fan-out fire?"""
     found: set[str] = set()
@@ -308,6 +458,84 @@ def _result_sources(events: list[dict]) -> list[str]:
             text = json.dumps(content) if not isinstance(content, str) else content
             found.update(re.findall(r'\\?"source\\?":\s*\\?"([a-z_]+)', text))
     return sorted(found)
+
+
+# What no transcript may touch: an answer key or adjudication file, this benchmark in the
+# repo (a checkout, or GitHub: the repo is public, so the keys are on the web), and the
+# run directories and score files of any round. Rounds 1 to 3 kept their runs and key
+# drafts in a session job directory (.claude/jobs/...); a run of theirs ran inside it.
+_LEAK = re.compile(
+    r"benchmarks/h2h|answer_key|adjudication(?:_reasons)?\.(?:json|yaml)"
+    r"|round[1-4]/(?:keys|tasks\.json|scores)|keys/[rtu]\d\.yaml"
+    r"|data-aggregator-mcp-artifacts|\.claude/jobs/"
+    r"|(?<![0-9a-z])(?:h2h_runs|r[2-5]_(?:runs|rerun|pilot|\d+|\d+_3arm)|r3_071)(?![0-9a-z])"
+    r"|(?<![0-9a-z])(?:adj|pool)_[rtu]\d\.json"
+    r"|github\.com/musharna/data-aggregator-mcp/(?:tree|blob|raw)/[^/\s\"]+/benchmarks"
+    r"|raw\.githubusercontent\.com/musharna/data-aggregator-mcp/[^/\s\"]+/benchmarks",
+    re.IGNORECASE,
+)
+
+
+def _tool_traffic(events: list[dict]) -> list[tuple[str, str]]:
+    """Every tool input and tool result in the log, as ("input" | "output", text)."""
+    out = []
+    for e in events:
+        for block in (
+            e.get("message", {}).get("content", []) if isinstance(e.get("message"), dict) else []
+        ):
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use":
+                out.append(("input", json.dumps(block.get("input"))))
+            elif block.get("type") == "tool_result":
+                c = block.get("content")
+                out.append(("output", c if isinstance(c, str) else json.dumps(c)))
+    return out
+
+
+def leak_hits(events: list[dict], own: list[str]) -> list[dict]:
+    """Where the run touched the key, the benchmark or another run. ``own``: the run's
+    own directories, removed first (an old round ran inside its run directory, whose path
+    names the round, and every Write of its answer names it)."""
+    hits = []
+    for where, text in _tool_traffic(events):
+        for path in sorted(filter(None, own), key=len, reverse=True):
+            text = text.replace(path, "<own>")
+        hits += [{"where": where, "match": m.group(0)} for m in _LEAK.finditer(text)]
+    return hits
+
+
+def validity(arm: str, writes_list: bool, meta: dict, init: dict, result: dict,
+             calls: list[str], leaks: list[dict]) -> list[str]:  # fmt: skip
+    """Why the row does not measure the arm, by one rule for every arm (empty: valid).
+
+    The run must finish (no timeout, harness error or budget stop), start with exactly
+    its arm's tools and server, use them at least once unless the arm has none (bare),
+    and touch nothing of the benchmark (``leak_hits``)."""
+    why = []
+    if meta.get("exit") != 0:
+        why.append(f"exit {meta.get('exit')}")
+    if not result:
+        why.append("no result")
+    elif result.get("is_error"):
+        why.append(f"error {result.get('subtype')}")
+    builtin = sorted(t for t in init.get("tools", []) if not t.startswith("mcp__"))
+    before = [t for t in ARM_TOOLS_BEFORE_READ.get(arm, ()) if writes_list or t != "Write"]
+    expected = meta.get("tools", before)
+    if builtin != sorted(expected):
+        why.append(f"tools {builtin} not {sorted(expected)}")
+    server = ARM_SERVER.get(arm)
+    servers = {x.get("name"): x.get("status") for x in init.get("mcp_servers", [])}
+    if servers != ({server: "connected"} if server else {}):
+        why.append(f"servers {servers}")
+    if arm != "bare":
+        data = DATA_TOOLS.get(arm) or frozenset()
+        used = [c for c in calls if c in data or (server and c.startswith(f"mcp__{server}__"))]
+        if not used:
+            why.append("no data-tool call")
+    if leaks:
+        why.append(f"leak {leaks[0]['match']}")
+    return why
 
 
 def score(task: dict, arm: str, run_dir: Path, adjudication: dict | None = None) -> dict:
@@ -330,8 +558,9 @@ def score(task: dict, arm: str, run_dir: Path, adjudication: dict | None = None)
     usage = result.get("usage") or {}
     answer = (result.get("result") or "").casefold()
     servers = {s.get("name"): s.get("status") for s in init.get("mcp_servers", [])}
-    mcp_calls = [c for c in calls if c.startswith("mcp__")]
     meta = json.loads((run_dir / "meta.json").read_text())
+    leaks = leak_hits(events, [init.get("cwd"), meta.get("cwd"), str(run_dir.resolve())])
+    invalid = validity(arm, task.get("kind") == "list", meta, init, result, calls, leaks)
     # Rounds 1-3 recorded none of these in meta.json; their init event still names the
     # model and the Claude Code version.
     provenance = {
@@ -359,8 +588,9 @@ def score(task: dict, arm: str, run_dir: Path, adjudication: dict | None = None)
         "run": run_dir.name,
         **provenance,
         "servers": servers,
-        # A server arm that never called its server measured nothing.
-        "valid": arm == "web" or bool(mcp_calls),
+        "valid": not invalid,
+        "invalid_reason": invalid,
+        "leaks": leaks,
         **outcome,
         "tool_calls": len(calls),
         "tools": calls,
@@ -373,7 +603,10 @@ def score(task: dict, arm: str, run_dir: Path, adjudication: dict | None = None)
         "wall_s": round(meta["wall_s"], 1),
         "exit": meta["exit"],
         "error": result.get("subtype") if result.get("is_error") else None,
-        "answer": _portable(result.get("result") or "", run_dir, meta.get("cwd"))[:400],
+        # Rounds 1 to 3 ran in the run directory itself; only their init event names it.
+        "answer": _portable(
+            result.get("result") or "", run_dir, meta.get("cwd") or init.get("cwd")
+        )[:400],
     }
 
 
@@ -390,11 +623,49 @@ def _portable(answer: str, run_dir: Path, cwd: str | None = None) -> str:
     return answer
 
 
+def installed_versions(package: str, version: str, exclude_newer: str) -> dict[str, str]:
+    """Every distribution in the environment ``uvx`` builds for the arm's server, read
+    from that environment, not from what was asked for."""
+    code = (
+        "import importlib.metadata as m, json; "
+        "print(json.dumps({d.metadata['Name'].lower(): d.version for d in m.distributions()}))"
+    )
+    proc = subprocess.run(
+        ["uvx", "--exclude-newer", exclude_newer, "--from", f"{package}=={version}",
+         "python", "-c", code],
+        capture_output=True, text=True, check=True, timeout=900,
+    )  # fmt: skip
+    return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+def preflight(tasks: list[dict], args: argparse.Namespace) -> None:
+    """Before any run: the scorer scores the key 100% and a wrong list 0%, and each pinned
+    server resolves to the version every row will claim. Writes ``versions.json``."""
+    problems = oracle_problems(tasks)
+    if problems:
+        raise SystemExit("oracle check failed: " + "; ".join(problems))
+    versions: dict[str, dict[str, str]] = {}
+    arms = args.arms.split(",")
+    pins = {
+        "dam": ("data-aggregator-mcp", args.dam_version),
+        "tu": ("tooluniverse", args.tu_version),
+    }
+    for arm, (package, version) in pins.items():
+        if arm not in arms or (arm == "dam" and args.dam_dir):
+            continue
+        got = installed_versions(package, version, args.exclude_newer)
+        if got.get(package) != version:
+            raise SystemExit(f"{arm}: uvx resolved {package} {got.get(package)}, not {version}")
+        versions[arm] = got
+    args.out.mkdir(parents=True, exist_ok=True)
+    (args.out / "versions.json").write_text(json.dumps(versions, indent=1, sort_keys=True))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tasks", required=True, type=Path)
     ap.add_argument("--out", required=True, type=Path)
-    ap.add_argument("--arms", default="dam,tu,web")
+    ap.add_argument("--arms", default="dam,tu,web,bare")
     ap.add_argument("--only", default="", help="comma-separated task ids")
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("--workers", "--parallel", type=int, default=1, dest="workers")
@@ -406,6 +677,9 @@ def main() -> None:
     ap.add_argument("--dam-dir", help="run the dam arm from a checkout, not the release")
     ap.add_argument("--score-only", action="store_true")
     ap.add_argument("--adjudication", type=Path, help="list tasks: pooled additions/rejects")
+    ap.add_argument(
+        "--write-to", type=Path, help="where scores.json and pool.json go (default: --out)"
+    )
     args = ap.parse_args()
     tasks = json.loads(args.tasks.read_text())
     adjudication = json.loads(args.adjudication.read_text()) if args.adjudication else {}
@@ -415,6 +689,7 @@ def main() -> None:
     arms = args.arms.split(",")
     jobs = [(t, a, r) for r in range(1, args.reps + 1) for t in tasks for a in arms]
     if not args.score_only:
+        preflight(tasks, args)
         args.claude_code = claude_version()
         with concurrent.futures.ThreadPoolExecutor(args.workers) as pool:
             futures = [pool.submit(run_one, t, a, r, args.out, args) for t, a, r in jobs]
@@ -425,7 +700,9 @@ def main() -> None:
         run_dir = args.out / a / t["id"] / f"r{r}"
         if (run_dir / "meta.json").exists():
             rows.append(score(t, a, run_dir, adjudication))
-    (args.out / "scores.json").write_text(json.dumps(rows, indent=1))
+    dest = args.write_to or args.out
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "scores.json").write_text(json.dumps(rows, indent=1))
     # Pooling: every listed entry no key study or reject covers, with no arm or run
     # attached and in a shuffled order, so adjudication cannot favour an arm.
     pool: dict[str, dict[str, dict]] = {}
@@ -437,7 +714,7 @@ def main() -> None:
         items = list(entries.values())
         random.Random(task_id).shuffle(items)
         shuffled[task_id] = items
-    (args.out / "pool.json").write_text(json.dumps(shuffled, indent=1))
+    (dest / "pool.json").write_text(json.dumps(shuffled, indent=1))
     for row in rows:
         if "recall" in row:
             print(
@@ -446,14 +723,15 @@ def main() -> None:
                 f"dup={row['duplicates']} prec={row['precision']} pending={len(row['pending'])} "
                 f"src={len(row['result_sources'])} calls={row['tool_calls']:3} "
                 f"in={row['input_tokens']:>8} ${row['cost_usd'] or 0:.2f} {row['wall_s']}s "
-                f"{row['error'] or ''}"
+                f"{row['error'] or ''} {'; '.join(row['invalid_reason'])}"
             )
             continue
         print(
             f"{row['task']} {row['arm']:4} {row['run']} valid={row['valid']!s:5} "
             f"found={row['found']!s:5} bytes={row['bytes_ok']!s:5} calls={row['tool_calls']:3} "
             f"in={row['input_tokens']:>8} out={row['output_tokens']:>6} "
-            f"${row['cost_usd'] or 0:.2f} {row['wall_s']}s {row['error'] or ''}"
+            f"${row['cost_usd'] or 0:.2f} {row['wall_s']}s {row['error'] or ''} "
+            f"{'; '.join(row['invalid_reason'])}"
         )
 
 

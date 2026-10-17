@@ -3,6 +3,8 @@
 Seen to fail: a mutant adding one ``_year(None)`` call to ``datacite._normalize`` turned
 the gate red on search_fanout (+40), cursor_paging (+68) and resolve (+1), each naming
 ``datacite.py:_year``, while fetch (no DataCite) stayed equal (PR body has the run).
+``--update`` tests seen to fail under ``mutate-run``: a rise accepted without
+``--allow-increase``, and a changed output accepted with ``--allow-increase`` alone.
 """
 
 from __future__ import annotations
@@ -64,6 +66,22 @@ def test_gate_fails_on_drop_without_update_and_on_rise_without_allow(
     assert ratchet.json.loads(baseline.read_text())["w"]["calls_total"] == 2  # not raised
     assert ratchet.main(["--baseline", str(baseline), "--update", "--allow-increase"]) == 0
     assert ratchet.json.loads(baseline.read_text())["w"]["calls_total"] == 5
+
+
+def test_update_refuses_a_changed_output_unless_accepted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    baseline = tmp_path / "baseline.json"
+    before = _row({"a.py:f": 3}, {"h": 1}, {"n": 1})
+    rows = {"w": _row({"a.py:f": 2}, {"h": 1}, {"n": 0})}  # cheaper, but does something else
+    monkeypatch.setattr(ratchet, "WORKLOADS", {"w": None})
+    monkeypatch.setattr(ratchet, "measure", lambda name: rows[name])
+    baseline.write_text(ratchet.json.dumps({"w": before}))
+    for flags in (["--update"], ["--update", "--allow-increase"]):
+        assert ratchet.main(["--baseline", str(baseline), *flags]) == 1, flags
+        assert ratchet.json.loads(baseline.read_text())["w"] == before, flags  # unchanged
+    assert ratchet.main(["--baseline", str(baseline), "--update", "--accept-output"]) == 0
+    assert ratchet.json.loads(baseline.read_text())["w"]["output"] == {"n": 0}
 
 
 def test_counter_counts_a_coroutine_once_however_often_it_resumes(tmp_path: Path) -> None:

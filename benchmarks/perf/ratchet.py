@@ -240,6 +240,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--child", help=argparse.SUPPRESS)
     ap.add_argument("--update", action="store_true", help="write lowered counts")
     ap.add_argument("--allow-increase", action="store_true", help="with --update: accept rises")
+    ap.add_argument(
+        "--accept-output",
+        action="store_true",
+        help="with --update: accept a changed output digest (the workload now does something else)",
+    )
     ap.add_argument("--only", default="", help="comma-separated workloads")
     ap.add_argument("--baseline", type=Path, default=BASELINE)
     args = ap.parse_args(argv)
@@ -255,15 +260,22 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(lines))
         if verdict == "equal":
             continue
-        ok = args.update and (verdict == "lower" or args.allow_increase)
+        # One flag per kind of change: a count rise never carries a behaviour change in.
+        ok = args.update and (
+            verdict == "lower"
+            or (verdict in ("higher", "new") and args.allow_increase)
+            or (verdict == "output" and args.accept_output)
+        )
         if ok:
             baseline[name] = now
             print(f"{name}: baseline updated ({verdict})")
         else:
             failed = True
-            hint = {"lower": "--update", "higher": "--update --allow-increase"}.get(
-                verdict, "--update --allow-increase (a new or changed workload)"
-            )
+            hint = {
+                "lower": "--update",
+                "higher": "--update --allow-increase",
+                "new": "--update --allow-increase",
+            }.get(verdict, "--update --accept-output (the workload's output changed)")
             print(f"{name}: FAIL ({verdict}); if intended, rerun with {hint}")
     if args.update:
         args.baseline.write_text(json.dumps(baseline, indent=1, sort_keys=True) + "\n")

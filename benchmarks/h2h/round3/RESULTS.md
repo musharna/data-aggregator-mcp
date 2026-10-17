@@ -32,6 +32,9 @@ include it.
 
 Per-run data: `scores_2026-10-11.json`. Raw transcripts are kept outside the repo, in
 `~/data-aggregator-mcp-artifacts/h2h/r3_runs/` (and `r3_071/` for the 0.71.0 rerun below).
+**Rescored 2026-10-16** (fixed scorer, one validity rule, leak scan, intervals): no row
+changed; dam vs web is not separated (4 of 5 tasks, sign test p = 0.38). See
+`../README.md` and `../summary.tsv`.
 
 | task | need | studies in key | dam | tu | web |
 |---|---|---|---|---|---|

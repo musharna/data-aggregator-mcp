@@ -27,6 +27,9 @@ listed it (`adjudication.json`, reasons in `adjudication_reasons.yaml`): none wa
 new qualifying study, 4 were copies of keyed studies, 3 were borderline, 22 did not
 qualify. Per-run data: `scores_2026-10-05.json`. Raw transcripts (session logs and the
 files each run wrote) are kept outside the repo, in `~/data-aggregator-mcp-artifacts/h2h/r2_runs/`.
+**Rescored 2026-10-16** (fixed scorer, one validity rule, leak scan, intervals): the
+numbers below are as first scored; see `../README.md` and `../summary.tsv`. Round 2's
+tasks were used to tune the server, so none of its runs after the first is evidence.
 
 | task | need | studies in key | dam | tu | web |
 |---|---|---|---|---|---|
