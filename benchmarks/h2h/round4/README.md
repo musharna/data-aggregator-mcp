@@ -52,6 +52,13 @@ From the repository root:
     python3 benchmarks/h2h/run.py --tasks benchmarks/h2h/round4/tasks.json \
         --out ~/data-aggregator-mcp-artifacts/h2h/r4_runs --reps 3 --workers 1
 
+A pilot (U2 only, one run per arm, 2026-10-16) proved the harness: all three arms
+exited 0 with their server connected (dam 0.74.0 confirmed from the running
+interpreter's site-packages), every row records model, Claude Code 2.1.302 and server,
+and the list scored. Its runs are in `~/data-aggregator-mcp-artifacts/h2h/r4_pilot/`
+and are not part of the results; do not diagnose the server from them before the sweep
+is scored.
+
 Raw transcripts stay in `~/data-aggregator-mcp-artifacts/h2h/r4_runs/` (rounds 2 and 3
 are alongside it). Rerun with `--score-only` to rescore.
 
