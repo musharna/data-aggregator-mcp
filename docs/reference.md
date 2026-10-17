@@ -286,8 +286,9 @@ All optional, set via environment variables:
   `UNPAYWALL_EMAIL` when unset.
 - `DATAVERSE_BASE_URL` — resolve Dataverse DOIs against a different installation
   (default `https://dataverse.harvard.edu`).
-- `CACHE_TTL_SECONDS` — resolve-cache lifetime in seconds (default `3600`; an
-  unparseable value falls back to that default).
+- `CACHE_TTL_SECONDS` — resolve-cache lifetime in seconds (default `3600`; `0` or
+  less turns the cache off, `inf` keeps entries for the life of the process; anything
+  that is not a number, `nan` included, falls back to the default with a warning).
 - `EMBEDDING_API_BASE` / `EMBEDDING_API_KEY` / `EMBEDDING_MODEL` — an
   OpenAI-compatible embeddings endpoint enabling `rank=semantic`. Absent ⇒
   semantic re-rank degrades to relevance order. Key is optional (keyless local
