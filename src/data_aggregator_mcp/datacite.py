@@ -125,6 +125,10 @@ _FILE_RESOLVERS: dict[str, Callable[..., Awaitable[list[FileEntry]]]] = {
 # DataCite landing URL (``landing_url=``) to pick the installation that holds it.
 _LANDING_AWARE = frozenset({"dataverse"})
 
+# What a resolver's list leaves out, said in ``truncated["files"]``: OSF lists a node's
+# own storage, not its components' or its add-on storage.
+_UNLISTED: dict[str, Callable[..., Awaitable[str | None]]] = {"osf": osf.unlisted}
+
 # Zenodo's own DOI namespace. `resolve` returns the native Zenodo record for these
 # anyway, so the DataCite GET is pure latency — match on the requested DOI and skip
 # it. Deliberately narrow: a Zenodo record minted under any other prefix still takes
@@ -478,4 +482,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             return resource.model_copy(update={"truncated": {**resource.truncated, "files": note}})
         if file_list:
             resource = resource.model_copy(update={"files": file_list})
+        unlisted = _UNLISTED.get(resource.source)
+        left_out = await unlisted(client, record_doi) if unlisted is not None else None
+        if left_out:
+            truncated = {**resource.truncated, "files": left_out}
+            resource = resource.model_copy(update={"truncated": truncated})
     return resource

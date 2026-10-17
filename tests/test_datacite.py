@@ -152,10 +152,82 @@ async def test_resolve_attaches_osf_files(httpx_mock: HTTPXMock) -> None:
             "links": {"next": None},
         },
     )
+    _osf_elsewhere(httpx_mock, "5pfej", components=[], total=0, providers=["osfstorage"])
     async with httpx.AsyncClient() as client:
         r = await datacite.resolve(client, "datacite:10.17605/osf.io/5pfej")
     assert r.source == "osf"
     assert {f.name for f in r.files} == {"a.csv"}
+    assert r.truncated == {}  # no component, no add-on: the list is the node's all
+
+
+def _osf_elsewhere(httpx_mock, guid, *, components, total, providers) -> None:
+    """OSF's answers for a node's components and storage providers (shapes live
+    2026-10-17: osf.io/ezcuj, osf.io/sxpe8)."""
+    httpx_mock.add_response(
+        url=f"https://api.osf.io/v2/nodes/{guid}/children/?page%5Bsize%5D=10",
+        json={
+            "data": [{"id": c, "type": "nodes"} for c in components],
+            "links": {"next": None, "meta": {"total": total, "per_page": 10}},
+        },
+    )
+    httpx_mock.add_response(
+        url=f"https://api.osf.io/v2/nodes/{guid}/files/",
+        json={
+            "data": [
+                {
+                    "id": f"{guid}:{p}",
+                    "type": "files",
+                    "attributes": {"kind": "folder", "provider": p},
+                }
+                for p in providers
+            ],
+            "links": {"next": None},
+            "meta": {"total": len(providers), "per_page": 10},
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    ("components", "total", "providers", "note"),
+    [
+        (
+            ["ezum7", "ytpuq"],
+            49,
+            ["osfstorage"],
+            "not listed: the files of its 49 components (osf.io/ezum7, osf.io/ytpuq, …). "
+            "Only the node's own OSF storage is listed",
+        ),
+        (
+            [],
+            0,
+            ["osfstorage", "github"],
+            "not listed: its files on github. Only the node's own OSF storage is listed",
+        ),
+        (
+            ["k1"],
+            1,
+            ["osfstorage", "dropbox", "github"],
+            "not listed: the files of its 1 component (osf.io/k1); its files on dropbox, "
+            "github. Only the node's own OSF storage is listed",
+        ),
+    ],
+)
+async def test_an_osf_node_says_which_of_its_files_are_not_listed(
+    httpx_mock: HTTPXMock, components, total, providers, note
+) -> None:
+    # osf.io/ezcuj listed 1 file of its own as its whole manifest beside 49 components.
+    doi = "10.17605/osf.io/ezcuj"
+    httpx_mock.add_response(
+        url=f"https://api.datacite.org/dois/{doi}", json=_hosted(doi, "cos.osf")
+    )
+    httpx_mock.add_response(
+        url="https://api.osf.io/v2/nodes/ezcuj/files/osfstorage/",
+        json={"data": [], "links": {"next": None}},
+    )
+    _osf_elsewhere(httpx_mock, "ezcuj", components=components, total=total, providers=providers)
+    async with httpx.AsyncClient() as client:
+        r = await datacite.resolve(client, doi)
+    assert r.truncated == {"files": note}
 
 
 def test_normalize_sets_access_open_for_open_license() -> None:
@@ -479,6 +551,19 @@ async def test_live_withdrawn_records_resolve_without_files(doi) -> None:
     assert r.truncated["files"].startswith("none listed: ")
     assert ("withdrawn" in r.truncated["files"]) and r.title
     assert ok.files and "files" not in ok.truncated
+
+
+@live_only
+async def test_live_an_osf_node_names_its_components_and_add_on_storage() -> None:
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+        rpp = await datacite.resolve(client, "10.17605/OSF.IO/EZCUJ")
+        gh = await datacite.resolve(client, "10.17605/OSF.IO/SXPE8")
+        plain = await datacite.resolve(client, "10.17605/osf.io/5pfej")
+    assert rpp.truncated["files"].startswith("not listed: the files of its ")
+    assert "osf.io/ezum7" in rpp.truncated["files"]
+    assert gh.truncated["files"].startswith("not listed: its files on github.")
+    # Positive control: a node with neither lists its files and no note.
+    assert plain.files and "files" not in plain.truncated
 
 
 @live_only
