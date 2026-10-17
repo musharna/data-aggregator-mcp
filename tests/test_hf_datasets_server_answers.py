@@ -110,6 +110,16 @@ async def test_live_gated_and_script_datasets_have_no_view_and_resolve_clean(ds_
 
 @_live_only
 @pytest.mark.asyncio
+async def test_live_every_converted_file_is_listed():
+    # allenai/c4 converts to 1,006 files (2026-10-17); 100 were listed before.
+    async with httpx.AsyncClient(timeout=60) as c:
+        files = await hf_datasets_server.parquet_files(c, "allenai/c4")
+    assert len(files) > 1000
+    assert len({f.name for f in files}) == len(files)
+
+
+@_live_only
+@pytest.mark.asyncio
 async def test_live_a_partial_conversion_is_named_partial():
     async with httpx.AsyncClient(timeout=60) as c:
         files = await hf_datasets_server.parquet_files(c, "alexandrainst/da-wit")

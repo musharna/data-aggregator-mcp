@@ -6,6 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A Hugging Face dataset lists every Parquet file datasets-server converted it to; the
+  first 100 were listed, with nothing in the record saying so, and the rest could not be
+  asked for by `file=` (allenai/c4: 1,006 files, 906 unlisted).
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
