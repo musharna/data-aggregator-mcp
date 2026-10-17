@@ -15,6 +15,7 @@ each word is counted first (one row per request), the rarest word's matches are 
 one request, and a dataset is kept when its title, description, keywords and species name
 every word as the server reads one (``_relevance``: whole words, a word also naming its
 plural). Past ``MAX_ROWS`` matches of the rarest word, its newest ``MAX_ROWS`` are read.
+A word's count is kept ten minutes, for the next search that holds it.
 
 ``resolve`` adds the DOI and FTP location from ``MassiveServlet``. Discovery-only: the
 files are on FTP, which fetch does not speak.
@@ -30,6 +31,7 @@ from collections.abc import Callable
 import httpx
 
 from data_aggregator_mcp import _http
+from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._relevance import _names, query_terms
 from data_aggregator_mcp._relevance import _normalize as _normalize_words
 from data_aggregator_mcp.errors import NotFoundError
@@ -53,6 +55,12 @@ _MIN_SENT = 3
 # The rows read for the rarest word: "metabolomics" is 2,778 rows, 7.5 MB, 3.3 s in one
 # request (2026-10-12).
 MAX_ROWS = 5000
+# A word's count, kept ten minutes. An agent's searches rephrase one another: 235 of the
+# 356 counts of an 83-search session repeated a word already counted, and under that
+# load MassIVE took up to 104 s a search (3.75 s alone) and answered 429 six times
+# (2026-10-17). The rows are read with a fresh count, so a kept count costs a request,
+# never a dataset; a kept zero hides a new dataset for at most the ten minutes.
+_COUNTS = TTLCache(maxsize=4096, ttl=600.0)
 DEFAULT_TIMEOUT = 60.0
 # Lists come as one string joined with "###": keywords, species.
 _SEP = "###"
@@ -107,6 +115,28 @@ async def _query(
     return int(body["total_rows"]), body["row_data"]
 
 
+async def _count(client: httpx.AsyncClient, word: str) -> int:
+    """The count of datasets matching ``word``, kept ``_COUNTS.ttl`` seconds."""
+    n = _COUNTS.get(word)
+    if n is MISS:
+        n, _ = await _query(client, word, size=1, offset=0, service="MassIVE search")
+        _COUNTS.set(word, n)
+    return n
+
+
+async def _newest_rows(client: httpx.AsyncClient, word: str, total: int) -> list[dict]:
+    """The newest ``MAX_ROWS`` rows matching ``word``, read where ``total``, its count,
+    puts them. The answer counts afresh: when that differs (the count was kept from an
+    earlier search), they are read again where the fresh count puts them."""
+    n = min(total, MAX_ROWS)
+    fresh, rows = await _query(client, word, size=n, offset=total - n, service="MassIVE search")
+    _COUNTS.set(word, fresh)
+    if fresh not in (total, 0):
+        n = min(fresh, MAX_ROWS)
+        _, rows = await _query(client, word, size=n, offset=fresh - n, service="MassIVE search")
+    return rows
+
+
 def _value(r: dict, field: str) -> str | None:
     """A text field, None when absent, empty or the string "null" (a 2014 row's
     description is "null")."""
@@ -155,15 +185,12 @@ async def search(
     if not terms:
         raise ValueError(f"MassIVE search needs a word to look for; {query!r} has none")
     sent = [t for t in terms if len(t) >= _MIN_SENT] or terms
-    counts = await asyncio.gather(
-        *(_query(client, t, size=1, offset=0, service="MassIVE search") for t in sent)
-    )
+    counts = await asyncio.gather(*(_count(client, t) for t in sent))
     # gather() returns one count per word sent, so strict= cannot change behaviour.
-    total, term = min((c[0], t) for c, t in zip(counts, sent, strict=True))  # pragma: no mutate
+    total, term = min(zip(counts, sent, strict=True))  # pragma: no mutate
     if total == 0:
         return 0, []
-    n = min(total, MAX_ROWS)
-    _, rows = await _query(client, term, size=n, offset=total - n, service="MassIVE search")
+    rows = await _newest_rows(client, term, total)
     matched = sorted(
         {r["dataset"]: r for r in rows if all(_names(_text(r), t) for t in terms)}.values(),
         key=lambda r: r["dataset"],
