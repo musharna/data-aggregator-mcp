@@ -6,6 +6,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- DataCite records held on a Figshare institutional portal whose DataCite client is not
+  named for Figshare (Monash Bridges, Queen's Belfast, the Open University, Deakin,
+  Loughborough and about 30 more) are now Figshare records, so resolve lists their files.
+  They were labelled with the raw client id (`monash.repo`) and listed none. Such a
+  portal is told by its landing page's shape. An older portal DOI that carries no
+  article id (Monash's `10.4225/03/…`, `10.26180/5f4c…`, as round 3's HyDaT study)
+  takes the id from that page, and a portal collection DOI (`10.17034/c.…`) is no
+  longer read as a withdrawn article.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
