@@ -264,9 +264,13 @@ async def _download_one(
             sc = exc.response.status_code
             if sc == 404:
                 raise NotFoundError(f"fetch {f.name} → HTTP 404 ({f.url})") from exc
-            raise UpstreamUnavailableError(f"fetch {f.name} → HTTP {sc} ({f.url})") from exc
+            raise UpstreamUnavailableError(
+                f"fetch {f.name} → HTTP {sc} ({f.url})", down=sc == 429 or sc >= 500
+            ) from exc
         except (httpx.TimeoutException, httpx.TransportError) as exc:
-            raise UpstreamUnavailableError(f"fetch {f.name} transport failure: {exc!r}") from exc
+            raise UpstreamUnavailableError(
+                f"fetch {f.name} transport failure: {exc!r}", down=True
+            ) from exc
         if h is not None and f.checksum:
             expected = _split_checksum(f.checksum)[1]
             if h.hexdigest() != expected:
