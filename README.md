@@ -96,7 +96,7 @@ how a set of records connect (a shared accession, DOI or explicit link).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/musharna/data-aggregator-mcp/main/docs/assets/architecture.svg"
-       alt="How one search runs: NCBI Taxonomy maps Orobanche aegyptiaca to its current name, Phelipanche aegyptiaca, and the sources that accept synonyms search both names; the query goes to 17 sources in parallel (10 archives, 6 omics, 1 literature); records that share a DOI become one, keeping the copy that can be downloaded; a record can then be resolved to files and checksums, fetched with the checksum verified where the source publishes one, or queried with SQL without downloading it"
+       alt="How one search runs: NCBI Taxonomy maps Orobanche aegyptiaca to its current name, Phelipanche aegyptiaca, and the sources that accept synonyms search both names; the query goes to 20 sources in parallel (10 archives, 9 omics, 1 literature); records that share a DOI become one, keeping the copy that can be downloaded; a record can then be resolved to files and checksums, fetched with the checksum verified where the source publishes one, or queried with SQL without downloading it"
        width="820">
 </p>
 
