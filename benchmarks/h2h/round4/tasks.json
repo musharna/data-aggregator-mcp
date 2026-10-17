@@ -1,0 +1,955 @@
+[
+ {
+  "id": "U1",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds human intracranial recordings (ECoG, stereo-EEG, depth electrodes, or microwire/microelectrode single units and LFP) made during natural sleep, overnight or during naps, where sleep is staged or at least sleep periods are identified. Raw or processed neural data both count. Scalp-only EEG or polysomnography, animal recordings, wake-only task recordings, recordings under anesthesia only, code-only repositories, and papers without deposited data do not count.",
+  "frozen": "2026-10-16",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "10.6080/K06Q1VD5",
+     "crcns:ieeg-1",
+     "OpenNeuro:ds003498",
+     "10.18112/openneuro.ds003498.v1.1.1",
+     "10.18112/openneuro.ds003498.v1.0.1",
+     "10.82901/nemar.on003498"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "OpenNeuro:ds003876",
+     "10.18112/openneuro.ds003876.v1.0.2",
+     "10.82901/nemar.on003876"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "OpenNeuro:ds003848",
+     "10.18112/openneuro.ds003848.v1.0.3",
+     "10.82901/nemar.on003848"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "OpenNeuro:ds004551",
+     "10.18112/openneuro.ds004551.v1.0.6",
+     "10.82901/nemar.on004551"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "OpenNeuro:ds005398",
+     "10.18112/openneuro.ds005398.v1.1.3",
+     "10.82901/nemar.on005398"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "OpenNeuro:ds007118",
+     "OpenNeuro:ds007119",
+     "OpenNeuro:ds007120",
+     "10.18112/openneuro.ds007118.v1.0.0",
+     "10.18112/openneuro.ds007119.v1.0.0",
+     "10.18112/openneuro.ds007120.v1.0.0",
+     "10.82901/nemar.on007118",
+     "10.82901/nemar.on007119",
+     "10.82901/nemar.on007120"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "10.5061/dryad.4f92n",
+     "zenodo:5014606",
+     "10.82901/nemar.nm000398"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "10.6078/D1NX1V",
+     "zenodo:3975771"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.6084/m9.figshare.26131978",
+     "10.6084/m9.figshare.26131978.v1",
+     "10.6084/m9.figshare.26131978.v2",
+     "10.6084/m9.figshare.26131978.v3",
+     "10.82901/nemar.nm000360"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.5281/zenodo.6270017",
+     "10.5281/zenodo.6270016"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "10.5281/zenodo.14583770",
+     "10.5281/zenodo.13644423",
+     "10.5281/zenodo.14885382",
+     "10.5281/zenodo.14885381",
+     "10.82901/nemar.nm000374"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "10.5281/zenodo.7838640",
+     "10.5281/zenodo.7838639"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.82901/nemar.nm000361",
+     "NEMAR:nm000361"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.82901/nemar.nm000362",
+     "NEMAR:nm000362",
+     "https://mni-open-ieegatlas.research.mcgill.ca/"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.17605/OSF.IO/3HPVR",
+     "osf.io/3hpvr",
+     "10.82901/nemar.nm000481"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "10.26275/xhte-d11l",
+     "sparc:414"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "10.7302/3cx8-3x86"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "10.34810/data503"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "10.5281/zenodo.5595341",
+     "10.5281/zenodo.5595340"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "10.5281/zenodo.15497531",
+     "10.5281/zenodo.15497530"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "10.5281/zenodo.19502572",
+     "10.5281/zenodo.19502635"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "10.5281/zenodo.10183659",
+     "10.5281/zenodo.10183658"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "10.5281/zenodo.8125756",
+     "10.5281/zenodo.7685932"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "10.5281/zenodo.6529724",
+     "10.5281/zenodo.6529723"
+    ]
+   },
+   {
+    "key": "S25",
+    "ids": [
+     "10.5281/zenodo.6451900",
+     "10.5281/zenodo.6451899"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S26",
+    "ids": [
+     "10.26275/xbu9-ulpn",
+     "10.26275/ju7h-bo8u",
+     "sparc:696",
+     "10.82901/nemar.nm000456"
+    ]
+   },
+   {
+    "key": "S27",
+    "ids": [
+     "DANDI:000055",
+     "10.48324/dandi.000055/0.220127.0436",
+     "10.82901/nemar.nm000358"
+    ]
+   },
+   {
+    "key": "S28",
+    "ids": [
+     "10.6084/m9.figshare.28375673",
+     "10.6084/m9.figshare.28375673.v1"
+    ]
+   },
+   {
+    "key": "S29",
+    "ids": [
+     "10.6084/m9.figshare.30716378",
+     "10.6084/m9.figshare.30716378.v1"
+    ]
+   },
+   {
+    "key": "S30",
+    "ids": [
+     "10.17605/OSF.IO/8KEVM",
+     "osf.io/8kevm"
+    ]
+   },
+   {
+    "key": "S31",
+    "ids": [
+     "10.5281/zenodo.8180780",
+     "10.5281/zenodo.8180779",
+     "10.6084/m9.figshare.23740410",
+     "10.6084/m9.figshare.23740410.v1"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "U2",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, of high-throughput sequencing data from the salamander chytrid fungus Batrachochytrium salamandrivorans (Bsal): genome or transcriptome sequencing of Bsal isolates, or sequencing (for example host RNA-seq or skin-microbiome amplicons) of amphibians experimentally or naturally infected with or exposed to Bsal. Raw reads, assemblies and processed sequence tables all count. Sanger single-gene sequences, qPCR or other non-sequencing detection data, sequencing of animals or environments never exposed to Bsal, B. dendrobatidis-only data, and papers without deposited data do not count.",
+  "frozen": "2026-10-16",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "PRJNA311566",
+     "SRP069871",
+     "GCA_002006685.1",
+     "GCA_002006685",
+     "PRJNA326249",
+     "SRP076803",
+     "PRJNA300849",
+     "SRP067225",
+     "PRJNA323392",
+     "GESS00000000",
+     "GESS01000000"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "PRJNA610831",
+     "SRP251868",
+     "PRJNA623491",
+     "PRJNA623492",
+     "PRJNA623493",
+     "PRJNA623494",
+     "PRJNA797021",
+     "PRJNA797022",
+     "GCA_021556655.1",
+     "GCA_021556665.1",
+     "GCA_021556675.1",
+     "GCA_021556705.1",
+     "GCA_020617715.1",
+     "GCA_020617725.1",
+     "GCA_020617735.1",
+     "GCA_020617195.1"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "PRJNA666901",
+     "SRP286262",
+     "GCA_002006685.2"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "GSE161129",
+     "PRJNA675619",
+     "SRP291769"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "PRJNA845763",
+     "SRP378425",
+     "GCA_044508915.1"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "PRJNA477390",
+     "SRP151078",
+     "10.5061/dryad.m40t6g7",
+     "10.5061/dryad.m40t6g7/1"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "PRJNA430498",
+     "SRP130045"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "PRJNA612733",
+     "SRP252891"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "PRJNA739374",
+     "SRP324704"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "PRJNA1248485",
+     "SRP577488",
+     "10.6084/m9.figshare.28254434",
+     "10.6084/m9.figshare.28254434.v1"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "PRJNA1265256",
+     "SRP586388",
+     "PRJNA1266396",
+     "SRP586974",
+     "GLNC00000000",
+     "GLNC01000000"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "PRJNA1399148",
+     "SRP660197"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "PRJNA1532440",
+     "SRP738441"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S10",
+    "ids": [
+     "PRJNA897848",
+     "SRP406639",
+     "10.5061/dryad.rv15dv4g1"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "U3",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds mass-spectrometry proteomics data (including phosphoproteomics, acetylomes and other PTM proteomics) from rice plants (Oryza sativa or other Oryza species) exposed to drought or water deficit: soil drying, withholding water, reduced field capacity, or PEG-simulated drought. Raw or processed MS data both count. Salt-, cold-, heat- or ABA-only treatments, other species, transcriptome-only or metabolome-only data, gel images without MS data, and papers without deposited data do not count.",
+  "frozen": "2026-10-16",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "PXD000319"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "PXD001046"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "PXD004096",
+     "PXD004118"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "PXD008977"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "PXD016150"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "PXD019885"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "PXD021005"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "PXD022269"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "PXD031505",
+     "IPX0004040000"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "PXD033343"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "PXD036637"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "PXD042247",
+     "IPX0006149000"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "PXD042392",
+     "10.6019/PXD042392"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "PXD046729",
+     "10.6019/PXD046729"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "PXD059709",
+     "PXD059711"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "PXD064898",
+     "PXD064916"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "PXD072923",
+     "IPX0015056000",
+     "10.3389/fpls.2026.1742602.s001",
+     "10.3389/fpls.2026.1742602.s002",
+     "10.3389/fpls.2026.1742602.s003",
+     "10.3389/fpls.2026.1742602.s004",
+     "10.3389/fpls.2026.1742602.s005",
+     "10.3389/fpls.2026.1742602.s006"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "10.5281/zenodo.7232767",
+     "10.5281/zenodo.7232766"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "OMIX016543",
+     "OMIX016544",
+     "OMIX016545",
+     "PRJCA052664"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S20",
+    "ids": [
+     "PXD030428"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "figshare:2566012",
+     "figshare:2566024",
+     "figshare:2566030",
+     "https://acs.figshare.com/articles/dataset/Shotgun_Proteomic_Analysis_of_Long_distance_Drought_Signaling_in_Rice_Roots/2566012"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "figshare:2756677",
+     "figshare:2756683",
+     "https://acs.figshare.com/articles/dataset/Identification_of_Extracellular_Matrix_Proteins_of_Rice_i_Oryza_sativa_i_L_Involved_in_Dehydration_Responsive_Network_A_Proteomic_Approach/2756677"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "10.6084/m9.figshare.c.5237103",
+     "10.6084/m9.figshare.13364418",
+     "10.6084/m9.figshare.13364406",
+     "10.6084/m9.figshare.13364409",
+     "10.6084/m9.figshare.13364412",
+     "10.6084/m9.figshare.13364415",
+     "10.6084/m9.figshare.13364421"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "10.6084/m9.figshare.20624797"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "U4",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds field measurements of microplastics (particle counts or concentrations, polymer types, sizes or shapes) in snow, sea ice, glacier ice or ice cores collected in the Arctic, in Antarctica, or on high-mountain glaciers (Alps, Himalaya/Tibetan Plateau, Andes and similar). Compilations that include such measurements count. Seawater-only, sediment-only, biota-only and air or deposition-collector samples, laboratory experiments, model output, and papers without deposited data do not count.",
+  "frozen": "2026-10-16",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "10.1594/PANGAEA.886593",
+     "PANGAEA.886593"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "10.1594/PANGAEA.901447",
+     "PANGAEA.901447"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.26179/qzf5-tr20",
+     "AADC:PanAnt_MPs"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "10.25959/bn9r-2f27",
+     "IMAS:58fdf02b-5009-4f11-ba1f-71de23fd74ef"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "10.5285/ac6ade29-2815-4938-a93a-d84f0d322bd6",
+     "GB/NERC/BAS/PDC/01975"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.15784/602048",
+     "USAP-DC:602048"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "10.17632/ggk9yhc5vc",
+     "10.17632/ggk9yhc5vc.1"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S8",
+    "ids": [
+     "10.17632/vh7ffvvjt9",
+     "10.17632/vh7ffvvjt9.1"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.13130/rd_unimi/pnvc2i",
+     "doi:10.13130/RD_UNIMI/PNVC2I"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.24416/uu01-h8zo62",
+     "10.24416/UU01-H8ZO62"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "10.5281/zenodo.14180715",
+     "10.5281/zenodo.14180714",
+     "zenodo:14180715"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "10.5281/zenodo.17942873",
+     "10.5281/zenodo.17942874",
+     "10.5281/zenodo.19466585",
+     "10.5281/zenodo.21375866",
+     "zenodo:21375866"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.5281/zenodo.14532528",
+     "10.5281/zenodo.14532529",
+     "10.5281/zenodo.14536229",
+     "10.5281/zenodo.14536630",
+     "10.5281/zenodo.17102673",
+     "zenodo:17102673"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.5281/zenodo.13877244",
+     "10.5281/zenodo.13877243",
+     "zenodo:13877244"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.11888/Cryos.tpdc.303420",
+     "TPDC:bdeadb5f-ade8-426b-a910-524ead3406d6"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "10.1021/acs.est.9b07540.s003",
+     "10.1021/acs.est.9b07540.s004",
+     "10.1021/acs.est.9b07540.s005",
+     "10.6084/m9.figshare.11763645"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "U5",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds eye-tracking recordings of children or adolescents (under 18) reading text (sentences or passages, in any language): raw gaze samples, fixations and saccades, or per-word or per-region reading measures derived from them. Corpora that include child readers alongside adults count; adult-only samples, non-reading eye-tracking tasks, single-word naming without eye tracking, and papers without deposited data do not count.",
+  "frozen": "2026-10-16",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "10.5281/zenodo.13332133",
+     "10.5281/zenodo.13332134",
+     "10.5281/zenodo.17513247"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "10.6084/m9.figshare.c.3521379",
+     "10.6084/m9.figshare.c.3521379.v1",
+     "10.6084/m9.figshare.4204824",
+     "10.6084/m9.figshare.4204824.v1"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.6084/m9.figshare.4986365",
+     "10.6084/m9.figshare.4986365.v1",
+     "10.1371/journal.pone.0182597.s002"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "10.7910/DVN/8CWDGZ",
+     "hdl:10904/10244"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "10.34894/RU8RFG"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.34894/ROSEZP"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "10.57760/sciencedb.psych.00992"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "10.17605/osf.io/hx2sj",
+     "osf.io/hx2sj"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.17605/osf.io/nmgxd",
+     "osf.io/nmgxd"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.17605/osf.io/frgw8",
+     "osf.io/frgw8"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S11",
+    "ids": [
+     "10.17605/osf.io/uk8bt",
+     "10.17605/osf.io/37tdg",
+     "10.17605/osf.io/ujq7a",
+     "10.17605/osf.io/5j7f8",
+     "10.17605/osf.io/nvxfm",
+     "10.17605/osf.io/pqywf",
+     "10.17605/osf.io/5td87",
+     "10.17605/osf.io/5bdak"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "10.17605/osf.io/6gnxe",
+     "osf.io/6gnxe"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.17605/osf.io/xu384",
+     "osf.io/xu384"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.17605/osf.io/x6wmf",
+     "osf.io/x6wmf"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.17605/osf.io/kcn3f",
+     "osf.io/kcn3f"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "10.17605/osf.io/5h9mw",
+     "osf.io/5h9mw"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "10.17605/osf.io/cgske",
+     "osf.io/cgske"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "10.17605/osf.io/xjd5r",
+     "osf.io/xjd5r",
+     "osf.io/6x9qr",
+     "osf.io/rve6d",
+     "osf.io/wzbuk",
+     "osf.io/x3pdh"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "osf.io/zj3un"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "osf.io/28qyf"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "osf.io/g85sh"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "osf.io/y5vh4"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "osf.io/ngjra"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "osf.io/9p3xh"
+    ]
+   },
+   {
+    "key": "S25",
+    "ids": [
+     "osf.io/gbsmf"
+    ]
+   },
+   {
+    "key": "S26",
+    "ids": [
+     "osf.io/26nvz",
+     "10.25384/sage.c.5639987",
+     "10.25384/sage.c.5639987.v1"
+    ]
+   },
+   {
+    "key": "S27",
+    "ids": [
+     "osf.io/d9528"
+    ]
+   },
+   {
+    "key": "S28",
+    "ids": [
+     "osf.io/j2tke"
+    ]
+   },
+   {
+    "key": "S29",
+    "ids": [
+     "osf.io/s8j2n"
+    ]
+   },
+   {
+    "key": "S30",
+    "ids": [
+     "10.25442/hku.19539061",
+     "10.25442/hku.19539061.v1"
+    ]
+   },
+   {
+    "key": "S31",
+    "ids": [
+     "10.5255/ukda-sn-856609"
+    ]
+   },
+   {
+    "key": "S32",
+    "ids": [
+     "10.35376/10324/54598"
+    ]
+   },
+   {
+    "key": "S33",
+    "ids": [
+     "github.com/Sorooshi/DD"
+    ]
+   }
+  ]
+ }
+]
