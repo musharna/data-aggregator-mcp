@@ -102,6 +102,15 @@ how a set of records connect (a shared accession, DOI or explicit link).
 
 A source that fails is named in the result's `errors`, never dropped silently.
 
+Six sources return only records holding every word of the query: DataCite,
+OmicsDI, NCBI omics (GEO, SRA, BioProject), CELLxGENE, the Metabolomics Workbench
+and MassIVE. A longer query can find nothing there, so DataCite, OmicsDI,
+CELLxGENE and the Workbench are also searched for records holding only some of the
+words. Those hits rank below hits naming more of the query, `total` does not count
+them, and `errors.all_words` says when a source had no record with every word. For
+NCBI omics and MassIVE, keep queries short. Details:
+[docs/reference.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/reference.md#every-word-sources).
+
 ## Compared with other servers
 
 | Server | Searches | One search | Checksum | Remote SQL | Licence check |
