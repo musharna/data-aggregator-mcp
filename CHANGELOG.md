@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A Zenodo record's views and downloads are now that version's own. They were the
+  counts of every version of its concept, so version 3.11.2 of a package
+  (`zenodo:23039074`) showed 428,071 views where it has 1,639, and a record and its
+  DataCite copy, which counts its own DOI, disagreed.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
