@@ -304,7 +304,7 @@ async def test_the_fill_is_read_only_while_fewer_than_a_page_name_every_word(nam
 
 
 @pytest.mark.asyncio
-async def test_the_fill_reads_the_three_rarest_words_that_match_anything():
+async def test_the_fill_reads_the_two_rarest_words_that_match_anything():
     both, alpha, beta = _dataset(1, "alpha beta"), _dataset(3, "alpha"), _dataset(2, "beta")
     gamma = [_dataset(10 + i, "gamma") for i in range(3)]
     # Each word matches at least 2, so its rows are read with pageSize > 1, unlike a count.
@@ -316,10 +316,12 @@ async def test_the_fill_reads_the_three_rarest_words_that_match_anything():
         # "omega" matches nothing: no dataset can name every word.
     }
     (total, recs), sent = await _search("alpha beta gamma delta omega", answers, some_words=True)
-    assert sorted(s[0] for s in sent if s[1] != 1) == ["alpha", "beta", "gamma"]
-    # More words first, then rarer ones (alpha and beta 2 datasets, gamma 3), newest first.
-    assert [r.title for r in recs] == ["alpha beta", "alpha", "beta", "gamma", "gamma", "gamma"]
-    assert total == 6
+    # gamma, the third rarest, is counted but its rows are not read.
+    assert sorted(s[0] for s in sent if s[1] != 1) == ["alpha", "beta"]
+    assert "gamma" in {s[0] for s in sent}
+    # More words first, then newest first.
+    assert [r.title for r in recs] == ["alpha beta", "alpha", "beta"]
+    assert total == 3
     # Positive control: the every-word search reads no rows at all for it.
     (total, recs), sent = await _search("alpha beta gamma delta omega", answers)
     assert (total, recs) == (0, [])

@@ -66,11 +66,13 @@ _COUNTS = TTLCache(maxsize=4096, ttl=600.0)
 # Its datasets naming only some of the words are searched too, below those naming every
 # one (``router._source_streams``); matched here, so asked for with some_words. Each word
 # is a request, and MassIVE answers 429 under load, so the fill reads only the rows of
-# the 3 rarest words that match anything, and only while fewer than a page of datasets
-# name every word.
+# the 2 rarest words that match anything, and only while fewer than a page of datasets
+# name every word. Over the round-3 coral queries a third word's rows added a read in 11
+# of 27 searches and put fewer key studies in the first 50 (272, against 278 with two),
+# its weaker hits crowding them (2026-10-17).
 ANY_WORD_FILL = True
 FILLS_IN_CODE = True
-_FILL_WORDS = 3
+_FILL_WORDS = 2
 _FILL_BELOW = DEFAULT_SIZE
 # Requests in flight, by what they ask: the every-word search and its fill run at once
 # and ask for the same counts and the rarest word's rows, which are read once for both.
