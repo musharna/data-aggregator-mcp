@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- One slow source no longer holds up a search page. The page waited for every source,
+  so a single stall set its time: over the round-3 queries (83 searches), 4 had one
+  source stall for 27-56 s (MassIVE, OmicsDI, OpenAIRE). A source that has not answered
+  within 20 s is now named in `errors` ("no answer within 20 s"), as an outage is, and
+  the page is served from the rest.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
