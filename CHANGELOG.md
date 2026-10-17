@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.74.1] - 2026-10-16
+
 ### Fixed
 
 - data.gov search pages no longer share records: the catalog ranks differently for each
