@@ -1,0 +1,252 @@
+task: U1
+prompt: >-
+  Find every public dataset, in any archive, that holds human intracranial recordings (ECoG, stereo-EEG, depth
+  electrodes, or microwire/microelectrode single units and LFP) made during natural sleep, overnight or during naps,
+  where sleep is staged or at least sleep periods are identified. Raw or processed neural data both count. Scalp-only
+  EEG or polysomnography, animal recordings, wake-only task recordings, recordings under anesthesia only, code-only
+  repositories, and papers without deposited data do not count.
+criteria: >-
+  Topic: PRIMARY (human intracranial recordings during natural sleep). Included: a public, openly downloadable deposit
+  (OpenNeuro, NEMAR, CRCNS, DANDI, SPARC/Pennsieve, Zenodo, Figshare, Dryad, OSF, Deep Blue Data, CORA/CSUC Dataverse,
+  etc.) holding intracranial neural data from human patients (subdural ECoG, SEEG/depth electrodes, laminar or Utah
+  microelectrodes, microwire units) recorded during natural sleep. The deposit or its paper must stage the sleep or mark
+  sleep periods (files, tasks or sessions named for sleep, NREM/SWS clips, hypnograms, or sleep labels). Processed data
+  count, such as per-subject ripple, MUA or coherence results and per-figure source data derived from the sleep
+  recordings. Borderline: sleep identified only by coarse video labels; deposits where only a minority of patients are
+  intracranial; continuous multi-day recordings whose deposit lacks sleep labels although the paper staged sleep;
+  per-night derived time series; and records whose files could not be listed (OSF was offline for scheduled
+  maintenance throughout this build, 2026-10-16 to 2026-10-19). Excluded: scalp-only EEG, hd-EEG or EEG-fMRI sleep data;
+  animal (rodent, cat, canine, macaque) recordings; wake-only task or resting recordings; intraoperative recordings
+  under general anesthesia only; seizure-only clips; embargoed, controlled-access, restricted or login-only records,
+  and DOIs whose data are not public; code-only software releases; and papers, posters or supplements. Unit = study.
+  OpenNeuro snapshots and their NEMAR mirrors (10.82901/nemar.onXXXXXX), Dryad deposits and their Zenodo mirrors,
+  concept and version DOIs, multi-part uploads of one dataset, and NEMAR re-packagings of another archive's deposit are
+  aliases. Separate deposits from different papers are separate studies, even from the same lab or cohort.
+studies:
+  - key: S1
+    title: "High frequency oscillations detected in the intracranial EEG of epilepsy patients during interictal sleep, patients' electrode location and outcome of epilepsy surgery (Zurich iEEG HFO dataset)"
+    year: 2017
+    ids: ["10.6080/K06Q1VD5", "crcns:ieeg-1", "OpenNeuro:ds003498", "10.18112/openneuro.ds003498.v1.1.1", "10.18112/openneuro.ds003498.v1.0.1", "10.82901/nemar.on003498"]
+    archives: [CRCNS, OpenNeuro, NEMAR]
+    evidence: "CRCNS about page: subdural and depth iEEG from 20 patients, up to six 5-min intervals of interictal slow-wave sleep per night recording, with HFO markings (Fedele et al. 2017 Sci Rep). OpenNeuro ds003498 (sessions ses-interictalsleep) is the BIDS conversion of the same data and says so in its README; NEMAR on003498 mirrors it."
+  - key: S2
+    title: "Epilepsy-iEEG-Interictal-Multicenter-Dataset"
+    year: 2021
+    ids: ["OpenNeuro:ds003876", "10.18112/openneuro.ds003876.v1.0.2", "10.82901/nemar.on003876"]
+    archives: [OpenNeuro, NEMAR]
+    evidence: "README: interictal iEEG (NIH, JHH, UMF; Bernabei & Li et al.) 'possibly with sleep or awake state annotated'; S3 listing has 60 task-interictalasleep files beside 55 task-interictalawake files."
+  - key: S3
+    title: "Dataset Clinical Epilepsy iEEG to BIDS - RESPect_longterm_iEEG"
+    year: 2021
+    ids: ["OpenNeuro:ds003848", "10.18112/openneuro.ds003848.v1.0.3", "10.82901/nemar.on003848"]
+    archives: [OpenNeuro, NEMAR]
+    evidence: "UMC Utrecht long-term ECoG/SEEG (6 patients); README defines task 'sleep' as a file where the patient sleeps most of the time; snapshot tasks include task-sleep/task-Sleep (70 files) and task-slawtrans (sleep-wake transition)."
+  - key: S4
+    title: "iEEG on children during slow wave sleep"
+    year: 2023
+    ids: ["OpenNeuro:ds004551", "10.18112/openneuro.ds004551.v1.0.6", "10.82901/nemar.on004551"]
+    archives: [OpenNeuro, NEMAR]
+    evidence: "README: iEEG from 114 children during slow-wave sleep (Sakakura et al., Wayne State; developmental atlas of HFO phase-amplitude coupling, PMC10575956); all 375 data files are task-sleep."
+  - key: S5
+    title: "Open iEEG Dataset (Pediatric iEEG, Wayne State University and UCLA)"
+    year: 2024
+    ids: ["OpenNeuro:ds005398", "10.18112/openneuro.ds005398.v1.1.3", "10.82901/nemar.on005398"]
+    archives: [OpenNeuro, NEMAR]
+    evidence: "README: interictal iEEG 'collected from 185 subjects during sleep' at UCLA and Children's Hospital of Michigan, with HFO derivatives (Zhang et al.); 1091 task-sleep files. A different deposit and paper from S4."
+  - key: S6
+    title: "iEEG_comprehensive_HFA_model (parts 1-3)"
+    year: 2025
+    ids: ["OpenNeuro:ds007118", "OpenNeuro:ds007119", "OpenNeuro:ds007120", "10.18112/openneuro.ds007118.v1.0.0", "10.18112/openneuro.ds007119.v1.0.0", "10.18112/openneuro.ds007120.v1.0.0", "10.82901/nemar.on007118", "10.82901/nemar.on007119", "10.82901/nemar.on007120"]
+    archives: [OpenNeuro, NEMAR]
+    evidence: "Three OpenNeuro parts of one upload; README: 'intracranial EEG data recorded during non-REM sleep and used in Hatano et al. (in press)' (Asano lab); every data file is task-sleep."
+  - key: S7
+    title: "Data from: Optimizing the detection of wakeful and sleep-like states for future electrocorticographic brain computer interface applications"
+    year: 2016
+    ids: ["10.5061/dryad.4f92n", "zenodo:5014606", "10.82901/nemar.nm000398"]
+    archives: [Dryad, Zenodo, NEMAR]
+    evidence: "Dryad API (4.4 GB): SubA-SubD Sleep1/Sleep2 and Wake .mat files of 64-channel subdural ECoG; sleep-like epochs identified from video and audio (Pahwa et al. 2015 PLoS One). Zenodo 5014606 is the Dryad mirror; NEMAR nm000398 repackages the Dryad files in BIDS."
+  - key: S8
+    title: "An electrophysiological marker of arousal level in humans"
+    year: 2020
+    ids: ["10.6078/D1NX1V", "zenodo:3975771"]
+    archives: [Dryad, Zenodo]
+    evidence: "Per-figure .mat files including Figure_2c_Sleep_iEEG_All_Power_Slope.mat (spectral slope of intracranial sleep recordings across wake, NREM and REM) alongside scalp sleep and propofol files (Lendner et al. 2020 eLife, PMC7394547). Processed only. Zenodo 3975771 is the Dryad mirror."
+  - key: S9
+    title: "Annotated interictal epileptiform discharges in intracranial EEG (iEEG) sleep data"
+    year: 2024
+    ids: ["10.6084/m9.figshare.26131978", "10.6084/m9.figshare.26131978.v1", "10.6084/m9.figshare.26131978.v2", "10.6084/m9.figshare.26131978.v3", "10.82901/nemar.nm000360"]
+    archives: [Figshare, NEMAR]
+    evidence: "Figshare: ieeg_ieds_bids_final.zip (272 MB) of multichannel iEEG from 25 epilepsy patients during overnight sleep (Tel Aviv and UCLA) with 852 annotated IEDs (Falach et al. 2024 Sci Data). NEMAR nm000360 links the same Figshare DOI."
+  - key: S10
+    title: "Widespread ripples synchronize human cortical activity during sleep, waking, and memory recall"
+    year: 2022
+    ids: ["10.5281/zenodo.6270017", "10.5281/zenodo.6270016"]
+    archives: [Zenodo]
+    evidence: "data.zip (22 GB) holds preprocessed per-subject ripple cross-correlograms and event data from SEEG/ECoG during NREM sleep and waking, plus code and README (Dickey et al. 2022 PNAS, PMC9282280)."
+  - key: S11
+    title: "Electrophysiological signatures underlying variability in human memory consolidation (data, code and raw iEEG)"
+    year: 2025
+    ids: ["10.5281/zenodo.14583770", "10.5281/zenodo.13644423", "10.5281/zenodo.14885382", "10.5281/zenodo.14885381", "10.82901/nemar.nm000374"]
+    archives: [Zenodo, NEMAR]
+    evidence: "Two Zenodo deposits of one paper (Duan et al. 2025 Nat Commun, PMC11903871): figure data plus hippocampal raw LFP with ripple markers, and per-subject raw intracranial recordings of 11 patients during learning and targeted memory reactivation in NREM sleep. NEMAR nm000374 repackages them in BIDS."
+  - key: S12
+    title: "Transition from NREM to REM sleep"
+    year: 2023
+    ids: ["10.5281/zenodo.7838640", "10.5281/zenodo.7838639"]
+    archives: [Zenodo]
+    evidence: "NREM_to_REM_sleep_transitions.mat (156 MB) plus results and script for Peter-Derex et al., 'Regional variability in intracerebral properties of NREM to REM sleep transitions in humans' (PNAS 2023, PMC10293806), which analysed SEEG across sleep-stage transitions."
+  - key: S13
+    title: "MNI Open iEEG Atlas: high-sampling-rate NREM sleep sEEG (normal high-frequency oscillations)"
+    year: 2026
+    ids: ["10.82901/nemar.nm000361", "NEMAR:nm000361"]
+    archives: [NEMAR]
+    evidence: "NEMAR page (4.9 GB zip): SEEG of N2/N3 sleep at 512-2000 Hz from 71 patients, 1152 normal bipolar channels, released through the MNI Open iEEG Atlas (Frauscher et al. 2018 Ann Neurol HFO atlas). The atlas site itself requires a LORIS account."
+  - key: S14
+    title: "MNI Open iEEG Atlas: normal intracranial EEG in wakefulness and sleep (processed 200 Hz atlas clips)"
+    year: 2026
+    ids: ["10.82901/nemar.nm000362", "NEMAR:nm000362", "https://mni-open-ieegatlas.research.mcgill.ca/"]
+    archives: [NEMAR, MNI Open iEEG Atlas]
+    evidence: "NEMAR copy of the MNI atlas clips of normal-channel iEEG in wake, N2, N3 and REM (Frauscher et al. 2018 Brain; von Ellenrieder et al. 2020 Ann Neurol). The original atlas portal asks for an account (HTTP 401), so the open NEMAR copy is the keyed public deposit. Kept separate from S13 (different data product and paper)."
+  - key: S15
+    title: "Sleep spindles mediate hippocampal-neocortical coupling during long-duration ripples (whole-night hippocampal depth + Cz recordings)"
+    year: 2020
+    ids: ["10.17605/OSF.IO/3HPVR", "osf.io/3hpvr", "10.82901/nemar.nm000481"]
+    archives: [OSF, NEMAR]
+    evidence: "NEMAR nm000481 (5.5 GB): whole-night recordings from 14 epilepsy patients (posterior hippocampal depth contact and scalp Cz, 135.6 h) with sleep scoring, repackaging the authors' OSF release (Ngo, Fell & Staresina 2020 eLife, PMC7363445). OSF itself was offline for maintenance, so the OSF file list was not read; the DataCite record of 3HPVR is findable."
+  - key: S16
+    title: "Normative iEEG sleep and wake atlases"
+    year: 2024
+    ids: ["10.26275/xhte-d11l", "sparc:414"]
+    archives: [SPARC]
+    evidence: "Pennsieve discover API: 4.4 GB, 3164 files, e.g. processed_eeg_final/sub-RID0013_N2_*.edf clips plus sleep-stage metadata, for 'Normative intracranial EEG highlights epileptic abnormalities across wakefulness and sleep' (Pattnaik et al., medRxiv 10.1101/2025.09.10.25335533)."
+  - key: S17
+    title: "Dataset for 'Electrophysiological markers of memory consolidation in the human brain when memories are reactivated during sleep'"
+    year: 2022
+    ids: ["10.7302/3cx8-3x86"]
+    archives: [Deep Blue Data]
+    evidence: "DataCite (findable): preprocessed iEEG (theta, sigma, gamma bands and ripples) from 5 patients who had memory-associated sounds played during sleep (Creery et al. 2022 PNAS, PMC9636913). The Deep Blue landing page sits behind a Cloudflare bot challenge, so files were not listed."
+  - key: S18
+    title: "Public database containing micro and macro electroencephalographic recordings from epilepsy patients"
+    year: 2023
+    ids: ["10.34810/data503"]
+    archives: [CORA (CSUC Dataverse)]
+    evidence: "DataCite (findable): data for Martinez et al. 2020 Front Neurol, nonlinear analysis of micro- versus macro-electrode iEEG recorded 'during seizure-free stages of the sleep-wake cycle' (Bonn depth and microwire recordings). The Dataverse API is behind an Anubis bot check, so files were not listed."
+  - key: S19
+    title: "The sleep EEG envelope: a novel, neuronal firing-based human biomarker"
+    year: 2021
+    ids: ["10.5281/zenodo.5595341", "10.5281/zenodo.5595340"]
+    archives: [Zenodo]
+    evidence: "'MUA results by patient.rar' (239 MB) and envelope spectra. PMC9637727 Study 1: MUA from cortex-penetrating microelectrodes and adjacent subdural ECoG in epilepsy patients during NREM sleep. Processed only. Zenodo types it 'publication' but it holds data."
+  - key: S20
+    title: "Dexmedetomidine produces more sleep-like brain activity compared to propofol"
+    year: 2025
+    ids: ["10.5281/zenodo.15497531", "10.5281/zenodo.15497530"]
+    archives: [Zenodo]
+    evidence: "DexProSleepPackage.zip (2.1 GB) with the original analysis data (AllMatData*.mat), derived data and models. PMC12668097: iEEG in 34 epilepsy patients during anesthesia and during overnight sleep staged by polysomnography (Krause et al., Univ. Iowa)."
+  - key: S21
+    title: "NeuralBreathing: processed data for 'Human forebrain neural synchronization and entrainment to breathing during wakefulness, sleep, and external mechanical ventilation'"
+    year: 2026
+    ids: ["10.5281/zenodo.19502572", "10.5281/zenodo.19502635"]
+    archives: [Zenodo]
+    evidence: "Zenodo dataset: saved_results.zip (57 MB) and MNI_map.zip. The data statement of PMC13388959 (Mowla et al. 2026 Nat Commun) says the processed coherence and source data are here; raw Iowa iEEG is not shared. Processed only."
+  - key: S22
+    title: "Co-occurring ripple oscillations facilitate neuronal interactions between cortical locations in humans"
+    year: 2023
+    ids: ["10.5281/zenodo.10183659", "10.5281/zenodo.10183658"]
+    archives: [Zenodo]
+    evidence: "Processed data (cofire.zip, E1/E2/B1 zips, about 44 GB) for Verzhbinsky et al. PNAS (PMC10769862): Utah-array units and co-ripples in human cortex during NREM sleep and waking."
+  - key: S23
+    title: "Fast ripples reflect increased excitability that primes epileptiform spikes"
+    year: 2023
+    ids: ["10.5281/zenodo.8125756", "10.5281/zenodo.7685932"]
+    archives: [Zenodo]
+    evidence: "MongoDB JSON of HFO and unit data (2 GB) and Matlab files. PMC10587774: macro- and microelectrode interictal recordings in 6 UCLA patients and SEEG in 23 patients during NREM sleep (Weiss et al. 2023 Brain Commun)."
+  - key: S24
+    title: "Delta Oscillation Coupled Propagating Fast Ripples Precede Epileptiform Discharges (raw SEEG)"
+    year: 2022
+    ids: ["10.5281/zenodo.6529724", "10.5281/zenodo.6529723"]
+    archives: [Zenodo]
+    evidence: "Raw 2 kHz SEEG exports (e.g. IO002J_sleep_15.mat, TJU4110_*.mat, about 1.5 GB each). Abstract of the paper (Weiss et al. 2022 Neurobiol Dis, 10.1016/j.nbd.2022.105928): fast ripples phase-coupled to delta during non-REM sleep in 46 patients."
+  - key: S25
+    title: "Graph Theoretical Measures of Fast Ripple Networks Support the Epileptic Network Hypothesis (HFO and electrode databases)"
+    year: 2022
+    ids: ["10.5281/zenodo.6451900", "10.5281/zenodo.6451899"]
+    archives: [Zenodo]
+    evidence: "weisslabhfo041122.json (5.5 GB) and electrode database. Abstract (Sci Rep 2023, PMC9825369): fast ripples detected in SEEG recordings during sleep in 23 patients. Processed HFO events only; a separate deposit from S23 and S24."
+  - key: S26
+    title: "Data for Human-AI Collaboration for Co-Managing Epilepsy in Real Time"
+    year: 2025
+    ids: ["10.26275/xbu9-ulpn", "10.26275/ju7h-bo8u", "sparc:696", "10.82901/nemar.nm000456"]
+    archives: [SPARC, NEMAR]
+    evidence: "confidence: borderline (only 2 of 13 patients are SEEG, the rest scalp; sleep annotations are sparse onset lists). Pennsieve v2 (286 GB): per-patient EDF plus annots/sleep.csv. The SEEG patient PennEPI02154 has Wake/N1/N2/REM onsets over several nights (Goldblum et al. medRxiv 10.64898/2026.01.26.26344234)."
+  - key: S27
+    title: "AJILE12: Long-term naturalistic human intracranial neural recordings and pose"
+    year: 2022
+    ids: ["DANDI:000055", "10.48324/dandi.000055/0.220127.0436", "10.82901/nemar.nm000358"]
+    archives: [DANDI, NEMAR]
+    evidence: "confidence: borderline (sleep identified only by coarse video labels, not staged). Twelve patients with continuous multi-day ECoG at 500 Hz. Peterson et al. 2022 Sci Data (PMC9023453) gives coarse behavior labels annotated about every 3 min, with 'Sleep/rest' the most common (e.g. 29.2 h for P01). NEMAR nm000358 mirrors the DANDI set."
+  - key: S28
+    title: "Data for 'Abnormal Synchronization Between Cortical Delta Power and Ripples in Hippocampal Sclerosis'"
+    year: 2025
+    ids: ["10.6084/m9.figshare.28375673", "10.6084/m9.figshare.28375673.v1"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (derived per-night time series; sleep tracked by cortical delta power, not staged). Per-patient ripple_rates.mat and cortical_delta_power.mat. PMC12093325 computes ripple-delta correlation from iEEG 'recorded each night' to study sleep-wake synchronization."
+  - key: S29
+    title: "A Week in the Life of the Human Brain: Stable States Punctuated by Chaotic-Like Transitions"
+    year: 2026
+    ids: ["10.6084/m9.figshare.30716378", "10.6084/m9.figshare.30716378.v1"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (the deposit, EP1117_NoAnnots.tar.gz, 18.9 GB, is one participant's week of continuous iEEG without annotations; the paper, PMC13396633, staged sleep from the recordings)."
+  - key: S30
+    title: "Staresina_et_al_NN_2023 (How coupled slow oscillations, spindles and ripples coordinate neuronal processing and communication during human sleep)"
+    year: 2023
+    ids: ["10.17605/OSF.IO/8KEVM", "osf.io/8kevm"]
+    archives: [OSF]
+    evidence: "confidence: borderline (OSF was offline for maintenance throughout this build, so the files were not listed). DataCite: 'data and code for Staresina et al. (Nature Neuroscience 2023)', a study of human single units and iEEG during sleep (PMC10400429)."
+  - key: S31
+    title: "Beta during sleep in PD Code/Data (SleepBeta)"
+    year: 2023
+    ids: ["10.5281/zenodo.8180780", "10.5281/zenodo.8180779", "10.6084/m9.figshare.23740410", "10.6084/m9.figshare.23740410.v1"]
+    archives: [Zenodo, Figshare]
+    evidence: "confidence: borderline (DBS-lead pallidal LFP rather than epilepsy iEEG; source data only). The zip holds SourceData.xlsx and figure1d_data.npy with figure1d_hypno.npy (an example overnight pallidal LFP with hypnogram), plus per-stage NREM/REM tables. Yin et al. 2023 Nat Commun (PMC10480217); the raw data are on request only."
+near_misses:
+  - {ids: ["OpenNeuro:ds005802", "10.18112/openneuro.ds005802.v1.0.0", "10.5281/zenodo.14207575", "10.5281/zenodo.14207574"], why_excluded: "'iEEG Overnight Rest and Sleep Recording' / 'Respiratory-coupled sleep oscillations in humans dataset' (Sheriff & Zelano; PMC11670218). The OpenNeuro DOI is findable but GraphQL and S3 return access denied (not public), and the Zenodo record is access_right=restricted with no files."}
+  - {ids: ["10.25493/30W7-0WK"], why_excluded: "EBRAINS 'Coregistration of simultaneous HD-EEG and intracranial EEG during single pulse intracerebral stimulation in wakefulness and sleep' matches the topic but is 'under embargo' (no public download)."}
+  - {ids: ["10.25493/ZC9M-2ES"], why_excluded: "EBRAINS 'Mesoscale Insights in Epileptic Networks' (Utah array + iEEG seizures; some subjects tagged 'asleep') is controlled access and seizure-focused."}
+  - {ids: ["10.25493/EF4K-HJH"], why_excluded: "EBRAINS sensory/intracortical stimulation sEEG + hd-EEG with subjective reports; under embargo, and no sleep condition stated."}
+  - {ids: ["OpenNeuro:ds004624", "10.18112/openneuro.ds004624.v2.0.0"], why_excluded: "Has a ses-Sleep with task-Sleep runs, but subjects are beagle canines implanted with the CorTec BrainInterchange (IACUC protocol A00001713; PMC9806357), not humans."}
+  - {ids: ["OpenNeuro:ds003844", "10.18112/openneuro.ds003844.v1.0.3"], why_excluded: "RESPect intraoperative ECoG: task-acute only, recorded under anesthesia during surgery (sister of S3)."}
+  - {ids: ["OpenNeuro:ds004100", "OpenNeuro:ds003029"], why_excluded: "HUP and multicenter epilepsy iEEG: task-ictal/task-interictal clips with no sleep labelling."}
+  - {ids: ["10.82901/nemar.nm000276", "10.5281/zenodo.14578382"], why_excluded: "SWEC-ETHZ long-term iEEG (5376 h, 40 patients) for seizure detection; continuous recordings include nights but no sleep periods are identified."}
+  - {ids: ["10.5281/zenodo.6412062", "10.5281/zenodo.6412063", "10.5281/zenodo.7410501", "10.5281/zenodo.7458552", "10.5281/zenodo.15065944"], why_excluded: "SleepSEEG: software for sleep scoring from intracranial EEG; code only, no recordings."}
+  - {ids: ["10.5281/zenodo.22251645", "10.5281/zenodo.22251644", "10.5281/zenodo.22124202", "10.5281/zenodo.20638920", "10.5281/zenodo.20638919", "10.5281/zenodo.13909725", "10.5281/zenodo.17978351", "10.5281/zenodo.15009246", "10.5281/zenodo.17666777", "10.5281/zenodo.8267570", "10.5281/zenodo.11237651", "10.5281/zenodo.20719663", "10.5281/zenodo.18718538", "10.5281/zenodo.7191089"], why_excluded: "Code-only releases tied to iEEG sleep papers: SWS amplifies EZ network signatures; hub neurostimulation stabilizes sleep (RNS); thalamic spindles and co-ripples (source data only in the article); 1/f ripples; closed-loop pediatric sleep modulation; MI_HFO; SPF; Thermo-Consciousness; WeekLongBrain scripts; MNI HFO detector."}
+  - {ids: ["10.6084/m9.figshare.27605184"], why_excluded: "Low-frequency DBS in NREM sleep in Parkinson's: MemoryScripts.zip (20 KB) only, no recordings."}
+  - {ids: ["10.17605/OSF.IO/MT72E", "osf.io/jm2xu"], why_excluded: "Basal-ganglia (DBS) sleep-decoding papers (PMC11087561, PMC13376363): the OSF projects hold trained models or code, and both data statements say the recordings are not openly available."}
+  - {ids: ["10.5281/zenodo.22210654", "10.5281/zenodo.22210653"], why_excluded: "MYSTI 'hippocampal' temporal interference stimulation during naps: non-invasive stimulation with scalp EEG and MRI, no intracranial recordings."}
+  - {ids: ["10.5281/zenodo.15836096", "10.5281/zenodo.15222132", "10.5061/dryad.2fqz612x0", "10.6084/m9.figshare.4905677", "10.6084/m9.figshare.34007202", "1dbda526-175a-43a6-970d-dbe6ddf43fe7"], why_excluded: "Scalp sleep EEG only (hd-EEG awakenings, SleepEEGpy example nights, EEG-fMRI sleep rhythms, slow/fast spindle sets, EEG-fMRI spindle reactivation; the EBRAINS 'Spontaneous EEG during sleep with intermittent awakenings' is also embargoed)."}
+  - {ids: ["10.6084/m9.figshare.22633369", "10.5061/dryad.5qfttdz6t", "zenodo:5808302", "10.5281/zenodo.18490239", "10.12751/g-node.d76994", "10.25740/zk881ps0522", "10.1101/2023.05.20.541597"], why_excluded: "Human intracranial data recorded awake only (thought sampling SWRs, ripples during memory tasks, dimensionality during retrieval, Boran working-memory set, Miller ECoG library, co-ripples during reading)."}
+  - {ids: ["10.5281/zenodo.7226711", "10.17632/bpwkdbc6v5", "crcns:fcx-1", "crcns:hc-23", "DANDI:000041"], why_excluded: "Animal sleep recordings (rats), not human."}
+  - {ids: ["10.26180/5dc7653849787"], why_excluded: "Monash Bridges item typed Image: a poster on integrated information in human intracranial data, no dataset."}
+  - {ids: ["10.5281/zenodo.5503590", "10.5281/zenodo.5910238", "10.5281/zenodo.3692923"], why_excluded: "Chronic iEEG seizure-pathway studies: code/workspaces and PDF visualisations, with no sleep-identified recordings."}
+  - {ids: ["10.5281/zenodo.15322393", "10.7488/ds/2319"], why_excluded: "Mouse ECoG/EEG sleep datasets (labelled 'ECoG' but rodent)."}
+  - {ids: ["10.26275/lzhy-ox20", "10.26275/ybum-ivos", "10.26275/psj7-wggf", "10.26275/hqyv-oagj", "10.26275/pfxu-irqf"], why_excluded: "SPARC HUP / Mayo iEEG epilepsy sets (interictal atlas clips, seizure studies) whose descriptions and listings show no sleep labelling."}
+  - {ids: ["DANDI:001347"], why_excluded: "Kauvar et al. 2025 brain-wide human iEEG during aversive stimuli and ketamine: wake/drug states, not natural sleep."}
+queries:
+  - "OpenNeuro GraphQL advancedSearch(query:{modality:...}) fully paged with README text: modality ieeg 106 (73 readable public); modality eeg 695 (463 readable). README/name regex sleep|nap|overnight|NREM|REM|spindle|slow-wave|polysomno: 11 ieeg hits; intracranial-term AND sleep regex over eeg: 0. Per-dataset summary{tasks sessions} for all 73 public ieeg datasets: 9 with sleep tasks/sessions. Keyword searches: [sleep, ieeg] 58; [polysomnography, intracranial] 89 (others errored on control characters). S3 listings checked for ds003498, ds003844, ds003848, ds003876, ds004551, ds005398, ds007118, ds004624, ds005802, ds003029, ds004100, ds007095, ds006392, ds004993, ds005448, ds006065."
+  - "DANDI https://api.dandiarchive.org/api/dandisets/?search=: sleep 15; 'slow wave' 3; spindle 0; NREM 4; REM 658 (fuzzy, not used); overnight 0; nap 34; intracranial 20; human 115; ECoG 19; iEEG 6; sEEG 1; epilepsy 14; 'single neuron' 48; ripple 8; hippocampus 55. 232 union dandisets' version metadata fetched; 59 human dandisets reviewed; human + sleep regex: 0 (AJILE12 found via behaviour labels in its paper)."
+  - "CRCNS https://crcns.org/data-sets/sitemap (182 links, titles regex human|sleep|intracranial|ECoG|epilep): ieeg-1 is the only human sleep set; fcx-1, pfc-6, pfc-9, hc-14, hc-18, hc-23, hc-24, hc-25 are rat sleep."
+  - "EBRAINS KG POST https://search.kg.ebrains.eu/api/search?group=public&type=Dataset&q=: sleep 21; 'sleep intracranial' 2; 'sleep SEEG' 1; 'slow wave sleep' 10; spindles 0; 'intracranial EEG' 10; stereo-EEG 14; SEEG 14; ECoG 0; 'single neuron human' 9; NREM 2; 'REM sleep' 4; 'epilepsy patients' 19 (52 unique; 11 detail documents fetched; accessibility fields checked)."
+  - "PhysioNet https://physionet.org/api/v1/project/published/ (739 project versions), JSON regex intracranial|iEEG|ECoG|SEEG|depth electrode|microwire|subdural|DBS|subthalamic: no human intracranial sleep project."
+  - "Zenodo https://zenodo.org/api/records (authenticated, fully paged): '(intracranial OR iEEG OR ECoG OR electrocorticography OR SEEG OR \"stereo-EEG\" OR stereoelectroencephalography OR \"depth electrodes\" OR microwire) AND sleep' 77; '(intracranial OR iEEG OR ECoG OR SEEG OR \"stereo-EEG\") AND (NREM OR \"slow wave sleep\" OR \"slow-wave sleep\" OR spindles OR \"REM sleep\")' 22; 'title:sleep AND (human OR patients) AND (intracranial OR iEEG OR ECoG OR SEEG OR neurons)' 10; '\"sleep spindles\" AND (human OR patients)' 19; 'hippocampal ripples sleep human/epilepsy' 5; '\"single neuron\" AND sleep AND (human OR patients)' 0; '(intracranial OR iEEG OR SEEG) AND (overnight OR night OR nap)' 13; 'polysomnography AND (intracranial...)' 0; 'interictal AND sleep' 21; 'HFO/high frequency oscillations AND sleep' 7; 'sleep AND DBS/subthalamic LFP' 1; 'sleep AND (responsive neurostimulation OR RNS OR chronic ECoG OR ambulatory)' 84; 'ripples/sharp-wave AND human AND intracranial' 8; 'sleep AND epilepsy AND dataset' 16; '\"slow waves\" AND intracranial AND human' 10; 'sleep AND human AND hippocampus AND dataset' 8; 'sleep AND spindles AND epilepsy AND dataset' 0; 'open ieeg atlas' 0; 'sleep AND neurons AND humans AND dataset' 7; '(ECoG OR iEEG OR intracranial OR SEEG) AND dataset AND (sleep OR NREM OR REM OR night)' 9; 'interictal AND iEEG AND dataset' 6; 'sleep AND anesthesia AND intracranial' 20; creators Banks+sleep 5; creators Halgren 13, Verzhbinsky 4, Staresina 0, Frauscher 3, 'Nir, Yuval' 1, Helfrich 45, Asano 138, 'Weiss, Shennan' 7; 'ripples AND humans AND cortex AND dataset' 3; 'spindles AND humans AND dataset' 5; 'HFO/fast ripples AND NREM AND patients' 2. 40 records fetched individually."
+  - "Figshare POST https://api.figshare.com/v2/articles/search: ':title: sleep AND :description: intracranial' 23; ':title: sleep AND :description: iEEG' 1; ':title: sleep AND (:description: SEEG OR stereo-EEG OR ECoG OR electrocorticography)' 615; ':description: \"intracranial EEG\" AND :description: sleep' 6; ':description: iEEG AND :description: NREM' 0; ':description: \"single neurons\" AND sleep AND human' 0; ':description: hippocampal AND ripples AND sleep AND patients' 3; ':title: iEEG' 26; ':title: intracranial' 1000 (capped); ':title: SEEG' 50; ':title: electrocorticography' 13; plain search_for (item_type 3): 'intracranial sleep' 47, 'iEEG sleep' 6, 'stereo-EEG sleep' 2, 'electrocorticography sleep' 3, 'sleep spindles intracranial' 21, 'hippocampal ripples sleep human' 13, 'NREM intracranial' 19. 1717 unique items title-screened; 10 articles fetched."
+  - "OSF https://api.osf.io/v2/: unavailable (HTTP 503, 'Cloud Infrastructure Migration' 2026-10-16 09:00 to 2026-10-19 09:00 EDT per status.cos.io), so OSF was covered through DataCite: 'client.uid:cos.osf AND (intracranial OR iEEG OR ECoG OR SEEG OR stereo-EEG OR electrocorticography OR depth electrodes OR hippocampal OR single neurons OR epilepsy) AND (sleep OR NREM OR spindles OR slow oscillations)' 72; 'client.uid:cos.osf AND titles.title:sleep' 2503 (both screened by regex)."
+  - "Dryad https://datadryad.org/api/v2/search?q=: 'intracranial sleep' 2; 'iEEG sleep' 0; 'electrocorticography sleep' 1; 'ECoG sleep' 2; 'stereo-EEG sleep' 0; 'SEEG sleep' 1; 'sleep spindles human' 3; 'hippocampal ripples sleep human' 0; 'epilepsy sleep intracranial' 0; 'single neurons sleep human' 2; 'slow wave sleep intracranial' 0; 'NREM intracranial' 1; sleep 278; intracranial 71; electrocorticography 6; iEEG 5 (354 unique screened)."
+  - "DataCite https://api.datacite.org/dois?query=: '(intracranial OR iEEG OR ECoG OR electrocorticography OR SEEG OR \"stereo-EEG\" OR stereoelectroencephalography OR \"depth electrodes\" OR microwire OR \"single neurons\" OR \"single units\") AND sleep' 478; '(intracranial OR iEEG OR ECoG OR SEEG OR \"stereo-EEG\") AND (NREM OR \"slow wave sleep\" OR \"slow-wave sleep\" OR spindles OR \"REM sleep\" OR overnight OR nap)' 162; '(titles.title:sleep) AND (human OR patients OR epilepsy) AND (Dataset OR Collection OR Other)' 1988; 'interictal AND sleep' 106; '(\"high frequency oscillations\" OR HFO OR ripples) AND sleep AND (human OR patients)' 97 (2556 unique screened); 'prefix:10.82901' (NEMAR) 2505 records / 913 datasets screened; 'prefix:10.26275' (SPARC) 1010 screened; 'AJILE12' 8."
+  - "SPARC/Pennsieve discover API (https://api.pennsieve.io/discover/datasets/doi/..., files/browse, zipit): datasets 414 and 696 listed; sleep.csv and participants.tsv of 696 read."
+  - "NEMAR pages https://nemar.org/dataset/<id> fetched for 14 candidates (HTTP 200; nm999999 returns 404 as control) and source links extracted."
+  - "GIN https://gin.g-node.org/api/v1/repos/search?q=: sleep 19; 'slow wave' 1; spindle 0; intracranial 3; iEEG 2; SEEG 7; ECoG 8; epilepsy 10; hippocampus 8; HFO 2; ripple 6; sEEG 7; night 0; NREM 0; interictal 2 (no human intracranial sleep repo)."
+  - "Harvard Dataverse search API: 'sleep AND (intracranial OR iEEG OR ECoG OR SEEG OR electrocorticography)' 0; 'sleep AND epilepsy AND (EEG OR recordings)' 0; '\"intracranial EEG\"' 3 (none qualify)."
+  - "Europe PMC: Q1 '((\"intracranial EEG\" OR iEEG OR \"stereo-EEG\" OR SEEG OR stereoelectroencephalography OR electrocorticography OR ECoG OR \"depth electrodes\" OR \"intracranial recordings\" OR microwire OR \"single neurons\" OR \"single-neuron\" OR intracerebral) AND (sleep OR NREM OR \"slow-wave sleep\" OR \"sleep spindles\") AND (human OR patients)) AND (zenodo OR figshare OR dryad OR openneuro OR dandiarchive OR DANDI OR osf.io OR crcns OR ebrains OR g-node OR mendeley OR dataverse OR physionet OR ieeg.org OR nemar OR sparc.science OR pennsieve OR repository DOI prefixes)' 1079 (1051 with PMCID); same core query without the repository clause 18848; Q2 title/abstract sleep terms AND title/abstract intracranial terms AND human, open access, 2012-2026: 513 (465 not in Q1). 1516 PMCIDs requested as fullTextXML (about 100 returned HTTP 500 = no full text); every text regex-scanned for repository accessions and data-availability statements, then papers with >=8 sleep and >=3 intracranial mentions and a non-generic accession reviewed by hand. Linked-paper checks: PMC9023453, PMC9806357, PMC9637727, PMC12668097, PMC13466540, PMC12093325, PMC13396633, PMC10769862, PMC10587774, PMC11187199, PMC11087561, PMC13376363, PMC10480217; abstracts of 10.1016/j.nbd.2022.105928 and PMC9825369."
+  - "WebSearch: none used; all leads came from archive APIs, DataCite and Europe PMC."
+size_verdict: >-
+  ok: 31 distinct studies, 25 firm and 6 borderline. The 25 firm studies span 11 archives: Zenodo 12, NEMAR 12, OpenNeuro 6, Dryad 2, CRCNS 1, Figshare 1, SPARC 1, OSF 1, Deep Blue Data 1, CORA/CSUC Dataverse 1, MNI Open iEEG Atlas 1 (studies with aliases count once per archive). This is within the 5-30 firm gate across at least 3 archives, so the primary topic stands and the backup (anesthesia) topic was not used. Not checked: OSF file listings (API offline for maintenance 2026-10-16 to 10-19), the Deep Blue Data and CSUC landing pages (bot challenges; their DataCite records were used instead), the MNI Open iEEG Atlas portal (login), ieeg.org (not searched), and about 100 Europe PMC papers without full text.
