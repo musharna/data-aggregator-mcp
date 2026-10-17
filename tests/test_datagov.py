@@ -169,6 +169,47 @@ async def test_consecutive_pages_share_no_record_though_the_ranking_depends_on_p
     assert {r.url.params["per_page"] for r in seen} == {str(datagov.MAX_SIZE)}
 
 
+def _cached_first_page(n: int, moved: int):
+    """Like the catalog behind CloudFront: the first page is a cached snapshot taken when
+    record ``moved`` ranked 6th, a page after a cursor is ranked now (it ranks ``moved``
+    in its place by number). The cursor is the last record's slug, as the sort key is."""
+    template = _SEARCH["results"][0]
+    fresh = list(range(n))
+    stale = [*fresh[:5], moved, *(i for i in fresh[5:] if i != moved)]
+
+    def handler(request):
+        per_page = int(request.url.params["per_page"])
+        after = request.url.params.get("after")
+        if after is None:
+            ranked = stale[:per_page]
+        else:
+            start = fresh.index(int(after.removeprefix("ds-"))) + 1
+            ranked = fresh[start : start + per_page]
+        page = [{**template, "slug": f"ds-{i:03d}"} for i in ranked]
+        body: dict = {"results": page, "sort": "relevance"}
+        if ranked and ranked[-1] != fresh[-1]:
+            body["after"] = page[-1]["slug"]
+        return httpx.Response(200, json=body)
+
+    return handler
+
+
+@pytest.mark.asyncio
+async def test_a_record_a_stale_first_page_already_listed_is_not_listed_again(monkeypatch):
+    monkeypatch.setattr(datagov, "_WALK_PAGE", 10)
+    handler = _cached_first_page(40, moved=12)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        # Positive control: the cursor page really holds a record the first page listed.
+        first = (await c.get("https://h/search", params={"per_page": 10})).json()
+        later = await c.get("https://h/search", params={"per_page": 10, "after": first["after"]})
+        assert "ds-012" in {h["slug"] for h in first["results"]}
+        assert "ds-012" in {h["slug"] for h in later.json()["results"]}
+        pages = [(await datagov.search(c, "x", size=10, offset=o))[1] for o in (0, 10, 20)]
+    ids = [r.id for page in pages for r in page]
+    assert len(ids) == len(set(ids)) == 30
+    assert ids[5] == "datagov:ds-012"  # where the first page put it
+
+
 @pytest.mark.asyncio
 async def test_search_caps_size_at_max():
     seen: list[httpx.Request] = []
