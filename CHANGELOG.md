@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Paging a search past Zenodo's or OpenAIRE's first 10,000 records reported the source
+  as failing (HTTP 400) on every later page. Each now says it serves only the first
+  10,000 records of a search and to narrow the query, as PubMed already did, and asks
+  for no page past them.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
