@@ -10,7 +10,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - data.gov search pages no longer share records: the catalog ranks differently for each
   page size, and each page was asked for with a different one, so page 2 repeated some
-  of page 1's hits and skipped others. Every request now asks for the same 50 rows.
+  of page 1's hits and skipped others. Every request now asks for the same 50 rows, and
+  since the catalog's CDN can serve a first page older than the pages after it, a walk
+  lists each record once.
 
 ## [0.74.0] - 2026-10-16
 
