@@ -27,7 +27,7 @@ import asyncio
 import functools
 import json
 import re
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable, Coroutine
 from typing import Any
 
 import httpx
@@ -136,7 +136,7 @@ def _forget(key: tuple, task: asyncio.Task) -> None:
         task.exception()  # retrieved: every caller awaiting it may have been cancelled
 
 
-async def _once(key: tuple, make: Callable[[], Awaitable[Any]]) -> Any:
+async def _once(key: tuple, make: Callable[[], Coroutine[Any, Any, Any]]) -> Any:
     """``make()``, awaited once for every caller asking for ``key`` while it runs."""
     loop = asyncio.get_running_loop()
     task = _PENDING.get(key)
