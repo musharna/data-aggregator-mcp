@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `relate` links a record to a Dryad deposit it names only by its Dryad page
+  (`datadryad.org/dataset/doi:…`, and the older `stash/dataset/` and `resource/` forms,
+  the DOI's slash plain or encoded). 37 of 125 DataCite links to a Dryad page had no DOI
+  beside them, so those pairs went unlinked.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
