@@ -149,8 +149,10 @@ def run_one(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace)
         shutil.rmtree(run_dir)  # an unfinished run: start it again from nothing
     run_dir.mkdir(parents=True)
     # A fresh, empty working directory outside any project: no CLAUDE.md above it, no
-    # earlier run's files. The answer is copied back into run_dir afterwards.
-    cwd = Path(tempfile.mkdtemp(prefix="h2h-", dir="/tmp"))
+    # earlier run's files. The answer is copied back into run_dir afterwards. /tmp, not
+    # $TMPDIR: a session's TMPDIR can sit under ~/.claude, which holds settings.
+    # mkdtemp makes a fresh 0700 directory with a random name, so nothing can pre-place it.
+    cwd = Path(tempfile.mkdtemp(prefix="h2h-", dir="/tmp"))  # nosec B108 - see above
     out = cwd / "out"
     out.mkdir()
     config = run_dir / "mcp.json"

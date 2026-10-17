@@ -76,7 +76,7 @@ class Upstream:
                         "id": f"file-{rid}-{name}",
                         "key": name,
                         "size": len(body),
-                        "checksum": "md5:" + hashlib.md5(body).hexdigest(),  # noqa: S324 - Zenodo's own checksum
+                        "checksum": "md5:" + hashlib.md5(body, usedforsecurity=False).hexdigest(),
                         "links": {
                             "self": f"https://zenodo.org/api/records/{rid}/files/{name}/content"
                         },
