@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- An OSF record whose files sit partly in its components or on add-on storage (GitHub,
+  Dropbox…) says so in `truncated.files`, naming the components. Only the node's own
+  OSF storage is listed, and the list read as complete: the Reproducibility Project:
+  Psychology (osf.io/ezcuj) listed 1 file beside 49 components.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed

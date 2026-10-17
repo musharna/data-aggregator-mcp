@@ -314,3 +314,24 @@ async def test_live_forced_paging_passes_the_check():
             pages += 1
             url = body["links"]["next"]
     assert (pages, seen) == (3, 10)
+
+
+_CHILDREN = {"data": [{"id": "ezum7", "type": "nodes"}], "links": {"meta": {"total": 49}}}
+_STORAGE = {"data": [{"attributes": {"kind": "folder", "provider": "github"}}]}
+
+
+@pytest.mark.parametrize(
+    ("check", "good", "bad"),
+    [
+        (osf._check_children, _CHILDREN, _CHILDREN | {"links": {"meta": {"total": "49"}}}),
+        (osf._check_children, _CHILDREN, _CHILDREN | {"links": {}}),
+        (osf._check_children, _CHILDREN, _CHILDREN | {"data": [{"type": "nodes"}]}),
+        (osf._check_children, _CHILDREN, _CHILDREN | {"data": None}),
+        (osf._check_storage, _STORAGE, {"data": [{"attributes": {"kind": "folder"}}]}),
+        (osf._check_storage, _STORAGE, {"data": None}),
+    ],
+)
+def test_a_component_or_storage_list_missing_what_unlisted_reads_is_refused(check, good, bad):
+    check(good)  # positive control: the live shape passes
+    with pytest.raises(_http.UpstreamEnvelopeError):
+        check(bad)
