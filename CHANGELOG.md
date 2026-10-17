@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `CACHE_TTL_SECONDS=nan` kept every resolved record for the life of the process, since
+  a nan lifetime never expires; it now falls back to the default like any other value
+  that is not a number, and each fallback is logged. `0` or less (no cache) and `inf`
+  (keep for good) are unchanged.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
