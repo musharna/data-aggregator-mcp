@@ -6,6 +6,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A PubMed record of a whole NCBI Bookshelf book (GeneReviews, PMID 20301295) is titled
+  by its book title; it was listed with an empty title. Its chapters keep their own.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
