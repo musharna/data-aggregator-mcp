@@ -6,6 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- The `resolve` and `operate` tool descriptions gave `zenodo:7654321` as the example id,
+  a record that now redirects to a restricted one with no files, so a model trying the
+  example got nothing to read. Both now quote the `list_sources` examples, which the live
+  tests resolve, and so does the reference's `resolve` section.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
