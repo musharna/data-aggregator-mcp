@@ -18,7 +18,7 @@ pytest.importorskip("duckdb")
 pytest.importorskip("fsspec")
 pytest.importorskip("pyarrow")
 
-from data_aggregator_mcp import duckquery, tabular
+from data_aggregator_mcp import duckquery, sourceio, tabular
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
@@ -74,6 +74,31 @@ async def test_a_byte_order_mark_is_not_part_of_the_first_column_name(tmp_path):
     assert (await tabular.preview(plain.as_uri(), "plain.csv", n=5))["rows"] == [
         {"Ünit": "m", "value": "1"}
     ]
+
+
+@pytest.mark.parametrize("encoding", ["utf-16-le", "utf-16-be"])
+async def test_a_utf16_csv_is_read_alike_by_every_reader(tmp_path, encoding):
+    """A UTF-16 file starts with its byte-order mark (Excel's "Unicode Text"). schema and
+    preview decoded it as UTF-8, every character U+FFFD; DuckDB refused it, and its own
+    ``encoding='utf-16'`` reads a big-endian file as one garbled column."""
+    text = "espèce,count\r\nÉchinacée,3\r\nbee,4\r\n"
+    path = tmp_path / "u16.csv"
+    path.write_bytes(("\ufeff" + text).encode(encoding))
+    want = ["espèce", "count"]
+    duck = await duckquery.run_head(path.as_uri(), "u16.csv", n=5, columns=None)
+    assert [c["name"] for c in duck["columns"]] == want
+    assert duck["rows"] == [{"espèce": "Échinacée", "count": 3}, {"espèce": "bee", "count": 4}]
+    sch = await tabular.schema(path.as_uri(), "u16.csv")
+    assert [c["name"] for c in sch["columns"]] == want
+    pre = await tabular.preview(path.as_uri(), "u16.csv", n=5)
+    assert pre["rows"] == [{"espèce": "Échinacée", "count": "3"}, {"espèce": "bee", "count": "4"}]
+    # Positive control: the same text in UTF-8 reads the same, and is not copied.
+    plain = tmp_path / "u8.csv"
+    plain.write_bytes(text.encode())
+    with sourceio.utf8_copy(str(plain)) as same:
+        assert same == str(plain)
+    duck8 = await duckquery.run_head(plain.as_uri(), "u8.csv", n=5, columns=None)
+    assert duck8["rows"] == duck["rows"]
 
 
 def _poem_rows(pad: int, count: int) -> list[str]:
