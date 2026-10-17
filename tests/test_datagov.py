@@ -67,7 +67,7 @@ async def test_search_maps_dcat_hits_from_the_keyless_catalog():
 
     (req,) = seen
     assert str(req.url).startswith("https://catalog.data.gov/search?")
-    assert req.url.params["q"] == "water" and req.url.params["per_page"] == "4"
+    assert req.url.params["q"] == "water" and req.url.params["per_page"] == str(datagov.MAX_SIZE)
     assert "after" not in req.url.params and "x-api-key" not in req.headers
 
 
@@ -110,27 +110,63 @@ def _paged_upstream(n: int, seen: list[httpx.Request]):
 
 @pytest.mark.asyncio
 async def test_search_serves_the_router_offset_by_walking_the_after_cursor(monkeypatch):
-    monkeypatch.setattr(datagov, "_PAGE_MAX", 7, raising=False)  # force a multi-request walk
+    monkeypatch.setattr(datagov, "_WALK_PAGE", 7)  # force a multi-request walk
     seen: list[httpx.Request] = []
     async with httpx.AsyncClient(transport=httpx.MockTransport(_paged_upstream(25, seen))) as c:
         total, recs = await datagov.search(c, "x", size=10, offset=10)
         assert [r.id for r in recs] == [f"datagov:ds-{i:03d}" for i in range(10, 20)]
-        assert total == 21  # 20 seen + more upstream
-        # Walk: 7 + 7 + 6 rows, each request carrying the previous response's cursor.
-        assert [r.url.params["per_page"] for r in seen] == ["7", "7", "6"]
+        assert total == 22  # 21 seen + more upstream
+        # Walk: 7 rows a request, each carrying the previous response's cursor.
+        assert [r.url.params["per_page"] for r in seen] == ["7", "7", "7"]
         assert [r.url.params.get("after") for r in seen] == [None, "7", "14"]
 
         # Positive control: page 1 is one request, no cursor.
         seen.clear()
         total, recs = await datagov.search(c, "x", size=5)
         assert [r.id for r in recs] == [f"datagov:ds-{i:03d}" for i in range(5)]
-        assert total == 6 and len(seen) == 1
+        assert total == 8 and len(seen) == 1
 
         # Last page: fewer rows than asked, no cursor → the total is exact.
         seen.clear()
         total, recs = await datagov.search(c, "x", size=10, offset=20)
         assert [r.id for r in recs] == [f"datagov:ds-{i:03d}" for i in range(20, 25)]
-        assert total == 25
+        assert total == 25 and len(seen) == 4
+
+
+def _ranked_by_page_size(n: int, seen: list[httpx.Request]):
+    """An upstream that, like the catalog, ranks by ``per_page`` too: on 2026-10-16 the top
+    50 of ``per_page=100`` for "water" were not those of ``per_page=50``. Here ties (hits
+    in runs of 15) are broken by an order that depends on ``per_page``."""
+    template = _SEARCH["results"][0]
+
+    def handler(request):
+        seen.append(request)
+        start = int(request.url.params.get("after", "0"))
+        per_page = int(request.url.params["per_page"])
+        ranked = sorted(range(n), key=lambda i: (i // 15, (i * per_page) % 15))
+        page = [{**template, "slug": f"ds-{i:03d}"} for i in ranked[start : start + per_page]]
+        body: dict = {"results": page, "sort": "relevance"}
+        if start + per_page < n:
+            body["after"] = str(start + per_page)
+        return httpx.Response(200, json=body)
+
+    return handler
+
+
+@pytest.mark.asyncio
+async def test_consecutive_pages_share_no_record_though_the_ranking_depends_on_page_size():
+    seen: list[httpx.Request] = []
+    handler = _ranked_by_page_size(40, seen)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        # Positive control: the fake really ranks by page size.
+        ten = (await c.get("https://h/search", params={"per_page": 10})).json()["results"]
+        twenty = (await c.get("https://h/search", params={"per_page": 20})).json()["results"]
+        assert [h["slug"] for h in ten] != [h["slug"] for h in twenty[:10]]
+        seen.clear()
+        pages = [(await datagov.search(c, "x", size=10, offset=o))[1] for o in (0, 10, 20)]
+    ids = [r.id for page in pages for r in page]
+    assert len(ids) == len(set(ids)) == 30
+    assert {r.url.params["per_page"] for r in seen} == {str(datagov.MAX_SIZE)}
 
 
 @pytest.mark.asyncio
