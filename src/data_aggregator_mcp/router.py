@@ -627,15 +627,18 @@ async def _fetch_page(
         stream_total, recs = outcome
         total += 0 if s.fill else stream_total
         fetched[s.key], totals[s.key] = list(recs), stream_total
-    # A source is empty when every one of its streams (one per query variant) answered
-    # and matched nothing; a variant that found something, or failed, says otherwise. Its
-    # fill matched only some of the words, so is not one of them: counted, its hits hid
-    # that DataCite held no record with every word (2026-10-16).
+    # A source is empty when every one of its streams (one per query variant, and GEO's
+    # plurals) answered and matched nothing; a stream that found something, or failed,
+    # says otherwise: GEO's query failed, its plurals answered 0, and it was called empty
+    # (2026-10-17). Its fill matched only some of the words, so is not one of them:
+    # counted, its hits hid that DataCite held no record with every word (2026-10-16).
     answered = [s for s in streams if s.label not in errors]
     empty_every_word = [
         src
         for src in dict.fromkeys(s.source for s in answered if s.every_word)
-        if all(totals[s.key] == 0 for s in answered if s.source == src and not s.fill)
+        if all(
+            s in answered and totals[s.key] == 0 for s in streams if s.source == src and not s.fill
+        )
     ]
     filled = [
         src
