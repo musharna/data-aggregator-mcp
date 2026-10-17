@@ -28,7 +28,17 @@ class NotFoundError(DataAggregatorError):
 
 
 class UpstreamUnavailableError(DataAggregatorError):
-    """A backend is unreachable or 5xx past its retries, or a checksum failed."""
+    """A backend is unreachable or 5xx past its retries, or a checksum failed.
+
+    ``down`` says the host did not answer: no response in time, no connection, or a
+    5xx on every try. It is false when the host answered with something unusable
+    (another error status, a body that would not parse, a failed checksum), which is
+    what an API change looks like; the nightly live suite tells the two apart by it.
+    """
+
+    def __init__(self, *args: object, down: bool = False) -> None:
+        super().__init__(*args)
+        self.down = down
 
 
 class FetchTooLargeError(DataAggregatorError):

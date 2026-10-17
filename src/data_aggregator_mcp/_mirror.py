@@ -100,8 +100,18 @@ def deposit_key(r: DataResource) -> str | None:
 
 def dedup_by_deposit(resources: list[DataResource]) -> list[DataResource]:
     """:func:`dedup_by_doi` over :func:`deposit_key`: one hit per deposit, the most
-    fetchable copy winning, ties to the first seen."""
+    fetchable copy winning, then the copy whose own DOI is the deposit's (figshare's
+    unversioned DOI over its ``.v1``), then the first seen."""
     return _dedup_by(resources, deposit_key)
+
+
+def _rank(r: DataResource, key: str) -> tuple[int, bool]:
+    """Higher wins. The copy whose own DOI is the deposit's beats one pointing at it, not
+    the one seen first: DataCite swaps records of tied relevance between requests,
+    figshare's unversioned DOI and its ``.v1`` among them, so the copy shown for S29
+    changed from one search to the next (nightly live, 2026-10-16). Two versions of a
+    deposit whose own DOI is absent still go to the first seen."""
+    return fetch_priority(r), r.doi is not None and "doi:" + r.doi.casefold() == key
 
 
 def _dedup_by(
@@ -119,7 +129,7 @@ def _dedup_by(
         if existing is None:
             by_key[key] = r
             order.append(key)
-        elif fetch_priority(r) > fetch_priority(existing):
+        elif _rank(r, key) > _rank(existing, key):
             by_key[key] = r
     return [by_key[k] for k in order] + keyless
 

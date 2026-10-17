@@ -44,13 +44,13 @@ async def test_each_request_is_exactly_what_the_catalog_is_sent():
     assert [_call(r) for r in seen] == [
         (
             "GET",
-            "https://catalog.data.gov/search?q=water+quality&per_page=2",
+            "https://catalog.data.gov/search?q=water+quality&per_page=50",
             "application/json",
             None,
         ),
         (
             "GET",
-            "https://catalog.data.gov/search?q=water+quality&per_page=1&after=c1",
+            "https://catalog.data.gov/search?q=water+quality&per_page=50&after=c1",
             "application/json",
             None,
         ),
@@ -67,7 +67,7 @@ async def test_with_a_key_each_request_goes_to_the_gateway_with_the_key(monkeypa
         await datagov.resolve(c, "datagov:water-quality")
     gw = "https://api.gsa.gov/technology/datagov/v4"
     assert [_call(r) for r in seen] == [
-        ("GET", f"{gw}/search?q=water&per_page=10", "application/json", "k-123"),
+        ("GET", f"{gw}/search?q=water&per_page=50", "application/json", "k-123"),
         ("GET", f"{gw}/dataset/water-quality", "application/json", "k-123"),
     ]
 

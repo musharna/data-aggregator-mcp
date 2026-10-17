@@ -17,8 +17,14 @@ then answered 429 with a ~6-hour Retry-After.
 
 **Pagination.** ``/search`` pages by an opaque ``after`` cursor, with no numeric offset
 and no hit count. The router's per-stream offset is served by walking the cursor from
-the start (one request while ``offset + size`` fits one ``_PAGE_MAX`` page), so a router
-cursor replays exactly. The returned total is a LOWER BOUND: the records seen so far,
+the start, so a router cursor replays exactly. Every request asks for ``_WALK_PAGE``
+rows, whatever the offset and size: the catalog ranks by ``per_page`` too (on 2026-10-16
+the top 50 of ``per_page=100`` for "water" were not those of ``per_page=50``), so asking
+``offset + size`` rows made each router page a slice of a different ranking, and pages 1
+and 2 shared records. Nor are the pages of one walk one snapshot: CloudFront caches
+``/search`` (a first page served 50 minutes old, ``Cache-Control: no-cache`` ignored)
+while a page after a fresh cursor is computed now, so a record can come back on a later
+page; a walk lists each record once. The returned total is a LOWER BOUND: the records seen so far,
 plus one when upstream reports more (``after`` present). That keeps the router's "more
 pages" signal correct; it is not the number of matching datasets.
 
@@ -59,7 +65,7 @@ GATEWAY = "https://api.gsa.gov/technology/datagov/v4"
 PREFIXES = {"datagov"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
-_PAGE_MAX = 1000  # upstream per_page ceiling (OpenAPI: 1 <= per_page <= 1000)
+_WALK_PAGE = MAX_SIZE  # rows per request, the same for every request (module doc)
 # httpx upper-cases the method and reads header names case-insensitively, so a
 # spelling mutant of either sends the same request.
 _GET = "GET"
@@ -233,10 +239,11 @@ async def search(
     want = offset + min(size, MAX_SIZE)
     base, _dataset_path, headers = _api()
     hits: list[dict] = []
+    seen: set[str] = set()
     cursor: dict[str, str] = {}
     more = False
     while len(hits) < want:
-        params = {"q": query, "per_page": str(min(want - len(hits), _PAGE_MAX)), **cursor}
+        params = {"q": query, "per_page": str(_WALK_PAGE), **cursor}
         body = await _http.request_json(
             client,
             _GET,
@@ -248,7 +255,10 @@ async def search(
             check=_check_results,
         )
         page = body["results"]
-        hits.extend(page)
+        for hit in page:  # the pages of one walk can be different snapshots (module doc)
+            if hit["slug"] not in seen:
+                seen.add(hit["slug"])
+                hits.append(hit)
         # An empty page ends the walk even if it carries a cursor.
         more = bool(page) and bool(body.get("after"))
         if not more:

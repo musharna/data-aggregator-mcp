@@ -112,13 +112,25 @@ async def test_a_page_shows_each_deposit_once_and_its_copies_do_not_return(monke
         [
             "zenodo:21887007",  # the native copy wins its concept over DataCite's
             "zenodo:other",
-            "datacite:fig.v1",
+            "datacite:fig",  # the DOI's own record, though its .v1 came first
             "sra:SRX0",
             "sra:SRX99",  # positive control: a run of another study stays
         ]
     )
     # The copies were handled with their deposit: nothing is left to page to.
     assert page.next_cursor is None
+
+
+def test_the_copy_shown_does_not_depend_on_the_order_upstream_returned_them() -> None:
+    """DataCite returns S29's unversioned DOI and its ``.v1`` (relevance tied) in either
+    order from one request to the next; the nightly saw the ``.v1`` on some runs."""
+    v1 = _rec("datacite:fig.v1", doi="10.6084/fig.v1", links=[("is_identical_to", "10.6084/fig")])
+    unversioned = _rec("datacite:fig", doi="10.6084/fig")
+    for order in ([v1, unversioned], [unversioned, v1]):
+        assert [r.id for r in _mirror.dedup_by_deposit(order)] == ["datacite:fig"]
+    # Positive control: a more fetchable copy still beats the DOI's own record.
+    native = _rec("figshare:1", doi="10.6084/fig.v1", links=[("is_identical_to", "10.6084/fig")])
+    assert [r.id for r in _mirror.dedup_by_deposit([unversioned, native])] == ["figshare:1"]
 
 
 def test_a_zenodo_version_links_its_concept() -> None:

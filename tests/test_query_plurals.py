@@ -201,7 +201,9 @@ async def test_live_datacite_finds_a_study_titled_with_the_plural() -> None:
     dois = lambda recs: {(r.doi or "").lower() for r in recs}  # noqa: E731
     assert _S29 in dois(plural)  # positive control: the record is there to find
     assert _S29 not in dois(singular)  # the query as written misses it upstream
-    assert _S29 in dois(page.results)
+    # 2nd of 34 on 2026-10-16, yet missing from one nightly page that night: the errors
+    # say whether a stream failed, which an assertion on the DOIs alone cannot.
+    assert _S29 in dois(page.results), page.errors
 
 
 @pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")

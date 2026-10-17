@@ -7,6 +7,11 @@ import os
 import pytest
 
 from data_aggregator_mcp import _ratelimit, egress, europepmc, router, taxonomy, zenodo
+from tests._upstream_down import (  # noqa: F401 - registered by name: a live outage is a skip
+    _record_down_upstreams,
+    pytest_runtest_makereport,
+    pytest_sessionfinish,
+)
 
 # Every environment variable the server reads as configuration. A test's behavior must
 # not depend on which of these happen to be exported in the shell that runs it: with

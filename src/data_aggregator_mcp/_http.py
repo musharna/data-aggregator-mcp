@@ -132,7 +132,7 @@ async def _retrying(
                 delay *= 2
                 continue
             raise UpstreamUnavailableError(
-                f"{service} unreachable after {max_retries} tries: {exc!r}"
+                f"{service} unreachable after {max_retries} tries: {exc!r}", down=True
             ) from exc
 
         if resp.status_code in _NO_CONTENT_STATUSES and parse is not None:
@@ -172,7 +172,8 @@ async def _retrying(
             if resp.status_code == 429:
                 raise RateLimitError(f"{service} exhausted {max_retries} retries (HTTP 429)")
             raise UpstreamUnavailableError(
-                f"{service} exhausted {max_retries} retries (last HTTP {resp.status_code})"
+                f"{service} exhausted {max_retries} retries (last HTTP {resp.status_code})",
+                down=True,
             )
         raise UpstreamUnavailableError(f"{service} → HTTP {resp.status_code}: {resp.text[:200]}")
 
