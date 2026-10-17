@@ -6,6 +6,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Every host now has its own rate limit. All hosts but NCBI shared one 10 requests a
+  second, so a search's ~34 requests to some 18 hosts queued behind one another: over
+  30 of the round-3 searches they spent a mean of 33.6 s each waiting in it, summed
+  over requests (0.11 s now), and the median page took 13.7 s (9.4 s now). Zenodo's
+  search and DataCite are now paced within their documented limits (30 a minute and
+  500 per 5 minutes per IP), which nothing enforced before.
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed
