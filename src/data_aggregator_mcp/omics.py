@@ -28,6 +28,9 @@ logger = logging.getLogger(__name__)
 # friendly source/prefix → NCBI E-utils db
 _DB = {"geo": "gds", "sra": "sra", "bioproject": "bioproject"}
 PREFIXES = tuple(_DB)  # ("geo", "sra", "bioproject") — derived so it can't drift from _DB
+# The one kind each db's records carry; the normalizers set it from here. The router reads
+# it to skip a db no record of which can pass a kind filter (``SUBSOURCE_KINDS``).
+SUBSOURCE_KINDS = {"geo": "study", "sra": "sequencing_run", "bioproject": "study"}
 DEFAULT_SIZE = 10
 MAX_SIZE = 50
 # esearch ANDs every word, so words that each match hundreds of records can match none
@@ -123,7 +126,7 @@ def _normalize_geo(doc: dict[str, Any]) -> DataResource:
     return DataResource(
         id=f"geo:{acc}",
         source="geo",
-        kind="study",
+        kind=SUBSOURCE_KINDS["geo"],
         title=_text(doc, "title"),
         year=_year_from(_text(doc, "pdat")),
         description=_text(doc, "summary") or None,
@@ -157,7 +160,7 @@ def _normalize_sra(doc: dict[str, Any]) -> DataResource:
     return DataResource(
         id=f"sra:{exp_acc}",
         source="sra",
-        kind="sequencing_run",
+        kind=SUBSOURCE_KINDS["sra"],
         title=title,
         year=_year_from(_text(doc, "createdate")),
         description=description,
@@ -172,7 +175,7 @@ def _normalize_bioproject(doc: dict[str, Any]) -> DataResource:
     return DataResource(
         id=f"bioproject:{acc}",
         source="bioproject",
-        kind="study",
+        kind=SUBSOURCE_KINDS["bioproject"],
         title=_text(doc, "project_title"),
         year=_year_from(_text(doc, "registration_date")),
         description=_text(doc, "project_description") or None,

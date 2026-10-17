@@ -34,6 +34,8 @@ _ELINK_DBS = ("sra", "gds", "bioproject")
 # E-utilities read ``id`` as a comma-separated LIST, so a PMID is checked whole before it
 # is sent: ``pubmed:34320281,1`` resolved one paper carrying the other's data links.
 _PMID = re.compile(r"[0-9]+")
+# Every record a search returns is a paper (``literature.SUBSOURCE_KINDS``).
+KIND = "publication"
 
 
 def _has(d: dict, key: str, kind: type) -> bool:
@@ -83,7 +85,7 @@ def _normalize_pubmed(doc: dict) -> DataResource:
     return DataResource(
         id=f"pubmed:{uid}",
         source="pubmed",
-        kind="publication",
+        kind=KIND,
         title=doc["title"],
         creators=[Creator(name=a["name"]) for a in doc.get("authors", []) if a.get("name")],
         year=omics._year_from(doc.get("sortpubdate")),
