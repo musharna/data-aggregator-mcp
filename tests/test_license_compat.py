@@ -204,13 +204,39 @@ def test_intent_vocabulary_is_pinned_because_pre_4_0_profiles_depend_on_it():
     }
 
 
-def test_ported_cc_ids_fold_onto_the_unported_profile():
-    """SPDX has jurisdiction ports (CC-BY-3.0-US); the normalizer folds them onto the
-    unported id, so the hand-encoded profile answers for them too. Pinned because it is
-    the assumption most likely to be wrong for a ported jurisdiction."""
-    assert lc.normalize_spdx("CC BY 3.0 US") == "CC-BY-3.0"
-    assert lc.normalize_spdx("https://creativecommons.org/licenses/by/3.0/us/") == "CC-BY-3.0"
-    assert lc.check("CC BY 3.0 US", "commercial").verdict == "ALLOW"
+def test_a_ported_cc_licence_is_reported_as_its_own_id_and_assessed_as_the_unported():
+    """SPDX names some Creative Commons ports (CC-BY-3.0-US) and the IGO licences
+    (CC-BY-3.0-IGO) as licences of their own. They were reported as the unported id, a
+    licence the record does not state; the id is now the stated one wherever SPDX has it,
+    and the check answers from the unported profile."""
+    stated = {
+        "CC BY 3.0 US": "CC-BY-3.0-US",
+        "https://creativecommons.org/licenses/by/3.0/us/": "CC-BY-3.0-US",
+        "CC BY 3.0 IGO": "CC-BY-3.0-IGO",
+        "CC BY-NC-SA 3.0 IGO": "CC-BY-NC-SA-3.0-IGO",
+        "https://creativecommons.org/licenses/by-sa/3.0/igo/legalcode": "CC-BY-SA-3.0-IGO",
+        "cc-by-nc-nd-3.0-igo": "CC-BY-NC-ND-3.0-IGO",
+        "https://creativecommons.org/licenses/by-nc-sa/2.0/uk/": "CC-BY-NC-SA-2.0-UK",
+        "CC-BY-SA-2.1-JP": "CC-BY-SA-2.1-JP",
+    }
+    for text, want in stated.items():
+        assert lc.normalize_spdx(text) == want, text
+    # Positive controls: an unported licence, 4.0 "International", a legal-code page, and
+    # ports SPDX names no id for (Spain; BY-ND IGO) keep the unported reading.
+    assert lc.normalize_spdx("CC BY 3.0") == "CC-BY-3.0"
+    assert lc.normalize_spdx("CC BY 4.0 International") == "CC-BY-4.0"
+    assert lc.normalize_spdx("https://creativecommons.org/licenses/by/4.0/legalcode") == (
+        "CC-BY-4.0"
+    )
+    assert lc.normalize_spdx("https://creativecommons.org/licenses/by/3.0/es/") == "CC-BY-3.0"
+    assert lc.normalize_spdx("CC BY-ND 3.0 IGO") == "CC-BY-ND-3.0"
+    # Assessed with the unported profile, reported with the stated id.
+    us = lc.check("CC BY 3.0 US", "commercial")
+    assert (us.verdict, us.spdx_id) == ("ALLOW", "CC-BY-3.0-US")
+    igo = lc.check("CC BY-NC 3.0 IGO", "commercial")
+    assert (igo.verdict, igo.spdx_id) == ("DENY", "CC-BY-NC-3.0-IGO")
+    jp = lc.check("CC-BY-SA-2.1-JP", "commercial")  # no 2.1 profile is bundled
+    assert (jp.verdict, jp.spdx_id) == ("REVIEW", "CC-BY-SA-2.1-JP")
 
 
 def test_matrix_covers_required_licences():
@@ -478,6 +504,25 @@ def test_absent_use_leaves_license_compat_none():
 
 _LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
 _live_only = pytest.mark.skipif(not _LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
+
+
+@_live_only
+def test_live_the_ported_ids_are_the_ones_spdx_lists():
+    """The ported ids are copied from the SPDX License List; a port SPDX adds, or one it
+    deprecates, must show up here rather than be read as the unported licence."""
+    import httpx
+
+    url = "https://raw.githubusercontent.com/spdx/license-list-data/main/json/licenses.json"
+    listed = httpx.get(url, timeout=60).raise_for_status().json()["licenses"]
+    ported = {
+        d["licenseId"]
+        for d in listed
+        if re.fullmatch(r"CC-BY(-NC)?(-ND|-SA)?-\d\.\d-[A-Za-z0-9]+", d["licenseId"])
+        and not d.get("isDeprecatedLicenseId")
+    }
+    # Positive control: the list holds the unported licences too.
+    assert {"CC-BY-3.0", "CC-BY-4.0"} <= {d["licenseId"] for d in listed}
+    assert ported == lc._CC_PORTED_IDS
 
 
 @_live_only

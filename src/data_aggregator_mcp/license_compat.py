@@ -277,9 +277,9 @@ LICENSE_MATRIX: dict[str, LicenseProfile] = {
 # ``INTENTS`` vocabulary; ``tests/test_license_compat.py`` pins it so that adding an
 # intent which touches those areas fails loudly instead of silently mis-answering.
 #
-# Jurisdiction note: ``normalize_spdx`` folds ported ids (e.g. CC-BY-3.0-US) onto the
-# unported id, so these profiles also answer for ported variants. Porting could alter
-# terms in a given jurisdiction, which is a reason the verdict stays an advisory.
+# Jurisdiction note: ``check`` assesses a ported id (CC-BY-3.0-US, CC-BY-3.0-IGO) with
+# its unported profile, while reporting the ported id. Porting could alter terms in a
+# given jurisdiction, which is a reason the verdict stays an advisory.
 _PRE_4_0_CC_SHAPES: dict[str, tuple[frozenset[str], frozenset[str]]] = {
     # family suffix -> (permissions, conditions)
     "CC-BY": (
@@ -444,7 +444,57 @@ _PROSE_ALIASES: dict[str, str] = {
 # included the ".0").
 _CC_VERSION_ALT = r"(?:[1-4]\.0|2\.5)"
 _CC_VERSION_RE = re.compile(rf"\b({_CC_VERSION_ALT})\b")
-_CC_URL_RE = re.compile(rf"/licenses/([a-z-]+)/({_CC_VERSION_ALT})")
+# The path segment after the version names a port (/3.0/us/, /3.0/igo/), or is the
+# legal code or a deed; only a segment forming one of _CC_PORTED_IDS is read as a port.
+_CC_URL_RE = re.compile(rf"/licenses/([a-z-]+)/({_CC_VERSION_ALT})(?:/([a-z]+))?")
+
+# The Creative Commons ports SPDX names as licences of their own (SPDX License List
+# 3.29.0, 2026-09-16): jurisdiction ports and the licences for intergovernmental
+# organisations, which Creative Commons issued as a port (3.0 IGO). Each is reported as
+# stated and assessed with its unported profile. A port SPDX names no id for (CC BY 3.0
+# ES, CC BY-ND 3.0 IGO) reads as the unported id, the nearest one SPDX has. A live test
+# checks this set against the SPDX list.
+_CC_PORTED_IDS: frozenset[str] = frozenset(
+    {
+        "CC-BY-2.5-AU",
+        "CC-BY-3.0-AT",
+        "CC-BY-3.0-AU",
+        "CC-BY-3.0-DE",
+        "CC-BY-3.0-IGO",
+        "CC-BY-3.0-NL",
+        "CC-BY-3.0-US",
+        "CC-BY-NC-3.0-DE",
+        "CC-BY-NC-3.0-IGO",
+        "CC-BY-NC-ND-3.0-DE",
+        "CC-BY-NC-ND-3.0-IGO",
+        "CC-BY-NC-SA-2.0-DE",
+        "CC-BY-NC-SA-2.0-FR",
+        "CC-BY-NC-SA-2.0-UK",
+        "CC-BY-NC-SA-3.0-DE",
+        "CC-BY-NC-SA-3.0-IGO",
+        "CC-BY-ND-3.0-DE",
+        "CC-BY-SA-2.0-UK",
+        "CC-BY-SA-2.1-JP",
+        "CC-BY-SA-3.0-AT",
+        "CC-BY-SA-3.0-DE",
+        "CC-BY-SA-3.0-IGO",
+    }
+)
+
+
+def _ported(spdx: str | None, marker: str | None) -> str | None:
+    """``spdx`` ported to ``marker`` (a jurisdiction code or "igo") when SPDX names that
+    port, else ``spdx`` unchanged."""
+    if spdx is None or not marker:
+        return spdx
+    candidate = f"{spdx}-{marker.upper()}"
+    return candidate if candidate in _CC_PORTED_IDS else spdx
+
+
+def _profile_id(spdx: str) -> str:
+    """The id whose profile assesses ``spdx``: a port's unported licence, else itself."""
+    return spdx.rsplit("-", 1)[0] if spdx in _CC_PORTED_IDS else spdx
+
 
 # The six element combinations Creative Commons actually issues. ND and SA are
 # mutually exclusive (you cannot both forbid derivatives and dictate their licence),
@@ -640,8 +690,8 @@ def normalize_spdx(license_str: str | None) -> str | None:
             return None
         low = raw.lower()
 
-    # 1. Bare SPDX id already in the matrix (case-insensitive match on keys).
-    for key in LICENSE_MATRIX:
+    # 1. Bare SPDX id already in the matrix, or a port (case-insensitive match on keys).
+    for key in (*LICENSE_MATRIX, *_CC_PORTED_IDS):
         if low == key.lower():
             return key
 
@@ -654,7 +704,7 @@ def normalize_spdx(license_str: str | None) -> str | None:
         m = _CC_URL_RE.search(low)
         if m:
             elements = [e for e in m.group(1).split("-") if e]
-            return _canonical_spdx_for_cc(elements, m.group(2))
+            return _ported(_canonical_spdx_for_cc(elements, m.group(2)), m.group(3))
         return None
 
     # 3. Open Data Commons URLs.
@@ -684,7 +734,9 @@ def normalize_spdx(license_str: str | None) -> str | None:
         if ver:
             spdx = _canonical_spdx_for_cc(_cc_elements_from_prose(collapsed), ver.group(1))
             if spdx:
-                return spdx
+                # "CC BY 3.0 IGO", "cc-by-3.0-us": the word after the version names a port.
+                marker = re.match(r"[\s-]*([a-z]+)", collapsed[ver.end() :])
+                return _ported(spdx, marker.group(1) if marker else None)
 
     return None
 
@@ -856,7 +908,7 @@ def check(
             ),
             disclaimer=DISCLAIMER,
         )
-    if spdx not in LICENSE_MATRIX:
+    if _profile_id(spdx) not in LICENSE_MATRIX:
         # Identified, but we hold no compatibility flags for it. Report the id —
         # "we know it is CC-BY-SA-3.0 but cannot assess it" is materially more
         # actionable than "unrecognized", and inventing flags for an unbundled
@@ -873,7 +925,7 @@ def check(
             disclaimer=DISCLAIMER,
         )
 
-    profile = LICENSE_MATRIX[spdx]
+    profile = LICENSE_MATRIX[_profile_id(spdx)]
     required = INTENTS[use]
     missing = [p for p in required if p not in profile.permissions]
 
