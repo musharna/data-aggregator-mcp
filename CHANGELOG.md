@@ -90,6 +90,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Dropbox…) says so in `truncated.files`, naming the components. Only the node's own
   OSF storage is listed, and the list read as complete: the Reproducibility Project:
   Psychology (osf.io/ezcuj) listed 1 file beside 49 components.
+- A `kind` filter no longer counts NCBI databases that hold no record of that kind. Each
+  of GEO, SRA and BioProject holds one kind, and PubMed only papers, yet every one was
+  searched and its whole total added before the filter removed its records:
+  `"tardigrade"` with `kind=study` reported 2,683 hits, 2,395 of them SRA runs. A
+  database of another kind is now not searched, so the total is GEO and BioProject's 288.
 
 ## [0.74.1] - 2026-10-16
 

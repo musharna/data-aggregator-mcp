@@ -34,6 +34,8 @@ _ELINK_DBS = ("sra", "gds", "bioproject")
 # E-utilities read ``id`` as a comma-separated LIST, so a PMID is checked whole before it
 # is sent: ``pubmed:34320281,1`` resolved one paper carrying the other's data links.
 _PMID = re.compile(r"[0-9]+")
+# Every record a search returns is a paper (``literature.SUBSOURCE_KINDS``).
+KIND = "publication"
 
 
 def _has(d: dict, key: str, kind: type) -> bool:
@@ -85,7 +87,7 @@ def _normalize_pubmed(doc: dict) -> DataResource:
     return DataResource(
         id=f"pubmed:{uid}",
         source="pubmed",
-        kind="publication",
+        kind=KIND,
         # A Bookshelf book (PMID 20301295, GeneReviews) has no title of its own; its
         # chapters have theirs.
         title=doc["title"] or doc.get("booktitle", ""),

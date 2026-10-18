@@ -354,6 +354,11 @@ def _source_streams(
     holds offsets into the UNFILTERED upstream order). Only the pushed subset is sent,
     and with no active filter the call is exactly the unfiltered one.
 
+    A composite adapter's ``SUBSOURCE_KINDS`` names the one kind every record of a listed
+    sub-source carries. With a kind filter, a sub-source of another kind is not searched:
+    the post-filter removed all its records and its unfiltered total was counted (SRA's
+    runs under kind=study).
+
     An adapter declaring ``QUERY_PLURALS`` sends each plain word with its plural
     upstream; with ``plurals`` off (a cursor minted before it did, whose offsets index
     the query as written) it is told not to.
@@ -401,8 +406,11 @@ def _source_streams(
         if subs:
             limits: dict[str, int] = getattr(adapter, "OPERATOR_LIMITS", {})
             split = plurals and plural_streams and getattr(adapter, "PLURAL_STREAM", None)
+            kinds: dict[str, str] = getattr(adapter, "SUBSOURCE_KINDS", {})
             parts = []
             for sub in subs:
+                if "kind" in wanted and kinds.get(sub, wanted["kind"]) != wanted["kind"]:
+                    continue  # no record of it can pass the kind filter
                 sq = _within_limit(f"{name}/{sub}", q, plain, groups, limits.get(sub), notes)
                 pq = with_plurals(sq) if split else sq
                 for key, query in [(f"{name}/{sub}", sq)] + (
