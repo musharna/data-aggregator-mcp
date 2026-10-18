@@ -646,8 +646,8 @@ async def _fetch_page(
     """Fan out every stream at its offset, dedup, (re-)rank, emit up to ``size`` records
     that pass ``filters``, and account for what was handled per stream. The candidates are
     ordered by ``tiers`` (hits naming more of the search first, round-robin within equal
-    hits; a fill record never above its own source's every-word hits); a ``rank_query``
-    then re-ranks them by embedding similarity to it."""
+    hits; a source's every-word hits before its fill, in the places its hits hold); a
+    ``rank_query`` then re-ranks them by embedding similarity to it."""
     base = {s.key: _stored_offset(offsets, s.key) for s in streams}
     outcomes = await asyncio.gather(
         *(_by_deadline(s.call(size=size, offset=base[s.key])) for s in streams),
@@ -715,44 +715,40 @@ async def _fetch_page(
     # Among hits naming the search equally, a data deposit comes before a paper, figure or
     # tool: "snow leopard" tied the R4 datasets with every paper titled with it, and a
     # round-robin over ~20 sources put figshare's first at 213th (2026-10-07).
-    # A source's fill holds records lacking a word, and its every-word streams records
-    # holding every word, named in their text or not; so no fill record ranks above a hit
-    # of its own source's every-word streams, and it loses a tie with any hit. Ranked on
-    # text alone, an OmicsDI hit holding "nitrogen" only in its protocol tied with the
-    # fill's records naming one word of "Chlamydomonas nitrogen", and 14 of its 39 such
-    # hits fell off a page of 50 behind 25 fill records (2026-10-18). Across sources the
-    # text decides, as before: whether another source's hit holds every word is unknown.
-    by_key = {s.key: s for s in streams}
-
-    def named(r: DataResource) -> tuple[int, ...]:
+    def score(r: DataResource) -> tuple[int, ...]:
         return (*tiers.score(r), int(r.kind in _DEPOSIT_KINDS))
-
-    floor: dict[str, tuple[int, ...]] = {}
-    for key, _, r in unique:
-        if by_key[key].every_word:
-            src = by_key[key].source
-            floor[src] = min(floor.get(src, named(r)), named(r))
-
-    def score(key: str, r: DataResource) -> tuple[int, ...]:
-        s, text = by_key[key], named(r)
-        if s.fill:  # within the fill, its own text still orders its records
-            return (*min(text, floor.get(s.source, text)), 0, *text)
-        return (*text, 1, *text)
 
     best: dict[str, tuple[int, ...]] = {}
     best_copy: dict[str, str] = {}  # the copy that set each deposit's rank, first if tied
     for c in unique:
         if dk := _deposit_key(c[2]):
-            hit = score(c[0], c[2])
+            hit = score(c[2])
             if dk not in best or hit > best[dk]:
                 best[dk], best_copy[dk] = hit, c[2].id
 
     def rank(c: tuple[str, int, DataResource]) -> tuple[int, ...]:
         dk = _deposit_key(c[2])
-        return best[dk] if dk else score(c[0], c[2])
+        return best[dk] if dk else score(c[2])
 
     # Stable: hits that name as much of the search keep the round-robin order.
     kept.sort(key=rank, reverse=True)
+    # A source's fill holds records lacking a word, and its every-word streams records
+    # holding every word, named in their text or not: within the places the text gives
+    # that source, its every-word hits come first, then its fill, each in text order.
+    # Ranked on text alone, an OmicsDI hit holding "nitrogen" only in its protocol tied
+    # with the fill's records naming one word of "Chlamydomonas nitrogen", and 14 of its
+    # 39 such hits fell off a page of 50 behind 25 fill records (2026-10-18). The places
+    # stay the text's: whether another source's hit holds every word is unknown, and
+    # capping the fill below its own hits sank DataCite's "Siberian lake ebullition" from
+    # 26th to 44th behind other sources' hits naming less (2026-10-18).
+    source_of = {s.key: s.source for s in streams}
+    fill = {s.key for s in streams if s.fill}
+    for src in {source_of[k] for k in fill}:
+        slots = [i for i, c in enumerate(kept) if source_of[c[0]] == src]
+        rows = [kept[i] for i in slots if kept[i][0] not in fill]
+        rows += [kept[i] for i in slots if kept[i][0] in fill]
+        for i, c in zip(slots, rows, strict=True):  # pragma: no mutate
+            kept[i] = c
 
     if rank_query is not None:
         reordered, reason = await embeddings.rerank(client, rank_query, [c[2] for c in kept])
@@ -777,7 +773,7 @@ async def _fetch_page(
         if key in every_word and (unshown := tiers.unshown(r)):
             r = r.model_copy(update={"unshown_terms": unshown})
         # Ranked on another copy's text, the hit shows less than set its rank: name that copy.
-        if (dk := _deposit_key(r)) and best[dk] > score(key, r):
+        if (dk := _deposit_key(r)) and best[dk] > score(r):
             r = r.model_copy(update={"ranked_by_copy": best_copy[dk]})
         passes = _passes_filters(r, filters)
         cost = _hit_chars(r) if passes else 0

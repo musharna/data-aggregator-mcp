@@ -76,15 +76,13 @@ async def test_hits_holding_some_words_rank_below_those_naming_more(monkeypatch)
     assert page.total == 2 + 1
 
 
-async def test_no_fill_record_ranks_above_its_own_sources_every_word_hits(monkeypatch) -> None:
+async def test_a_sources_every_word_hits_take_its_places_before_its_fill(monkeypatch) -> None:
     """Nightly live (2026-10-18): OmicsDI's PXD055071 holds "nitrogen" only in its protocol,
     so named one word of "Chlamydomonas nitrogen"; ranked on text alone it tied with the
     fill's records naming one word, and sat 51st behind 25 of them."""
-    # Each holds the words it does not name out of sight; the weaker is the bar for the fill.
-    every = [_hit("dc", "e2", "honey bee hive"), _hit("dc", "e1", "honey hive")]
+    every = [_hit("dc", "e0", "hive images")]  # holds every word, names none
     # Upstream order puts the fill record naming less first; its text reorders them.
-    some = [_hit("dc", "f2", "honey production"), _hit("dc", "f1", "bee pollen images")]
-    other = [_hit("loose", "l1", "bee pollen loads"), _hit("loose", "l2", "pollen")]
+    some = [_hit("dc", "f3", "hive frames"), _hit("dc", "f1", "bee pollen images")]
     monkeypatch.setattr(
         router,
         "_ADAPTERS",
@@ -92,20 +90,16 @@ async def test_no_fill_record_ranks_above_its_own_sources_every_word_hits(monkey
             "dc": _source(
                 [], {_Q: every, _FILL: some}, REQUIRES_EVERY_WORD=True, ANY_WORD_FILL=True
             ),
-            "loose": _source([], {"*": other}),
+            "loose": _source([], {"*": [_hit("loose", "l1", "pollen")]}),
         },
     )
     async with httpx.AsyncClient() as c:
         page = await router.search_page(c, query=_Q, size=10)
-    ids = [r.id for r in page.results]
-    # The fill's record naming 2 words now ranks below the every-word hit naming 1.
-    assert ids.index("dc:e1") < ids.index("dc:f1")
-    # Positive controls: across sources the text still decides, so another source's hit
-    # naming 2 words ties the every-word hit naming 2, above the one naming 1; within the
-    # fill, the record naming more comes first; and a fill record loses a tie with another
-    # source's hit naming as much.
-    assert set(ids[:2]) == {"dc:e2", "loose:l1"}
-    assert set(ids[2:4]) == {"dc:e1", "loose:l2"} and ids[4:] == ["dc:f1", "dc:f2"]
+    # Text alone ranks f1 (2 words), l1 (1), e0 and f3 (0): dc holds places 1, 3 and 4.
+    # Its every-word hit takes the first of them, then its fill in text order (f1, f3).
+    # Positive control: the other source keeps the place its text gives it, above dc's
+    # fill record naming more words; capping the fill below e0 put l1 first (2026-10-18).
+    assert [r.id for r in page.results] == ["dc:e0", "loose:l1", "dc:f1", "dc:f3"]
 
 
 @pytest.mark.parametrize("query", ["pollen", "the pollen", "honey AND bee", '"honey bee"'])
