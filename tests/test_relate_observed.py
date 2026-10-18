@@ -214,6 +214,16 @@ async def test_live_relate_joins_a_paper_to_its_study_and_not_proteins_by_taxon(
         ("https://dandiarchive.org/dandiset/000003/0.230629.1955", "dandi:000003"),
         ("https://huggingface.co/datasets/le-teen/college-roi-data", "hf:le-teen/college-roi-data"),
         ("https://huggingface.co/datasets/o/n?row=3", "hf:o/n"),
+        # Dryad: its page, the two older forms it redirects to, and an encoded slash; a
+        # share link names no DOI
+        ("https://datadryad.org/dataset/doi:10.5061/dryad.7h44j0ztk", "10.5061/dryad.7h44j0ztk"),
+        ("https://datadryad.org/stash/dataset/doi:10.5061/dryad.hf124", "10.5061/dryad.hf124"),
+        ("http://datadryad.org/resource/doi:10.5061/dryad.pq143", "10.5061/dryad.pq143"),
+        ("https://datadryad.org/stash/dataset/doi:10.5061%2Fdryad.t4b", "10.5061/dryad.t4b"),
+        (
+            "https://datadryad.org/stash/share/3klm5Pm8",
+            "https://datadryad.org/stash/share/3klm5Pm8",
+        ),
         ("  https://www.openml.org/d/61  ", "openml:61"),
         ("10.5281/zenodo.2", "10.5281/zenodo.2"),
         ("", ""),
@@ -228,8 +238,9 @@ def test_url_to_id_maps_each_real_landing_form(url: str | None, rid: str | None)
 async def test_live_relate_links_records_cited_by_landing_url() -> None:
     """Real records whose metadata names another record only by its landing-page URL:
     an ICPSR study cited by a PubMed article (NCBI's /pubmed/ form), a Zenodo deposit
-    referencing an OpenML dataset (OpenML's search-page form), and a Zenodo deposit
-    identical to a Hugging Face and an OpenML dataset. Each link is read from the
+    referencing an OpenML dataset (OpenML's search-page form), a Zenodo deposit
+    identical to a Hugging Face and an OpenML dataset, and a Zenodo deposit supplemented
+    by a Dryad deposit. Each link is read from the
     resolved record first, so a changed upstream fails the premise, not `relate`."""
     cases = [
         (
@@ -248,6 +259,13 @@ async def test_live_relate_links_records_cited_by_landing_url() -> None:
             "hf:le-teen/college-roi-data",
         ),
         ("zenodo:22945909", "https://www.openml.org/d/47276", "openml:47276"),
+        # Its Dryad supplement named only by Dryad's older page, the slash encoded (as 37 of
+        # 125 DataCite links to a Dryad page were, 2026-10-17)
+        (
+            "zenodo:5683449",
+            "https://datadryad.org/stash/dataset/doi:10.5061%2Fdryad.np5hqbzrc",
+            "datacite:10.5061/dryad.np5hqbzrc",
+        ),
     ]
     async with httpx.AsyncClient(follow_redirects=True) as client:
         for src, url, target in cases:

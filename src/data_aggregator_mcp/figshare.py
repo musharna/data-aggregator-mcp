@@ -26,20 +26,30 @@ _GET = "GET"
 _ARTICLE_ID = re.compile(r"figshare\.(\d+)")
 # Institutional portals: the id is the final all-digit segment, after a dot or the prefix
 # slash, before an optional ``.vN`` version suffix. Only reached for DOIs DataCite
-# attributes to a figshare client.
+# attributes to a figshare client or whose landing page is a Figshare portal's.
 _TRAILING_ID = re.compile(r"[./](\d+)(?:\.v\d+)?$", re.IGNORECASE)
-# ``10.6084/m9.figshare.c.8708104.v1``, ``10.25383/city.c.8323077``: a collection id (its
-# own id space), which /articles answers with 404 or with some unrelated article.
-_COLLECTION = re.compile(r"\.c\.\d+(?:\.v\d+)?$", re.IGNORECASE)
+# ``10.6084/m9.figshare.c.8708104.v1``, ``10.25383/city.c.8323077``, and straight after
+# the prefix on some portals (``10.17034/c.8718502``, Queen's Belfast): a collection id
+# (its own id space), which /articles answers with 404 or with some unrelated article.
+_COLLECTION = re.compile(r"[./]c\.\d+(?:\.v\d+)?$", re.IGNORECASE)
 _VERSION = re.compile(r"\.v(\d+)$", re.IGNORECASE)
+# The article id a portal page ends with, before its optional version: older portal DOIs
+# do not carry one (Monash's ``10.4225/03/58b649e4e0755`` is article 4705483 at
+# ``bridges.monash.edu/articles/thesis/<slug>/4705483/1``, 5 of 200 sampled 2026-10-17).
+_PAGE_ARTICLE_ID = re.compile(r"/articles/[^/\s]+/[^/\s]+/(\d+)(?:/\d+)?/?$")
 
 logger = logging.getLogger(__name__)
 
 
-def _article_id(doi: str) -> str | None:
+def _article_id(doi: str, landing_url: str | None = None) -> str | None:
+    """The article id in ``doi``, else at the end of its landing page's path."""
     if _COLLECTION.search(doi):
         return None
-    m = _ARTICLE_ID.search(doi) or _TRAILING_ID.search(doi)
+    m = (
+        _ARTICLE_ID.search(doi)
+        or _TRAILING_ID.search(doi)
+        or _PAGE_ARTICLE_ID.search(landing_url or "")
+    )
     return m.group(1) if m else None
 
 
@@ -78,8 +88,10 @@ def _check_article(body: dict) -> None:
         raise _http.UpstreamEnvelopeError(f"no Figshare article in {body!r:.200}")
 
 
-async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
-    aid = _article_id(doi)
+async def files(
+    client: httpx.AsyncClient, doi: str, landing_url: str | None = None
+) -> list[FileEntry]:
+    aid = _article_id(doi, landing_url)
     if not aid:
         return []
     # A ``.vN`` DOI names one immutable version; /articles/{id} is whatever is current.
@@ -105,7 +117,7 @@ async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:
         )
     got = data["doi"]
     if _doi_key(got, bool(version)) != _doi_key(doi, bool(version)):
-        # The id was parsed from the DOI's shape; the article it names is someone else's
+        # The id was parsed from the DOI's or page's shape; the article it names is someone else's
         # (or carries no DOI, so cannot be shown to be ours). Attaching its files would
         # be wrong data, so attach none (logged).
         logger.warning(

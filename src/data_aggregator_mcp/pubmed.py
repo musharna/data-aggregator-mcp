@@ -46,7 +46,8 @@ def _has(d: dict, key: str, kind: type) -> bool:
 def _is_doc(doc: dict) -> bool:
     """Every field ``_normalize_pubmed`` reads, at the type it reads it as. ``_eutils``
     checks only that each uid has an object. Every live DocSum has a PMID ``uid`` and a
-    ``title`` (a whole book's is ``""``); the lists are checked when present."""
+    ``title`` (a whole book's is ``""``, its name in ``booktitle``); the lists are checked
+    when present."""
     uid = doc.get("uid")
     authors = doc.get("authors", [])
     articleids = doc.get("articleids", [])
@@ -54,6 +55,7 @@ def _is_doc(doc: dict) -> bool:
         isinstance(uid, str)
         and _PMID.fullmatch(uid) is not None
         and isinstance(doc.get("title"), str)
+        and _has(doc, "booktitle", str)
         and _has(doc, "sortpubdate", str)
         and isinstance(authors, list)
         and all(isinstance(a, dict) and _has(a, "name", str) for a in authors)
@@ -86,7 +88,9 @@ def _normalize_pubmed(doc: dict) -> DataResource:
         id=f"pubmed:{uid}",
         source="pubmed",
         kind=KIND,
-        title=doc["title"],
+        # A Bookshelf book (PMID 20301295, GeneReviews) has no title of its own; its
+        # chapters have theirs.
+        title=doc["title"] or doc.get("booktitle", ""),
         creators=[Creator(name=a["name"]) for a in doc.get("authors", []) if a.get("name")],
         year=omics._year_from(doc.get("sortpubdate")),
         doi=doi,

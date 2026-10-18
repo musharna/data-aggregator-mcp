@@ -380,6 +380,7 @@ def test_no_wrong_typed_field_escapes_as_a_bare_error() -> None:
         ("authors", 0),
         ("authors", 0, "name"),
         ("title",),
+        ("booktitle",),
         ("articleids",),
         ("articleids", 0),
         ("articleids", 0, "idtype"),
@@ -395,6 +396,7 @@ def test_no_wrong_typed_field_escapes_as_a_bare_error() -> None:
         ("uid", "42802988,1"),
         ("uid", None),
         ("title", None),
+        ("booktitle", None),
         ("sortpubdate", 2026),
         ("authors", [{"name": None}]),
         ("authors", ["Imani M"]),
@@ -416,6 +418,30 @@ def test_a_record_without_its_optional_fields_reads_cleanly() -> None:
     assert pubmed._normalize_pubmed(doc) == DataResource(
         id="pubmed:7", source="pubmed", kind="publication", title="", identifiers={"pmid": "7"}
     )
+
+
+# esummary db=pubmed, PMID 20301295 (the GeneReviews book) and 26225414 (one of its
+# chapters), the fields read (live 2026-10-17).
+BOOK = {
+    "uid": "20301295",
+    "title": "",
+    "booktitle": "GeneReviews(®)",
+    "doctype": "book",
+    "authors": [{"name": "Adam MP", "authtype": "Editor", "clusterid": ""}],
+    "sortpubdate": "1993/01/01 00:00",
+}
+CHAPTER = BOOK | {
+    "uid": "26225414",
+    "title": "Lysosomal Acid Lipase Deficiency.",
+    "doctype": "chapter",
+}
+
+
+def test_a_whole_book_is_titled_by_its_book_title() -> None:
+    # Its DocSum title is empty: the record was listed untitled.
+    assert pubmed._normalize_pubmed(BOOK).title == "GeneReviews(®)"
+    # Positive control: a chapter keeps its own title, not the book's.
+    assert pubmed._normalize_pubmed(CHAPTER).title == "Lysosomal Acid Lipase Deficiency."
 
 
 async def test_a_malformed_record_in_a_search_page_is_upstream_trouble() -> None:
@@ -447,6 +473,16 @@ async def test_live_a_paper_linking_thousands_of_sra_records_resolves() -> None:
     assert re.fullmatch(r"first 100 of \d{4,} linked sra records", r.truncated["links"])
     assert sum(re.fullmatch(r"sra:[SED]RX\d+", lnk.target_id) is not None for lnk in r.links) == 100
     assert len({lnk.target_id for lnk in r.links}) == len(r.links)
+
+
+@live_only
+async def test_live_a_whole_book_is_titled_by_its_book_title() -> None:
+    async with httpx.AsyncClient(timeout=60) as client:
+        docs = await _eutils.esummary(client, "pubmed", ["20301295", "26225414"])
+    by = {d["uid"]: d for d in docs}
+    assert by["20301295"]["title"] == ""  # the premise, from NCBI
+    assert pubmed._normalize_pubmed(by["20301295"]).title == "GeneReviews(®)"
+    assert pubmed._normalize_pubmed(by["26225414"]).title == "Lysosomal Acid Lipase Deficiency."
 
 
 @live_only

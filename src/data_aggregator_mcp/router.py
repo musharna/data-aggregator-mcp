@@ -22,6 +22,7 @@ import asyncio
 import functools
 import json
 import logging
+import math
 import os
 import re
 from collections.abc import Awaitable, Callable, Sequence
@@ -47,8 +48,14 @@ from data_aggregator_mcp import query_understanding as query_understanding_mod
 from data_aggregator_mcp import relate as relate_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
-from data_aggregator_mcp._relevance import MatchTiers, any_word, title_clause, with_plurals
-from data_aggregator_mcp.errors import ValidationError
+from data_aggregator_mcp._relevance import (
+    MatchTiers,
+    any_word,
+    balance_query,
+    title_clause,
+    with_plurals,
+)
+from data_aggregator_mcp.errors import UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import (
     SEARCH_LIST_LIMITS,
     AssayExpansion,
@@ -112,9 +119,14 @@ def _cache_ttl() -> float:
     if raw is None:
         return 3600.0
     try:
-        return float(raw)
+        ttl = float(raw)
     except ValueError:
+        ttl = math.nan
+    # nan parses but never expires an entry (every comparison with it is False).
+    if math.isnan(ttl):
+        logger.warning("CACHE_TTL_SECONDS=%r is not a number of seconds; using 3600", raw)
         return 3600.0
+    return ttl
 
 
 _RESOLVE_CACHE = TTLCache(maxsize=512, ttl=_cache_ttl())
@@ -589,6 +601,23 @@ def _hit_chars(r: DataResource) -> int:
     return len(sent) + _ENRICH_CHARS_PER_ORGANISM * organisms
 
 
+# The longest a page waits for one stream. Timing the round-3 queries (83 searches, every
+# source, 2026-10-17) once MassIVE kept its word counts: the slowest stream of a search
+# answered within 20 s in 79; the other 4 were single stalls of 27-56 s (MassIVE twice,
+# OmicsDI, OpenAIRE), each holding the whole page. A stream past it fails as an outage
+# does, named in ``errors``.
+STREAM_DEADLINE_S = 20.0
+
+
+async def _by_deadline(call: Awaitable[Any]) -> Any:
+    try:
+        return await asyncio.wait_for(call, STREAM_DEADLINE_S)
+    except TimeoutError:
+        raise UpstreamUnavailableError(
+            f"no answer within {STREAM_DEADLINE_S:g} s", down=True
+        ) from None
+
+
 @dataclass
 class _Page:
     emitted: list[DataResource]
@@ -620,7 +649,8 @@ async def _fetch_page(
     hits); a ``rank_query`` then re-ranks them by embedding similarity to it."""
     base = {s.key: _stored_offset(offsets, s.key) for s in streams}
     outcomes = await asyncio.gather(
-        *(s.call(size=size, offset=base[s.key]) for s in streams), return_exceptions=True
+        *(_by_deadline(s.call(size=size, offset=base[s.key])) for s in streams),
+        return_exceptions=True,
     )
     fetched: dict[str, list[DataResource]] = {}
     totals: dict[str, int] = {}
@@ -635,15 +665,18 @@ async def _fetch_page(
         stream_total, recs = outcome
         total += 0 if s.fill else stream_total
         fetched[s.key], totals[s.key] = list(recs), stream_total
-    # A source is empty when every one of its streams (one per query variant) answered
-    # and matched nothing; a variant that found something, or failed, says otherwise. Its
-    # fill matched only some of the words, so is not one of them: counted, its hits hid
-    # that DataCite held no record with every word (2026-10-16).
+    # A source is empty when every one of its streams (one per query variant, and GEO's
+    # plurals) answered and matched nothing; a stream that found something, or failed,
+    # says otherwise: GEO's query failed, its plurals answered 0, and it was called empty
+    # (2026-10-17). Its fill matched only some of the words, so is not one of them:
+    # counted, its hits hid that DataCite held no record with every word (2026-10-16).
     answered = [s for s in streams if s.label not in errors]
     empty_every_word = [
         src
         for src in dict.fromkeys(s.source for s in answered if s.every_word)
-        if all(totals[s.key] == 0 for s in answered if s.source == src and not s.fill)
+        if all(
+            s in answered and totals[s.key] == 0 for s in streams if s.source == src and not s.fill
+        )
     ]
     filled = [
         src
@@ -1158,6 +1191,14 @@ async def search_page(
                     overridden=overridden,
                     confidence=ru.confidence,
                 )
+        # An unmatched quote or parenthesis breaks most sources' query parsers, each reported
+        # as an outage: dropped here, once, after any rewrite and before any expansion.
+        query, dropped = balance_query(query)
+        if dropped:
+            errors["unbalanced"] = (
+                f"dropped an unmatched {' '.join(dropped)} that most sources cannot parse; "
+                f"searched for: {query}"
+            )
         filters = {
             "published_after": published_after,
             "published_before": published_before,
@@ -1213,7 +1254,8 @@ async def search_page(
             else:
                 # Raw variant list for the echo: original (post-understand) query first,
                 # ci-deduped, capped. Variant 0 is always the original.
-                raw_variants = _dedup_ci([query, *variants_raw])[:MAX_QUERY_VARIANTS]
+                repaired = (balance_query(v)[0] for v in variants_raw)
+                raw_variants = _dedup_ci([query, *repaired])[:MAX_QUERY_VARIANTS]
                 # Effective (ontology-expanded) string per variant. Variant 0 reuses the
                 # already-computed `effective_query`; the rest run the SAME expansion chain
                 # (resolver lookups are cached → cheap). Echoes were captured once above.

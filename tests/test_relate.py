@@ -227,6 +227,26 @@ def test_explicit_link_resolves_hf_two_part_url() -> None:
     assert set(hints[0].resources) == {"pubmed:1", "hf:owner/name"}
 
 
+def test_explicit_link_resolves_a_dryad_landing_url_to_the_deposit_doi() -> None:
+    # NEMAR's derived datasets cite their Dryad source by its landing page (live 10-17).
+    url = "https://datadryad.org/dataset/doi:10.5061/dryad.7h44j0ztk"
+    rs = [
+        _res(
+            "datacite:10.82901/nemar.nm000372", links=[Link(rel="is_derived_from", target_id=url)]
+        ),
+        _res("datacite:10.5061/dryad.7h44j0ztk", doi="10.5061/dryad.7h44j0ztk"),
+        # Positive control: a share link names no deposit, so it joins nothing.
+        _res(
+            "pubmed:1",
+            links=[Link(rel="references", target_id="https://datadryad.org/stash/share/3klm5")],
+        ),
+    ]
+    hints = [h for h in relate_mod.detect(rs) if h.kind == "explicit_link"]
+    assert [h.resources for h in hints] == [
+        ["datacite:10.82901/nemar.nm000372", "datacite:10.5061/dryad.7h44j0ztk"]
+    ]
+
+
 def test_unknown_url_produces_no_false_link() -> None:
     rs = [
         _res("pubmed:1", links=[Link(rel="references", target_id="https://example.com/foo/2")]),
