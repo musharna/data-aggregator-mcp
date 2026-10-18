@@ -68,6 +68,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   500 per 5 minutes per IP), which nothing enforced before.
 - A PubMed record of a whole NCBI Bookshelf book (GeneReviews, PMID 20301295) is titled
   by its book title; it was listed with an empty title. Its chapters keep their own.
+- `relate` links a record to a Dryad deposit it names only by its Dryad page
+  (`datadryad.org/dataset/doi:…`, and the older `stash/dataset/` and `resource/` forms,
+  the DOI's slash plain or encoded). 37 of 125 DataCite links to a Dryad page had no DOI
+  beside them, so those pairs went unlinked.
 
 ## [0.74.1] - 2026-10-16
 
