@@ -8,6 +8,19 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- The `resolve` and `operate` tool descriptions gave `zenodo:7654321` as the example id,
+  a record that now redirects to a restricted one with no files, so a model trying the
+  example got nothing to read. Both now quote the `list_sources` examples, which the live
+  tests resolve, and so does the reference's `resolve` section.
+- A title pasted with a colon after a word ("Survival at the edge: Inbreeding purging
+  ...") found nothing on OmicsDI or NGDC, which read the colon as query syntax and take
+  no escape, so the study was missing from those two sources. The colon is now dropped
+  before the query is sent, and on NGDC a semicolon after a word too; a colon with its
+  value attached (`TAXONOMY:9606`) is still sent as written.
+- Paging a search past Zenodo's or OpenAIRE's first 10,000 records reported the source
+  as failing (HTTP 400) on every later page. Each now says it serves only the first
+  10,000 records of a search and to narrow the query, as PubMed already did, and asks
+  for no page past them.
 - `CACHE_TTL_SECONDS=nan` kept every resolved record for the life of the process, since
   a nan lifetime never expires; it now falls back to the default like any other value
   that is not a number, and each fallback is logged. `0` or less (no cache) and `inf`

@@ -81,11 +81,13 @@ longer query can find nothing there.
 
 ### `resolve(id, cite?, format?, trust?, fair?, use?)`
 
-Full record + files manifest. Routes by id shape — `zenodo:7654321`, a bare DOI,
-`datacite:10.5061/dryad.x`, an omics id (`sra:SRX079566`, `geo:GSE332789`,
-`bioproject:PRJNA1468572`), a literature id (`pubmed:34320281`, `openaire:<id>`),
-a HuggingFace id (`hf:owner/name`), a DataONE id (`dataone:doi:10.5063/F1HT2M7Q`),
-or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
+Full record + files manifest. Routes by id shape — `zenodo:1254563`, a bare DOI,
+`datacite:10.5061/dryad.t4b8gtjgj`, an omics id (`sra:SRX079566`, `geo:GSE10072`,
+`bioproject:PRJNA231221`), a literature id (`pubmed:23066504`, `openaire:<id>`),
+a HuggingFace id (`hf:davidcechak/Arabidopsis_thaliana_DNA_v0`), a DataONE id
+(`dataone:doi:10.18739/A26336`), or an OmicsDI id (`omicsdi:pride:PXD000001`). Every
+example here is a `list_sources` `id_example`, resolved by the live tests. Attaches,
+where available:
 
 - **`files[]`** — ENA FASTQ manifest (SRA), GEO `suppl/`, or the host repo's
   native manifest (Figshare / Dataverse / OSF / Dryad).
