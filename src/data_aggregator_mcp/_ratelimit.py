@@ -9,6 +9,13 @@ across tool calls within the long-lived stdio process. ``acquire`` is called
 inside ``_http._retrying`` so every upstream request — and every retry — spends a
 token.
 
+Every other host has its own bucket. They shared one 10 req/s bucket until
+2026-10-17, so a search's ~34 requests to some 18 hosts queued behind one another
+for up to 2.4 s, while two hosts' documented limits went unenforced: Zenodo's search
+(30 a minute per IP) and DataCite (500 per 5 minutes per IP, unidentified; both
+checked 2026-10-17). Those two are now paced within them, in this process; a
+search's few requests to them still go at once.
+
 The NCBI schedule is shared by every server process on the machine (a lock file
 holding the next free slot), because NCBI counts the IP, not the process: three
 processes each pacing themselves at 3/s sent 9/s, and every page of three
@@ -182,19 +189,31 @@ class SharedSchedule:
         return slot - now
 
 
+# Documented limits per IP, as (requests, window in seconds, burst), checked 2026-10-17.
+# Zenodo's applies to its search alone. A bucket of capacity ``burst`` refilling
+# ``(requests - burst) / window`` per second grants at most ``requests`` in any window,
+# and lets a search's few requests go at once. Each is paced at 90% of the limit, an
+# unmeasured margin for requests that reach the host later than they were granted.
+_DOCUMENTED: dict[str, tuple[int, float, int]] = {
+    "zenodo-search": (27, 60.0, 4),
+    "datacite": (450, 300.0, 10),
+}
+_ZENODO_SEARCH = ("zenodo.org", "/api/records")
+
 _BUCKETS: dict[str, TokenBucket | SharedSchedule] = {}
 
 
 _NCBI_DOMAIN = "ncbi.nlm.nih.gov"
 
 
-def _host_of(url: str) -> str:
-    """Lowercase host of ``url``, or "" when it has none. Never raises — pacing must not
-    be the thing that breaks a request."""
+def _host_path(url: str) -> tuple[str, str]:
+    """Lowercase host and path of ``url``, "" for what it lacks. Never raises — pacing
+    must not be the thing that breaks a request."""
     try:
-        return (urlsplit(url).hostname or "").lower()
+        parts = urlsplit(url)
+        return (parts.hostname or "").lower(), parts.path
     except ValueError:
-        return ""
+        return "", ""
 
 
 def _bucket_for(service: str, url: str) -> str:
@@ -208,12 +227,19 @@ def _bucket_for(service: str, url: str) -> str:
 
     The label check is kept as a conservative backstop for a URL we cannot parse. It can
     only ever add pacing, never remove it.
+
+    Zenodo's search and DataCite have their documented limits (``_DOCUMENTED``); every
+    other host has a bucket of its own, named by the host.
     """
-    host = _host_of(url)
+    host, path = _host_path(url)
     if host == _NCBI_DOMAIN or host.endswith("." + _NCBI_DOMAIN):
         return "ncbi"
+    if (host, path.rstrip("/")) == _ZENODO_SEARCH:
+        return "zenodo-search"
+    if host == "api.datacite.org":
+        return "datacite"
     if host:
-        return "default"
+        return host
     return "ncbi" if service.startswith("NCBI") else "default"
 
 
@@ -223,6 +249,9 @@ async def acquire(service: str, url: str) -> None:
     if bucket is None:
         if name == "ncbi":
             bucket = SharedSchedule(state_dir() / "ncbi.schedule", _ncbi_rate())
+        elif name in _DOCUMENTED:
+            requests, window, burst = _DOCUMENTED[name]
+            bucket = TokenBucket((requests - burst) / window, burst)
         else:
             bucket = TokenBucket(_DEFAULT_RATE)
         _BUCKETS[name] = bucket

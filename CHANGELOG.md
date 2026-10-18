@@ -6,8 +6,66 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- MassIVE also finds datasets naming only some of the query's words, ranked below those
+  naming every one, as DataCite, OmicsDI, CELLxGENE and the Metabolomics Workbench do.
+  Each word costs MassIVE a request, so the fill runs only while fewer than 10 datasets
+  name every word, reads the rows of at most the 2 rarest words, and shares the
+  every-word search's requests: at most 2 more a search. Over the 27 round-3 coral
+  heat-stress queries, the key studies MassIVE returned in its first 50 rose from 92 to
+  225 (30 to 39 distinct of 47), and the queries finding one from 18 to 25; the
+  MassIVE search's median time rose from 4.5 to 11.0 s. A third word's rows cost 11
+  more requests and found fewer (220).
+
 ### Fixed
 
+- The `resolve` and `operate` tool descriptions gave `zenodo:7654321` as the example id,
+  a record that now redirects to a restricted one with no files, so a model trying the
+  example got nothing to read. Both now quote the `list_sources` examples, which the live
+  tests resolve, and so does the reference's `resolve` section.
+- A title pasted with a colon after a word ("Survival at the edge: Inbreeding purging
+  ...") found nothing on OmicsDI or NGDC, which read the colon as query syntax and take
+  no escape, so the study was missing from those two sources. The colon is now dropped
+  before the query is sent, and on NGDC a semicolon after a word too; a colon with its
+  value attached (`TAXONOMY:9606`) is still sent as written.
+- Paging a search past Zenodo's or OpenAIRE's first 10,000 records reported the source
+  as failing (HTTP 400) on every later page. Each now says it serves only the first
+  10,000 records of a search and to narrow the query, as PubMed already did, and asks
+  for no page past them.
+- `CACHE_TTL_SECONDS=nan` kept every resolved record for the life of the process, since
+  a nan lifetime never expires; it now falls back to the default like any other value
+  that is not a number, and each fallback is logged. `0` or less (no cache) and `inf`
+  (keep for good) are unchanged.
+- A query with an unmatched quote or parenthesis (`"snow leopard`, `liver (proteome`)
+  was reported as an outage by up to 8 sources (DataCite, DANDI, OpenAIRE, UniProt,
+  NASA CMR, OmicsDI, OpenML, NGDC), whose query parsers refuse it. The unmatched mark is
+  now dropped before the query is sent, `errors.unbalanced` says what was searched, and
+  every source answers. Multi-query variants are repaired the same way.
+- MassIVE no longer holds up a search page. It counts each word of a query with its own
+  request, and an agent's searches repeat words, so a session of 83 searches sent 356
+  counts, 235 of them for a word already counted; under that load MassIVE took up to
+  104 s a search and answered 429. A word's count is now kept ten minutes. Replaying
+  the same 83 searches: MassIVE 184 requests, p90 8.9 s (was 20.9 s), dropped for 429s
+  from one search (was 6);
+  the page p90 14.6 s (was 20.9 s). The rows are still read with a fresh count, so
+  results are unchanged.
+- `errors.all_words` no longer says a source matched nothing when part of its search
+  failed. GEO, SRA and BioProject each send their query as written and, separately,
+  the plurals it adds; when the first failed and the second answered with nothing, the
+  note named the database as empty next to its own error. A source is now named only
+  when every one of its searches answered with nothing.
+- One slow source no longer holds up a search page. The page waited for every source,
+  so a single stall set its time: over the round-3 queries (83 searches), 4 had one
+  source stall for 27-56 s (MassIVE, OmicsDI, OpenAIRE). A source that has not answered
+  within 20 s is now named in `errors` ("no answer within 20 s"), as an outage is, and
+  the page is served from the rest.
+- Every host now has its own rate limit. All hosts but NCBI shared one 10 requests a
+  second, so a search's ~34 requests to some 18 hosts queued behind one another: over
+  30 of the round-3 searches they spent a mean of 33.6 s each waiting in it, summed
+  over requests (0.11 s now), and the median page took 13.7 s (9.4 s now). Zenodo's
+  search and DataCite are now paced within their documented limits (30 a minute and
+  500 per 5 minutes per IP), which nothing enforced before.
 - A PubMed record of a whole NCBI Bookshelf book (GeneReviews, PMID 20301295) is titled
   by its book title; it was listed with an empty title. Its chapters keep their own.
 
