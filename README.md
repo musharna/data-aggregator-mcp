@@ -1,22 +1,18 @@
 # data-aggregator-mcp
 
-An MCP server for agents and researchers looking for public research data. It
-searches 21 sources at once (data archives, omics repositories and papers) and
-returns one list: organism, disease and tissue names are expanded with their
-synonyms in the 12 sources that accept them, records that share a DOI become one,
-and downloads are checked against the source's checksum where it publishes one.
+data-aggregator-mcp is an MCP server that lets AI agents search 21 public
+research-data sources at once and get back one deduplicated list.
 
 [![CI](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
 [![Python](https://img.shields.io/pypi/pyversions/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/musharna/data-aggregator-mcp/blob/main/LICENSE)
+[![License](https://img.shields.io/pypi/l/data-aggregator-mcp.svg)](https://github.com/musharna/data-aggregator-mcp/blob/main/LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21636332.svg)](https://doi.org/10.5281/zenodo.21636332)
 [![Glama](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp/badges/score.svg)](https://glama.ai/mcp/servers/musharna/data-aggregator-mcp)
 
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install-0098FF?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=data-aggregator&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22data-aggregator-mcp%22%5D%7D)
-[![Install in Cursor](https://img.shields.io/badge/Cursor-Install-000000?logo=cursor&logoColor=white)](https://cursor.com/install-mcp?name=data-aggregator&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJkYXRhLWFnZ3JlZ2F0b3ItbWNwIl19)
-
+<!--
 mcp-name: io.github.musharna/data-aggregator-mcp
+-->
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/musharna/data-aggregator-mcp/main/examples/assets/demo.svg"
@@ -37,8 +33,8 @@ mean recall was higher than web search's on 4 of 5 tasks (sign test p = 0.38):
 | ToolUniverse | 0.26 |
 
 It made fewer tool calls than web search (7.7 fewer per run, 95% CI 1.8 to 13.1)
-and ToolUniverse; cost and wall time against web search are not separated. A
-fresh held-out round has not run yet. Method and controls:
+and ToolUniverse; cost and wall time against web search are not separated.
+Method and controls:
 [benchmarks/h2h](https://github.com/musharna/data-aggregator-mcp/blob/main/benchmarks/h2h/README.md).
 
 ## Install
@@ -49,8 +45,12 @@ Claude Code:
 claude mcp add data-aggregator -- uvx data-aggregator-mcp
 ```
 
-VS Code and Cursor: the buttons above. Any other MCP client: run
-`uvx data-aggregator-mcp` as a stdio server.
+VS Code and Cursor: these buttons.
+
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install-0098FF?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=data-aggregator&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22data-aggregator-mcp%22%5D%7D)
+[![Install in Cursor](https://img.shields.io/badge/Cursor-Install-000000?logo=cursor&logoColor=white)](https://cursor.com/install-mcp?name=data-aggregator&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJkYXRhLWFnZ3JlZ2F0b3ItbWNwIl19)
+
+Any other MCP client: run `uvx data-aggregator-mcp` as a stdio server.
 
 <details>
 <summary>Claude Desktop, pip, and the <code>operate</code> extra</summary>
@@ -118,12 +118,6 @@ how a set of records connect (a shared accession, DOI or explicit link).
 
 A source that fails is named in the result's `errors`, never dropped silently.
 
-Seven sources return only records holding every word of the query (DataCite,
-OmicsDI, NCBI omics, CELLxGENE, the Metabolomics Workbench, MassIVE and Kaggle).
-All but NCBI omics and Kaggle are also searched for records holding some of the
-words; for those two, keep queries short. Details:
-[docs/reference.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/reference.md#every-word-sources).
-
 What each source can fetch, and which checksum it is verified against:
 [docs/sources.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/sources.md).
 
@@ -148,6 +142,8 @@ More: [docs/POSITIONING.md](https://github.com/musharna/data-aggregator-mcp/blob
 Every tool and parameter, the HTTP transport (`--transport http`) and the
 environment variables:
 [docs/reference.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/reference.md).
+Sources that need every word of a query, and how they are searched:
+[every-word sources](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/reference.md#every-word-sources).
 Tests, linting and the live API probes:
 [CONTRIBUTING.md](https://github.com/musharna/data-aggregator-mcp/blob/main/CONTRIBUTING.md).
 
