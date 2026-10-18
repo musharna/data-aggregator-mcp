@@ -129,7 +129,7 @@ def _is_record(r: object) -> bool:
                 and _opt((f.get("links") or {}).get("self"), str)
             ),
         )
-        and _fields(stats, {"views": int, "downloads": int})
+        and _fields(stats, {"version_views": int, "version_downloads": int})
         and _opt(rtype.get("type"), str)
         and _opt(lic.get("id"), str)
         and _items(meta.get("creators"), lambda c: _fields(c, {"name": str, "orcid": str}))
@@ -199,8 +199,10 @@ def _normalize(record: dict[str, Any]) -> DataResource:
                 checksum=f.get("checksum"),
             )
         )
+    # The record is one version; ``views`` and ``downloads`` count every version of the
+    # concept (428,071 views for 23039074, which has 1,639 of its own; 2026-10-17).
     stats = record.get("stats") or {}
-    views, downloads = stats.get("views"), stats.get("downloads")
+    views, downloads = stats.get("version_views"), stats.get("version_downloads")
     metrics = (
         Metrics(views=views, downloads=downloads)
         if (views is not None or downloads is not None)

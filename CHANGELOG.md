@@ -95,6 +95,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   searched and its whole total added before the filter removed its records:
   `"tardigrade"` with `kind=study` reported 2,683 hits, 2,395 of them SRA runs. A
   database of another kind is now not searched, so the total is GEO and BioProject's 288.
+- A Zenodo record's views and downloads are now that version's own. They were the
+  counts of every version of its concept, so version 3.11.2 of a package
+  (`zenodo:23039074`) showed 428,071 views where it has 1,639, and a record and its
+  DataCite copy, which counts its own DOI, disagreed.
 
 ## [0.74.1] - 2026-10-16
 

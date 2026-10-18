@@ -219,17 +219,26 @@ def test_normalize_extracts_related_links() -> None:
 
 
 def test_normalize_maps_metrics_from_stats() -> None:
+    """The record is one version: its counts are that version's, not the concept's
+    (``views``/``downloads`` count every version). A single-version record has the same
+    numbers in both, the positive control."""
     rec = _record()
     rec["stats"] = {
-        "views": 1234,
-        "unique_views": 1000,
-        "downloads": 56,
-        "unique_downloads": 50,
+        "views": 428071,
+        "unique_views": 400000,
+        "downloads": 569550,
+        "unique_downloads": 500000,
+        "version_views": 1639,
+        "version_unique_views": 1500,
+        "version_downloads": 6138,
+        "version_unique_downloads": 6000,
     }
     r = zenodo._normalize(rec)
     assert r.metrics is not None
-    assert r.metrics.views == 1234
-    assert r.metrics.downloads == 56
+    assert (r.metrics.views, r.metrics.downloads) == (1639, 6138)
+    rec["stats"] = {"views": 834, "downloads": 767, "version_views": 834, "version_downloads": 767}
+    single = zenodo._normalize(rec).metrics
+    assert single is not None and (single.views, single.downloads) == (834, 767)
 
 
 def test_normalize_metrics_none_when_stats_absent() -> None:
@@ -239,7 +248,7 @@ def test_normalize_metrics_none_when_stats_absent() -> None:
 
 def test_normalize_metrics_coerces_floats_and_skips_nulls() -> None:
     rec = _record()
-    rec["stats"] = {"views": 12.0, "downloads": None}
+    rec["stats"] = {"version_views": 12.0, "version_downloads": None}
     r = zenodo._normalize(rec)
     assert r.metrics is not None
     assert r.metrics.views == 12
@@ -436,6 +445,19 @@ async def test_live_resolve_known_record_has_files() -> None:
         resolved = await zenodo.resolve(client, results[0].id)
     assert resolved.id == results[0].id
     assert resolved.doi
+
+
+@live_only
+async def test_live_metrics_are_the_versions_own() -> None:
+    """23039074 is version 3.11.2 of a concept viewed 428,071 times; it has 1,639 views
+    of its own (2026-10-17). Our counts are read first, so the raw ones can only be
+    higher, by the few views between the two requests."""
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await zenodo.resolve(client, "zenodo:23039074")
+        raw = (await client.get(f"{zenodo.BASE_URL}/api/records/23039074")).json()["stats"]
+    assert r.metrics is not None and r.metrics.views is not None, r.metrics
+    assert raw["version_views"] - 100 <= r.metrics.views <= raw["version_views"], raw
+    assert r.metrics.views * 10 < raw["views"], raw  # far below the concept's
 
 
 @live_only
