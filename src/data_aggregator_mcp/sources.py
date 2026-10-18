@@ -256,7 +256,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         zenodo,
         layer="archives",
         kinds=("dataset", "publication", "software", "other"),
-        rate_limit="~60/min anonymous",
+        rate_limit="search 30/min per IP (paced at 27); other calls 10/s",
         status="live",
         fetchable=True,
         operable=True,
@@ -339,7 +339,7 @@ SOURCES: tuple[SourceSpec, ...] = (
         datacite,
         layer="archives",
         kinds=("dataset", "publication", "software", "other"),
-        rate_limit="respects 429/Retry-After",
+        rate_limit="500 per 5 min per IP unidentified (paced at 450); respects 429/Retry-After",
         status="live (discovery; fetch on resolve for Figshare/Dataverse/OSF/Zenodo, manifest-only for Dryad)",
         fetchable="per-repo",
         operable=True,
@@ -653,3 +653,9 @@ def resolver_for(prefix: str) -> SourceAdapter | None:
         if prefix in spec.prefixes:
             return spec.module
     return None
+
+
+def example_id(name: str) -> str:
+    """The first id_example of source ``name``: the one example id that is resolved live, so
+    a tool description quoting it cannot go stale on its own."""
+    return _BY_NAME[name].id_example.split("|")[0].strip()
