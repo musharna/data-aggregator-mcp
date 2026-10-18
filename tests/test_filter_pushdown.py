@@ -315,6 +315,53 @@ async def test_filters_note_names_only_the_sources_that_did_not_push_down(monkey
     assert pushed_only.count == 3 and "filters" not in pushed_only.errors
 
 
+def _composite(held: dict[str, list[DataResource]], kinds: dict[str, str], asked: list[str]):
+    """A composite adapter (omics-shaped) whose listed sub-sources each hold one kind."""
+
+    async def search_subsource(client, sub, q, *, size=10, offset=0):
+        asked.append(sub)
+        return len(held[sub]), held[sub][offset : offset + size]
+
+    return types.SimpleNamespace(
+        SUBSOURCES=tuple(held), SUBSOURCE_KINDS=kinds, search_subsource=search_subsource
+    )
+
+
+async def test_a_sub_source_of_another_kind_is_not_searched(monkeypatch) -> None:
+    """kind=study fetched SRA's runs only to remove them all, and counted SRA's total.
+    Now the run sub-source is not asked, and the unlisted one (mixed kinds) is still
+    asked and post-filtered. Positive control: with no kind
+    filter every sub-source is asked and every total counted."""
+
+    def rec(sub: str, i: int, kind: str) -> DataResource:
+        return DataResource(id=f"{sub}:{i}", source=sub, kind=kind, title=f"{sub} {i}")
+
+    held = {
+        "geo": [rec("geo", i, "study") for i in range(2)],
+        "sra": [rec("sra", i, "sequencing_run") for i in range(5)],
+        "mixed": [rec("mixed", 0, "study"), rec("mixed", 1, "dataset")],
+    }
+    asked: list[str] = []
+    kinds = {"geo": "study", "sra": "sequencing_run"}
+    monkeypatch.setattr(router, "_ADAPTERS", {"omics": _composite(held, kinds, asked)})
+    async with httpx.AsyncClient() as client:
+        page = await router.search_page(client, query="q", kind="study")
+        assert sorted(asked) == ["geo", "mixed"]
+        assert {r.id for r in page.results} == {"geo:0", "geo:1", "mixed:0"}
+        assert page.total == 2 + 2, page.total  # SRA's 5 runs are not counted
+        note = page.errors["filters"]
+        assert "omics/mixed" in note, note
+
+        asked.clear()
+        datasets = await router.search_page(client, query="q", kind="dataset")
+        assert asked == ["mixed"] and [r.id for r in datasets.results] == ["mixed:1"]
+
+        asked.clear()
+        unfiltered = await router.search_page(client, query="q")
+    assert sorted(asked) == ["geo", "mixed", "sra"]
+    assert unfiltered.total == 2 + 5 + 2 and unfiltered.count == 9
+
+
 async def test_cursor_minted_before_pushdown_continues_unpushed(monkeypatch) -> None:
     """Its offsets index the UNFILTERED upstream order; pushing the filters on page 2
     would index a different, shorter list and skip records."""
@@ -368,6 +415,25 @@ async def test_live_kind_software_is_pushed_down() -> None:
     assert {r.kind for r in page.results} == {"software"}
     assert 0 < page.total < 127_000, page.total
     assert "filters" not in page.errors
+
+
+@live_only
+async def test_live_kind_skips_the_ncbi_dbs_of_another_kind() -> None:
+    """omics with kind=sequencing_run asks SRA alone: its total is SRA's, not GEO's and
+    BioProject's added in. Positive control: kind=study is GEO + BioProject's total."""
+    from data_aggregator_mcp import omics
+
+    q = '"tardigrade"'  # quoted: no plural stream adds to the router's total
+    async with httpx.AsyncClient(timeout=60) as client:
+        runs = await router.search_page(client, query=q, sources=["omics"], kind="sequencing_run")
+        studies = await router.search_page(client, query=q, sources=["omics"], kind="study")
+        each = {s: (await omics.search_subsource(client, s, q, size=1))[0] for s in omics.PREFIXES}
+    assert all(each.values()), each
+    assert runs.count > 0 and {r.kind for r in runs.results} == {"sequencing_run"}, runs.errors
+    assert runs.total == each["sra"], (runs.total, each)
+    assert studies.count > 0 and {r.kind for r in studies.results} == {"study"}
+    assert studies.total == each["geo"] + each["bioproject"], (studies.total, each)
+    assert "filters" not in runs.errors and "filters" not in studies.errors
 
 
 @live_only

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 import pytest
@@ -140,3 +141,37 @@ def test_search_description_names_every_source_a_default_search_queries():
     assert queried - _SEARCH_LABELS.keys() == set(), "searched source with no label here"
     missing = sorted(s for s in queried if _SEARCH_LABELS[s] not in desc)
     assert missing == [], f"search description omits: {missing}"
+
+
+# A quoted or backticked `prefix:id`; `<...>` placeholders (`openaire:<id>`) are skipped.
+_QUOTED_ID = re.compile(r"[`'\"]([a-z]+):([^`'\"\s<>]+)[`'\"]")
+
+
+def _example_ids(text: str, prefixes: set[str]) -> list[str]:
+    return [f"{m[1]}:{m[2]}" for m in _QUOTED_ID.finditer(text) if m[1] in prefixes]
+
+
+def _descriptions(node: object) -> list[str]:
+    if isinstance(node, dict):
+        own = [node["description"]] if isinstance(node.get("description"), str) else []
+        return own + [s for v in node.values() for s in _descriptions(v)]
+    return []
+
+
+def test_every_example_id_shown_to_a_model_is_a_registry_example():
+    """An example id in a tool description is the id a model tries first. Only the registry's
+    id_example values are resolved live (test_live_every_advertised_id_example_resolves_to_itself);
+    a hand-copied one went stale: resolve and operate kept advertising zenodo:7654321 after it
+    began redirecting to a restricted, fileless record and the registry had moved on."""
+    from data_aggregator_mcp import sources
+
+    prefixes = {p for spec in sources.SOURCES for p in spec.prefixes}
+    known = {p.strip() for spec in sources.SOURCES for p in spec.id_example.split("|")}
+    assert _example_ids("e.g. 'zenodo:1' or `openaire:<id>`", prefixes) == ["zenodo:1"]
+    texts = [
+        s for t in tool_specs.TOOLS for s in [t.description or "", *_descriptions(t.input_schema)]
+    ]
+    texts.append((Path(__file__).parents[1] / "docs" / "reference.md").read_text())
+    shown = [i for text in texts for i in _example_ids(text, prefixes)]
+    assert "omicsdi:pride:PXD000001" in shown  # positive control: a registry example is found
+    assert sorted({i for i in shown if i not in known}) == []

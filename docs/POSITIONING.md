@@ -87,7 +87,7 @@ since; read it as a dated observation, not a survey of every server that exists.
    failure seen in deep-research tools that report a download that never
    happened.
 5. **FAIR assessment + research-object packaging.** `resolve` can attach an
-   RDA-grounded FAIRness score (Maturity Model v0.90, with per-indicator RDA ids
+   RDA-grounded FAIRness score (Maturity Model v1.0, with per-indicator RDA ids
    and actionable gaps), and export the record as Croissant, RO-Crate, or a
    `format="provenance"` dossier that composes version-currency, licence/SPDX,
    FAIRness, and retraction signals into one machine-readable artifact — with a

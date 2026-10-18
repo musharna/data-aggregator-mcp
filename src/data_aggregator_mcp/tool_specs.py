@@ -20,7 +20,7 @@ from mcp import MCPError, types
 from mcp.types import INVALID_PARAMS
 
 from data_aggregator_mcp import fetch as fetch_mod
-from data_aggregator_mcp import zenodo
+from data_aggregator_mcp import sources, zenodo
 from data_aggregator_mcp.models import DataResource, FetchResult, RelateResult, SearchResult
 
 # The page size the router is built for (its per-page enrichment fan-out assumes <= 50),
@@ -263,8 +263,9 @@ TOOLS: list[types.Tool] = [
     types.Tool(
         name="resolve",
         description=(
-            "Fetch the full DataResource for a known id (e.g. 'zenodo:7654321', "
-            "'datacite:10.5061/dryad.x', 'hf:owner/name', a bare Zenodo record id, or a DOI), "
+            f"Fetch the full DataResource for a known id (e.g. '{sources.example_id('zenodo')}', "
+            f"'{sources.example_id('datacite')}', '{sources.example_id('huggingface')}', "
+            "a bare Zenodo record id, or a DOI), "
             "including the complete files[] manifest. Publication resolve also attaches "
             "normalized identifiers (pmid/pmcid/doi) and, when open access, a full-text file. "
             "Pass cite=<format> to render a "
@@ -453,7 +454,10 @@ TOOLS: list[types.Tool] = [
             "additionalProperties": False,
             "properties": {
                 "op": {"type": "string", "enum": ["schema", "preview", "head", "sql", "peek"]},
-                "id": {"type": "string", "description": "DataResource id (e.g. 'zenodo:7654321')"},
+                "id": {
+                    "type": "string",
+                    "description": f"DataResource id (e.g. '{sources.example_id('zenodo')}')",
+                },
                 "file": {
                     "type": "string",
                     "description": "File name within the record; optional when exactly one "

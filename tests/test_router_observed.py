@@ -930,6 +930,19 @@ def test_cache_ttl_reads_the_environment_and_falls_back_to_an_hour(monkeypatch) 
     assert router._cache_ttl() == 3600.0
 
 
+def test_a_nan_cache_ttl_falls_back_and_the_fallback_is_logged(monkeypatch, caplog) -> None:
+    """float() parses "nan", and a nan lifetime never expires an entry (every comparison
+    with nan is False), so CACHE_TTL_SECONDS=nan silently cached resolves for the life of
+    the process. inf (cache for good) and a value <= 0 (no cache) are settings, and kept."""
+    monkeypatch.setenv("CACHE_TTL_SECONDS", "nan")
+    with caplog.at_level(logging.WARNING, logger=router.__name__):
+        assert router._cache_ttl() == 3600.0
+    assert "CACHE_TTL_SECONDS='nan'" in caplog.text
+    for kept in ("inf", "-1", "0"):
+        monkeypatch.setenv("CACHE_TTL_SECONDS", kept)
+        assert router._cache_ttl() == float(kept)
+
+
 # --- #88 burn-down of router (0.71.0): the page budget, operator limits, plural streams ---
 
 

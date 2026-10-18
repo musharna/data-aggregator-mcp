@@ -17,6 +17,7 @@ files" or a request to another host.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from collections import deque
 
@@ -33,6 +34,12 @@ _GET = "GET"
 _MAX_REQUESTS = 2000
 # An OSF guid is lower-case alphanumeric; anything else must not reach the URL path.
 _GUID = re.compile(r"[a-z0-9]+")
+# A node's OSF storage holds its own files only. Its components (child nodes, each with
+# storage of its own) and its add-on storage (GitHub, Dropbox… linked by its owner) are
+# other listings: osf.io/ezcuj lists 1 file of its own beside 49 components, osf.io/sxpe8
+# a GitHub repository (live 2026-10-17). Neither is walked; ``unlisted`` names them.
+_COMPONENTS_NAMED = 10
+_OWN_STORAGE = "osfstorage"
 
 
 def _guid(doi: str) -> str | None:
@@ -88,6 +95,68 @@ def _check_page(body: dict) -> None:
         and (nxt is None or _api_link(nxt))
     ):
         raise _http.UpstreamEnvelopeError(f"no OSF file listing in {body!r:.200}")
+
+
+def _check_children(body: dict) -> None:
+    data, total = body.get("data"), _dig(body, "links", "meta", "total")
+    if not (
+        isinstance(data, list)
+        and all(isinstance(_dig(c, "id"), str) for c in data)
+        and type(total) is int
+    ):
+        raise _http.UpstreamEnvelopeError(f"no OSF component list in {body!r:.200}")
+
+
+def _check_storage(body: dict) -> None:
+    data = body.get("data")
+    if not (
+        isinstance(data, list)
+        and all(isinstance(_dig(p, "attributes", "provider"), str) for p in data)
+    ):
+        raise _http.UpstreamEnvelopeError(f"no OSF storage list in {body!r:.200}")
+
+
+async def unlisted(client: httpx.AsyncClient, doi: str) -> str | None:
+    """What ``files`` leaves out of a node: its components' files and its add-on
+    storage, or None when it has neither."""
+    guid = _guid(doi)
+    if not guid:
+        return None
+    children, storage = await asyncio.gather(
+        _http.request_json(
+            client,
+            _GET,
+            f"{API}/nodes/{guid}/children/",
+            service="OSF components",
+            params={"page[size]": _COMPONENTS_NAMED},
+            expect=dict,
+            check=_check_children,
+            empty_answer=_refused,
+            no_content_returns=None,
+        ),
+        _http.request_json(
+            client,
+            _GET,
+            f"{API}/nodes/{guid}/files/",
+            service="OSF storage",
+            expect=dict,
+            check=_check_storage,
+            empty_answer=_refused,
+            no_content_returns=None,
+        ),
+    )
+    parts = []
+    if children is not None and (n := children["links"]["meta"]["total"]):
+        named = ", ".join(f"osf.io/{c['id']}" for c in children["data"])
+        more = ", …" if n > len(children["data"]) else ""
+        parts.append(f"the files of its {n} component{'s' if n > 1 else ''} ({named}{more})")
+    if storage is not None:
+        addons = sorted({p["attributes"]["provider"] for p in storage["data"]} - {_OWN_STORAGE})
+        if addons:
+            parts.append(f"its files on {', '.join(addons)}")
+    if not parts:
+        return None
+    return f"not listed: {'; '.join(parts)}. Only the node's own OSF storage is listed"
 
 
 async def files(client: httpx.AsyncClient, doi: str) -> list[FileEntry]:

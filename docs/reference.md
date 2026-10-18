@@ -9,7 +9,8 @@ The [README](https://github.com/musharna/data-aggregator-mcp/blob/main/README.md
 
 Fan out across all wired sources in parallel and return compact `DataResource`
 records, deduped by DOI. Per-source failures land in `errors{}` — never silently
-dropped.
+dropped. A source that has not answered within 20 s is one of them ("no answer
+within 20 s"); the page is served without it.
 
 - `organism` — expand the query with NCBI-Taxonomy synonyms; the expansion is
   echoed in `taxon_expansion`, and results carry normalized `taxa[]`
@@ -81,11 +82,13 @@ a longer query can find nothing there.
 
 ### `resolve(id, cite?, format?, trust?, fair?, use?)`
 
-Full record + files manifest. Routes by id shape — `zenodo:7654321`, a bare DOI,
-`datacite:10.5061/dryad.x`, an omics id (`sra:SRX079566`, `geo:GSE332789`,
-`bioproject:PRJNA1468572`), a literature id (`pubmed:34320281`, `openaire:<id>`),
-a HuggingFace id (`hf:owner/name`), a DataONE id (`dataone:doi:10.5063/F1HT2M7Q`),
-or an OmicsDI id (`omicsdi:pride:PXD000001`). Attaches, where available:
+Full record + files manifest. Routes by id shape — `zenodo:1254563`, a bare DOI,
+`datacite:10.5061/dryad.t4b8gtjgj`, an omics id (`sra:SRX079566`, `geo:GSE10072`,
+`bioproject:PRJNA231221`), a literature id (`pubmed:23066504`, `openaire:<id>`),
+a HuggingFace id (`hf:davidcechak/Arabidopsis_thaliana_DNA_v0`), a DataONE id
+(`dataone:doi:10.18739/A26336`), or an OmicsDI id (`omicsdi:pride:PXD000001`). Every
+example here is a `list_sources` `id_example`, resolved by the live tests. Attaches,
+where available:
 
 - **`files[]`** — ENA FASTQ manifest (SRA), GEO `suppl/`, or the host repo's
   native manifest (Figshare / Dataverse / OSF / Dryad).
@@ -286,8 +289,9 @@ All optional, set via environment variables:
   `UNPAYWALL_EMAIL` when unset.
 - `DATAVERSE_BASE_URL` — resolve Dataverse DOIs against a different installation
   (default `https://dataverse.harvard.edu`).
-- `CACHE_TTL_SECONDS` — resolve-cache lifetime in seconds (default `3600`; an
-  unparseable value falls back to that default).
+- `CACHE_TTL_SECONDS` — resolve-cache lifetime in seconds (default `3600`; `0` or
+  less turns the cache off, `inf` keeps entries for the life of the process; anything
+  that is not a number, `nan` included, falls back to the default with a warning).
 - `EMBEDDING_API_BASE` / `EMBEDDING_API_KEY` / `EMBEDDING_MODEL` — an
   OpenAI-compatible embeddings endpoint enabling `rank=semantic`. Absent ⇒
   semantic re-rank degrades to relevance order. Key is optional (keyless local
