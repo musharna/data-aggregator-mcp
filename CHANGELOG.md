@@ -21,6 +21,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   as failing (HTTP 400) on every later page. Each now says it serves only the first
   10,000 records of a search and to narrow the query, as PubMed already did, and asks
   for no page past them.
+- `CACHE_TTL_SECONDS=nan` kept every resolved record for the life of the process, since
+  a nan lifetime never expires; it now falls back to the default like any other value
+  that is not a number, and each fallback is logged. `0` or less (no cache) and `inf`
+  (keep for good) are unchanged.
 
 ## [0.74.1] - 2026-10-16
 
