@@ -127,6 +127,10 @@ this server doesn't; ToolUniverse covers far more ground overall; paper-search-m
 covers far more literature sources; Mobus also compares datasets and checks schema
 compatibility. More detail: [docs/POSITIONING.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/POSITIONING.md).
 
+## Does it help?
+
+On the one held-out round so far (5 dataset-search tasks, 2 runs each, Claude Sonnet 5.5), mean recall was 0.49 with this server, 0.35 with web search alone and 0.26 with ToolUniverse. This server against web search is not separated: it was higher on 4 of 5 tasks (sign test p = 0.38). It made 7.7 fewer tool calls per run than web search (95% CI 1.8 to 13.1), and fewer than ToolUniverse; cost and wall time against web search are not separated. A fresh held-out round has not run yet. Method and controls: [benchmarks/h2h](https://github.com/musharna/data-aggregator-mcp/blob/main/benchmarks/h2h/README.md).
+
 ## Sources
 
 | Source                       | Discover |       Fetch       |     Checksum     |
