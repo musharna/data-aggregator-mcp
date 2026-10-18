@@ -6,6 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- The `search` tool description no longer tells models that MassIVE lacks a some-words
+  search or to keep MassIVE queries short; MassIVE has had one since 0.75.0. A test now
+  derives the description's two source lists from the adapters' flags.
+
 ## [0.75.1] - 2026-10-18
 
 ### Fixed
