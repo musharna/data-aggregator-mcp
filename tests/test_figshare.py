@@ -142,6 +142,46 @@ async def test_files_institutional_doi_lists_files_and_rejects_mismatch(httpx_mo
         assert await figshare.files(client, "10.25405/data.ncl.9918287.v1") == []
 
 
+_MONASH_PAGE = (
+    "https://bridges.monash.edu/articles/thesis/"
+    "Understanding_persistence_and_emergence_of_antibiotic_resistance_during_"
+    "Staphylococcus_aureus_infection/4705483/1"
+)
+
+
+def test_a_portal_collection_doi_names_no_article() -> None:
+    # Queen's Belfast puts the collection mark straight after the prefix (live 10-17); the
+    # articles API answers 404 for 8718502, which read as a withdrawn article.
+    assert figshare._article_id("10.17034/c.8718502") is None
+    assert figshare._article_id("10.17034/c.8718502.v1") is None
+    # Positive control: an article on a portal named with a dot before its id.
+    assert figshare._article_id("10.21954/ou.rd.31988460") == "31988460"
+
+
+def test_an_older_portal_doi_takes_its_article_id_from_the_page() -> None:
+    # Monash's 10.4225/03/58b649e4e0755 carries no id; Figshare holds it as 4705483.
+    assert figshare._article_id("10.4225/03/58b649e4e0755", _MONASH_PAGE) == "4705483"
+    assert figshare._article_id("10.4225/03/58b649e4e0755") is None
+    # The DOI's own id comes first: a page is read only when the DOI names none.
+    page = "https://data.ncl.ac.uk/articles/dataset/x/999"
+    assert figshare._article_id("10.25405/ncl.33951526", page) == "33951526"
+    # A collection page is not an article's.
+    coll = "https://orr.qub.ac.uk/collections/The_Curated_LawPod_Collection/8718502/1"
+    assert figshare._article_id("10.4225/03/58b649e4e0755", coll) is None
+
+
+async def test_files_of_an_older_portal_doi_are_checked_against_its_doi(httpx_mock) -> None:
+    ours = dict(_ARTICLE, id=4705483, doi="10.4225/03/58b649e4e0755")
+    httpx_mock.add_response(
+        url="https://api.figshare.com/v2/articles/4705483", json=ours, is_reusable=True
+    )
+    async with httpx.AsyncClient() as client:
+        files = await figshare.files(client, "10.4225/03/58b649e4e0755", landing_url=_MONASH_PAGE)
+        assert {f.name for f in files} == {"small.csv"}
+        # The page's id names another DOI's article: no files attached.
+        assert await figshare.files(client, "10.4225/03/aaaa", landing_url=_MONASH_PAGE) == []
+
+
 def _fs_file(name: str, fid: int, md5: str) -> dict:
     return {
         "name": name,
