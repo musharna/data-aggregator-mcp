@@ -109,7 +109,10 @@ def events_of(path: Path) -> list[dict]:
 
 _HOST = re.compile(r"https?://([A-Za-z0-9.-]+)")
 _FORBIDDEN = re.compile(
-    r"data-aggregator|data_aggregator|tooluniverse|benchmarks/h2h|\.claude|/home/|~/", re.I
+    # "~/" only where a path starts (awk's `$1~/re/` match operator is not a home path).
+    r"data-aggregator|data_aggregator|tooluniverse|benchmarks/h2h|\.claude|/home/"
+    r"|(?:^|[\s'\"=(])~/",
+    re.I,
 )
 
 
