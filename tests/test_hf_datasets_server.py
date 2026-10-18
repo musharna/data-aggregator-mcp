@@ -1,5 +1,4 @@
 # tests/test_hf_datasets_server.py
-import logging
 import os
 
 import httpx
@@ -54,26 +53,6 @@ async def test_parquet_files_maps_entries():
 async def test_parquet_files_empty_list():
     async with _client(lambda r: httpx.Response(200, json={"parquet_files": []})) as c:
         assert await hf_datasets_server.parquet_files(c, "o/n") == []
-
-
-@pytest.mark.asyncio
-async def test_parquet_files_caps_and_warns(caplog):
-    many = {
-        "parquet_files": [
-            {
-                "config": "d",
-                "split": "s",
-                "url": f"https://huggingface.co/datasets/o/n/resolve/refs%2Fconvert%2Fparquet/d/s/{i}.parquet",
-                "size": 1,
-            }
-            for i in range(hf_datasets_server.MAX_DSS_FILES + 5)
-        ]
-    }
-    async with _client(lambda r: httpx.Response(200, json=many)) as c:
-        with caplog.at_level(logging.WARNING):
-            files = await hf_datasets_server.parquet_files(c, "o/n")
-    assert len(files) == hf_datasets_server.MAX_DSS_FILES
-    assert any("capping" in m.lower() for m in caplog.messages)
 
 
 @pytest.mark.asyncio

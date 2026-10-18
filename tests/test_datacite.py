@@ -73,6 +73,41 @@ def test_unknown_client_falls_back_to_raw_id() -> None:
     assert datacite._normalize(item).source == "tib.foobar"
 
 
+@pytest.mark.parametrize(
+    ("client_id", "url", "source"),
+    [
+        # Figshare portals under clients not named for it (landing pages live 2026-10-17)
+        (
+            "monash.repo",
+            "https://bridges.monash.edu/articles/dataset/Honeybee_video_tracking_data/12895433",
+            "figshare",
+        ),
+        (
+            "bl.qub",
+            "https://orr.qub.ac.uk/collections/The_Curated_LawPod_Collection/8718502/1",
+            "figshare",
+        ),
+        ("bl.open", "https://ordo.open.ac.uk/articles/media/_i_HACK_i_2016_/31987446", "figshare"),
+        # Positive controls: other repositories' pages, and a client a rule names
+        ("delft.ru", "https://data.ru.nl/collections/di/dcmn/DSC_sgapi_r0006004a_665", "delft.ru"),
+        (
+            "bl.ads",
+            "https://archaeologydataservice.ac.uk/archives/collections/view/1009644/metadata.cfm",
+            "bl.ads",
+        ),
+        ("dryad.dryad", "https://datadryad.org/articles/dataset/x/1", "dryad"),
+        ("bl.open", None, "bl.open"),
+    ],
+)
+def test_a_figshare_portal_page_names_figshare_for_a_client_no_rule_names(
+    client_id: str, url: str | None, source: str
+) -> None:
+    item = _item()
+    item["relationships"]["client"]["data"]["id"] = client_id
+    item["attributes"]["url"] = url
+    assert datacite._normalize(item).source == source
+
+
 def test_source_for_client_maps_gdcc_to_dataverse() -> None:
     from data_aggregator_mcp.datacite import _source_for_client
 
@@ -489,6 +524,33 @@ def _hosted(doi: str, client_id: str) -> dict:
     }
 
 
+async def test_resolve_lists_a_portal_articles_files_by_the_id_on_its_page(
+    httpx_mock: HTTPXMock,
+) -> None:
+    # HyDaT (round 3 T4 S21) on Monash Bridges: its DOI carries no article id, and its
+    # client is not named for Figshare (both live 2026-10-17).
+    doi = "10.26180/5f4c8d5815940"
+    record = _hosted(doi, "monash.repo")
+    page = "https://bridges.monash.edu/articles/dataset/Honeybee_video_tracking_data/12895433"
+    record["data"]["attributes"]["url"] = page
+    httpx_mock.add_response(url=f"https://api.datacite.org/dois/{doi}", json=record)
+    article = {"doi": doi, "files": [_fs_file("tracks.csv")]}
+    httpx_mock.add_response(url="https://api.figshare.com/v2/articles/12895433", json=article)
+    async with httpx.AsyncClient() as client:
+        r = await datacite.resolve(client, doi)
+    assert (r.source, [f.name for f in r.files]) == ("figshare", ["tracks.csv"])
+
+
+def _fs_file(name: str) -> dict:
+    return {
+        "name": name,
+        "size": 10,
+        "is_link_only": False,
+        "download_url": "https://ndownloader.figshare.com/files/1",
+        "computed_md5": "ab",
+    }
+
+
 @pytest.mark.parametrize(
     ("doi", "client_id", "files_url", "status", "why"),
     [
@@ -564,6 +626,20 @@ async def test_live_an_osf_node_names_its_components_and_add_on_storage() -> Non
     assert gh.truncated["files"].startswith("not listed: its files on github.")
     # Positive control: a node with neither lists its files and no note.
     assert plain.files and "files" not in plain.truncated
+
+
+@live_only
+async def test_live_figshare_portals_under_other_clients_list_their_files() -> None:
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+        # Round 3 T4 S21, HyDaT on Monash Bridges: its DOI carries no article id.
+        hydat = await datacite.resolve(client, "10.26180/5f4c8d5815940")
+        # A Queen's Belfast collection: no files of its own, and not called withdrawn.
+        coll = await datacite.resolve(client, "10.17034/c.8718502")
+        # Positive control: an Open University article whose DOI carries its id.
+        ou = await datacite.resolve(client, "10.21954/ou.rd.31988460")
+    assert (hydat.source, coll.source, ou.source) == ("figshare", "figshare", "figshare")
+    assert hydat.files and ou.files
+    assert coll.files == [] and "files" not in coll.truncated
 
 
 @live_only

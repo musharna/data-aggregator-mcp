@@ -151,8 +151,8 @@ def _connect(url: str, file: str, opened: Callable[[Any], None]):
     # DuckDB never sees a remote URL: httpfs follows redirects with no egress check, so a
     # public record URL that 302s into private space had its body read. sourceio
     # downloads it through the guarded client and DuckDB reads the local copy.
-    with sourceio.local_copy(url) as local:
-        con.execute(f"CREATE TABLE data AS SELECT * FROM {_reader(local, file)};")  # nosec B608 - url is ''-escaped in _reader
+    with sourceio.local_copy(url) as local, sourceio.utf8_copy(local) as readable:
+        con.execute(f"CREATE TABLE data AS SELECT * FROM {_reader(readable, file)};")  # nosec B608 - url is ''-escaped in _reader
     # The source is in memory by this line, so nothing downstream needs any file or
     # network access: turn ALL of it off. Naming filesystems to disable was a denylist
     # that httpfs outgrows — it also registers S3 (s3/s3a/s3n/r2/gcs) and HuggingFace
