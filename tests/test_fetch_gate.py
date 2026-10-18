@@ -155,19 +155,21 @@ def test_ensure_fulltext_available_passes_when_files_present() -> None:
 
 @live_only
 async def test_live_sra_fetch_smallest_fastq_verifies_md5(tmp_path) -> None:
+    # A 3 KB run (ENA filereport, 2026-10-17); SRX079566's smallest FASTQ was 101 MB, a
+    # download on every live run for a check that needs a few bytes.
     async with httpx.AsyncClient(timeout=120, follow_redirects=True) as client:
-        resource = await router.resolve(client, "sra:SRX079566")
+        resource = await router.resolve(client, "sra:SRX11037562")
         assert resource.files, "SRA resolve should attach an ENA FASTQ manifest"
         smallest = min(resource.files, key=lambda f: f.size or 1 << 62)
-        assert smallest.checksum and smallest.checksum.startswith("md5:")
+        assert smallest.checksum == "md5:1026d692c5d30b7615cba6ba9c336440"
         out = await fetch_mod.fetch_files(
             client,
             resource,
             dest=str(tmp_path),
             files=smallest.name,
-            max_bytes=300_000_000,
+            max_bytes=1_000_000,
         )
-    assert out.paths and out.bytes > 0
+    assert out.paths and out.bytes == smallest.size == 3069
     # fetch_files raises on checksum mismatch, so reaching here means md5 verified.
 
 
