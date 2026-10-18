@@ -16,6 +16,8 @@ declare is refused with an input-validation error rather than silently dropped.
 
 from __future__ import annotations
 
+import re
+
 from mcp import MCPError, types
 from mcp.types import INVALID_PARAMS
 
@@ -509,6 +511,32 @@ TOOLS: list[types.Tool] = [
         annotations=types.ToolAnnotations(read_only_hint=True),
     ),
 ]
+
+# A client lists each tool under its own prefix, and a model that copies a bare name out
+# of a description ("use resolve for the full record") calls a tool the client does not
+# have: in the round-2 head-to-head runs (2026-10-05 to 10-07) Claude Code refused 11 bare
+# `resolve` calls in 5 of 60 runs. So every description that names another tool says so
+# before naming one: the note opens the sentence holding the first such name, leaving the
+# description's lead sentence as it was.
+PREFIX_NOTE = (
+    "Tool names in this text are this server's own; your client may list them with a "
+    "prefix (in Claude Code, mcp__data-aggregator__resolve): call the name it lists. "
+)
+_TOOL_NAME = re.compile(r"\b(" + "|".join(re.escape(t.name) for t in TOOLS) + r")\b")
+
+
+def _with_prefix_note(tool: types.Tool) -> str:
+    text = tool.description or ""
+    first = next((m for m in _TOOL_NAME.finditer(text) if m.group(1) != tool.name), None)
+    if first is None:
+        return text
+    cut = text.rfind(". ", 0, first.start())
+    cut = 0 if cut < 0 else cut + 2
+    return text[:cut] + PREFIX_NOTE + text[cut:]
+
+
+for _tool in TOOLS:
+    _tool.description = _with_prefix_note(_tool)
 
 
 PROMPTS: list[types.Prompt] = [

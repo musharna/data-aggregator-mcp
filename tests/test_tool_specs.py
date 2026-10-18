@@ -175,3 +175,24 @@ def test_every_example_id_shown_to_a_model_is_a_registry_example():
     shown = [i for text in texts for i in _example_ids(text, prefixes)]
     assert "omicsdi:pride:PXD000001" in shown  # positive control: a registry example is found
     assert sorted({i for i in shown if i not in known}) == []
+
+
+def test_a_description_says_tool_names_are_client_prefixed_before_naming_another_tool():
+    """Claude Code refused 11 bare `resolve` calls in 5 of 60 round-2 head-to-head runs:
+    the model copied the name out of a description. Every description that names another
+    tool must say, before the first such name, that the client prefixes names, and show
+    the prefixed form of a real tool."""
+    names = {t.name for t in tool_specs.TOOLS}
+    word = re.compile(r"\b(" + "|".join(sorted(names)) + r")\b")
+    noted = 0
+    for t in tool_specs.TOOLS:
+        first = next((m for m in word.finditer(t.description) if m.group(1) != t.name), None)
+        if first is None:
+            assert "mcp__" not in t.description, t.name  # no note where none is needed
+            continue
+        note = t.description.find("mcp__data-aggregator__")
+        assert 0 <= note < first.start(), (t.name, t.description[: first.end()])
+        shown = re.search(r"mcp__data-aggregator__([a-z_]+)", t.description).group(1)
+        assert shown in names, shown
+        noted += 1
+    assert noted >= 4  # control: search, fetch, list_sources, operate and relate name others
