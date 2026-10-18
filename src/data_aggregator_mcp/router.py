@@ -22,6 +22,7 @@ import asyncio
 import functools
 import json
 import logging
+import math
 import os
 import re
 from collections.abc import Awaitable, Callable, Sequence
@@ -118,9 +119,14 @@ def _cache_ttl() -> float:
     if raw is None:
         return 3600.0
     try:
-        return float(raw)
+        ttl = float(raw)
     except ValueError:
+        ttl = math.nan
+    # nan parses but never expires an entry (every comparison with it is False).
+    if math.isnan(ttl):
+        logger.warning("CACHE_TTL_SECONDS=%r is not a number of seconds; using 3600", raw)
         return 3600.0
+    return ttl
 
 
 _RESOLVE_CACHE = TTLCache(maxsize=512, ttl=_cache_ttl())

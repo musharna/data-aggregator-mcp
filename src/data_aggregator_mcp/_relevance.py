@@ -139,6 +139,15 @@ def balance_query(query: str) -> tuple[str, list[str]]:
     return " ".join(kept.split()), [query[i] for i in sorted(drop)]
 
 
+def drop_stray_marks(query: str, marks: str) -> str:
+    """``query`` with each of ``marks`` that ends a word dropped, for an upstream that reads
+    it as syntax and takes no backslash escape. OmicsDI and NGDC found nothing for 5 of 5
+    pasted titles with a colon each, as written and escaped, and each at rank 1 with the
+    colon dropped; NGDC also found nothing for a semicolon (probed 2026-10-17). A mark
+    with its value attached (``TAXONOMY:9606``), a URL and a time are sent as written."""
+    return re.sub(rf"(?<=[^\s\\])[{re.escape(marks)}](?=\s|$)", "", query)
+
+
 def _pluralisable(word: str) -> bool:
     return (
         word.isalpha()
