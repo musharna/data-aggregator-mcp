@@ -96,26 +96,26 @@ how a set of records connect (a shared accession, DOI or explicit link).
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/musharna/data-aggregator-mcp/main/docs/assets/architecture.svg"
-       alt="How one search runs: NCBI Taxonomy maps Orobanche aegyptiaca to its current name, Phelipanche aegyptiaca, and the sources that accept synonyms search both names; the query goes to 20 sources in parallel (10 archives, 9 omics, 1 literature); records that share a DOI become one, keeping the copy that can be downloaded; a record can then be resolved to files and checksums, fetched with the checksum verified where the source publishes one, or queried with SQL without downloading it"
+       alt="How one search runs: NCBI Taxonomy maps Orobanche aegyptiaca to its current name, Phelipanche aegyptiaca, and the sources that accept synonyms search both names; the query goes to 21 sources in parallel (11 archives, 9 omics, 1 literature); records that share a DOI become one, keeping the copy that can be downloaded; a record can then be resolved to files and checksums, fetched with the checksum verified where the source publishes one, or queried with SQL without downloading it"
        width="820">
 </p>
 
 A source that fails is named in the result's `errors`, never dropped silently.
 
-Six sources return only records holding every word of the query: DataCite,
-OmicsDI, NCBI omics (GEO, SRA, BioProject), CELLxGENE, the Metabolomics Workbench
-and MassIVE. A longer query can find nothing there, so DataCite, OmicsDI,
+Seven sources return only records holding every word of the query: DataCite,
+OmicsDI, NCBI omics (GEO, SRA, BioProject), CELLxGENE, the Metabolomics Workbench,
+MassIVE and Kaggle. A longer query can find nothing there, so DataCite, OmicsDI,
 CELLxGENE and the Workbench are also searched for records holding only some of the
 words. Those hits rank below hits naming more of the query, `total` does not count
 them, and `errors.all_words` says when a source had no record with every word. For
-NCBI omics and MassIVE, keep queries short. Details:
+NCBI omics, MassIVE and Kaggle, keep queries short. Details:
 [docs/reference.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/reference.md#every-word-sources).
 
 ## Compared with other servers
 
 | Server | Searches | One search | Checksum | Remote SQL | Licence check |
 | --- | --- | :---: | :---: | :---: | :---: |
-| **data-aggregator-mcp** | 20 sources: data archives, omics, papers | yes, DOI dedup | where published | yes | yes |
+| **data-aggregator-mcp** | 21 sources: data archives, omics, papers | yes, DOI dedup | where published | yes | yes |
 | [Mobus](https://github.com/mobus-ai/Mobus) | 20 general and ML data platforms | yes | — | row preview | yes |
 | [paper-search-mcp](https://github.com/openags/paper-search-mcp) | papers: arXiv, PubMed, OpenAlex, Crossref and more | yes, deduplicated | — | — | — |
 | [ToolUniverse](https://github.com/mims-harvard/ToolUniverse) | 1000+ tools: models, datasets, APIs, packages | papers | — | — | — |
@@ -164,6 +164,7 @@ On the one held-out round so far (5 tasks, 2 runs each, Claude Sonnet 5.5), mean
 | NGDC BioProject (China)      |    ✅    |  → GSA read sets  |        —         |
 | Metabolomics Workbench       |    ✅    |         —         |        —         |
 | MassIVE (mass spectrometry)  |    ✅    |         —         |        —         |
+| Kaggle (ML datasets)         |    ✅    |         —         |        —         |
 
 ¹ Dryad downloads are token / bot-challenge gated, so `fetch` returns an error;
 `resolve` still lists the files.

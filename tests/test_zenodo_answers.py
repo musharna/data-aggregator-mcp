@@ -48,7 +48,7 @@ _FULL = {
             },
         }
     ],
-    "stats": {"views": 832, "downloads": 754},
+    "stats": {"views": 832, "downloads": 754, "version_views": 832, "version_downloads": 754},
     "metadata": {
         "title": "CLARITY D7.8 Data Management Plan",
         "publication_date": "2017-11-30",

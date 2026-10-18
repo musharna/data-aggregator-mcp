@@ -43,15 +43,17 @@ TOOLS: list[types.Tool] = [
             "GBIF (biodiversity datasets), data.gov (US government open data), NASA CMR "
             "(Earth-science collections), UniProt (protein entries), BioStudies "
             "(EMBL-EBI study records), NGDC (BioProjects deposited in China, with "
-            "their GSA read sets), the Metabolomics Workbench (metabolomics studies), and "
-            "MassIVE (mass-spectrometry datasets: GNPS metabolomics, proteomics). "
-            "DataCite, OmicsDI, NCBI omics, CELLxGENE, the Metabolomics Workbench and "
-            "MassIVE match only records holding every query word: errors.all_words names "
+            "their GSA read sets), the Metabolomics Workbench (metabolomics studies), "
+            "MassIVE (mass-spectrometry datasets: GNPS metabolomics, proteomics), and "
+            "Kaggle (machine-learning datasets, many with no DOI). "
+            "DataCite, OmicsDI, NCBI omics, CELLxGENE, the Metabolomics Workbench, "
+            "MassIVE and Kaggle match only records holding every query word: "
+            "errors.all_words names "
             "one that matched none, and a hit of theirs lists in unshown_terms the query "
             "words it matched in text the hit leaves out, such as a protocol, which resolve "
             "shows. DataCite, OmicsDI, CELLxGENE and the Workbench are also searched for "
             "records holding only some of the words, ranked below hits naming more; keep "
-            "queries to NCBI omics and MassIVE short. "
+            "queries to NCBI omics, MassIVE and Kaggle short. "
             "Returns compact DataResource "
             "records (fields with no value left out; long lists cut to their first few, "
             "named in truncated{}); a page "
@@ -106,7 +108,7 @@ TOOLS: list[types.Tool] = [
                     "DataONE), so leave this unset unless the user names the archives. "
                     "Available: zenodo, dataone, gbif, cellxgene, datacite, dandi, omics, "
                     "literature, huggingface, datagov, nasacmr, omicsdi, openml, pdb, "
-                    "uniprot, gwas, biostudies, ngdc, mwb, massive",
+                    "uniprot, gwas, biostudies, ngdc, mwb, massive, kaggle",
                 },
                 "organism": {
                     "type": "string",

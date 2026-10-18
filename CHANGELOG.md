@@ -17,6 +17,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   225 (30 to 39 distinct of 47), and the queries finding one from 18 to 25; the
   MassIVE search's median time rose from 4.5 to 11.0 s. A third word's rows cost 11
   more requests and found fewer (220).
+- `kaggle`, Kaggle's public datasets searched natively (discovery-only, no account
+  needed). Many machine-learning datasets are deposited only there, with no DOI: in
+  round 3 T4 (labelled honey bee images) six key datasets were held nowhere else, and
+  Kaggle's search returns all six for "honey bee" or "bee varroa". Kaggle needs every
+  word (each also as a prefix), reads no OR, pages by 20 and reports no total, so the
+  total counts the rows up to the page read, plus one when the page is full. Licence
+  names are read as SPDX ids where they have one. A Kaggle DOI names one version at
+  DataCite and links to no dataset, so a DOI'd dataset can be listed from both sources,
+  and `collapse_mirrors` does not fold the two (a Kaggle hit has no year until resolved).
 
 ### Fixed
 
@@ -95,6 +104,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   searched and its whole total added before the filter removed its records:
   `"tardigrade"` with `kind=study` reported 2,683 hits, 2,395 of them SRA runs. A
   database of another kind is now not searched, so the total is GEO and BioProject's 288.
+- A Zenodo record's views and downloads are now that version's own. They were the
+  counts of every version of its concept, so version 3.11.2 of a package
+  (`zenodo:23039074`) showed 428,071 views where it has 1,639, and a record and its
+  DataCite copy, which counts its own DOI, disagreed.
 
 ## [0.74.1] - 2026-10-16
 

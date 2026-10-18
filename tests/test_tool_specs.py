@@ -125,6 +125,7 @@ _SEARCH_LABELS = {
     "ngdc": "NGDC",
     "mwb": "Metabolomics Workbench",
     "massive": "MassIVE",
+    "kaggle": "Kaggle",
 }
 
 
