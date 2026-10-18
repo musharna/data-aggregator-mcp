@@ -220,8 +220,7 @@ async def test_an_answer_of_the_wrong_shape_fails_the_search(httpx_mock: HTTPXMo
         ("GPL 2", "GPL-2.0"),
         ("GNU Lesser General Public License 3.0", "LGPL-3.0"),
         ("Apache 2.0", "Apache-2.0"),
-        # An IGO licence is its own; the normalizer would read it as the plain one.
-        ("Attribution 3.0 IGO (CC BY 3.0 IGO)", "Attribution 3.0 IGO (CC BY 3.0 IGO)"),
+        ("Attribution 3.0 IGO (CC BY 3.0 IGO)", "CC-BY-3.0-IGO"),
         ("Other (specified in description)", "Other (specified in description)"),
         ("Unknown", None),
         (None, None),
@@ -267,3 +266,13 @@ async def test_live_resolve_of_the_advertised_example_and_an_unknown_id() -> Non
         assert r.title == "Honey Bee pollen" and r.license == "CC-BY-SA-4.0" and r.year == 2018
         with pytest.raises(NotFoundError):
             await kaggle.resolve(c, "kaggle:nobody-xx/no-such-dataset-zz")
+
+
+@live_only
+async def test_live_an_igo_licence_resolves_as_its_own_spdx_id() -> None:
+    async with httpx.AsyncClient(timeout=60) as c:
+        # WHO life expectancy, "Attribution-NonCommercial-ShareAlike 3.0 IGO (CC BY-NC-SA 3.0 IGO)".
+        igo = await kaggle.resolve(c, "kaggle:joebeachcapital/life-expectancy")
+        # Positive control: an unported licence on the same path.
+        plain = await kaggle.resolve(c, "kaggle:ivanfel/honey-bee-pollen")
+    assert (igo.license, plain.license) == ("CC-BY-NC-SA-3.0-IGO", "CC-BY-SA-4.0")
