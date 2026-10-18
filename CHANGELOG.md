@@ -80,6 +80,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   article id (Monash's `10.4225/03/…`, `10.26180/5f4c…`, as round 3's HyDaT study)
   takes the id from that page, and a portal collection DOI (`10.17034/c.…`) is no
   longer read as a withdrawn article.
+- A Hugging Face dataset lists every Parquet file datasets-server converted it to; the
+  first 100 were listed, with nothing in the record saying so, and the rest could not be
+  asked for by `file=` (allenai/c4: 1,006 files, 906 unlisted).
 
 ## [0.74.1] - 2026-10-16
 

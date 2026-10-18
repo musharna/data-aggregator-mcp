@@ -4,18 +4,13 @@ as FileEntries so the existing operate engines can query any HF dataset."""
 
 from __future__ import annotations
 
-import logging
-
 import httpx
 
 from data_aggregator_mcp import _http
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import FileEntry
 
-logger = logging.getLogger(__name__)
-
 DSS_API = "https://datasets-server.huggingface.co"
-MAX_DSS_FILES = 100
 MAX_RETRIES = 2
 _SERVICE = "HF datasets-server"
 # httpx upper-cases the method and reads header names case-insensitively, so a
@@ -85,7 +80,10 @@ async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry
     )
     if body is None:
         raise NotFoundError(f"{_SERVICE} has no readable converted view of {ds_id!r}")
-    files = [
+    # Every file is listed: a cap of 100 hid 906 of allenai/c4's 1,006 from fetch's
+    # ``file=``, and saved no output beside the 69,221 repository files its record lists
+    # (2026-10-17). datasets-server answers 501 for a list over 10 MB.
+    return [
         FileEntry(
             name=_branch_path(p["url"]),
             url=p["url"],
@@ -94,12 +92,3 @@ async def parquet_files(client: httpx.AsyncClient, ds_id: str) -> list[FileEntry
         )
         for p in body["parquet_files"]
     ]
-    if len(files) > MAX_DSS_FILES:
-        logger.warning(
-            "datasets-server: %s exposes %d parquet files; capping to %d",
-            ds_id,
-            len(files),
-            MAX_DSS_FILES,
-        )
-        files = files[:MAX_DSS_FILES]
-    return files
