@@ -22,6 +22,7 @@ import asyncio
 import functools
 import json
 import logging
+import math
 import os
 import re
 from collections.abc import Awaitable, Callable, Sequence
@@ -47,7 +48,13 @@ from data_aggregator_mcp import query_understanding as query_understanding_mod
 from data_aggregator_mcp import relate as relate_mod
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._merge import interleave
-from data_aggregator_mcp._relevance import MatchTiers, any_word, title_clause, with_plurals
+from data_aggregator_mcp._relevance import (
+    MatchTiers,
+    any_word,
+    balance_query,
+    title_clause,
+    with_plurals,
+)
 from data_aggregator_mcp.errors import ValidationError
 from data_aggregator_mcp.models import (
     SEARCH_LIST_LIMITS,
@@ -112,9 +119,14 @@ def _cache_ttl() -> float:
     if raw is None:
         return 3600.0
     try:
-        return float(raw)
+        ttl = float(raw)
     except ValueError:
+        ttl = math.nan
+    # nan parses but never expires an entry (every comparison with it is False).
+    if math.isnan(ttl):
+        logger.warning("CACHE_TTL_SECONDS=%r is not a number of seconds; using 3600", raw)
         return 3600.0
+    return ttl
 
 
 _RESOLVE_CACHE = TTLCache(maxsize=512, ttl=_cache_ttl())
@@ -1150,6 +1162,14 @@ async def search_page(
                     overridden=overridden,
                     confidence=ru.confidence,
                 )
+        # An unmatched quote or parenthesis breaks most sources' query parsers, each reported
+        # as an outage: dropped here, once, after any rewrite and before any expansion.
+        query, dropped = balance_query(query)
+        if dropped:
+            errors["unbalanced"] = (
+                f"dropped an unmatched {' '.join(dropped)} that most sources cannot parse; "
+                f"searched for: {query}"
+            )
         filters = {
             "published_after": published_after,
             "published_before": published_before,
@@ -1205,7 +1225,8 @@ async def search_page(
             else:
                 # Raw variant list for the echo: original (post-understand) query first,
                 # ci-deduped, capped. Variant 0 is always the original.
-                raw_variants = _dedup_ci([query, *variants_raw])[:MAX_QUERY_VARIANTS]
+                repaired = (balance_query(v)[0] for v in variants_raw)
+                raw_variants = _dedup_ci([query, *repaired])[:MAX_QUERY_VARIANTS]
                 # Effective (ontology-expanded) string per variant. Variant 0 reuses the
                 # already-computed `effective_query`; the rest run the SAME expansion chain
                 # (resolver lookups are cached → cheap). Echoes were captured once above.
