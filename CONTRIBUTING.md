@@ -132,6 +132,11 @@ Register it with a client (e.g. Claude Code):
 claude mcp add data-aggregator -- uvx data-aggregator-mcp
 ```
 
+## README demo
+
+The README demo (`examples/assets/demo.svg`) is recorded from live calls by
+`examples/_demo_search.py`; its header has the commands to re-record it.
+
 ## Pull requests
 
 - `uv run ruff check .` and `uv run pytest -q` must both pass — CI enforces this

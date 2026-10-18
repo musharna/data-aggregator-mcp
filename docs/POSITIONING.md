@@ -80,8 +80,8 @@ since; read it as a dated observation, not a survey of every server that exists.
    to its literature. Multi-repo and MCP-native.
 4. **Checksum-verified fetch where possible; no invented paths.** Fetch verifies
    MD5 / SHA-256 where the source publishes one. Many sources publish none, and
-   those downloads are not verified (see the Checksum column in the README's
-   Sources table); for them the only content check is an HTML sniff on files
+   those downloads are not verified (see the Checksum column in
+   [sources.md](sources.md)); for them the only content check is an HTML sniff on files
    declared as PDF or XML, which rejects a paywall page served as a "PDF". When
    bytes aren't reachable, it raises — it does not invent a path, which is the
    failure seen in deep-research tools that report a download that never

@@ -67,18 +67,19 @@ DataCite, OmicsDI, NCBI omics (GEO, SRA, BioProject), CELLxGENE, the Metabolomic
 Workbench, MassIVE and Kaggle return only records holding every word of the query, so
 a longer query can find nothing there.
 
-- DataCite, OmicsDI, CELLxGENE and the Workbench are also searched for records
-  holding only some of the words. Those hits rank below hits naming more of the
-  query; CELLxGENE and the Workbench put records holding more of the words, then
-  rarer ones, first. `total` does not count them.
+- DataCite, OmicsDI, CELLxGENE, the Workbench and MassIVE are also searched for
+  records holding only some of the words. Those hits rank below hits naming more of
+  the query; CELLxGENE and the Workbench put records holding more of the words, then
+  rarer ones, first. MassIVE's fill runs only while fewer than a page of datasets
+  name every word, and reads the rows of its 2 rarest words. `total` does not count
+  them.
 - `errors.all_words` names a source with no record holding every word: either it
   matched nothing (a query with fewer words may find some), or the hits shown from
   it hold only some of the words.
 - A hit from these sources lists in `unshown_terms` the query words it matched in
   text the hit leaves out, such as a protocol; `resolve` shows that text.
-- NCBI omics, MassIVE and Kaggle have no some-words search (NCBI's would be
-  millions of records, newest first; MassIVE's a request per word; Kaggle reads no
-  OR), so keep queries to them short.
+- NCBI omics and Kaggle have no some-words search (NCBI's would be millions of
+  records, newest first; Kaggle reads no OR), so keep queries to them short.
 
 ### `resolve(id, cite?, format?, trust?, fair?, use?)`
 
