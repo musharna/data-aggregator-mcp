@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.75.1] - 2026-10-18
+
+### Fixed
+
+- A Creative Commons licence ported to a jurisdiction or issued for intergovernmental
+  organisations is reported as its own SPDX id: "CC BY-NC-SA 3.0 IGO" (the WHO's
+  life-expectancy data on Kaggle) as `CC-BY-NC-SA-3.0-IGO`, `…/licenses/by/3.0/us/` as
+  `CC-BY-3.0-US`. Each was reported as the unported licence, which the record does not
+  state. The 22 ports SPDX names are read from an id, a URL or prose; a port SPDX names
+  no id for (CC BY 3.0 ES) still reads as the unported one. A licence check assesses a
+  port with its unported licence's terms, as before.
+
 ## [0.75.0] - 2026-10-18
 
 ### Added

@@ -124,9 +124,7 @@ def _license(name: str | None) -> str | None:
     if name in _LICENSES:
         return _LICENSES[name]
     short = _SHORT_NAME.search(name)
-    # An IGO licence is its own, which the normalizer reads as the plain one.
-    candidate = short.group(1) if short else name
-    spdx = None if "IGO" in candidate else normalize_spdx(candidate)
+    spdx = normalize_spdx(short.group(1) if short else name)
     return spdx or name
 
 
