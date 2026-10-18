@@ -102,6 +102,7 @@ def test_available_sources_lists_all_adapters() -> None:
         "ngdc",
         "mwb",
         "massive",
+        "kaggle",
         "nasacmr",
         "biostudies",
     ]
@@ -547,6 +548,10 @@ async def test_default_search_includes_omics(httpx_mock: HTTPXMock, monkeypatch)
         url=re.compile(r"https://massive\.ucsd\.edu/ProteoSAFe/QueryDatasets\?.*"),
         content=(Path(__file__).parent / "fixtures" / "massive_empty.json").read_bytes(),
         headers={"content-type": "application/json;charset=ISO-8859-1"},
+    )
+    # and kaggle, whose no-hit answer is a bare [] (verbatim, 2026-10-17)
+    httpx_mock.add_response(
+        url=re.compile(r"https://www\.kaggle\.com/api/v1/datasets/list\?.*"), json=[]
     )
     async with httpx.AsyncClient() as client:
         total, results, errors, _exp = await router.search(client, "rna")

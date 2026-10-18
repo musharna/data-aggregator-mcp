@@ -841,7 +841,8 @@ async def test_an_unroutable_id_lists_every_accepted_form() -> None:
         "'gbif:<dataset-key>', 'datagov:<name-slug>', 'nasacmr:<concept-id>', "
         "'omicsdi:<source>:<acc>', 'dandi:<id>', 'cellxgene:<id>', 'openml:<id>', "
         "'pdb:<id>', 'uniprot:<acc>', 'gwas:<acc>', 'biostudies:<acc>', 'ngdc:<PRJCA acc>', "
-        "'mwb:<ST acc>', 'massive:<MSV acc>', a bare Zenodo id, or a DOI"
+        "'mwb:<ST acc>', 'massive:<MSV acc>', 'kaggle:<owner>/<slug>', a bare Zenodo id, "
+        "or a DOI"
     )
 
 

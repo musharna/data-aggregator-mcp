@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `kaggle`, Kaggle's public datasets searched natively (discovery-only, no account
+  needed). Many machine-learning datasets are deposited only there, with no DOI: in
+  round 3 T4 (labelled honey bee images) six key datasets were held nowhere else, and
+  Kaggle's search returns all six for "honey bee" or "bee varroa". Kaggle needs every
+  word (each also as a prefix), reads no OR, pages by 20 and reports no total, so the
+  total counts the rows up to the page read, plus one when the page is full. Licence
+  names are read as SPDX ids where they have one. A Kaggle DOI names one version at
+  DataCite and links to no dataset, so a DOI'd dataset can be listed from both sources,
+  and `collapse_mirrors` does not fold the two (a Kaggle hit has no year until resolved).
+
 ## [0.74.1] - 2026-10-16
 
 ### Fixed

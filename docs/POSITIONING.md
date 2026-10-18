@@ -134,8 +134,8 @@ This is a discovery-and-fetch layer, not the whole stack. Today it does **not**:
   Ensembl are not wired. GBIF (biodiversity) and data.gov (US government open data)
   now extend reach beyond the molecular-omics core, and NASA CMR (Earthdata) adds
   earth-science discovery — though CMR is discovery-only here, since granule download
-  needs an Earthdata login this server does not wire. Kaggle is the remaining named
-  gap. The `DataResource` model is domain-general, and the wiring is broadening,
+  needs an Earthdata login this server does not wire. Kaggle is searched too, also
+  discovery-only. The `DataResource` model is domain-general, and the wiring is broadening,
   though still weighted toward the life sciences.
 - **Elicit clarification on a free-text query.** An ambiguous `query` string is
   expanded and searched, never queried back to the user. Elicitation is wired only

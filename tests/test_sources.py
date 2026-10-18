@@ -46,7 +46,9 @@ def test_fetch_gate_matches_the_historical_hand_maintained_set():
 
 
 def test_discovery_only_is_the_non_fetchable_sources():
-    assert frozenset({"gwas", "massive", "mwb", "nasacmr", "ngdc"}) == sources.DISCOVERY_ONLY
+    assert (
+        frozenset({"gwas", "kaggle", "massive", "mwb", "nasacmr", "ngdc"}) == sources.DISCOVERY_ONLY
+    )
     assert router._DISCOVERY_ONLY_SOURCES is sources.DISCOVERY_ONLY
 
 
@@ -237,6 +239,7 @@ BOOLEAN_PROBE_QUERY = {
     "ngdc": "axolotl",
     "mwb": "zebrafish",  # 21 studies: more than one page of 3
     "massive": "coral",  # 138 datasets (2026-10-12)
+    "kaggle": "varroa",  # 2 pages of 20 (2026-10-17)
 }
 
 
@@ -265,6 +268,7 @@ def test_keyword_only_set_is_the_live_probed_set():
         "dandi",
         "mwb",
         "massive",
+        "kaggle",
     } == sources.KEYWORD_ONLY
     # positive control: the boolean-capable majority still gets the expansion
     assert {"zenodo", "datacite", "omics", "pdb", "uniprot"}.isdisjoint(sources.KEYWORD_ONLY)

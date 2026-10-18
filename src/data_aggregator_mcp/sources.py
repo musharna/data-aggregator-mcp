@@ -35,6 +35,7 @@ from data_aggregator_mcp import (
     gbif,
     gwas,
     huggingface,
+    kaggle,
     literature,
     massive,
     mwb,
@@ -541,6 +542,22 @@ SOURCES: tuple[SourceSpec, ...] = (
         description="MassIVE (UCSD) - mass-spectrometry datasets (MSV accessions: GNPS metabolomics, proteomics), searched natively in title, description, keywords and species; DataCite holds MassIVE DOIs with titles only, and OmicsDI's copy lags.",
     ),
     _spec(
+        "kaggle",
+        kaggle,
+        # Kaggle reads OR as a word to match ("honey OR bee" 12 hits, "honey bee" 37), so
+        # an ontology expansion would require every synonym of the organism.
+        boolean_query=False,
+        layer="archives",
+        kinds=("dataset",),
+        rate_limit="public API, anonymous; no limit published (courtesy only)",
+        status="live (Kaggle public API: every word required as a prefix, 20 a page, no total reported)",
+        fetchable=False,
+        fetchable_notes="Discovery-only: the record names the dataset (owner/slug), licence and landing page; Kaggle's whole-dataset archive download is not wired.",
+        id_example="kaggle:ivanfel/honey-bee-pollen",
+        # No default_license: each dataset names its own, read into the record.
+        description="Kaggle - public datasets, many held nowhere else and without a DOI (machine-learning image, video and tabular sets); searched natively in titles, subtitles and tags. The total is a lower bound: Kaggle reports none.",
+    ),
+    _spec(
         "nasacmr",
         nasacmr,
         boolean_query=False,
@@ -633,6 +650,7 @@ CATALOG_ORDER: tuple[str, ...] = (
     "ngdc",
     "mwb",
     "massive",
+    "kaggle",
 )
 
 if set(CATALOG_ORDER) != set(_BY_NAME):  # a new source must be given a catalog position

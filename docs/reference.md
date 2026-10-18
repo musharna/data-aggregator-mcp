@@ -63,8 +63,8 @@ dropped.
 #### Every-word sources
 
 DataCite, OmicsDI, NCBI omics (GEO, SRA, BioProject), CELLxGENE, the Metabolomics
-Workbench and MassIVE return only records holding every word of the query, so a
-longer query can find nothing there.
+Workbench, MassIVE and Kaggle return only records holding every word of the query, so
+a longer query can find nothing there.
 
 - DataCite, OmicsDI, CELLxGENE and the Workbench are also searched for records
   holding only some of the words. Those hits rank below hits naming more of the
@@ -75,9 +75,9 @@ longer query can find nothing there.
   it hold only some of the words.
 - A hit from these sources lists in `unshown_terms` the query words it matched in
   text the hit leaves out, such as a protocol; `resolve` shows that text.
-- NCBI omics and MassIVE have no some-words search (NCBI's would be millions of
-  records, newest first; MassIVE's a request per word), so keep queries to them
-  short.
+- NCBI omics, MassIVE and Kaggle have no some-words search (NCBI's would be
+  millions of records, newest first; MassIVE's a request per word; Kaggle reads no
+  OR), so keep queries to them short.
 
 ### `resolve(id, cite?, format?, trust?, fair?, use?)`
 
@@ -156,7 +156,7 @@ publishes a checksum.
   open-access full text.
 - **Dryad**, other DataCite repos, other OmicsDI repos (MassIVE / GNPS / ...),
   **BioProject**, **NASA CMR**, the **GWAS Catalog**, **NGDC**, the **Metabolomics
-  Workbench** and **MassIVE** are discovery-only and
+  Workbench**, **MassIVE** and **Kaggle** are discovery-only and
   raise `FetchNotSupportedError`.
 
 ### `list_sources()`
