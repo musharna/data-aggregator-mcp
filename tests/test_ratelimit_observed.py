@@ -114,25 +114,30 @@ async def test_buckets_persist_per_name_with_the_rate_for_that_name(monkeypatch,
     await _ratelimit.acquire("NCBI esearch (pubmed)", "https://eutils.ncbi.nlm.nih.gov/x")
     ncbi = _ratelimit._BUCKETS["ncbi"]
     await _ratelimit.acquire("Zenodo search", "https://zenodo.org/api/records")
-    default = _ratelimit._BUCKETS["default"]
-    # Back to back: the second NCBI slot waits a third of a second, refilling `default`.
+    search = _ratelimit._BUCKETS["zenodo-search"]
+    await _ratelimit.acquire("EBI OLS", "https://www.ebi.ac.uk/ols4/api/search")
+    ebi = _ratelimit._BUCKETS["www.ebi.ac.uk"]
     await _ratelimit.acquire("EBI OLS", "https://www.ebi.ac.uk/ols4/api/search")
     await _ratelimit.acquire("NCBI efetch (sra)", "https://eutils.ncbi.nlm.nih.gov/y")
     buckets = _ratelimit._BUCKETS
-    assert buckets == {"ncbi": ncbi, "default": default}  # reused, not replaced
+    assert buckets == {"ncbi": ncbi, "zenodo-search": search, "www.ebi.ac.uk": ebi}  # reused
     # NCBI: the machine-wide schedule in the state directory, 2/s with no burst.
     assert isinstance(ncbi, _ratelimit.SharedSchedule)
     assert ncbi.path == tmp_path / "ncbi.schedule"
     assert ncbi.rate == pytest.approx(2.0)
-    assert (default.rate, default.capacity) == (10.0, 10.0)
-    assert default._tokens == pytest.approx(8.0, abs=0.01)
+    # Zenodo's search: its documented 30 a minute, at 90%: a burst of 4, then 23 a minute.
+    assert isinstance(search, TokenBucket)
+    assert (search.capacity, search.rate) == (4, pytest.approx(23 / 60))
+    assert (ebi.rate, ebi.capacity) == (10.0, 10.0)
+    assert ebi._tokens == pytest.approx(8.0, abs=0.01)  # its own two, no one else's
 
 
 def test_host_is_compared_case_insensitively() -> None:
     assert _ratelimit._bucket_for("x", "https://EUTILS.NCBI.NLM.NIH.GOV/a") == "ncbi"
-    assert _ratelimit._host_of("https://Zenodo.ORG/x") == "zenodo.org"
-    assert _ratelimit._host_of("http://[::1") == ""  # urlsplit raises ValueError
-    assert _ratelimit._host_of("/relative/path") == ""
+    assert _ratelimit._host_path("https://Zenodo.ORG/x") == ("zenodo.org", "/x")
+    assert _ratelimit._host_path("http://[::1") == ("", "")  # urlsplit raises ValueError
+    assert _ratelimit._host_path("/relative/path") == ("", "/relative/path")
+    assert _ratelimit._bucket_for("x", "https://ZENODO.org/api/records/") == "zenodo-search"
 
 
 async def test_an_unparseable_url_is_paced_by_its_label() -> None:

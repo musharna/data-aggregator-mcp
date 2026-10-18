@@ -18,7 +18,7 @@ import httpx
 from data_aggregator_mcp import _http, _pushdown
 from data_aggregator_mcp._cache import MISS, TTLCache
 from data_aggregator_mcp._relevance import escape_stray_colons, with_plurals
-from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
+from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import (
     Creator,
     DataResource,
@@ -47,6 +47,10 @@ DEFAULT_SIZE = 10
 # 2026-10-02). At 50 every search asking for 26-50 records failed. The router pages each
 # source in its own coordinates, so a source returning fewer than asked is fine.
 MAX_SIZE = 25
+# The search serves a page only while page * size <= 10,000 (sizes 10, 20 and 25 served up to
+# exactly 10,000; one page more answers HTTP 400 "Invalid querystring parameters.", live
+# 2026-10-17), which was read as an outage on every page past the window.
+_WINDOW = 10_000
 # Matches words exactly, so search sends each word with its plural (``plurals``): "snow leopard"
 # 11,734 hits, "snow leopards" 10,742, "snow (leopard OR leopards)" 11,925 (probed
 # 2026-10-05).
@@ -282,6 +286,12 @@ async def search(
     unchanged.
     """
     capped = min(size, MAX_SIZE)
+    page = offset // capped + 1
+    if page * capped > _WINDOW:
+        raise ValidationError(
+            f"Zenodo serves only the first {_WINDOW} records of a search; the page holding "
+            f"offset {offset} ends past them, so narrow the query"
+        )
     query = escape_stray_colons(query)
     params = {
         "q": _pushdown.with_clauses(
@@ -290,7 +300,7 @@ async def search(
         "size": str(capped),
     }
     if offset:  # only when paging past page 1, so offset=0 request stays byte-identical
-        params["page"] = str(offset // capped + 1)
+        params["page"] = str(page)
     data = await _http.request_json(
         client,
         _GET,

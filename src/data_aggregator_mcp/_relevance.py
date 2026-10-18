@@ -112,6 +112,42 @@ def escape_stray_colons(query: str) -> str:
     return _STRAY_COLON.sub(r"\\:", query)
 
 
+def balance_query(query: str) -> tuple[str, list[str]]:
+    """``query`` without its unmatched quote and parentheses, and the marks dropped. An
+    odd count of quotes drops the last; a ``)`` with nothing open, or a ``(`` never
+    closed, outside quotes, is dropped. A quote after a backslash is text. Probed
+    2026-10-17: an unmatched quote broke 8 sources and a parenthesis 5, each reported as an
+    outage. A balanced query comes back as written."""
+    quotes = [i for i, c in enumerate(query) if c == '"' and (i == 0 or query[i - 1] != "\\")]
+    drop = {quotes[-1]} if len(quotes) % 2 else set()
+    open_parens: list[int] = []
+    in_quote = False
+    for i, c in enumerate(query):
+        if i in quotes and i not in drop:
+            in_quote = not in_quote
+        elif not in_quote and c == "(":
+            open_parens.append(i)
+        elif not in_quote and c == ")":
+            if open_parens:
+                open_parens.pop()
+            else:
+                drop.add(i)
+    drop.update(open_parens)
+    if not drop:
+        return query, []
+    kept = "".join(c for i, c in enumerate(query) if i not in drop)
+    return " ".join(kept.split()), [query[i] for i in sorted(drop)]
+
+
+def drop_stray_marks(query: str, marks: str) -> str:
+    """``query`` with each of ``marks`` that ends a word dropped, for an upstream that reads
+    it as syntax and takes no backslash escape. OmicsDI and NGDC found nothing for 5 of 5
+    pasted titles with a colon each, as written and escaped, and each at rank 1 with the
+    colon dropped; NGDC also found nothing for a semicolon (probed 2026-10-17). A mark
+    with its value attached (``TAXONOMY:9606``), a URL and a time are sent as written."""
+    return re.sub(rf"(?<=[^\s\\])[{re.escape(marks)}](?=\s|$)", "", query)
+
+
 def _pluralisable(word: str) -> bool:
     return (
         word.isalpha()

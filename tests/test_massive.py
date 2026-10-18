@@ -8,6 +8,7 @@ the title alone, so no source matched it to a heat-stress search.
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import json
 import os
@@ -57,12 +58,14 @@ def _answer(rows: list[dict], total: int | None = None) -> bytes:
     return json.dumps({**body, "row_data": rows}).encode("iso-8859-1")
 
 
-def _client(sent: list[tuple[str, int, int]], answers: dict[str, object]):
+def _client(sent: list[tuple[str, int, int]], answers: dict[str, object], *, delay: float = 0.0):
     """A client answering QueryDatasets for a searched text from ``answers``: bytes are
     the answer to every page, a ``(count, rows)`` pair answers ``pageSize=1`` with the
     first and anything else with the second, and an unlisted text the empty answer. A
     servlet request is answered from ``answers["info:<acc>"]`` (bytes, or a str sent as
-    404 text)."""
+    404 text). A callable answers each page from its ``(pageSize, offset)``. With
+    ``delay``, each answer comes that many seconds later, so requests are in flight
+    together as they are over the network."""
 
     def handler(request: httpx.Request) -> httpx.Response:
         params = request.url.params
@@ -79,12 +82,18 @@ def _client(sent: list[tuple[str, int, int]], answers: dict[str, object]):
         size, offset = int(params["pageSize"]), int(params["offset"])
         sent.append((text, size, offset))
         body = answers.get(text, _EMPTY)
+        if callable(body):
+            body = body(size, offset)
         if isinstance(body, tuple):
             body = body[0] if size == 1 else body[1]
         assert isinstance(body, bytes)
         return httpx.Response(200, content=body, headers=_LATIN1)
 
-    return httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    async def later(request: httpx.Request) -> httpx.Response:
+        await _tick(delay)
+        return handler(request)
+
+    return httpx.AsyncClient(transport=httpx.MockTransport(later if delay else handler))
 
 
 def _words(*words: str) -> dict[str, object]:
@@ -191,6 +200,158 @@ async def test_past_max_rows_the_newest_rows_of_the_rarest_word_are_read(monkeyp
 
 
 @pytest.mark.asyncio
+async def test_a_word_counted_for_one_search_is_not_counted_again_for_the_next():
+    """An agent's searches rephrase one another: 235 of the 356 word counts of an
+    83-search session repeated a word already counted (2026-10-17)."""
+    (_, first), sent = await _search("pocillopora heatwave")
+    assert sorted(sent[:2]) == [("heatwave", 1, 0), ("pocillopora", 1, 0)]
+    (_, again), sent = await _search("heatwave pocillopora")
+    assert sent == [("heatwave", 3, 0)]  # the rows alone: both counts were kept
+    assert again == first
+    # Positive control: a word not counted before is counted.
+    _, sent = await _search("pocillopora wave")
+    assert sent == [("wave", 1, 0), ("pocillopora", 16, 0)]
+
+
+@pytest.mark.parametrize(
+    ("max_rows", "reads", "newest"),
+    [(5000, [(15, 0), (16, 0)], 16), (10, [(10, 5), (10, 6)], 10)],
+)
+@pytest.mark.asyncio
+async def test_a_kept_count_that_has_grown_reads_the_rows_where_the_fresh_count_puts_them(
+    monkeypatch, max_rows, reads, newest
+):
+    monkeypatch.setattr(massive, "MAX_ROWS", max_rows)
+    rows = _rows("massive_rows_pocillopora.json")  # 16, oldest first, as the server sends
+
+    def page(size: int, offset: int) -> bytes:
+        return _answer(rows[offset : offset + size], total=16)
+
+    massive._COUNTS.set("pocillopora", 15)  # kept before the newest dataset was deposited
+    sent: list[tuple[str, int, int]] = []
+    async with _client(sent, {"pocillopora": page}) as c:
+        total, recs = await massive.search(c, "pocillopora", size=50)
+    assert sent == [("pocillopora", *r) for r in reads]
+    assert [r.id for r in recs] == [f"massive:{r['dataset']}" for r in reversed(rows)][:newest]
+    assert total == newest
+    # Positive control: the fresh count was kept, so the next search reads once.
+    sent.clear()
+    async with _client(sent, {"pocillopora": page}) as c:
+        await massive.search(c, "pocillopora", size=50)
+    assert sent == [("pocillopora", *reads[1])]
+
+
+@pytest.mark.asyncio
+async def test_a_kept_count_is_counted_again_after_ten_minutes(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr(massive._COUNTS, "_now", lambda: clock[0])
+    await _search("heatwave")
+    clock[0] = 599.0
+    assert massive._COUNTS.get("heatwave") == 3  # a search now would read the rows alone
+    clock[0] = 600.0
+    _, sent = await _search("heatwave")
+    assert sent == [("heatwave", 1, 0), ("heatwave", 3, 0)]
+
+
+async def _tick(delay: float = 0.0) -> None:
+    """Yield to the loop for ``delay`` seconds (``asyncio.sleep`` is patched out here)."""
+    loop = asyncio.get_running_loop()
+    later = loop.create_future()
+    loop.call_later(delay, later.set_result, None)
+    await later
+
+
+@pytest.mark.asyncio
+async def test_the_fill_shares_the_every_word_searchs_requests(monkeypatch):
+    """The two streams ask, at once, for each word's count and the rarest word's rows;
+    each is sent once. The fill adds the next rarest word's rows, and nothing else."""
+    monkeypatch.setattr(router, "_ADAPTERS", {"massive": massive})
+    sent: list[tuple[str, int, int]] = []
+    async with _client(sent, _words("pocillopora", "heatwave"), delay=0.05) as c:
+        page = await router.search_page(
+            c, query="pocillopora heatwave", sources=["massive"], size=3
+        )
+    assert sorted(sent) == [
+        ("heatwave", 1, 0),
+        ("heatwave", 3, 0),
+        ("pocillopora", 1, 0),
+        ("pocillopora", 16, 0),  # the fill's
+    ]
+    # Positive control: both streams answered, S15 naming both words first.
+    assert [r.id for r in page.results][:1] == [f"massive:{S15}"] and len(page.results) == 3
+
+
+def _dataset(i: int, title: str) -> dict:
+    blank = dict.fromkeys(("description", "keywords", "species_resolved"))
+    return dict(
+        _rows("massive_rows_pocillopora.json")[0], **blank, dataset=f"MSV{i:09d}", title=title
+    )
+
+
+@pytest.mark.parametrize(("naming_both", "filled"), [(10, 0), (9, 6)])
+@pytest.mark.asyncio
+async def test_the_fill_is_read_only_while_fewer_than_a_page_name_every_word(naming_both, filled):
+    both = [_dataset(i, "coral reef") for i in range(naming_both)]
+    coral = [_dataset(800, "coral")]  # among the rarest word's rows, read once for both
+    reef = [_dataset(900 + i, "reef") for i in range(5)]
+    answers = {"coral": _answer(both + coral), "reef": _answer(both + reef)}
+    (total, recs), sent = await _search("coral reef", answers, some_words=True)
+    assert (total, len(recs)) == (filled, filled)
+    rows_read = [s[0] for s in sent if s[1] != 1]
+    # The rarest word's rows are read either way; the next word's only for a fill.
+    assert rows_read == (["coral"] if not filled else ["coral", "reef"])
+    assert sorted(r.title for r in recs) == (["coral"] + ["reef"] * 5)[: filled or 0]
+
+
+@pytest.mark.asyncio
+async def test_the_fill_reads_the_two_rarest_words_that_match_anything():
+    both, alpha, beta = _dataset(1, "alpha beta"), _dataset(3, "alpha"), _dataset(2, "beta")
+    gamma = [_dataset(10 + i, "gamma") for i in range(3)]
+    # Each word matches at least 2, so its rows are read with pageSize > 1, unlike a count.
+    answers = {
+        "alpha": _answer([both, alpha]),
+        "beta": _answer([both, beta]),
+        "gamma": _answer(gamma),
+        "delta": _answer([_dataset(20 + i, "delta") for i in range(4)]),
+        # "omega" matches nothing: no dataset can name every word.
+    }
+    (total, recs), sent = await _search("alpha beta gamma delta omega", answers, some_words=True)
+    # gamma, the third rarest, is counted but its rows are not read.
+    assert sorted(s[0] for s in sent if s[1] != 1) == ["alpha", "beta"]
+    assert "gamma" in {s[0] for s in sent}
+    # More words first, then newest first.
+    assert [r.title for r in recs] == ["alpha beta", "alpha", "beta"]
+    assert total == 3
+    # Positive control: the every-word search reads no rows at all for it.
+    (total, recs), sent = await _search("alpha beta gamma delta omega", answers)
+    assert (total, recs) == (0, [])
+    assert [s for s in sent if s[1] != 1] == []
+
+
+@pytest.mark.asyncio
+async def test_one_caller_cut_off_does_not_cancel_the_others_request():
+    gate = asyncio.Event()
+    made: list[int] = []
+
+    async def make() -> int:
+        made.append(1)
+        await gate.wait()
+        return 7
+
+    first = asyncio.ensure_future(massive._once(("k",), make))
+    second = asyncio.ensure_future(massive._once(("k",), make))
+    await _tick()
+    first.cancel()  # the router's deadline, say
+    await _tick()
+    gate.set()
+    assert await second == 7
+    assert first.cancelled()
+    assert made == [1]  # one request for both
+    await _tick()
+    assert massive._PENDING == {}  # forgotten once answered
+
+
+@pytest.mark.asyncio
 async def test_no_match_is_one_request_and_an_empty_page():
     (total, recs), sent = await _search("zzqxnonword")
     assert (total, recs, sent) == (0, [], [("zzqxnonword", 1, 0)])
@@ -201,6 +362,7 @@ async def test_a_short_word_is_required_but_not_sent_unless_it_is_all_there_is()
     (total, recs), sent = await _search("pocillopora heatwave ms")
     assert {s[0] for s in sent} == {"pocillopora", "heatwave"}
     assert total == 1  # S15's description says "LC-MS/MS"
+    massive._COUNTS.clear()  # so the words are counted again, not kept
     (total, recs), sent = await _search("pocillopora heatwave zq")
     assert {s[0] for s in sent} == {"pocillopora", "heatwave"}
     assert total == 0  # required, though never sent
@@ -368,12 +530,25 @@ async def test_the_router_names_massive_when_every_word_empties_it(monkeypatch):
     sent: list[tuple[str, int, int]] = []
     async with _client(sent, _words("pocillopora", "heatwave", "wave")) as c:
         monkeypatch.setattr(router, "_ADAPTERS", {"massive": massive})
-        page = await router.search_page(c, query="pocillopora wave", sources=["massive"])
+        # Three hits a page: each hit's species is looked up at NCBI, paced at 2 a second.
+        page = await router.search_page(c, query="pocillopora wave", sources=["massive"], size=3)
         assert page.errors["all_words"].startswith("massive matched nothing: it returns ")
         # Positive control: words a dataset names are no note.
-        page = await router.search_page(c, query="pocillopora heatwave", sources=["massive"])
+        page = await router.search_page(
+            c, query="pocillopora heatwave", sources=["massive"], size=3
+        )
     assert "all_words" not in page.errors
-    assert [r.id for r in page.results] == [f"massive:{S15}"]
+    # S15 names both words; the any-word fill's datasets, naming one, come after it.
+    assert page.results[0].id == f"massive:{S15}"
+    assert len(page.results) == 3
+    rows = {
+        f"massive:{r['dataset']}": r
+        for name in ("massive_rows_pocillopora.json", "massive_rows_heatwave.json")
+        for r in _rows(name)
+    }
+    for r in page.results[1:]:
+        text = massive._text(rows[r.id])
+        assert massive._names(text, "pocillopora") != massive._names(text, "heatwave"), r.id
 
 
 # --- live ---------------------------------------------------------------------------------
