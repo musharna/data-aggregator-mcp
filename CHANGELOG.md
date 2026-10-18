@@ -25,6 +25,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a nan lifetime never expires; it now falls back to the default like any other value
   that is not a number, and each fallback is logged. `0` or less (no cache) and `inf`
   (keep for good) are unchanged.
+- A query with an unmatched quote or parenthesis (`"snow leopard`, `liver (proteome`)
+  was reported as an outage by up to 8 sources (DataCite, DANDI, OpenAIRE, UniProt,
+  NASA CMR, OmicsDI, OpenML, NGDC), whose query parsers refuse it. The unmatched mark is
+  now dropped before the query is sent, `errors.unbalanced` says what was searched, and
+  every source answers. Multi-query variants are repaired the same way.
 
 ## [0.74.1] - 2026-10-16
 
