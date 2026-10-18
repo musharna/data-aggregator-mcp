@@ -3,7 +3,7 @@
 data-aggregator-mcp is an MCP server that lets AI agents search 21 public
 research-data sources at once and get back one deduplicated list.
 
-[![CI](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/musharna/data-aggregator-mcp/ci.yml?branch=main&label=CI)](https://github.com/musharna/data-aggregator-mcp/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
 [![Python](https://img.shields.io/pypi/pyversions/data-aggregator-mcp.svg)](https://pypi.org/project/data-aggregator-mcp/)
 [![License](https://img.shields.io/pypi/l/data-aggregator-mcp.svg)](https://github.com/musharna/data-aggregator-mcp/blob/main/LICENSE)
@@ -45,7 +45,7 @@ Claude Code:
 claude mcp add data-aggregator -- uvx data-aggregator-mcp
 ```
 
-VS Code and Cursor: these buttons.
+One-click install for VS Code or Cursor:
 
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install-0098FF?logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=data-aggregator&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22data-aggregator-mcp%22%5D%7D)
 [![Install in Cursor](https://img.shields.io/badge/Cursor-Install-000000?logo=cursor&logoColor=white)](https://cursor.com/install-mcp?name=data-aggregator&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJkYXRhLWFnZ3JlZ2F0b3ItbWNwIl19)
