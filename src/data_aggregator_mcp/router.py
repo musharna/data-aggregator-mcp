@@ -55,7 +55,7 @@ from data_aggregator_mcp._relevance import (
     title_clause,
     with_plurals,
 )
-from data_aggregator_mcp.errors import ValidationError
+from data_aggregator_mcp.errors import UpstreamUnavailableError, ValidationError
 from data_aggregator_mcp.models import (
     SEARCH_LIST_LIMITS,
     AssayExpansion,
@@ -593,6 +593,23 @@ def _hit_chars(r: DataResource) -> int:
     return len(sent) + _ENRICH_CHARS_PER_ORGANISM * organisms
 
 
+# The longest a page waits for one stream. Timing the round-3 queries (83 searches, every
+# source, 2026-10-17) once MassIVE kept its word counts: the slowest stream of a search
+# answered within 20 s in 79; the other 4 were single stalls of 27-56 s (MassIVE twice,
+# OmicsDI, OpenAIRE), each holding the whole page. A stream past it fails as an outage
+# does, named in ``errors``.
+STREAM_DEADLINE_S = 20.0
+
+
+async def _by_deadline(call: Awaitable[Any]) -> Any:
+    try:
+        return await asyncio.wait_for(call, STREAM_DEADLINE_S)
+    except TimeoutError:
+        raise UpstreamUnavailableError(
+            f"no answer within {STREAM_DEADLINE_S:g} s", down=True
+        ) from None
+
+
 @dataclass
 class _Page:
     emitted: list[DataResource]
@@ -624,7 +641,8 @@ async def _fetch_page(
     hits); a ``rank_query`` then re-ranks them by embedding similarity to it."""
     base = {s.key: _stored_offset(offsets, s.key) for s in streams}
     outcomes = await asyncio.gather(
-        *(s.call(size=size, offset=base[s.key]) for s in streams), return_exceptions=True
+        *(_by_deadline(s.call(size=size, offset=base[s.key])) for s in streams),
+        return_exceptions=True,
     )
     fetched: dict[str, list[DataResource]] = {}
     totals: dict[str, int] = {}

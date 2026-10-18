@@ -9,7 +9,8 @@ The [README](https://github.com/musharna/data-aggregator-mcp/blob/main/README.md
 
 Fan out across all wired sources in parallel and return compact `DataResource`
 records, deduped by DOI. Per-source failures land in `errors{}` — never silently
-dropped.
+dropped. A source that has not answered within 20 s is one of them ("no answer
+within 20 s"); the page is served without it.
 
 - `organism` — expand the query with NCBI-Taxonomy synonyms; the expansion is
   echoed in `taxon_expansion`, and results carry normalized `taxa[]`
