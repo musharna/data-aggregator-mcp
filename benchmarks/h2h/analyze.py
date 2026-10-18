@@ -46,6 +46,8 @@ SETS = {
     "r3_heldout": ("round3", "r3_runs", 2, "round 3 held out, dam 0.69.1, 2026-10-11"),
     "r3_071": ("round3", "r3_071", 2, "round 3 rerun, dam 0.71.0 (after tuning on it)"),
     "r4_pilot": ("round4", "r4_pilot", 1, "round 4 pilot, U2 only, Opus 5.5, dam 0.74.0"),
+    "r4": ("round4", "r4_runs", 3, "round 4 held out, Opus 5.5, dam 0.74.0, 2026-10-18"),
+    "r5": ("round5", "r5_runs", 3, "round 5 held out, Opus 5.5, dam 0e3661f (unreleased)"),
 }
 ARMS = ("dam", "tu", "web", "bare")
 PAIRS = (("dam", "web"), ("dam", "tu"), ("tu", "web"), ("dam", "bare"), ("web", "bare"))

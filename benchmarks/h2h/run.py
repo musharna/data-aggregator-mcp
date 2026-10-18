@@ -597,10 +597,10 @@ def _result_sources(events: list[dict]) -> list[str]:
 # drafts in a session job directory (.claude/jobs/...); a run of theirs ran inside it.
 _LEAK = re.compile(
     r"benchmarks/h2h|answer_key|adjudication(?:_reasons)?\.(?:json|yaml)"
-    r"|round[1-4]/(?:keys|tasks\.json|scores)|keys/[rtu]\d\.yaml"
+    r"|round[1-5]/(?:keys|tasks\.json|scores)|keys/[rtuv]\d+\.yaml"
     r"|data-aggregator-mcp-artifacts|\.claude/jobs/"
     r"|(?<![0-9a-z])(?:h2h_runs|r[2-5]_(?:runs|rerun|pilot|\d+|\d+_3arm)|r3_071)(?![0-9a-z])"
-    r"|(?<![0-9a-z])(?:adj|pool)_[rtu]\d\.json"
+    r"|(?<![0-9a-z])(?:adj|pool)_[rtuv]\d+\.json"
     r"|github\.com/musharna/data-aggregator-mcp/(?:tree|blob|raw)/[^/\s\"]+/benchmarks"
     r"|raw\.githubusercontent\.com/musharna/data-aggregator-mcp/[^/\s\"]+/benchmarks",
     re.IGNORECASE,

@@ -302,6 +302,8 @@ def test_leak_scan_flags_the_key_or_benchmark_in_tool_traffic_and_not_the_runs_o
     assert not hit["valid"] and hit["leaks"] and hit["invalid_reason"][0].startswith("leak"), hit
     assert row("key", "cat benchmarks/h2h/round3/tasks.json")["leaks"]
     assert row("adj", "../../adj_T3.json")["leaks"]
+    assert row("r5key", "cat keys/V10.yaml")["leaks"]  # round 5's keys and pool
+    assert row("r5pool", "pool_V3.json")["leaks"]
     # An old round ran inside its run directory, whose path names the round: its own
     # Write of datasets.json is no leak.
     own = "/runs/r3_runs/dam/T1/r1"
