@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.75.0] - 2026-10-18
+
 ### Added
 
 - MassIVE also finds datasets naming only some of the query's words, ranked below those
