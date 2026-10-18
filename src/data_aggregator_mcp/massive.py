@@ -15,6 +15,7 @@ each word is counted first (one row per request), the rarest word's matches are 
 one request, and a dataset is kept when its title, description, keywords and species name
 every word as the server reads one (``_relevance``: whole words, a word also naming its
 plural). Past ``MAX_ROWS`` matches of the rarest word, its newest ``MAX_ROWS`` are read.
+A word's count is kept ten minutes, for the next search that holds it.
 
 ``resolve`` adds the DOI and FTP location from ``MassiveServlet``. Discovery-only: the
 files are on FTP, which fetch does not speak.
@@ -23,14 +24,17 @@ files are on FTP, which fetch does not speak.
 from __future__ import annotations
 
 import asyncio
+import functools
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
+from typing import Any
 
 import httpx
 
 from data_aggregator_mcp import _http
-from data_aggregator_mcp._relevance import _names, query_terms
+from data_aggregator_mcp._cache import MISS, TTLCache
+from data_aggregator_mcp._relevance import _names, holding_words, query_terms
 from data_aggregator_mcp._relevance import _normalize as _normalize_words
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import Creator, DataResource, Link, compact, local_id, year_from
@@ -53,6 +57,26 @@ _MIN_SENT = 3
 # The rows read for the rarest word: "metabolomics" is 2,778 rows, 7.5 MB, 3.3 s in one
 # request (2026-10-12).
 MAX_ROWS = 5000
+# A word's count, kept ten minutes. An agent's searches rephrase one another: 235 of the
+# 356 counts of an 83-search session repeated a word already counted, and under that
+# load MassIVE took up to 104 s a search (3.75 s alone) and answered 429 six times
+# (2026-10-17). The rows are read with a fresh count, so a kept count costs a request,
+# never a dataset; a kept zero hides a new dataset for at most the ten minutes.
+_COUNTS = TTLCache(maxsize=4096, ttl=600.0)
+# Its datasets naming only some of the words are searched too, below those naming every
+# one (``router._source_streams``); matched here, so asked for with some_words. Each word
+# is a request, and MassIVE answers 429 under load, so the fill reads only the rows of
+# the 2 rarest words that match anything, and only while fewer than a page of datasets
+# name every word. Over the round-3 coral queries a third word's rows added a read in 11
+# of 27 searches and put fewer key studies in the first 50 (272, against 278 with two),
+# its weaker hits crowding them (2026-10-17).
+ANY_WORD_FILL = True
+FILLS_IN_CODE = True
+_FILL_WORDS = 2
+_FILL_BELOW = DEFAULT_SIZE
+# Requests in flight, by what they ask: the every-word search and its fill run at once
+# and ask for the same counts and the rarest word's rows, which are read once for both.
+_PENDING: dict[tuple, asyncio.Task] = {}
 DEFAULT_TIMEOUT = 60.0
 # Lists come as one string joined with "###": keywords, species.
 _SEP = "###"
@@ -107,6 +131,55 @@ async def _query(
     return int(body["total_rows"]), body["row_data"]
 
 
+def _forget(key: tuple, task: asyncio.Task) -> None:
+    if _PENDING.get(key) is task:
+        del _PENDING[key]
+    if not task.cancelled():
+        task.exception()  # retrieved: every caller awaiting it may have been cancelled
+
+
+async def _once(key: tuple, make: Callable[[], Coroutine[Any, Any, Any]]) -> Any:
+    """``make()``, awaited once for every caller asking for ``key`` while it runs."""
+    loop = asyncio.get_running_loop()
+    task = _PENDING.get(key)
+    if task is None or task.get_loop() is not loop:
+        task = _PENDING[key] = loop.create_task(make())
+        task.add_done_callback(functools.partial(_forget, key))
+    # One caller cut off (the router's deadline) must not cancel the others' request.
+    return await asyncio.shield(task)
+
+
+async def _count(client: httpx.AsyncClient, word: str) -> int:
+    """The count of datasets matching ``word``, kept ``_COUNTS.ttl`` seconds."""
+    n = _COUNTS.get(word)
+    if n is MISS:
+        n = await _once(("count", word), lambda: _counted(client, word))
+    return n
+
+
+async def _counted(client: httpx.AsyncClient, word: str) -> int:
+    n, _ = await _query(client, word, size=1, offset=0, service="MassIVE search")
+    _COUNTS.set(word, n)
+    return n
+
+
+async def _shared_rows(client: httpx.AsyncClient, word: str, total: int) -> list[dict]:
+    return await _once(("rows", word, total), lambda: _newest_rows(client, word, total))
+
+
+async def _newest_rows(client: httpx.AsyncClient, word: str, total: int) -> list[dict]:
+    """The newest ``MAX_ROWS`` rows matching ``word``, read where ``total``, its count,
+    puts them. The answer counts afresh: when that differs (the count was kept from an
+    earlier search), they are read again where the fresh count puts them."""
+    n = min(total, MAX_ROWS)
+    fresh, rows = await _query(client, word, size=n, offset=total - n, service="MassIVE search")
+    _COUNTS.set(word, fresh)
+    if fresh not in (total, 0):
+        n = min(fresh, MAX_ROWS)
+        _, rows = await _query(client, word, size=n, offset=fresh - n, service="MassIVE search")
+    return rows
+
+
 def _value(r: dict, field: str) -> str | None:
     """A text field, None when absent, empty or the string "null" (a 2014 row's
     description is "null")."""
@@ -146,29 +219,47 @@ def _text(r: dict) -> str:
     return _normalize_words(" ".join(v for f in _TEXT_FIELDS if (v := _value(r, f))))
 
 
+def _newest_first(rows: list[dict]) -> list[dict]:
+    return sorted(
+        {r["dataset"]: r for r in rows}.values(), key=lambda r: r["dataset"], reverse=True
+    )
+
+
 async def search(
-    client: httpx.AsyncClient, query: str, *, size: int = DEFAULT_SIZE, offset: int = 0
+    client: httpx.AsyncClient,
+    query: str,
+    *,
+    size: int = DEFAULT_SIZE,
+    offset: int = 0,
+    some_words: bool = False,
 ) -> tuple[int, list[DataResource]]:
-    """MassIVE datasets naming every word of ``query``, newest first: (total, compact
-    resources)."""
+    """MassIVE datasets naming every word of ``query``, newest first; with
+    ``some_words``, those naming only some of them, the ones naming more first, while
+    fewer than ``_FILL_BELOW`` name every word: (total, compact resources)."""
     terms = query_terms(query)
     if not terms:
         raise ValueError(f"MassIVE search needs a word to look for; {query!r} has none")
     sent = [t for t in terms if len(t) >= _MIN_SENT] or terms
-    counts = await asyncio.gather(
-        *(_query(client, t, size=1, offset=0, service="MassIVE search") for t in sent)
-    )
+    counts = await asyncio.gather(*(_count(client, t) for t in sent))
     # gather() returns one count per word sent, so strict= cannot change behaviour.
-    total, term = min((c[0], t) for c, t in zip(counts, sent, strict=True))  # pragma: no mutate
-    if total == 0:
-        return 0, []
-    n = min(total, MAX_ROWS)
-    _, rows = await _query(client, term, size=n, offset=total - n, service="MassIVE search")
-    matched = sorted(
-        {r["dataset"]: r for r in rows if all(_names(_text(r), t) for t in terms)}.values(),
-        key=lambda r: r["dataset"],
-        reverse=True,
-    )
+    rarest = sorted(zip(counts, sent, strict=True))  # pragma: no mutate
+    total, term = rarest[0]
+
+    def holds(r: dict, t: str) -> bool:
+        return _names(_text(r), t)
+
+    first = await _shared_rows(client, term, total) if total else []
+    every = holding_words(_newest_first(first), holds, terms)
+    if not some_words:
+        matched = every
+    elif len(every) >= _FILL_BELOW:
+        matched = []
+    else:
+        # The rarest word's rows are read already when it matches anything.
+        read = [(n, t) for n, t in rarest if n][:_FILL_WORDS]
+        pages = await asyncio.gather(*(_shared_rows(client, t, n) for n, t in read[bool(total) :]))
+        rows = _newest_first([*first, *(r for page in pages for r in page)])
+        matched = holding_words(rows, holds, terms, some_words=True)
     capped = min(size, MAX_SIZE)
     return len(matched), [compact(_normalize(r)) for r in matched[offset : offset + capped]]
 

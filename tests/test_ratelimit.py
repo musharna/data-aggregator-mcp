@@ -70,8 +70,8 @@ def test_bucket_classifier_groups_all_ncbi():
     assert _bucket_for("NCBI efetch (sra)", _EUTILS) == "ncbi"
     idconv = "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/"
     assert _bucket_for("NCBI idconv", idconv) == "ncbi"
-    assert _bucket_for("Zenodo search", "https://zenodo.org/api/records") == "default"
-    assert _bucket_for("EuropePMC search", "https://www.ebi.ac.uk/europepmc/x") == "default"
+    assert _bucket_for("Zenodo search", "https://zenodo.org/api/records") == "zenodo-search"
+    assert _bucket_for("EuropePMC search", "https://www.ebi.ac.uk/europepmc/x") == "www.ebi.ac.uk"
 
 
 def test_ncbi_host_is_paced_whatever_the_service_is_called():
@@ -87,8 +87,10 @@ def test_ncbi_host_is_paced_whatever_the_service_is_called():
 def test_bucket_host_match_is_not_fooled_by_a_lookalike_host():
     """Suffix matching must be anchored on a dot boundary, or a host merely ENDING in the
     domain text picks up NCBI's pacing — and a real NCBI host could dodge it."""
-    assert _bucket_for("x", "https://ncbi.nlm.nih.gov.example.com/a") == "default"
-    assert _bucket_for("x", "https://notncbi.nlm.nih.gov/a") == "default"
+    assert _bucket_for("x", "https://ncbi.nlm.nih.gov.example.com/a") == (
+        "ncbi.nlm.nih.gov.example.com"
+    )
+    assert _bucket_for("x", "https://notncbi.nlm.nih.gov/a") == "notncbi.nlm.nih.gov"
     assert _bucket_for("x", "https://ncbi.nlm.nih.gov/a") == "ncbi"  # the bare domain counts
 
 

@@ -100,12 +100,23 @@ _URL_ID_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (re.compile(r"^(?:https?://)?(?:www\.)?dandiarchive\.org/dandiset/(\d+)"), "dandi:{0}"),
     (re.compile(r"^(?:https?://)?huggingface\.co/datasets/([^/\s?#]+)/([^/\s?#]+)"), "hf:{0}/{1}"),
+    # Dryad's landing page names the deposit by its DOI, which joins it as a DOI does.
+    # `stash/dataset/` and `resource/` are the older forms it redirects to, and the DOI's
+    # slash may come encoded (`doi:10.5061%2Fdryad.x`, live 2026-10-17).
+    (
+        re.compile(
+            r"^(?:https?://)?(?:www\.)?datadryad\.org/(?:stash/dataset|dataset|resource)/doi:"
+            r"(10\.\d{4,9})(?:/|%2[Ff])([^\s?#]+)"
+        ),
+        "{0}/{1}",
+    ),
 )
 
 
 def _url_to_id(value: str | None) -> str | None:
-    """Canonicalize a known source landing-page URL to its ``<source>:<localpart>`` id.
-    Non-URL values and unrecognized URLs are returned unchanged."""
+    """Canonicalize a known source landing-page URL to its ``<source>:<localpart>`` id, or
+    to the DOI a page names its record by. Non-URL values and unrecognized URLs are
+    returned unchanged."""
     if not value:
         return value
     s = value.strip()
