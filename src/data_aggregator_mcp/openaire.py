@@ -17,7 +17,7 @@ from collections.abc import Mapping
 import httpx
 
 from data_aggregator_mcp import _http, europepmc, fulltext, idconv, omics, scholix
-from data_aggregator_mcp.errors import NotFoundError
+from data_aggregator_mcp.errors import NotFoundError, ValidationError
 from data_aggregator_mcp.models import Creator, DataResource, normalize_access
 
 DEFAULT_SIZE = 10
@@ -27,6 +27,10 @@ BASE_URL = "https://api.openaire.eu/graph/v1/researchProducts"
 # four upper-case AND/OR/NOT words outside quotes (probed live 2026-10-04). The router
 # sends this backend a shortened ontology expansion that fits (_ontology.within_operator_limit).
 MAX_OPERATORS = 4
+# The search serves a page only while page * pageSize <= 10,000: page 201 of 50 answers
+# HTTP 400 "Page * pageSize must be less than or equal to 10000" (live 2026-10-17), which
+# was retried and read as an outage on every page past the window.
+_WINDOW = 10_000
 _GET = "GET"
 _ESCAPE_ALL = ""  # quote(safe=...): an id is one path segment, so even "/" is escaped
 
@@ -177,9 +181,15 @@ async def search(
     offset: int = 0,
 ) -> tuple[int, list[DataResource]]:
     capped = min(size, MAX_SIZE)
+    page = offset // capped + 1
+    if page * capped > _WINDOW:
+        raise ValidationError(
+            f"OpenAIRE serves only the first {_WINDOW} records of a search; the page holding "
+            f"offset {offset} ends past them, so narrow the query"
+        )
     params: dict[str, str | int] = {"search": query, "type": "publication", "pageSize": capped}
     if offset:  # only when paging past page 1, so offset=0 request stays byte-identical
-        params["page"] = offset // capped + 1
+        params["page"] = page
     data = await _http.request_json(
         client,
         _GET,
