@@ -86,6 +86,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A UTF-16 CSV or TSV (Excel's "Unicode Text" export) is read: schema and preview showed
   every character as U+FFFD, and head and sql refused the file as not UTF-8. Either byte
   order is told by its byte-order mark, and every reader names the columns alike.
+- An OSF record whose files sit partly in its components or on add-on storage (GitHub,
+  Dropbox…) says so in `truncated.files`, naming the components. Only the node's own
+  OSF storage is listed, and the list read as complete: the Reproducibility Project:
+  Psychology (osf.io/ezcuj) listed 1 file beside 49 components.
 
 ## [0.74.1] - 2026-10-16
 
