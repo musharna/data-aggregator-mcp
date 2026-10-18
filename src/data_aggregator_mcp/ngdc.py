@@ -25,7 +25,7 @@ import re
 import httpx
 
 from data_aggregator_mcp import _http
-from data_aggregator_mcp._relevance import with_plurals
+from data_aggregator_mcp._relevance import drop_stray_marks, with_plurals
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import DataResource, Link, compact, local_id, year_from
 
@@ -141,6 +141,7 @@ async def search(
 ) -> tuple[int, list[DataResource]]:
     """NGDC's own BioProjects matching ``query``: (total, compact resources). The
     endpoint pages by ``start``/``length``, so ``offset`` is sent as is."""
+    query = drop_stray_marks(query, ":;")
     q = with_plurals(query) if plurals else query
     total, rows = await _query(
         client,

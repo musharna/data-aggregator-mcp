@@ -12,6 +12,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   a record that now redirects to a restricted one with no files, so a model trying the
   example got nothing to read. Both now quote the `list_sources` examples, which the live
   tests resolve, and so does the reference's `resolve` section.
+- A title pasted with a colon after a word ("Survival at the edge: Inbreeding purging
+  ...") found nothing on OmicsDI or NGDC, which read the colon as query syntax and take
+  no escape, so the study was missing from those two sources. The colon is now dropped
+  before the query is sent, and on NGDC a semicolon after a word too; a colon with its
+  value attached (`TAXONOMY:9606`) is still sent as written.
 
 ## [0.74.1] - 2026-10-16
 
