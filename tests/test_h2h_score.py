@@ -483,3 +483,25 @@ def test_server_spec_runs_dam_from_a_pushed_commit_and_preflight_checks_it(
         run.preflight(tasks, args)
     with pytest.raises(SystemExit, match="is not git"):
         run.preflight(tasks, _cfg(arms="dam", out=tmp_path, server_spec=spec[:-1]))
+
+
+def test_adjudication_verdicts_merge_into_the_scorers_format_and_rescore(tmp_path: Path) -> None:
+    import adjudicate
+
+    pool = {"X": [{"id": "GSE777", "same_as": ["PRJNA777"]}, {"id": "E-MTAB-9"},
+                  {"id": "MSV000555"}, {"id": "GSE999"}, {"id": "zenodo:42"}]}  # fmt: skip
+    verdicts = {"X": [
+        {"id": "GSE777", "verdict": "add:A1"}, {"id": "E-MTAB-9", "verdict": "add:A1"},
+        {"id": "MSV000555", "verdict": "alias:S3"}, {"id": "GSE999", "verdict": "reject"},
+        {"id": "zenodo:42", "verdict": "optional:B1"}]}  # fmt: skip
+    adj, reasons = adjudicate.merge(verdicts, pool)
+    assert adj["X"]["add"] == [{"key": "A1", "ids": ["E-MTAB-9", "GSE777", "PRJNA777"]}]
+    assert adj["X"]["alias"] == {"S3": ["MSV000555"]} and adj["X"]["reject"] == ["GSE999"]
+    assert len(reasons) == 5
+    listed = [{"id": "GSE777"}, {"id": "MSV000555"}, {"id": "GSE999"}, {"id": "zenodo:42"}]
+    s = run.score_list(TASK, _run_dir(tmp_path, listed), adj)
+    assert s["found_keys"] == ["A1", "S3"] and s["irrelevant"] == 1 and not s["pending"], s
+    with pytest.raises(SystemExit, match="no verdict for GSE999"):  # every entry is judged
+        adjudicate.merge({"X": verdicts["X"][:3]}, pool)
+    with pytest.raises(SystemExit, match="bad verdict"):
+        adjudicate.merge({"X": [*verdicts["X"][:4], {"id": "zenodo:42", "verdict": "maybe"}]}, pool)
