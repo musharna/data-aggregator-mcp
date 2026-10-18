@@ -716,7 +716,7 @@
   "id": "U5",
   "kind": "list",
   "prompt": "Find every public dataset, in any archive, that holds eye-tracking recordings of children or adolescents (under 18) reading text (sentences or passages, in any language): raw gaze samples, fixations and saccades, or per-word or per-region reading measures derived from them. Corpora that include child readers alongside adults count; adult-only samples, non-reading eye-tracking tasks, single-word naming without eye tracking, and papers without deposited data do not count.",
-  "frozen": "2026-10-16",
+  "frozen": "2026-10-18",
   "studies": [
    {
     "key": "S1",
@@ -783,28 +783,6 @@
     ]
    },
    {
-    "key": "S10",
-    "ids": [
-     "10.17605/osf.io/frgw8",
-     "osf.io/frgw8"
-    ]
-   }
-  ],
-  "optional": [
-   {
-    "key": "S11",
-    "ids": [
-     "10.17605/osf.io/uk8bt",
-     "10.17605/osf.io/37tdg",
-     "10.17605/osf.io/ujq7a",
-     "10.17605/osf.io/5j7f8",
-     "10.17605/osf.io/nvxfm",
-     "10.17605/osf.io/pqywf",
-     "10.17605/osf.io/5td87",
-     "10.17605/osf.io/5bdak"
-    ]
-   },
-   {
     "key": "S12",
     "ids": [
      "10.17605/osf.io/6gnxe",
@@ -816,13 +794,6 @@
     "ids": [
      "10.17605/osf.io/xu384",
      "osf.io/xu384"
-    ]
-   },
-   {
-    "key": "S14",
-    "ids": [
-     "10.17605/osf.io/x6wmf",
-     "osf.io/x6wmf"
     ]
    },
    {
@@ -864,12 +835,6 @@
     ]
    },
    {
-    "key": "S20",
-    "ids": [
-     "osf.io/28qyf"
-    ]
-   },
-   {
     "key": "S21",
     "ids": [
      "osf.io/g85sh"
@@ -894,12 +859,6 @@
     ]
    },
    {
-    "key": "S25",
-    "ids": [
-     "osf.io/gbsmf"
-    ]
-   },
-   {
     "key": "S26",
     "ids": [
      "osf.io/26nvz",
@@ -912,17 +871,34 @@
     "ids": [
      "osf.io/d9528"
     ]
-   },
+   }
+  ],
+  "optional": [
    {
-    "key": "S28",
+    "key": "S10",
     "ids": [
-     "osf.io/j2tke"
+     "10.17605/osf.io/frgw8",
+     "osf.io/frgw8"
     ]
    },
    {
-    "key": "S29",
+    "key": "S11",
     "ids": [
-     "osf.io/s8j2n"
+     "10.17605/osf.io/uk8bt",
+     "10.17605/osf.io/37tdg",
+     "10.17605/osf.io/ujq7a",
+     "10.17605/osf.io/5j7f8",
+     "10.17605/osf.io/nvxfm",
+     "10.17605/osf.io/pqywf",
+     "10.17605/osf.io/5td87",
+     "10.17605/osf.io/5bdak"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.17605/osf.io/x6wmf",
+     "osf.io/x6wmf"
     ]
    },
    {
@@ -948,6 +924,13 @@
     "key": "S33",
     "ids": [
      "github.com/Sorooshi/DD"
+    ]
+   },
+   {
+    "key": "S34",
+    "ids": [
+     "10.17605/osf.io/xp5ac",
+     "osf.io/xp5ac"
     ]
    }
   ]

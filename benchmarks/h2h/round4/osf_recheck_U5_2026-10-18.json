@@ -1,0 +1,6571 @@
+{
+ "checked": "2026-10-18T18:10:06-0400",
+ "api": "https://api.osf.io/v2",
+ "nodes": [
+  {
+   "guid": "hx2sj",
+   "status": 200,
+   "title": "EyeReadIt: A developmental eye-tracking corpus of text reading in Italian",
+   "public": true,
+   "category": "project",
+   "date_created": "2020-06-25T08:13:40.849244",
+   "description": "Database of eye movement measures collected from developing and adult readers of Italian during multiline passage reading",
+   "files": [
+    {
+     "path": "osfstorage:/README.txt",
+     "size": 16838
+    },
+    {
+     "path": "osfstorage:/data_analysis_and_materials.zip",
+     "size": 12011631
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "tfdyh",
+   "status": 404,
+   "guid_status": 200,
+   "guid_type": "preprints"
+  },
+  {
+   "guid": "wr4qf",
+   "status": 200,
+   "title": "A Systematic Evaluation of Dutch Large Language Models\u2019 Surprisal Estimates in Sentence, Paragraph, and Book Reading",
+   "public": true,
+   "category": "project",
+   "date_created": "2024-10-01T11:18:20.245870",
+   "description": "A psychometric evaluation of Dutch large language models.",
+   "files": [
+    {
+     "path": "osfstorage:/Poster_QuaSemo_2024.pdf",
+     "size": 988335
+    },
+    {
+     "path": "osfstorage:/DutchLLM-SupplementaryMaterial.pdf",
+     "size": 454775
+    },
+    {
+     "path": "osfstorage:/DutchLLM-Manuscript.pdf",
+     "size": 998840
+    },
+    {
+     "path": "osfstorage:/4. General/00_Main.R",
+     "size": 629
+    },
+    {
+     "path": "osfstorage:/4. General/01_Visualization.R",
+     "size": 37837
+    },
+    {
+     "path": "osfstorage:/3. GECO/Python/GECO_surprisal.ipynb",
+     "size": 97249
+    },
+    {
+     "path": "osfstorage:/3. GECO/R/01_G_Data.R",
+     "size": 6404
+    },
+    {
+     "path": "osfstorage:/3. GECO/R/02_G_CrossVal.R",
+     "size": 19368
+    },
+    {
+     "path": "osfstorage:/3. GECO/R/03_G_GAM.R",
+     "size": 19388
+    },
+    {
+     "path": "osfstorage:/3. GECO/R/df_full.rds",
+     "size": 47666823
+    },
+    {
+     "path": "osfstorage:/3. GECO/R/Data_GECO.csv",
+     "size": 815485364
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/GECO_stimuli_cl.csv",
+     "size": 1801661
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/GECO_sentence.txt",
+     "size": 425619
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/gpt2-large-dutch.csv",
+     "size": 4655205
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/GEITje-7B.csv",
+     "size": 4925351
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/Boreas-7B.csv",
+     "size": 4579956
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/5gram.csv",
+     "size": 5009946
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/fietje-2.csv",
+     "size": 4661682
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/gpt2-medium-dutch.csv",
+     "size": 4653747
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/gpt2-medium-dutch-embeddings.csv",
+     "size": 4665253
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/gpt2-medium-dutch-finetune-oscar.csv",
+     "size": 4687622
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/gpt2-small-dutch.csv",
+     "size": 4667772
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/gpt2-small-dutch-embeddings.csv",
+     "size": 4665233
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/gpt-neo-1.3B-dutch.csv",
+     "size": 4653131
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/Llama-3-8B-dutch.csv",
+     "size": 4520949
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/gpt-neo-125M-dutch.csv",
+     "size": 4651115
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/gpt2-small-dutch-finetune-oscar.csv",
+     "size": 4684990
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/tweety-7b-dutch-v24a.csv",
+     "size": 4370150
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/mGPT.csv",
+     "size": 4753666
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/EuroLLM-1.7B.csv",
+     "size": 4432509
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/EuroLLM-9B.csv",
+     "size": 4439884
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/salamandra-2b.csv",
+     "size": 4417919
+    },
+    {
+     "path": "osfstorage:/3. GECO/Stimuli/Surprisal estimates per model/salamandra-7b.csv",
+     "size": 4423821
+    },
+    {
+     "path": "osfstorage:/2. MECO/Python/MECO_surprisal.ipynb",
+     "size": 116959
+    },
+    {
+     "path": "osfstorage:/2. MECO/R/02_M_CrossVal.R",
+     "size": 19331
+    },
+    {
+     "path": "osfstorage:/2. MECO/R/01_M_Data.R",
+     "size": 4765
+    },
+    {
+     "path": "osfstorage:/2. MECO/R/03_M_GAM.R",
+     "size": 19612
+    },
+    {
+     "path": "osfstorage:/2. MECO/R/df_full.rds",
+     "size": 2788887
+    },
+    {
+     "path": "osfstorage:/2. MECO/R/Data_MECO.csv",
+     "size": 87886321
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/MECO_stimuli.csv",
+     "size": 37770
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/MECO_stimuli.txt",
+     "size": 14587
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/5gram.csv",
+     "size": 112179
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/fietje-2.csv",
+     "size": 142002
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/Boreas-7B.csv",
+     "size": 129309
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/GEITje-7B.csv",
+     "size": 126402
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/gpt2-large-dutch.csv",
+     "size": 120999
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/gpt2-medium-dutch.csv",
+     "size": 121034
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/gpt2-medium-dutch-embeddings.csv",
+     "size": 120713
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/gpt2-small-dutch-embeddings.csv",
+     "size": 120778
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/gpt2-medium-dutch-finetune-oscar.csv",
+     "size": 121071
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/gpt2-small-dutch.csv",
+     "size": 120823
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/gpt-neo-125M-dutch.csv",
+     "size": 120905
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/gpt-neo-1.3B-dutch.csv",
+     "size": 120954
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/gpt2-small-dutch-finetune-oscar.csv",
+     "size": 120996
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/Llama-3-8B-dutch.csv",
+     "size": 124745
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/mGPT.csv",
+     "size": 124396
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/tweety-7b-dutch-v24a.csv",
+     "size": 121304
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/EuroLLM-1.7B.csv",
+     "size": 123333
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/EuroLLM-9B.csv",
+     "size": 123606
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/salamandra-2b.csv",
+     "size": 123046
+    },
+    {
+     "path": "osfstorage:/2. MECO/Stimuli/Surprisal estimates per model/salamandra-7b.csv",
+     "size": 123293
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Python/RaCCooNS_surprisal.ipynb",
+     "size": 189466
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/R/01_R_Data.R",
+     "size": 4601
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/R/02_R_CrossVal.R",
+     "size": 19471
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/R/03_R_GAM.R",
+     "size": 20087
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/R/df_full.rds",
+     "size": 5218202
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/R/Data_RaCCooNS.csv",
+     "size": 116405259
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/RaCCooNS_stimuli.csv",
+     "size": 44457
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/RaCCooNS_stimuli.txt",
+     "size": 15522
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/GEITje-7B.csv",
+     "size": 164655
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/Boreas-7B.csv",
+     "size": 164722
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/fietje-2.csv",
+     "size": 168040
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/5gram.csv",
+     "size": 65940
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/gpt2-large-dutch.csv",
+     "size": 156155
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/gpt2-small-dutch.csv",
+     "size": 155879
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/gpt2-medium-dutch.csv",
+     "size": 156125
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/gpt2-medium-dutch-embeddings.csv",
+     "size": 155923
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/gpt2-medium-dutch-finetune-oscar.csv",
+     "size": 156147
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/gpt-neo-1.3B-dutch.csv",
+     "size": 156097
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/Llama-3-8B-dutch.csv",
+     "size": 162413
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/gpt2-small-dutch-finetune-oscar.csv",
+     "size": 156092
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/gpt2-small-dutch-embeddings.csv",
+     "size": 155846
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/mGPT.csv",
+     "size": 160201
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/gpt-neo-125M-dutch.csv",
+     "size": 155991
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/tweety-7b-dutch-v24a.csv",
+     "size": 155851
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/EuroLLM-1.7B.csv",
+     "size": 142623
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/EuroLLM-9B.csv",
+     "size": 158260
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/salamandra-7b.csv",
+     "size": 157744
+    },
+    {
+     "path": "osfstorage:/1. RaCCooNS/Stimuli/Surprisal estimates per model/salamandra-2b.csv",
+     "size": 157597
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "nmgxd",
+   "status": 200,
+   "title": "Benchmark measures of eye movements during reading in Russian children",
+   "public": true,
+   "category": "project",
+   "date_created": "2022-06-06T09:50:45.967665",
+   "description": "Child Russian Sentence Corpus (ChiRSC) includes eye-movement data of 222 typically-developing children from grades 1-6 who read 30 sentences.\n",
+   "files": [
+    {
+     "path": "osfstorage:/Conferences/ECEM2022_poster.pdf",
+     "size": 1633138
+    },
+    {
+     "path": "osfstorage:/Materials/words.csv",
+     "size": 42892
+    },
+    {
+     "path": "osfstorage:/Materials/sentences.csv",
+     "size": 4468
+    },
+    {
+     "path": "osfstorage:/Materials/participants.csv",
+     "size": 8407
+    },
+    {
+     "path": "osfstorage:/Analysis/data.csv",
+     "size": 8863291
+    },
+    {
+     "path": "osfstorage:/Analysis/Simple slopes analysis of interactions.pdf",
+     "size": 74973
+    },
+    {
+     "path": "osfstorage:/Analysis/Analysis.R",
+     "size": 34794
+    },
+    {
+     "path": "osfstorage:/Analysis/Tables.pdf",
+     "size": 112769
+    },
+    {
+     "path": "osfstorage:/Preprocessing/Preprocessing.R",
+     "size": 3071
+    },
+    {
+     "path": "osfstorage:/Preprocessing/IA_children_norm.csv",
+     "size": 13376125
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "2x5pk",
+   "status": 404,
+   "guid_status": 200,
+   "guid_type": "preprints"
+  },
+  {
+   "guid": "frgw8",
+   "status": 200,
+   "title": "Keep It Simple: Streamlining Book Illustrations Improves Attention and Comprehension in Beginning Readers",
+   "public": true,
+   "category": "project",
+   "date_created": "2019-12-08T21:53:16.160636",
+   "description": "This study used eye-tracking technology to examine whether extraneous illustrations (entertaining, but nonessential features to comprehend the story)\u2013a design common in beginning reader storybooks\u2013promote attentional competition and hinder reading comprehension in beginning readers. We used a within-subject design in two experiments with first and second grade children (N=120). Children were presented with a story in a commercially available \u201cStandard\u201d Condition and two experimental Conditions: a Streamlined Condition (Experiment 1; with extraneous illustrations removed) and a Featureless Back",
+   "files": [
+    {
+     "path": "osfstorage:/Study Codebook.pdf",
+     "size": 168687
+    },
+    {
+     "path": "osfstorage:/README.rtf",
+     "size": 5871
+    },
+    {
+     "path": "osfstorage:/Example Materials/ExampleReadingMaterials.png",
+     "size": 790651
+    },
+    {
+     "path": "osfstorage:/Code for Analyses/Control_ExperimentAnalyses.sps",
+     "size": 1995
+    },
+    {
+     "path": "osfstorage:/Code for Analyses/Experiment1_Analyses.sps",
+     "size": 2293
+    },
+    {
+     "path": "osfstorage:/Code for Analyses/Analyses_PlainText.txt",
+     "size": 4275
+    },
+    {
+     "path": "osfstorage:/Code for Analyses/Experiment1_Analyses_LMM.sps",
+     "size": 2233
+    },
+    {
+     "path": "osfstorage:/Code for Analyses/ControlExperiment_Analyses_LMM.sps",
+     "size": 2240
+    },
+    {
+     "path": "osfstorage:/Code for Analyses/Analyses_PlainText_LMM.txt",
+     "size": 4938
+    },
+    {
+     "path": "osfstorage:/Data/ControlExperiment.csv",
+     "size": 20299
+    },
+    {
+     "path": "osfstorage:/Data/ControlExperiment.sav",
+     "size": 21084
+    },
+    {
+     "path": "osfstorage:/Data/Experiment1.csv",
+     "size": 18791
+    },
+    {
+     "path": "osfstorage:/Data/Experiment1.sav",
+     "size": 19892
+    },
+    {
+     "path": "osfstorage:/Data/Experiment1_LMM.sav",
+     "size": 4404
+    },
+    {
+     "path": "osfstorage:/Data/Experiment1_LMM.csv",
+     "size": 4460
+    },
+    {
+     "path": "osfstorage:/Data/ControlExperiment_LMM.sav",
+     "size": 4524
+    },
+    {
+     "path": "osfstorage:/Data/ControlExperiment_LMM.csv",
+     "size": 4663
+    },
+    {
+     "path": "osfstorage:/Eye Gaze Patterns Example Videos/Exp1_Standard Condition_Sample Subject B.mp4",
+     "size": 15013845
+    },
+    {
+     "path": "osfstorage:/Eye Gaze Patterns Example Videos/Exp1_Streamlined Condition_SampleSubject A.mp4",
+     "size": 21206061
+    },
+    {
+     "path": "osfstorage:/Eye Gaze Patterns Example Videos/ControlExp_Featureless Background Condition_Sample Subject C.mp4",
+     "size": 18348619
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "uk8bt",
+   "status": 200,
+   "title": "Where do children look when watching videos with same-language subtitles?",
+   "public": true,
+   "category": "project",
+   "date_created": "2023-03-26T16:53:00.436741",
+   "description": "Stimulus materials, data, analysis scripts, and Supplemental Materials of the eye-tracking experiment, investigating  the extent to which primary-school children pay attention to and read subtitles, and whether this is related to their reading proficiency.",
+   "files": [
+    {
+     "path": "osfstorage:/Videos/Year6_subtitles_nosubtitles.mp4",
+     "size": 40955227
+    },
+    {
+     "path": "osfstorage:/Videos/Year1-Year6_subtitles.mp4",
+     "size": 41176362
+    },
+    {
+     "path": "osfstorage:/Videos/README.txt",
+     "size": 156
+    },
+    {
+     "path": "osfstorage:/Supplemental Materials/Supplemental Materials.pdf",
+     "size": 713681
+    }
+   ],
+   "components": [
+    {
+     "guid": "45q36",
+     "status": 200,
+     "title": "Pre-registration",
+     "public": true,
+     "category": "other",
+     "date_created": "2023-03-26T16:57:46.861295",
+     "description": "",
+     "files": [
+      {
+       "path": "osfstorage:/Non-anonymous_Preregistration_26March2023_Subtitles_Exp1.pdf",
+       "size": 126365
+      }
+     ],
+     "components": []
+    },
+    {
+     "guid": "37tdg",
+     "status": 200,
+     "title": "Materials",
+     "public": true,
+     "category": "other",
+     "date_created": "2024-04-23T16:08:01.414580",
+     "description": "Stimulus materials of the eye-tracking experiment, investigating the extent to which primary-school children pay attention to and read subtitles, and whether this is related to their reading proficiency.",
+     "files": [
+      {
+       "path": "osfstorage:/Materials/Subtitles.csv",
+       "size": 34114
+      },
+      {
+       "path": "osfstorage:/Materials/Words_subtitles.csv",
+       "size": 153497
+      },
+      {
+       "path": "osfstorage:/Materials/Words_Curriculum-based books.csv",
+       "size": 259522
+      },
+      {
+       "path": "osfstorage:/Materials/Words_Wandle Reading Scheme books.csv",
+       "size": 595361
+      },
+      {
+       "path": "osfstorage:/Materials/Words_CBBC programmes.csv",
+       "size": 5661823
+      },
+      {
+       "path": "osfstorage:/Materials/0. README_Materials.pdf",
+       "size": 140617
+      }
+     ],
+     "components": []
+    },
+    {
+     "guid": "ujq7a",
+     "status": 200,
+     "title": "Data",
+     "public": true,
+     "category": "data",
+     "date_created": "2024-04-23T16:09:00.291138",
+     "description": "Data of the eye-tracking experiment, investigating the extent to which primary-school children pay attention to and read subtitles, and whether this is related to their reading proficiency.",
+     "files": [
+      {
+       "path": "osfstorage:/Data/comprehension_analysis_adults_y6.csv",
+       "size": 14898
+      },
+      {
+       "path": "osfstorage:/Data/data_ias_children.csv",
+       "size": 17713859
+      },
+      {
+       "path": "osfstorage:/Data/data_saccade_adults_y6.csv",
+       "size": 10504428
+      },
+      {
+       "path": "osfstorage:/Data/data_ias_adults_y6.csv",
+       "size": 3837938
+      },
+      {
+       "path": "osfstorage:/Data/comprehension_analysis_children_global.csv",
+       "size": 47666
+      },
+      {
+       "path": "osfstorage:/Data/data_ias_y1_subtitles.csv",
+       "size": 943618
+      },
+      {
+       "path": "osfstorage:/Data/comprehension_analysis_children.csv",
+       "size": 77097
+      },
+      {
+       "path": "osfstorage:/Data/data_words_adults_y6.csv",
+       "size": 8343402
+      },
+      {
+       "path": "osfstorage:/Data/data_words_adults_y6_skipping.csv",
+       "size": 7482520
+      },
+      {
+       "path": "osfstorage:/Data/data_words_y1_noskip.csv",
+       "size": 1972936
+      },
+      {
+       "path": "osfstorage:/Data/data_words_children_skipping.csv",
+       "size": 22659246
+      },
+      {
+       "path": "osfstorage:/Data/data_saccade_children.csv",
+       "size": 46488415
+      },
+      {
+       "path": "osfstorage:/Data/data_words_children.csv",
+       "size": 29250947
+      },
+      {
+       "path": "osfstorage:/Data/Words_subtitles.csv",
+       "size": 153497
+      },
+      {
+       "path": "osfstorage:/Data/Words_CBBC programmes.csv",
+       "size": 5661823
+      },
+      {
+       "path": "osfstorage:/Data/Words_Wandle Reading Scheme books.csv",
+       "size": 595361
+      },
+      {
+       "path": "osfstorage:/Data/Words_Curriculum-based books.csv",
+       "size": 259522
+      },
+      {
+       "path": "osfstorage:/Data/Subtitles.csv",
+       "size": 34114
+      },
+      {
+       "path": "osfstorage:/Data/0. README_Data.pdf",
+       "size": 197820
+      }
+     ],
+     "components": []
+    },
+    {
+     "guid": "5j7f8",
+     "status": 200,
+     "title": "Analysis",
+     "public": true,
+     "category": "analysis",
+     "date_created": "2024-04-23T16:11:39.470780",
+     "description": "Analysis scripts of the eye-tracking experiment, investigating the extent to which primary-school children pay attention to and read subtitles, and whether this is related to their reading proficiency.",
+     "files": [
+      {
+       "path": "osfstorage:/Analysis/2. SCRIPT_eyetracking_words_children.R",
+       "size": 11282
+      },
+      {
+       "path": "osfstorage:/Analysis/3. SCRIPT_comprehension_children.R",
+       "size": 9618
+      },
+      {
+       "path": "osfstorage:/Analysis/4. SCRIPT_eyetracking_global_Y6-adults.R",
+       "size": 11901
+      },
+      {
+       "path": "osfstorage:/Analysis/1. SCRIPT_eyetracking_global_children.R",
+       "size": 27006
+      },
+      {
+       "path": "osfstorage:/Analysis/5. SCRIPT_eyetracking_words_Y6-adults.R",
+       "size": 8994
+      },
+      {
+       "path": "osfstorage:/Analysis/6. SCRIPT_comprehension_Y6-adults.R",
+       "size": 2583
+      },
+      {
+       "path": "osfstorage:/Analysis/7. SCRIPT_eyetracking_Year1.R",
+       "size": 9173
+      },
+      {
+       "path": "osfstorage:/Analysis/8. SCRIPT_materials.R",
+       "size": 3474
+      },
+      {
+       "path": "osfstorage:/Analysis/9. SCRIPT_eyetracking_global_children BPVS.R",
+       "size": 10615
+      },
+      {
+       "path": "osfstorage:/Analysis/11. SCRIPT_comprehension_children BPVS.R",
+       "size": 3445
+      },
+      {
+       "path": "osfstorage:/Analysis/10. SCRIPT_eyetracking_words_children BPVS.R",
+       "size": 7486
+      },
+      {
+       "path": "osfstorage:/Analysis/0. README_Analysis.pdf",
+       "size": 43829
+      }
+     ],
+     "components": []
+    }
+   ]
+  },
+  {
+   "guid": "37tdg",
+   "status": 200,
+   "title": "Materials",
+   "public": true,
+   "category": "other",
+   "date_created": "2024-04-23T16:08:01.414580",
+   "description": "Stimulus materials of the eye-tracking experiment, investigating the extent to which primary-school children pay attention to and read subtitles, and whether this is related to their reading proficiency.",
+   "files": [
+    {
+     "path": "osfstorage:/Materials/Subtitles.csv",
+     "size": 34114
+    },
+    {
+     "path": "osfstorage:/Materials/Words_subtitles.csv",
+     "size": 153497
+    },
+    {
+     "path": "osfstorage:/Materials/Words_Curriculum-based books.csv",
+     "size": 259522
+    },
+    {
+     "path": "osfstorage:/Materials/Words_Wandle Reading Scheme books.csv",
+     "size": 595361
+    },
+    {
+     "path": "osfstorage:/Materials/Words_CBBC programmes.csv",
+     "size": 5661823
+    },
+    {
+     "path": "osfstorage:/Materials/0. README_Materials.pdf",
+     "size": 140617
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "ujq7a",
+   "status": 200,
+   "title": "Data",
+   "public": true,
+   "category": "data",
+   "date_created": "2024-04-23T16:09:00.291138",
+   "description": "Data of the eye-tracking experiment, investigating the extent to which primary-school children pay attention to and read subtitles, and whether this is related to their reading proficiency.",
+   "files": [
+    {
+     "path": "osfstorage:/Data/comprehension_analysis_adults_y6.csv",
+     "size": 14898
+    },
+    {
+     "path": "osfstorage:/Data/data_ias_children.csv",
+     "size": 17713859
+    },
+    {
+     "path": "osfstorage:/Data/data_saccade_adults_y6.csv",
+     "size": 10504428
+    },
+    {
+     "path": "osfstorage:/Data/data_ias_adults_y6.csv",
+     "size": 3837938
+    },
+    {
+     "path": "osfstorage:/Data/comprehension_analysis_children_global.csv",
+     "size": 47666
+    },
+    {
+     "path": "osfstorage:/Data/data_ias_y1_subtitles.csv",
+     "size": 943618
+    },
+    {
+     "path": "osfstorage:/Data/comprehension_analysis_children.csv",
+     "size": 77097
+    },
+    {
+     "path": "osfstorage:/Data/data_words_adults_y6.csv",
+     "size": 8343402
+    },
+    {
+     "path": "osfstorage:/Data/data_words_adults_y6_skipping.csv",
+     "size": 7482520
+    },
+    {
+     "path": "osfstorage:/Data/data_words_y1_noskip.csv",
+     "size": 1972936
+    },
+    {
+     "path": "osfstorage:/Data/data_words_children_skipping.csv",
+     "size": 22659246
+    },
+    {
+     "path": "osfstorage:/Data/data_saccade_children.csv",
+     "size": 46488415
+    },
+    {
+     "path": "osfstorage:/Data/data_words_children.csv",
+     "size": 29250947
+    },
+    {
+     "path": "osfstorage:/Data/Words_subtitles.csv",
+     "size": 153497
+    },
+    {
+     "path": "osfstorage:/Data/Words_CBBC programmes.csv",
+     "size": 5661823
+    },
+    {
+     "path": "osfstorage:/Data/Words_Wandle Reading Scheme books.csv",
+     "size": 595361
+    },
+    {
+     "path": "osfstorage:/Data/Words_Curriculum-based books.csv",
+     "size": 259522
+    },
+    {
+     "path": "osfstorage:/Data/Subtitles.csv",
+     "size": 34114
+    },
+    {
+     "path": "osfstorage:/Data/0. README_Data.pdf",
+     "size": 197820
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "5j7f8",
+   "status": 200,
+   "title": "Analysis",
+   "public": true,
+   "category": "analysis",
+   "date_created": "2024-04-23T16:11:39.470780",
+   "description": "Analysis scripts of the eye-tracking experiment, investigating the extent to which primary-school children pay attention to and read subtitles, and whether this is related to their reading proficiency.",
+   "files": [
+    {
+     "path": "osfstorage:/Analysis/2. SCRIPT_eyetracking_words_children.R",
+     "size": 11282
+    },
+    {
+     "path": "osfstorage:/Analysis/3. SCRIPT_comprehension_children.R",
+     "size": 9618
+    },
+    {
+     "path": "osfstorage:/Analysis/4. SCRIPT_eyetracking_global_Y6-adults.R",
+     "size": 11901
+    },
+    {
+     "path": "osfstorage:/Analysis/1. SCRIPT_eyetracking_global_children.R",
+     "size": 27006
+    },
+    {
+     "path": "osfstorage:/Analysis/5. SCRIPT_eyetracking_words_Y6-adults.R",
+     "size": 8994
+    },
+    {
+     "path": "osfstorage:/Analysis/6. SCRIPT_comprehension_Y6-adults.R",
+     "size": 2583
+    },
+    {
+     "path": "osfstorage:/Analysis/7. SCRIPT_eyetracking_Year1.R",
+     "size": 9173
+    },
+    {
+     "path": "osfstorage:/Analysis/8. SCRIPT_materials.R",
+     "size": 3474
+    },
+    {
+     "path": "osfstorage:/Analysis/9. SCRIPT_eyetracking_global_children BPVS.R",
+     "size": 10615
+    },
+    {
+     "path": "osfstorage:/Analysis/11. SCRIPT_comprehension_children BPVS.R",
+     "size": 3445
+    },
+    {
+     "path": "osfstorage:/Analysis/10. SCRIPT_eyetracking_words_children BPVS.R",
+     "size": 7486
+    },
+    {
+     "path": "osfstorage:/Analysis/0. README_Analysis.pdf",
+     "size": 43829
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "nvxfm",
+   "status": 404,
+   "guid_status": 200,
+   "guid_type": "registrations"
+  },
+  {
+   "guid": "pqywf",
+   "status": 404,
+   "guid_status": 200,
+   "guid_type": "registrations"
+  },
+  {
+   "guid": "5td87",
+   "status": 404,
+   "guid_status": 200,
+   "guid_type": "registrations"
+  },
+  {
+   "guid": "5bdak",
+   "status": 404,
+   "guid_status": 200,
+   "guid_type": "registrations"
+  },
+  {
+   "guid": "6gnxe",
+   "status": 200,
+   "title": "Phonological and orthographic parafoveal processing during silent reading in Russian children and adults",
+   "public": true,
+   "category": "project",
+   "date_created": "2021-09-13T09:15:17.111446",
+   "description": "Studies on German and English showed that children and adults can rely on phonological and orthographic information from the parafovea during reading, but this reliance differs between ages and languages. In the present study, we investigated the development of phonological and orthographic parafoveal processing during silent reading in Russian-speaking 8-year-old children, 10-year-old children, and adults using gaze-contingent boundary paradigm. The participants read sentences with embedded nouns which were presented in original, pseudohomophone, control for pseudohomophone, transposed-letter",
+   "files": [
+    {
+     "path": "osfstorage:/Analysis/Submission/data_paper.csv",
+     "size": 2637237
+    },
+    {
+     "path": "osfstorage:/Analysis/Submission/analysis_paper.R",
+     "size": 5901
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/manipulation.csv",
+     "size": 4221
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/data_paper.csv",
+     "size": 2637237
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/position of manipulation_additional analysis.R",
+     "size": 10417
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/Anova_results_revision2.pdf",
+     "size": 48017
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/analysis_paper\u00a0revision2.R",
+     "size": 11451
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/position of manipulation_tables/Phonological_manipulation_nested contrasts.html",
+     "size": 17837
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/position of manipulation_tables/Phonological_manipulation_interaction.html",
+     "size": 22973
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/position of manipulation_tables/Orthographic_manipulation_nested contrasts.html",
+     "size": 17820
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/post-hoc analyses/contasts_phon_GD.xlsx",
+     "size": 8831
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/post-hoc analyses/contasts_orth_GD.xlsx",
+     "size": 8857
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/post-hoc analyses/contasts_orth_FFD.xlsx",
+     "size": 8836
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/post-hoc analyses/contasts_phon_TT.xlsx",
+     "size": 8845
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/post-hoc analyses/contasts_orth_TT.xlsx",
+     "size": 8850
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 2_final analysis/post-hoc analyses/contasts_phon_FFD.xlsx",
+     "size": 8769
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 1/manipulation.csv",
+     "size": 4221
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 1/contasts_phon_TT.xlsx",
+     "size": 10989
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 1/contasts_phon_FFD.xlsx",
+     "size": 10944
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 1/contasts_phon_GD.xlsx",
+     "size": 11004
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 1/contasts_orth_FFD.xlsx",
+     "size": 10955
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 1/contasts_orth_GD.xlsx",
+     "size": 10986
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 1/contasts_orth_TT.xlsx",
+     "size": 10984
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 1/analysis_paper\u00a0revision1.R",
+     "size": 10859
+    },
+    {
+     "path": "osfstorage:/Analysis/Revision 1/Anova.docx",
+     "size": 8440
+    },
+    {
+     "path": "osfstorage:/Materials/Participants.csv",
+     "size": 5969
+    },
+    {
+     "path": "osfstorage:/Materials/Target_nouns.csv",
+     "size": 7876
+    },
+    {
+     "path": "osfstorage:/Materials/Sentences.csv",
+     "size": 8310
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "xu384",
+   "status": 200,
+   "title": "Children's Processing of Irony During Reading in English: An Eye-Tracking Study",
+   "public": true,
+   "category": "project",
+   "date_created": "2022-11-29T05:02:55.829104",
+   "description": "This study investigated how children and adult's processed online irony during reading in English with consideration to some individual differences such as reading ability, non-verbal intelligence and autism quotients. Eye tracking measures such as first pass reading time, regression path duration and total reading time were collected and  analysed. Behavioural measures such as accuracy and response time to comprehension questions were also measured and analysed. Overall, our results indicated that children processed irony in a similar way to adults but were less efficient and less accurate th",
+   "files": [
+    {
+     "path": "osfstorage:/Appendix A and B/Irony Paper Supplementary Material 18th Nov 2024.docx",
+     "size": 79036
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Stimulus_List.xlsx",
+     "size": 1028690
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Orthographic Information/WordsForOrthoAnalysis.xlsx",
+     "size": 16883
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Orthographic Information/UpdatedStimulusList.xlsx",
+     "size": 21203
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Orthographic Information/OrthographicLengthsOSF.R",
+     "size": 1953
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/2374680700065613007.png",
+     "size": 5524
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/3707270632231984411.png",
+     "size": 5559
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-1859796415708312808.png",
+     "size": 5672
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-3987408522880972278.png",
+     "size": 5717
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-7606496342662006814.png",
+     "size": 5757
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/2646720068141683978.png",
+     "size": 5758
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-4425418354376099882.png",
+     "size": 5776
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-1730192430491339476.png",
+     "size": 5823
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/7378443129394878504.png",
+     "size": 5825
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-7732307246290408224.png",
+     "size": 5840
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/4558411665489567496.png",
+     "size": 5906
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/8591803723701711959.png",
+     "size": 5914
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/5325504918961908797.png",
+     "size": 5915
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-5741439373322709774.png",
+     "size": 6014
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-2536875337212513799.png",
+     "size": 6048
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-7490547497528988592.png",
+     "size": 6081
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/3787519463016300505.png",
+     "size": 6084
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-4634879097760948683.png",
+     "size": 6130
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/8190613165160866509.png",
+     "size": 6146
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-7120828480873131838.png",
+     "size": 5127
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-3837310733872652500.png",
+     "size": 5368
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/Comprehension Questions/-8054761782085835839.png",
+     "size": 5394
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/IRONY_B.txt",
+     "size": 16028
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-923550767133622700.png",
+     "size": 10196
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-572245930613422721.png",
+     "size": 10647
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-7006658171588203261.png",
+     "size": 10792
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/6914563581097839464.png",
+     "size": 10841
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/6619677400432871999.png",
+     "size": 10892
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/535798119484428979.png",
+     "size": 10948
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-6716527813432023737.png",
+     "size": 10967
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-1019442926744692638.png",
+     "size": 11175
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-7506557804906613548.png",
+     "size": 11194
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-1696324588297461803.png",
+     "size": 11206
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/1530795332832594410.png",
+     "size": 11237
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/1679597092899368722.png",
+     "size": 11244
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-4280492586658890645.png",
+     "size": 11246
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/211042400735353097.png",
+     "size": 11347
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-6429335921201572674.png",
+     "size": 11484
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/2764664164688069799.png",
+     "size": 11492
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-6649314551428767032.png",
+     "size": 11502
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-2275058007386984596.png",
+     "size": 11531
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/1390501864581121871.png",
+     "size": 11542
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-8076517341366750580.png",
+     "size": 11544
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/6521657641493411326.png",
+     "size": 11578
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/6814625417638500616.png",
+     "size": 11623
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-5264842291609177734.png",
+     "size": 11624
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/6783692358176463340.png",
+     "size": 11628
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/389292978810527843.png",
+     "size": 11649
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-7183817574579950730.png",
+     "size": 11674
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/7488353052678600309.png",
+     "size": 11732
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/680898859241648353.png",
+     "size": 11736
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/6193722523760355331.png",
+     "size": 11747
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/8026667116112085897.png",
+     "size": 11774
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/5843556725765652556.png",
+     "size": 11805
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/9048912112442309239.png",
+     "size": 11817
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-1275123544930983728.png",
+     "size": 11846
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/2728852814666038289.png",
+     "size": 11866
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-2615708995944642606.png",
+     "size": 11847
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-768238040347294641.png",
+     "size": 11955
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/41983946717955510.png",
+     "size": 12088
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-3773772399271197694.png",
+     "size": 12090
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/3529972479345413322.png",
+     "size": 12182
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-2322218757922338883.png",
+     "size": 12415
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/3733212300124793039.png",
+     "size": 12275
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-8313944647529389453.png",
+     "size": 12415
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-4403157821950066200.png",
+     "size": 12485
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-2383889370545351100.png",
+     "size": 12605
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/7470488935093126070.png",
+     "size": 12736
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/2427099688581120541.png",
+     "size": 12754
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-7474551625062819062.png",
+     "size": 12780
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-5457502581198960584.png",
+     "size": 12888
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-7812842813746971099.png",
+     "size": 12907
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-8228687084603128644.png",
+     "size": 12978
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-3299067370022547071.png",
+     "size": 12985
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/5588050271797399339.png",
+     "size": 13086
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-4424041479468043110.png",
+     "size": 13083
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/5340313604057746072.png",
+     "size": 13243
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-3649279603799828860.png",
+     "size": 13264
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-1279283819771176001.png",
+     "size": 13314
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/4729459828331608965.png",
+     "size": 13325
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/5973154231337645122.png",
+     "size": 13391
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-8333133181565925529.png",
+     "size": 13888
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List B/-4195115228881857607.png",
+     "size": 14088
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-923550767133622700.png",
+     "size": 10196
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-146293337875084474.png",
+     "size": 10594
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-1279680403227980382.png",
+     "size": 10914
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-4197127372068962557.png",
+     "size": 10928
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-6716527813432023737.png",
+     "size": 10967
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/2288105469949423250.png",
+     "size": 10976
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/5042119327622599902.png",
+     "size": 11105
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-7596217224377722469.png",
+     "size": 11190
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/1530795332832594410.png",
+     "size": 11237
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/1679597092899368722.png",
+     "size": 11244
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-4280492586658890645.png",
+     "size": 11246
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/1447335216285624817.png",
+     "size": 11261
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-3558541499609414161.png",
+     "size": 11309
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/4426108905413631326.png",
+     "size": 11466
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-1485129025208711867.png",
+     "size": 11471
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-3082665508961238446.png",
+     "size": 11478
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/2764664164688069799.png",
+     "size": 11492
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/1307417601750925279.png",
+     "size": 11504
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-2275058007386984596.png",
+     "size": 11531
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/1390501864581121871.png",
+     "size": 11542
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/6521657641493411326.png",
+     "size": 11578
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/401954391680161561.png",
+     "size": 11580
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-4440227536027039884.png",
+     "size": 11583
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/6814625417638500616.png",
+     "size": 11623
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/389292978810527843.png",
+     "size": 11649
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/4228943291741250304.png",
+     "size": 11654
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-752773751581824150.png",
+     "size": 11718
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-4566258914181378020.png",
+     "size": 11775
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/9048912112442309239.png",
+     "size": 11817
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/4725010304434816982.png",
+     "size": 11834
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-1275123544930983728.png",
+     "size": 11846
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/979330372087778906.png",
+     "size": 11849
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/7691155290501537786.png",
+     "size": 11866
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-768238040347294641.png",
+     "size": 11955
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-7984598746116857837.png",
+     "size": 12020
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-1159366670597105052.png",
+     "size": 12021
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/41983946717955510.png",
+     "size": 12088
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-3773772399271197694.png",
+     "size": 12090
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/4600188391780790698.png",
+     "size": 12183
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/7761911281269586714.png",
+     "size": 12267
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-2322218757922338883.png",
+     "size": 12415
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-8313944647529389453.png",
+     "size": 12415
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/4722060339130064792.png",
+     "size": 12477
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-6231429319663640925.png",
+     "size": 12489
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-2215029732651611144.png",
+     "size": 12682
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-8016315545890338999.png",
+     "size": 12696
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/2427099688581120541.png",
+     "size": 12754
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-2559602408095991908.png",
+     "size": 12848
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/7785791869560731843.png",
+     "size": 12852
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-7812842813746971099.png",
+     "size": 12907
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-3299067370022547071.png",
+     "size": 12985
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/7237675099770845137.png",
+     "size": 13009
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-4480496995261713482.png",
+     "size": 13086
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/469986365148629819.png",
+     "size": 13182
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/5340313604057746072.png",
+     "size": 13243
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-1279283819771176001.png",
+     "size": 13314
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/5973154231337645122.png",
+     "size": 13391
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/5800877367946176940.png",
+     "size": 13467
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-4519785779324145640.png",
+     "size": 13753
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/-59341305752509979.png",
+     "size": 13958
+    },
+    {
+     "path": "osfstorage:/Stimuli Sets/List A/IRONY_A.txt",
+     "size": 17420
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/key_ias.csv",
+     "size": 2425
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP222023FIX.xls",
+     "size": 55516
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP252023FIX.xls",
+     "size": 64372
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP242023FIX.xls",
+     "size": 76248
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP212023FIX.xls",
+     "size": 40985
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP232023FIX.xls",
+     "size": 36417
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP272023FIX.xls",
+     "size": 52059
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP262023FIX.xls",
+     "size": 59087
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP302023FIX.xls",
+     "size": 53947
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP282023FIX.xls",
+     "size": 93514
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP292023FIX.xls",
+     "size": 56083
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP322023FIX.xls",
+     "size": 44365
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP312023FIX.xls",
+     "size": 53689
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP332023FIX.xls",
+     "size": 21482
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP362023FIX.xls",
+     "size": 31185
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP352023FIX.xls",
+     "size": 61021
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP372023FIX.xls",
+     "size": 58603
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP12023FIX.xls",
+     "size": 32522
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP32023FIX.xls",
+     "size": 65041
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP42023FIX.xls",
+     "size": 41440
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP52023FIX.xls",
+     "size": 51252
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP22023FIX.xls",
+     "size": 45427
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP62023FIX.xls",
+     "size": 40555
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP102023FIX.xls",
+     "size": 57878
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP72023FIX.xls",
+     "size": 48240
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP82023FIX.xls",
+     "size": 48460
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP92023FIX.xls",
+     "size": 36594
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP112023FIX.xls",
+     "size": 28783
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP132023FIX.xls",
+     "size": 70545
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP142023FIX.xls",
+     "size": 56421
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP122023FIX.xls",
+     "size": 45650
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP162023FIX.xls",
+     "size": 26752
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP152023FIX.xls",
+     "size": 47991
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP182023FIX.xls",
+     "size": 47737
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP172023FIX.xls",
+     "size": 62703
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP192023FIX.xls",
+     "size": 50783
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultdatafiles/AdultP202023FIX.xls",
+     "size": 27845
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultFinalAnalysisFiles/Adult Preprocessing Code for OSF.R",
+     "size": 32320
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultFinalAnalysisFiles/Adspillover_final_for_analysis.txt",
+     "size": 58590
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultFinalAnalysisFiles/Adutterance_final_for_analysis.txt",
+     "size": 59626
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultFinalAnalysisFiles/Adcontext2_final_for_analysis.txt",
+     "size": 58525
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/adultFinalAnalysisFiles/Adcontext1_final_for_analysis.txt",
+     "size": 59052
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/childFinalAnalysisFiles/Child Preprocessing Code for OSF.R",
+     "size": 31870
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/childFinalAnalysisFiles/context1_final_for_analysis.txt",
+     "size": 57735
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/childFinalAnalysisFiles/context2_final_for_analysis.txt",
+     "size": 57019
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/childFinalAnalysisFiles/utterance_final_for_analysis.txt",
+     "size": 58112
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/childFinalAnalysisFiles/spillover_final_for_analysis.txt",
+     "size": 57318
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/README.txt",
+     "size": 154
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP222023FIX.xls",
+     "size": 50845
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP212023FIX.xls",
+     "size": 52439
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP232023FIX.xls",
+     "size": 49961
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP202023FIX.xls",
+     "size": 33019
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP192023FIX.xls",
+     "size": 50457
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP242023FIX.xls",
+     "size": 47435
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP262023FIX.xls",
+     "size": 36141
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP282023FIX.xls",
+     "size": 41995
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP272023FIX.xls",
+     "size": 53402
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP292023FIX.xls",
+     "size": 55153
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP302023FIX.xls",
+     "size": 35204
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP312023FIX.xls",
+     "size": 57468
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP332023FIX.xls",
+     "size": 31095
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP322023FIX.xls",
+     "size": 58272
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP342023FIX.xls",
+     "size": 47473
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP352023FIX.xls",
+     "size": 51933
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP52023FIX.xls",
+     "size": 46712
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP12023FIX.xls",
+     "size": 36676
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP32023FIX.xls",
+     "size": 60163
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP62023FIX.xls",
+     "size": 46107
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP72023FIX.xls",
+     "size": 17361
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP82023FIX.xls",
+     "size": 51208
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP102023FIX.xls",
+     "size": 49948
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP92023FIX.xls",
+     "size": 47023
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP112023FIX.xls",
+     "size": 53716
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP122023FIX.xls",
+     "size": 54044
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP132023FIX.xls",
+     "size": 61214
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP152023FIX.xls",
+     "size": 48067
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP142023FIX.xls",
+     "size": 49532
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP162023FIX.xls",
+     "size": 52945
+    },
+    {
+     "path": "osfstorage:/Data Cleaning Codes/datafiles/ChildP172023FIX.xls",
+     "size": 46755
+    },
+    {
+     "path": "osfstorage:/Data Analyses/NaturalnessSurveyCodeMarkdown.Rmd",
+     "size": 27200
+    },
+    {
+     "path": "osfstorage:/Data Analyses/Updated_Model_IronyScriptOSF_OCT.Rmd",
+     "size": 100817
+    },
+    {
+     "path": "osfstorage:/Data Analyses/Updated_Model_IronyScriptOSF_OCT.html",
+     "size": 2156995
+    },
+    {
+     "path": "osfstorage:/Data Files/Final Data Files used/Correlations.sav",
+     "size": 25860
+    },
+    {
+     "path": "osfstorage:/Data Files/Final Data Files used/AdultLMMDATA2023.sav",
+     "size": 407664
+    },
+    {
+     "path": "osfstorage:/Data Files/Final Data Files used/ChildLMMDATA2023.sav",
+     "size": 401380
+    },
+    {
+     "path": "osfstorage:/Data Files/Final Data Files used/Irony Study_May 28, 2024_14.41.csv",
+     "size": 34944
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "x6wmf",
+   "status": 200,
+   "title": "Eye Movements Show Comparable Reading Patterns in Born Deaf and Hearing Children",
+   "public": true,
+   "category": "project",
+   "date_created": "2024-10-03T17:44:06.877415",
+   "description": "Eye Movements Show Comparable Reading Patterns in Born Deaf and Hearing Children",
+   "files": [
+    {
+     "path": "osfstorage:/Tekst_Preludium.csv",
+     "size": 34378
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "kcn3f",
+   "status": 200,
+   "title": "Subskills Underlying Children\u2019s Eye Movements During Passage Reading",
+   "public": true,
+   "category": "project",
+   "date_created": "2025-05-22T15:57:03.262794",
+   "description": "",
+   "files": [
+    {
+     "path": "osfstorage:/Oculomotor Task Stimuli and Materials/Stimuli/eagle.png",
+     "size": 57676
+    },
+    {
+     "path": "osfstorage:/Oculomotor Task Stimuli and Materials/Stimuli/porcupine.jpg",
+     "size": 30577
+    },
+    {
+     "path": "osfstorage:/Oculomotor Task Stimuli and Materials/Stimuli/pterodactyl.jpg",
+     "size": 101628
+    },
+    {
+     "path": "osfstorage:/Oculomotor Task Stimuli and Materials/Stimuli/monkey.jpg",
+     "size": 132701
+    },
+    {
+     "path": "osfstorage:/Oculomotor Task Stimuli and Materials/Stimuli/dog.jpg",
+     "size": 246055
+    },
+    {
+     "path": "osfstorage:/Oculomotor Task Stimuli and Materials/Stimuli/sheep.png",
+     "size": 59224
+    },
+    {
+     "path": "osfstorage:/Oculomotor Task Stimuli and Materials/EyeLinkAnalysis Database/FixationSpeed copy.accdb",
+     "size": 1282899968
+    },
+    {
+     "path": "osfstorage:/Oculomotor Task Stimuli and Materials/Example Lists/1fixation.dat",
+     "size": 1586
+    },
+    {
+     "path": "osfstorage:/Oculomotor Task Stimuli and Materials/Example Lists/2fixation.dat",
+     "size": 1570
+    },
+    {
+     "path": "osfstorage:/Oculomotor Task Stimuli and Materials/Example Lists/3fixation.dat",
+     "size": 1622
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/items.xlsx",
+     "size": 9781
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/examplelist.dat",
+     "size": 19709
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/listgen.m",
+     "size": 8861
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/ants.jpg",
+     "size": 45187
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bag.jpg",
+     "size": 42605
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bald.jpg",
+     "size": 25284
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/ball.jpg",
+     "size": 42107
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/band.jpg",
+     "size": 52816
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bank.jpg",
+     "size": 60926
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bark.jpg",
+     "size": 36880
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/barn.jpg",
+     "size": 58599
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bat.jpg",
+     "size": 34340
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bead.jpg",
+     "size": 39882
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/beak.jpg",
+     "size": 40434
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bed.jpg",
+     "size": 46606
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bell.jpg",
+     "size": 31864
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/belt.jpg",
+     "size": 40758
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bird.jpg",
+     "size": 41840
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/boat.jpg",
+     "size": 49931
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/book.jpg",
+     "size": 63132
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/boot.jpg",
+     "size": 54516
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/braid.jpg",
+     "size": 35646
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/brown.jpg",
+     "size": 56002
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/brain.jpg",
+     "size": 61372
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bun.jpg",
+     "size": 44071
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/bug.jpg",
+     "size": 47334
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/camp.jpg",
+     "size": 37213
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/car.jpg",
+     "size": 42171
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/card.jpg",
+     "size": 41638
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/cart.jpg",
+     "size": 53218
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/Catch.jpg",
+     "size": 38391
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/cat.jpg",
+     "size": 40762
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/chin.jpg",
+     "size": 45110
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/chip.jpg",
+     "size": 53457
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/cook.jpg",
+     "size": 55957
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/cord.jpg",
+     "size": 26051
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/corn.jpg",
+     "size": 73389
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/crowd.jpg",
+     "size": 88942
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/crown.jpg",
+     "size": 40706
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/cup.jpg",
+     "size": 36478
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/cut.jpg",
+     "size": 32827
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/dart.jpg",
+     "size": 35627
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/dark.jpg",
+     "size": 42743
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/desk.jpg",
+     "size": 47065
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/dish.jpg",
+     "size": 41720
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/drain.jpg",
+     "size": 37227
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/feed.jpg",
+     "size": 58180
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/fin.jpg",
+     "size": 27265
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/fish.jpg",
+     "size": 56210
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/flag.jpg",
+     "size": 50180
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/foot.jpg",
+     "size": 30656
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/frog.jpg",
+     "size": 61647
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/goal.jpg",
+     "size": 39068
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/goat.jpg",
+     "size": 40121
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/grain.jpg",
+     "size": 71215
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/grill.jpg",
+     "size": 30157
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/ham.jpg",
+     "size": 51510
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/hat.jpg",
+     "size": 36302
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/heart.jpg",
+     "size": 39417
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/hoof.jpg",
+     "size": 35528
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/hook.jpg",
+     "size": 31761
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/horn.jpg",
+     "size": 60230
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/jail.jpg",
+     "size": 41278
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/jam.jpg",
+     "size": 68644
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/lamp.jpg",
+     "size": 29852
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/jog.jpg",
+     "size": 38255
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/leak.jpg",
+     "size": 44220
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/leap.jpg",
+     "size": 35355
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/load.jpg",
+     "size": 53566
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/loaf.jpg",
+     "size": 41992
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/maid.jpg",
+     "size": 31996
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/mail.jpg",
+     "size": 45928
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/meal.jpg",
+     "size": 76116
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/meat.jpg",
+     "size": 38111
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/melt.jpg",
+     "size": 36050
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/moon.jpg",
+     "size": 48952
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/nest.jpg",
+     "size": 68844
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/park.jpg",
+     "size": 66997
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/peak.jpg",
+     "size": 35837
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/part.jpg",
+     "size": 60562
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/pig.jpg",
+     "size": 34395
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/plug.jpg",
+     "size": 46575
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/pup.jpg",
+     "size": 54627
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/read.jpg",
+     "size": 50904
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/roast.jpg",
+     "size": 43729
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/roof.jpg",
+     "size": 40113
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/rug.jpg",
+     "size": 55838
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/sand.jpg",
+     "size": 39456
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/seal.jpg",
+     "size": 36128
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/seat.jpg",
+     "size": 46233
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/ship.jpg",
+     "size": 39882
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/tail.jpg",
+     "size": 29547
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/team.jpg",
+     "size": 48806
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/toad.jpg",
+     "size": 63545
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/top.jpg",
+     "size": 54311
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/train.jpg",
+     "size": 46115
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/trail.jpg",
+     "size": 73248
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/weed.jpg",
+     "size": 60390
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/wall.jpg",
+     "size": 34197
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/week.jpg",
+     "size": 44222
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/wig.jpg",
+     "size": 64162
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/wolf.jpg",
+     "size": 37525
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/win.jpg",
+     "size": 47350
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/images/yarn.jpg",
+     "size": 69814
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/antsF.wav",
+     "size": 67812
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/bagF.wav",
+     "size": 43688
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/baldF.wav",
+     "size": 51228
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/ballF.wav",
+     "size": 40698
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/bandF.wav",
+     "size": 57908
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/bankF.wav",
+     "size": 56092
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/barkF.wav",
+     "size": 52604
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/barnF.wav",
+     "size": 53180
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/batF.wav",
+     "size": 53156
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/beakF.wav",
+     "size": 38954
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/beadF.wav",
+     "size": 49420
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/bedF.wav",
+     "size": 40488
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/beet.wav",
+     "size": 50564
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/beltF.wav",
+     "size": 46332
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/bellF.wav",
+     "size": 51674
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/birdF.wav",
+     "size": 47054
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/boatF.wav",
+     "size": 47398
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/bookF.wav",
+     "size": 41442
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/bootF.wav",
+     "size": 45170
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/braidF.wav",
+     "size": 50772
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/brainF.wav",
+     "size": 60854
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/brownF.wav",
+     "size": 43138
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/bugF.wav",
+     "size": 42682
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/bunF.wav",
+     "size": 44114
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/campF.wav",
+     "size": 50128
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/cardF.wav",
+     "size": 61404
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/carF.wav",
+     "size": 39998
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/cartF.wav",
+     "size": 47246
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/catchF.wav",
+     "size": 60280
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/catF.wav",
+     "size": 59238
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/chinF.wav",
+     "size": 58276
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/chipF.wav",
+     "size": 48366
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/cookF.wav",
+     "size": 46212
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/cornF.wav",
+     "size": 57366
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/cordF.wav",
+     "size": 64220
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/crowdF.wav",
+     "size": 53404
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/cupF.wav",
+     "size": 40318
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/crownF.wav",
+     "size": 56684
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/cutF.wav",
+     "size": 53428
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/darkF.wav",
+     "size": 57800
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/dartF.wav",
+     "size": 50164
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/deskF.wav",
+     "size": 54038
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/desk.wav",
+     "size": 59196
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/dishF.wav",
+     "size": 53496
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/drainF.wav",
+     "size": 61832
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/feedF.wav",
+     "size": 65928
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/finF.wav",
+     "size": 60400
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/flagF.wav",
+     "size": 61202
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/fishF.wav",
+     "size": 60264
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/footF.wav",
+     "size": 47408
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/frogF.wav",
+     "size": 58554
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/goalF.wav",
+     "size": 44082
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/goatF.wav",
+     "size": 49926
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/grainF.wav",
+     "size": 63972
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/hatF.wav",
+     "size": 56278
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/heartF.wav",
+     "size": 54856
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/hamF.wav",
+     "size": 52800
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/hookF.wav",
+     "size": 51626
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/hoofF.wav",
+     "size": 47066
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/hornF.wav",
+     "size": 60370
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/jailF.wav",
+     "size": 50006
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/jamF.wav",
+     "size": 50008
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/jogF.wav",
+     "size": 56646
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/lampF.wav",
+     "size": 51024
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/leakF.wav",
+     "size": 48824
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/leapF.wav",
+     "size": 50622
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/loadF.wav",
+     "size": 63400
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/loafF.wav",
+     "size": 62304
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/maidF.wav",
+     "size": 55668
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/mailF.wav",
+     "size": 57794
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/mealF.wav",
+     "size": 56406
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/meltF.wav",
+     "size": 58750
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/moonF.wav",
+     "size": 60408
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/nestF.wav",
+     "size": 63238
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/parkF.wav",
+     "size": 47148
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/partF.wav",
+     "size": 50406
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/peakF.wav",
+     "size": 42972
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/pigF.wav",
+     "size": 47860
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/plugF.wav",
+     "size": 56942
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/readF.wav",
+     "size": 51358
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/pupF.wav",
+     "size": 37074
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/roofF.wav",
+     "size": 51630
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/roastF.wav",
+     "size": 74646
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/rugF.wav",
+     "size": 56744
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/rootF.wav",
+     "size": 53624
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/sandF.wav",
+     "size": 70240
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/sealF.wav",
+     "size": 60470
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/seatF.wav",
+     "size": 61752
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/shipF.wav",
+     "size": 49222
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/tailF.wav",
+     "size": 49076
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/teamF.wav",
+     "size": 59988
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/toadF.wav",
+     "size": 57596
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/topF.wav",
+     "size": 41734
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/trailF.wav",
+     "size": 57974
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/trainF.wav",
+     "size": 61166
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/wallF.wav",
+     "size": 52274
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/weedF.wav",
+     "size": 61846
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/weekF.wav",
+     "size": 52214
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/wigF.wav",
+     "size": 54576
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/winF.wav",
+     "size": 63260
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/wolfF.wav",
+     "size": 61628
+    },
+    {
+     "path": "osfstorage:/VWP stimuli and materials/familiarization audio/yarnF.wav",
+     "size": 57530
+    },
+    {
+     "path": "osfstorage:/scripts/analyseswithadults.R",
+     "size": 11901
+    },
+    {
+     "path": "osfstorage:/scripts/analysis script.R",
+     "size": 36985
+    },
+    {
+     "path": "osfstorage:/scripts/data processing scripts/2. Fixation Labeling.R",
+     "size": 23988
+    },
+    {
+     "path": "osfstorage:/scripts/data processing scripts/1. Comprehension Accuracy.R",
+     "size": 2871
+    },
+    {
+     "path": "osfstorage:/scripts/data processing scripts/3. Merge PREM with Predictor Data.R",
+     "size": 2338
+    },
+    {
+     "path": "osfstorage:/scripts/data processing scripts/helpers_PREMparser.R",
+     "size": 1224
+    },
+    {
+     "path": "osfstorage:/scripts/data processing scripts/4. Trials.R",
+     "size": 15500
+    },
+    {
+     "path": "osfstorage:/scripts/data processing scripts/A_CompileData.R",
+     "size": 10745
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data.csv",
+     "size": 178372
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data for processing/ialabels.csv",
+     "size": 2488
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data for processing/assessmentandaccuracy.csv",
+     "size": 235850
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data for processing/subjectaccuracy.csv",
+     "size": 25187
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data for processing/VWP.xlsx",
+     "size": 119818
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data for processing/subjectdata.csv",
+     "size": 231899
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data for processing/trials.csv",
+     "size": 331671
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data for processing/fixationsneedlabel.csv",
+     "size": 11573427
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data for processing/DataCompiled.csv",
+     "size": 150313
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data for processing/FixSpeed.xlsx",
+     "size": 44315
+    },
+    {
+     "path": "osfstorage:/data/Child Data/data for processing/DataCompiled_Z_imputed.csv",
+     "size": 177413
+    },
+    {
+     "path": "osfstorage:/data/Adult Data/data.csv",
+     "size": 13528
+    },
+    {
+     "path": "osfstorage:/data/Adult Data/data for processing/fixationsneedlabel.csv",
+     "size": 445769
+    },
+    {
+     "path": "osfstorage:/data/Adult Data/data for processing/ialabels.csv",
+     "size": 2764
+    },
+    {
+     "path": "osfstorage:/data/Adult Data/data for processing/subjectaccuracy.csv",
+     "size": 3274
+    },
+    {
+     "path": "osfstorage:/data/Adult Data/data for processing/PY2_Demo_deidentified.xlsx",
+     "size": 11195
+    },
+    {
+     "path": "osfstorage:/data/Adult Data/data for processing/trials.csv",
+     "size": 2311
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "e3fdb",
+   "status": 404,
+   "guid_status": 200,
+   "guid_type": "preprints"
+  },
+  {
+   "guid": "5h9mw",
+   "status": 200,
+   "title": "Spatial parameters of eye-movement control during reading in Russian-speaking children",
+   "public": true,
+   "category": "project",
+   "date_created": "2024-11-13T19:41:38.731655",
+   "description": "",
+   "files": [
+    {
+     "path": "osfstorage:/Supplementary materials.pdf",
+     "size": 426502
+    },
+    {
+     "path": "osfstorage:/Materials/ERAS_Ru.pdf",
+     "size": 126847
+    },
+    {
+     "path": "osfstorage:/Materials/Stimuli.xlsx",
+     "size": 13641
+    },
+    {
+     "path": "osfstorage:/Materials/Figure S1 scanpath overlay.docx",
+     "size": 219944
+    },
+    {
+     "path": "osfstorage:/Materials/Example video of uniform trials children vs adults/Child_U3.mp4",
+     "size": 222272
+    },
+    {
+     "path": "osfstorage:/Materials/Example video of uniform trials children vs adults/Adult_U3.mp4",
+     "size": 108206
+    },
+    {
+     "path": "osfstorage:/Materials/Example video of uniform trials children vs adults/Child_U4.mp4",
+     "size": 239283
+    },
+    {
+     "path": "osfstorage:/Materials/Example video of uniform trials children vs adults/Adult_U5.mp4",
+     "size": 96772
+    },
+    {
+     "path": "osfstorage:/Materials/Example video of uniform trials children vs adults/Child_U5.mp4",
+     "size": 293439
+    },
+    {
+     "path": "osfstorage:/Materials/Example video of uniform trials children vs adults/Adult_U4.mp4",
+     "size": 73198
+    },
+    {
+     "path": "osfstorage:/Data and analysis R script/behavioural data.csv",
+     "size": 3884
+    },
+    {
+     "path": "osfstorage:/Data and analysis R script/word_info_children_short.xlsx",
+     "size": 33670
+    },
+    {
+     "path": "osfstorage:/Data and analysis R script/word_prog6.xlsx",
+     "size": 15839434
+    },
+    {
+     "path": "osfstorage:/Data and analysis R script/IA_Year1_Moscow (1).xlsx",
+     "size": 38664394
+    },
+    {
+     "path": "osfstorage:/Data and analysis R script/word_prog_adch.xlsx",
+     "size": 700368
+    },
+    {
+     "path": "osfstorage:/Data and analysis R script/word_prog_adch.rda",
+     "size": 69055
+    },
+    {
+     "path": "osfstorage:/Data and analysis R script/descriptives.xlsx",
+     "size": 8614
+    },
+    {
+     "path": "osfstorage:/Data and analysis R script/adult data_word_prog.xlsx",
+     "size": 2023801
+    },
+    {
+     "path": "osfstorage:/Data and analysis R script/R script_publication Saccade targeting in reading in children_clean.R",
+     "size": 100039
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "6e7ph",
+   "status": 404,
+   "guid_status": 200,
+   "guid_type": "preprints"
+  },
+  {
+   "guid": "cgske",
+   "status": 200,
+   "title": "The trajectory of eye movements in Chinese developing readers during silent and oral sentence reading",
+   "public": true,
+   "category": "project",
+   "date_created": "2024-11-25T08:04:02.861170",
+   "description": "",
+   "files": [
+    {
+     "path": "osfstorage:/R/Bayes.R",
+     "size": 1390
+    },
+    {
+     "path": "osfstorage:/R/Global+two-character.R",
+     "size": 11529
+    },
+    {
+     "path": "osfstorage:/R/Target word.R",
+     "size": 12020
+    },
+    {
+     "path": "osfstorage:/R/Target word_group.R",
+     "size": 12692
+    },
+    {
+     "path": "osfstorage:/R/Global_group.R",
+     "size": 10492
+    },
+    {
+     "path": "osfstorage:/data/target words_group.csv",
+     "size": 498925
+    },
+    {
+     "path": "osfstorage:/data/Global data_group.csv",
+     "size": 333577
+    },
+    {
+     "path": "osfstorage:/data/target words.csv",
+     "size": 460294
+    },
+    {
+     "path": "osfstorage:/data/Global data.csv",
+     "size": 557622
+    },
+    {
+     "path": "osfstorage:/data/two-character.csv",
+     "size": 1659178
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "xjd5r",
+   "status": 200,
+   "title": "All good readers are the same, but every low-skilled reader is different: an eye-tracking study using PISA data",
+   "public": true,
+   "category": "project",
+   "date_created": "2017-06-27T19:56:59.056575",
+   "description": "PISA results show that a considerable number of fifteen-years old pupils after 8-10 years of schooling have a low level of functional reading literacy, as defined in the PISA framework. While PISA results help identify level of reading competency, they do not reveal what might be the reasons why some students fail to solve the tasks. One way to explore the difficulties pupils encounter while solving PISA reading tasks is to track their eye-movements during reading.\nThe main aim of this study was to explore the similarities and differences in eye-movement patterns between pupils with high and l",
+   "files": [],
+   "components": [
+    {
+     "guid": "wzbuk",
+     "status": 200,
+     "title": "Stimuli",
+     "public": true,
+     "category": "instrumentation",
+     "date_created": "2017-06-28T11:31:44.597132",
+     "description": "Here, you can find all PISA items and questions that were used in the pretest and the main test. They were originally presented in Serbian, but the link to the original English version can be found in the Wiki section. Screen-shots present the moment when each of the questions is added onto the screen.",
+     "files": [
+      {
+       "path": "osfstorage:/R040Q04 (L2 non-continuous) - screenshot.png",
+       "size": 202249
+      },
+      {
+       "path": "osfstorage:/R040Q06 (L3 non-continuous) - screenshot.png",
+       "size": 241354
+      },
+      {
+       "path": "osfstorage:/R077Q01 (L2 continuous) - screenshot.png",
+       "size": 253289
+      },
+      {
+       "path": "osfstorage:/R04Q02 (L1 non-continous) - screenshot.png",
+       "size": 349663
+      },
+      {
+       "path": "osfstorage:/R110Q01 (L1 continuous) - screenshot.png",
+       "size": 537196
+      },
+      {
+       "path": "osfstorage:/R100Q04 (L3 continuous) - screenshot.png",
+       "size": 528171
+      },
+      {
+       "path": "osfstorage:/PISA pretest (Serbian).pdf",
+       "size": 443433
+      }
+     ],
+     "components": []
+    },
+    {
+     "guid": "6x9qr",
+     "status": 200,
+     "title": "Data",
+     "public": true,
+     "category": "data",
+     "date_created": "2017-06-28T11:45:23.899347",
+     "description": "Pretest results, raw eye tracking data and main test behavioural and eye tracking measures. \"A\"-\"D\" items in the Storage refer to global reading measures of the continuous texts, while \"E\" item contains AOI measures for all screens.",
+     "files": [
+      {
+       "path": "osfstorage:/PISA eye tracking raw data.7z",
+       "size": 370392680
+      },
+      {
+       "path": "osfstorage:/A Saccade median amplitude.sav",
+       "size": 2319
+      },
+      {
+       "path": "osfstorage:/E AOI statistics.sav",
+       "size": 51623
+      },
+      {
+       "path": "osfstorage:/C Regressions.sav",
+       "size": 6728
+      },
+      {
+       "path": "osfstorage:/D Average fixation durations.sav",
+       "size": 2340
+      },
+      {
+       "path": "osfstorage:/B WPM.sav",
+       "size": 20470
+      },
+      {
+       "path": "osfstorage:/Pretest results.xlsx",
+       "size": 23650
+      }
+     ],
+     "components": []
+    },
+    {
+     "guid": "rve6d",
+     "status": 200,
+     "title": "Results - statistical tests",
+     "public": true,
+     "category": "analysis",
+     "date_created": "2017-06-28T11:46:22.561743",
+     "description": "Results of the quantitative analyses. \"A\"-\"D\" items in the Storage refer to global reading measures of the continuous texts, while \"E\" items are AOI measures and analyses results.",
+     "files": [
+      {
+       "path": "osfstorage:/Group statistics - gender and pretest.spv",
+       "size": 12281
+      },
+      {
+       "path": "osfstorage:/A Median saccade amplitude - t test and MWU.spv",
+       "size": 12086
+      },
+      {
+       "path": "osfstorage:/E Non-continuous item AOI measures - t test and MWU.spv",
+       "size": 33243
+      },
+      {
+       "path": "osfstorage:/E Continuous items AOI measures - t test and MWU.spv",
+       "size": 30071
+      },
+      {
+       "path": "osfstorage:/C Regressions t i MWU test.spv",
+       "size": 11422
+      },
+      {
+       "path": "osfstorage:/D Average fixation durations t and MWU.spv",
+       "size": 11995
+      },
+      {
+       "path": "osfstorage:/B WPM t test.spv",
+       "size": 12572
+      }
+     ],
+     "components": []
+    },
+    {
+     "guid": "x3pdh",
+     "status": 200,
+     "title": "Results - visualisation",
+     "public": true,
+     "category": "analysis",
+     "date_created": "2017-06-28T11:47:46.035063",
+     "description": "Heat maps, focus maps and examples of individual scan paths.",
+     "files": [
+      {
+       "path": "osfstorage:/11 L2 continous scan path high score.png",
+       "size": 716241
+      },
+      {
+       "path": "osfstorage:/21 L3 continous scan path high score.png",
+       "size": 719853
+      },
+      {
+       "path": "osfstorage:/12 L2 continuous scan path low score.png",
+       "size": 826144
+      },
+      {
+       "path": "osfstorage:/13 L2 continous heat map high score.png",
+       "size": 1103404
+      },
+      {
+       "path": "osfstorage:/14 L2 continous heat map low score.png",
+       "size": 1408364
+      },
+      {
+       "path": "osfstorage:/22 L3 continous scan path low score.png",
+       "size": 809127
+      },
+      {
+       "path": "osfstorage:/31 L2 non-continuous scan path high score.png",
+       "size": 540944
+      },
+      {
+       "path": "osfstorage:/32 L2 non-continuous scan path low score.png",
+       "size": 564458
+      },
+      {
+       "path": "osfstorage:/33 L2 non-continuous heat map high score.png",
+       "size": 859912
+      },
+      {
+       "path": "osfstorage:/23 L3 continous heat map high score.png",
+       "size": 1080026
+      },
+      {
+       "path": "osfstorage:/24 L3 continous heat map low score.png",
+       "size": 1290055
+      },
+      {
+       "path": "osfstorage:/41 L3 non-continous scan path high score.png",
+       "size": 687994
+      },
+      {
+       "path": "osfstorage:/42 L3 non-continous scan-path low score.png",
+       "size": 688392
+      },
+      {
+       "path": "osfstorage:/34 L2 non-continuous heat map low score.png",
+       "size": 985490
+      },
+      {
+       "path": "osfstorage:/43 L3 non-continous heat map high score.png",
+       "size": 1340338
+      },
+      {
+       "path": "osfstorage:/44 L3 non-continous heat map low score.png",
+       "size": 1363573
+      },
+      {
+       "path": "osfstorage:/00 Heat maps contrasting high vs low on continuous L2 item - critical information marked.png",
+       "size": 357637
+      }
+     ],
+     "components": []
+    }
+   ]
+  },
+  {
+   "guid": "6x9qr",
+   "status": 200,
+   "title": "Data",
+   "public": true,
+   "category": "data",
+   "date_created": "2017-06-28T11:45:23.899347",
+   "description": "Pretest results, raw eye tracking data and main test behavioural and eye tracking measures. \"A\"-\"D\" items in the Storage refer to global reading measures of the continuous texts, while \"E\" item contains AOI measures for all screens.",
+   "files": [
+    {
+     "path": "osfstorage:/PISA eye tracking raw data.7z",
+     "size": 370392680
+    },
+    {
+     "path": "osfstorage:/A Saccade median amplitude.sav",
+     "size": 2319
+    },
+    {
+     "path": "osfstorage:/E AOI statistics.sav",
+     "size": 51623
+    },
+    {
+     "path": "osfstorage:/C Regressions.sav",
+     "size": 6728
+    },
+    {
+     "path": "osfstorage:/D Average fixation durations.sav",
+     "size": 2340
+    },
+    {
+     "path": "osfstorage:/B WPM.sav",
+     "size": 20470
+    },
+    {
+     "path": "osfstorage:/Pretest results.xlsx",
+     "size": 23650
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "rve6d",
+   "status": 200,
+   "title": "Results - statistical tests",
+   "public": true,
+   "category": "analysis",
+   "date_created": "2017-06-28T11:46:22.561743",
+   "description": "Results of the quantitative analyses. \"A\"-\"D\" items in the Storage refer to global reading measures of the continuous texts, while \"E\" items are AOI measures and analyses results.",
+   "files": [
+    {
+     "path": "osfstorage:/Group statistics - gender and pretest.spv",
+     "size": 12281
+    },
+    {
+     "path": "osfstorage:/A Median saccade amplitude - t test and MWU.spv",
+     "size": 12086
+    },
+    {
+     "path": "osfstorage:/E Non-continuous item AOI measures - t test and MWU.spv",
+     "size": 33243
+    },
+    {
+     "path": "osfstorage:/E Continuous items AOI measures - t test and MWU.spv",
+     "size": 30071
+    },
+    {
+     "path": "osfstorage:/C Regressions t i MWU test.spv",
+     "size": 11422
+    },
+    {
+     "path": "osfstorage:/D Average fixation durations t and MWU.spv",
+     "size": 11995
+    },
+    {
+     "path": "osfstorage:/B WPM t test.spv",
+     "size": 12572
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "wzbuk",
+   "status": 200,
+   "title": "Stimuli",
+   "public": true,
+   "category": "instrumentation",
+   "date_created": "2017-06-28T11:31:44.597132",
+   "description": "Here, you can find all PISA items and questions that were used in the pretest and the main test. They were originally presented in Serbian, but the link to the original English version can be found in the Wiki section. Screen-shots present the moment when each of the questions is added onto the screen.",
+   "files": [
+    {
+     "path": "osfstorage:/R040Q04 (L2 non-continuous) - screenshot.png",
+     "size": 202249
+    },
+    {
+     "path": "osfstorage:/R040Q06 (L3 non-continuous) - screenshot.png",
+     "size": 241354
+    },
+    {
+     "path": "osfstorage:/R077Q01 (L2 continuous) - screenshot.png",
+     "size": 253289
+    },
+    {
+     "path": "osfstorage:/R04Q02 (L1 non-continous) - screenshot.png",
+     "size": 349663
+    },
+    {
+     "path": "osfstorage:/R110Q01 (L1 continuous) - screenshot.png",
+     "size": 537196
+    },
+    {
+     "path": "osfstorage:/R100Q04 (L3 continuous) - screenshot.png",
+     "size": 528171
+    },
+    {
+     "path": "osfstorage:/PISA pretest (Serbian).pdf",
+     "size": 443433
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "x3pdh",
+   "status": 200,
+   "title": "Results - visualisation",
+   "public": true,
+   "category": "analysis",
+   "date_created": "2017-06-28T11:47:46.035063",
+   "description": "Heat maps, focus maps and examples of individual scan paths.",
+   "files": [
+    {
+     "path": "osfstorage:/11 L2 continous scan path high score.png",
+     "size": 716241
+    },
+    {
+     "path": "osfstorage:/21 L3 continous scan path high score.png",
+     "size": 719853
+    },
+    {
+     "path": "osfstorage:/12 L2 continuous scan path low score.png",
+     "size": 826144
+    },
+    {
+     "path": "osfstorage:/13 L2 continous heat map high score.png",
+     "size": 1103404
+    },
+    {
+     "path": "osfstorage:/14 L2 continous heat map low score.png",
+     "size": 1408364
+    },
+    {
+     "path": "osfstorage:/22 L3 continous scan path low score.png",
+     "size": 809127
+    },
+    {
+     "path": "osfstorage:/31 L2 non-continuous scan path high score.png",
+     "size": 540944
+    },
+    {
+     "path": "osfstorage:/32 L2 non-continuous scan path low score.png",
+     "size": 564458
+    },
+    {
+     "path": "osfstorage:/33 L2 non-continuous heat map high score.png",
+     "size": 859912
+    },
+    {
+     "path": "osfstorage:/23 L3 continous heat map high score.png",
+     "size": 1080026
+    },
+    {
+     "path": "osfstorage:/24 L3 continous heat map low score.png",
+     "size": 1290055
+    },
+    {
+     "path": "osfstorage:/41 L3 non-continous scan path high score.png",
+     "size": 687994
+    },
+    {
+     "path": "osfstorage:/42 L3 non-continous scan-path low score.png",
+     "size": 688392
+    },
+    {
+     "path": "osfstorage:/34 L2 non-continuous heat map low score.png",
+     "size": 985490
+    },
+    {
+     "path": "osfstorage:/43 L3 non-continous heat map high score.png",
+     "size": 1340338
+    },
+    {
+     "path": "osfstorage:/44 L3 non-continous heat map low score.png",
+     "size": 1363573
+    },
+    {
+     "path": "osfstorage:/00 Heat maps contrasting high vs low on continuous L2 item - critical information marked.png",
+     "size": 357637
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "zj3un",
+   "status": 200,
+   "title": "Development of orthographic, phonological and semantic parafoveal processing in Chinese reading",
+   "public": true,
+   "category": "project",
+   "date_created": "2023-02-28T23:17:41.211937",
+   "description": "",
+   "files": [
+    {
+     "path": "osfstorage:/Additional Analyses Oct20 2024/Additional Analyses Oct20 2024.docx",
+     "size": 265459
+    },
+    {
+     "path": "osfstorage:/Experiment materials/Experiment materials.xlsx",
+     "size": 64810
+    },
+    {
+     "path": "osfstorage:/launch_site/EXP.1 FFD.csv",
+     "size": 120184
+    },
+    {
+     "path": "osfstorage:/launch_site/EXP.1 GD.csv",
+     "size": 120195
+    },
+    {
+     "path": "osfstorage:/launch_site/EXP.1 SFD.csv",
+     "size": 110589
+    },
+    {
+     "path": "osfstorage:/launch_site/EXP.2 FFD.csv",
+     "size": 143040
+    },
+    {
+     "path": "osfstorage:/launch_site/EXP.2 SFD.csv",
+     "size": 129593
+    },
+    {
+     "path": "osfstorage:/launch_site/EXP.2 GD.csv",
+     "size": 143061
+    },
+    {
+     "path": "osfstorage:/launch_site/EXP.3 FFD.csv",
+     "size": 143334
+    },
+    {
+     "path": "osfstorage:/launch_site/EXP.3 GD.csv",
+     "size": 143366
+    },
+    {
+     "path": "osfstorage:/launch_site/EXP.3 SFD.csv",
+     "size": 129345
+    },
+    {
+     "path": "osfstorage:/R code/bayesFactor.R",
+     "size": 1255
+    },
+    {
+     "path": "osfstorage:/R code/global analysis.R",
+     "size": 5176
+    },
+    {
+     "path": "osfstorage:/R code/local analysis.R",
+     "size": 9346
+    },
+    {
+     "path": "osfstorage:/R code/Single Analysis for Three Experiments.R",
+     "size": 5810
+    },
+    {
+     "path": "osfstorage:/R code/The R code when Launch Site Was Included as a Continuous Variable.R",
+     "size": 11030
+    },
+    {
+     "path": "osfstorage:/Explanation of eye movement measures in the data table/Explanation of eye movement measures in the data table.txt",
+     "size": 617
+    },
+    {
+     "path": "osfstorage:/Single Analysis for Three Experiments/Single Analysis for Three Experiments.docx",
+     "size": 361850
+    },
+    {
+     "path": "osfstorage:/Experiment 3/Local Analysis/First fixation duration.csv",
+     "size": 105538
+    },
+    {
+     "path": "osfstorage:/Experiment 3/Local Analysis/Gaze duration.csv",
+     "size": 105570
+    },
+    {
+     "path": "osfstorage:/Experiment 3/Local Analysis/Go-past time.csv",
+     "size": 105959
+    },
+    {
+     "path": "osfstorage:/Experiment 3/Local Analysis/Single fixation duration.csv",
+     "size": 95243
+    },
+    {
+     "path": "osfstorage:/Experiment 3/Local Analysis/Skipping probability.csv",
+     "size": 200183
+    },
+    {
+     "path": "osfstorage:/Experiment 3/Local Analysis/Total time.csv",
+     "size": 155325
+    },
+    {
+     "path": "osfstorage:/Experiment 3/Global Analysis/Average fixation duration.csv",
+     "size": 183749
+    },
+    {
+     "path": "osfstorage:/Experiment 3/Global Analysis/Number of fixations.csv",
+     "size": 149298
+    },
+    {
+     "path": "osfstorage:/Experiment 3/Global Analysis/Rightward saccade extent .csv",
+     "size": 168751
+    },
+    {
+     "path": "osfstorage:/Experiment 3/Global Analysis/Total sentence reading times .csv",
+     "size": 170102
+    },
+    {
+     "path": "osfstorage:/Experiment 2/Local Analysis/First fixation duration.csv",
+     "size": 106085
+    },
+    {
+     "path": "osfstorage:/Experiment 2/Local Analysis/Gaze duration.csv",
+     "size": 106106
+    },
+    {
+     "path": "osfstorage:/Experiment 2/Local Analysis/Go-past time.csv",
+     "size": 106449
+    },
+    {
+     "path": "osfstorage:/Experiment 2/Local Analysis/Single fixation duration.csv",
+     "size": 96225
+    },
+    {
+     "path": "osfstorage:/Experiment 2/Local Analysis/Skipping probability.csv",
+     "size": 210379
+    },
+    {
+     "path": "osfstorage:/Experiment 2/Local Analysis/Total time.csv",
+     "size": 156950
+    },
+    {
+     "path": "osfstorage:/Experiment 2/Global Analysis/Average fixation duration.csv",
+     "size": 195976
+    },
+    {
+     "path": "osfstorage:/Experiment 2/Global Analysis/Number of fixations.csv",
+     "size": 160062
+    },
+    {
+     "path": "osfstorage:/Experiment 2/Global Analysis/Rightward saccade extent .csv",
+     "size": 180395
+    },
+    {
+     "path": "osfstorage:/Experiment 2/Global Analysis/Total sentence reading times .csv",
+     "size": 181692
+    },
+    {
+     "path": "osfstorage:/Experiment 1/Local Analysis/First fixation duration.csv",
+     "size": 89064
+    },
+    {
+     "path": "osfstorage:/Experiment 1/Local Analysis/Gaze duration.csv",
+     "size": 89075
+    },
+    {
+     "path": "osfstorage:/Experiment 1/Local Analysis/Go-past time.csv",
+     "size": 89381
+    },
+    {
+     "path": "osfstorage:/Experiment 1/Local Analysis/Single fixation duration.csv",
+     "size": 82012
+    },
+    {
+     "path": "osfstorage:/Experiment 1/Local Analysis/Skipping probability.csv",
+     "size": 202551
+    },
+    {
+     "path": "osfstorage:/Experiment 1/Local Analysis/Total time.csv",
+     "size": 143018
+    },
+    {
+     "path": "osfstorage:/Experiment 1/Global Analysis/Average fixation duration.csv",
+     "size": 188916
+    },
+    {
+     "path": "osfstorage:/Experiment 1/Global Analysis/Number of fixations.csv",
+     "size": 154374
+    },
+    {
+     "path": "osfstorage:/Experiment 1/Global Analysis/Rightward saccade extent .csv",
+     "size": 173941
+    },
+    {
+     "path": "osfstorage:/Experiment 1/Global Analysis/Total sentence reading times .csv",
+     "size": 175142
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "28qyf",
+   "status": 401,
+   "guid_status": 401,
+   "guid_type": null
+  },
+  {
+   "guid": "g85sh",
+   "status": 200,
+   "title": "ASL-English Vocabulary Knowledge PILOT",
+   "public": true,
+   "category": "project",
+   "date_created": "2026-05-07T14:11:04.458568",
+   "description": "",
+   "files": [
+    {
+     "path": "osfstorage:/CooleyQuintoPozos_Pilot_clean.Rmd",
+     "size": 11812
+    },
+    {
+     "path": "osfstorage:/behavioral_all.csv",
+     "size": 2649
+    },
+    {
+     "path": "osfstorage:/data.csv",
+     "size": 672945
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "y5vh4",
+   "status": 200,
+   "title": "The effect of relevance on children\u2019s multiple text reading: Evidence from eye movements",
+   "public": true,
+   "category": "project",
+   "date_created": "2024-09-11T10:19:21.682423",
+   "description": "\nBackground\nWe examined how Finnish children read and integrate information across multiple expository texts when given an inquiry task. We were interested in how task-relevance of text information affects readers\u2019 eye movements and whether the eye movements are connected to the quality of an essay written after reading. We were also interested in differentiating between the effects of technical reading skill and reading comprehension in respect to these processes.\n\nMethods\nIn total, 24 5th and 6th grade Finnish native-speakers completed the experiment. Prior to testing, the participants were ",
+   "files": [
+    {
+     "path": "osfstorage:/MultipleTextReading_data.rda",
+     "size": 57299
+    },
+    {
+     "path": "osfstorage:/MultipleTextReading_reading_data.txt",
+     "size": 96878
+    },
+    {
+     "path": "osfstorage:/MultipleTextReading_participant_data.txt",
+     "size": 906
+    },
+    {
+     "path": "osfstorage:/MultipleTextReading_dataRQ2.rda",
+     "size": 3928
+    },
+    {
+     "path": "osfstorage:/MultipleTextReading_20240424.R",
+     "size": 25077
+    },
+    {
+     "path": "osfstorage:/MultipleTextReading_segment_length.txt",
+     "size": 1194
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "ngjra",
+   "status": 200,
+   "title": "Online inference making and comprehension monitoring in children during reading: Evidence from eye movements",
+   "public": true,
+   "category": "project",
+   "date_created": "2020-07-10T10:39:34.869610",
+   "description": "",
+   "files": [
+    {
+     "path": "osfstorage:/Local_Inferences_July2020.Rmd",
+     "size": 25011
+    },
+    {
+     "path": "osfstorage:/Global_Inferences_July2020.Rmd",
+     "size": 26231
+    },
+    {
+     "path": "osfstorage:/Local_Inferences_July2020.csv",
+     "size": 86973
+    },
+    {
+     "path": "osfstorage:/Global_Inferences_July2020.csv",
+     "size": 110475
+    },
+    {
+     "path": "osfstorage:/Inference stimuli.pdf",
+     "size": 286220
+    },
+    {
+     "path": "osfstorage:/JosephWonnacottNation_InferenceMaking_July2020_preprint.pdf",
+     "size": 647382
+    },
+    {
+     "path": "osfstorage:/JosephWonnacottNation_InferenceMaking_ACCEPTED_Dec2020.pdf",
+     "size": 660415
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "9p3xh",
+   "status": 200,
+   "title": "The influence of text genre on eye movement patterns during reading",
+   "public": true,
+   "category": "project",
+   "date_created": "2025-08-31T10:11:26.737013",
+   "description": "All stimuli, the data and analysis code for this study",
+   "files": [
+    {
+     "path": "osfstorage:/Stimuli/Reading comprehension tasks.docx",
+     "size": 28023
+    },
+    {
+     "path": "osfstorage:/Stimuli/Stimuli texts.docx",
+     "size": 16831
+    },
+    {
+     "path": "osfstorage:/Eye movement data analysis/ia_merged.xlsx",
+     "size": 3179741
+    },
+    {
+     "path": "osfstorage:/Eye movement data analysis/fix_merged.xlsx",
+     "size": 5203546
+    },
+    {
+     "path": "osfstorage:/Eye movement data analysis/Scanpath analysis.R",
+     "size": 16136
+    },
+    {
+     "path": "osfstorage:/Eye movement data analysis/sac_merged.xlsx",
+     "size": 4547251
+    },
+    {
+     "path": "osfstorage:/Eye movement data analysis/trial_merged.xlsx",
+     "size": 24981
+    },
+    {
+     "path": "osfstorage:/Behavioural data analysis/Behavioral_data.csv",
+     "size": 4054
+    },
+    {
+     "path": "osfstorage:/Behavioural data analysis/Script.R",
+     "size": 6916
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "gbsmf",
+   "status": 401,
+   "guid_status": 401,
+   "guid_type": null
+  },
+  {
+   "guid": "26nvz",
+   "status": 200,
+   "title": "Lexicality Effects on Orthographic Learning in Beginning and Advanced Readers of Dutch: An Eye-tracking Study",
+   "public": true,
+   "category": "project",
+   "date_created": "2021-08-25T06:52:02.921677",
+   "description": "Abstract\nOrthographic learning is the topic of many recent studies about reading, but much is still unknown about conditions that affect orthographic learning and their influence on reading fluency development over time. This study investigated lexicality effects on orthographic learning in beginning and relatively advanced readers of Dutch. Eye movements of 131 children in Grades 2 and 5 were monitored during an orthographic learning task. Children read sentences containing pseudowords or low-frequency real words that varied in number of exposures. We examined both offline learning outcomes (",
+   "files": [
+    {
+     "path": "osfstorage:/README.pdf",
+     "size": 463492
+    },
+    {
+     "path": "osfstorage:/Manuscript/Online Supplement B - Offline analyses.pdf",
+     "size": 1209707
+    },
+    {
+     "path": "osfstorage:/Manuscript/Online Supplement C - Online analyses.pdf",
+     "size": 3429517
+    },
+    {
+     "path": "osfstorage:/Manuscript/Online Supplement A.pdf",
+     "size": 490988
+    },
+    {
+     "path": "osfstorage:/Manuscript/van Viersen et al., 2021.pdf",
+     "size": 413531
+    },
+    {
+     "path": "osfstorage:/Data and analysis scripts/rdat.Rda",
+     "size": 112082
+    },
+    {
+     "path": "osfstorage:/Data and analysis scripts/som.Rda",
+     "size": 17596
+    },
+    {
+     "path": "osfstorage:/Data and analysis scripts/Offline_analyses.Rmd",
+     "size": 40143
+    },
+    {
+     "path": "osfstorage:/Data and analysis scripts/OLeyemovements.Rmd",
+     "size": 19244
+    },
+    {
+     "path": "osfstorage:/Data and analysis scripts/Offline_analyses.pdf",
+     "size": 1209707
+    },
+    {
+     "path": "osfstorage:/Data and analysis scripts/OLeyemovements.pdf",
+     "size": 3429517
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "d9528",
+   "status": 200,
+   "title": "Acquisition of orthographic forms via spoken complex word training",
+   "public": true,
+   "category": "project",
+   "date_created": "2022-04-08T02:01:18.910840",
+   "description": "",
+   "files": [
+    {
+     "path": "osfstorage:/Analysis scripts/Reading Aloud Analyses/Morskel_Children_ReadingAloud.Rmd",
+     "size": 6747
+    },
+    {
+     "path": "osfstorage:/Analysis scripts/Reading Aloud Analyses/Morskel_Children_ReadingAloud.html",
+     "size": 831599
+    },
+    {
+     "path": "osfstorage:/Analysis scripts/Eye-Tracking Analyses/Children's_Morphological_Skeleton.Rmd",
+     "size": 15954
+    },
+    {
+     "path": "osfstorage:/Analysis scripts/Eye-Tracking Analyses/Children-s_Morphological_Skeleton.html",
+     "size": 1214043
+    },
+    {
+     "path": "osfstorage:/Data/Reading Aloud Data/Morskel_Children_ReadingAloudResults.csv",
+     "size": 93837
+    },
+    {
+     "path": "osfstorage:/Data/Eye-Tracking Data/firstPass.csv",
+     "size": 57647
+    },
+    {
+     "path": "osfstorage:/Data/Eye-Tracking Data/targets.csv",
+     "size": 66439
+    },
+    {
+     "path": "osfstorage:/Materials/EyeTracking_Materials.docx",
+     "size": 16067
+    },
+    {
+     "path": "osfstorage:/Materials/Oral_Vocabulary_Training_Materials.docx",
+     "size": 17689
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "j2tke",
+   "status": 401,
+   "guid_status": 401,
+   "guid_type": null
+  },
+  {
+   "guid": "s8j2n",
+   "status": 401,
+   "guid_status": 401,
+   "guid_type": null
+  },
+  {
+   "guid": "3r8gx",
+   "status": 200,
+   "title": "Individuals with dyslexia use a different visual sampling strategy to read text",
+   "public": true,
+   "category": "project",
+   "date_created": "2020-07-27T15:37:49.509271",
+   "description": "This project repository provides data and code supporting the work in the eponymous article accepted for publication in Nature Scientific Reports (February, 2021). Please contact us [leon.franzen@mail.com] for code pertaining to specific analyses or all other enquiries.",
+   "files": [
+    {
+     "path": "osfstorage:/Dyslexia_Eye Movement Profile_Preprint_Franzen2020.pdf",
+     "size": 1294982
+    },
+    {
+     "path": "osfstorage:/Code/Code_Figure2_IndividualsWithDyslexia.m",
+     "size": 8887
+    },
+    {
+     "path": "osfstorage:/Data/IndividualsWithDyslexia_BehaviorAndEyeData_SingleTrialTable_67Participants_601Trials.csv",
+     "size": 46749
+    },
+    {
+     "path": "osfstorage:/Data/IndividualsWithDyslexia_BehaviorAndEyeData_SingleTrialTable_67Participants_601Trials.mat",
+     "size": 19115
+    },
+    {
+     "path": "osfstorage:/Data/CognitiveScoresAndDemographics_Table_67Subjects.csv",
+     "size": 1102
+    },
+    {
+     "path": "osfstorage:/Data/CognitiveScoresAndDemographics_Table_67Subjects.mat",
+     "size": 1448
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "45prg",
+   "status": 401,
+   "guid_status": 401,
+   "guid_type": null
+  },
+  {
+   "guid": "vgze6",
+   "status": 200,
+   "title": "Letter Spacing Project",
+   "public": true,
+   "category": "project",
+   "date_created": "2019-08-30T09:12:51.887437",
+   "description": "Data and scripts for Korinth S.P., Gerstenberger K. &amp; Fiebach C.J. (2020). Wider letter-spacing facilitates word processing but impairs reading rates of fast readers. Front. Psychol. 11:444. doi: 10.3389/fpsyg.2020.00444\"",
+   "files": [
+    {
+     "path": "osfstorage:/README.txt",
+     "size": 1560
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/letter_distance_script.R",
+     "size": 10644
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/README.txt",
+     "size": 836
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/all_line_letter_borders_normal.Rda",
+     "size": 71936
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/example_image.png",
+     "size": 24101
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/all_line_letter_borders_wide.Rda",
+     "size": 72582
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/text_condition_merge_all.Rda",
+     "size": 47946
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_5.png",
+     "size": 231114
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_10.png",
+     "size": 239747
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_31.png",
+     "size": 239555
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_9.png",
+     "size": 230096
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_14.png",
+     "size": 310687
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_33.png",
+     "size": 222395
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_42.png",
+     "size": 307742
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_36.png",
+     "size": 233709
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_35.png",
+     "size": 232187
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_48.png",
+     "size": 234569
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_60.png",
+     "size": 231795
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_72.png",
+     "size": 229236
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_78.png",
+     "size": 236816
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/normal images/normal_83.png",
+     "size": 231966
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_14.png",
+     "size": 235966
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_10.png",
+     "size": 250800
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_5.png",
+     "size": 241043
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_9.png",
+     "size": 240503
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_31.png",
+     "size": 250279
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_33.png",
+     "size": 232068
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_35.png",
+     "size": 242400
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_42.png",
+     "size": 314578
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_48.png",
+     "size": 245511
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_36.png",
+     "size": 245107
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_60.png",
+     "size": 241837
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_72.png",
+     "size": 241399
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_78.png",
+     "size": 247100
+    },
+    {
+     "path": "osfstorage:/letterCenterToCenterDistance/wide images/weit_83.png",
+     "size": 242087
+    },
+    {
+     "path": "osfstorage:/trialDurationData/trial_report.txt",
+     "size": 15240
+    },
+    {
+     "path": "osfstorage:/trialDurationData/README.txt",
+     "size": 913
+    },
+    {
+     "path": "osfstorage:/trialDurationData/trial_analysis.R",
+     "size": 6903
+    },
+    {
+     "path": "osfstorage:/parafovealCrowding/fixation_report_pre_stimulus_periode.txt",
+     "size": 1166197
+    },
+    {
+     "path": "osfstorage:/parafovealCrowding/crowding_results_30_participants.txt",
+     "size": 203093
+    },
+    {
+     "path": "osfstorage:/parafovealCrowding/README.txt",
+     "size": 3204
+    },
+    {
+     "path": "osfstorage:/parafovealCrowding/parafoveal_crowding_analysis.R",
+     "size": 11011
+    },
+    {
+     "path": "osfstorage:/outputFolder/eye_movement_ranefs.Rda",
+     "size": 2681
+    },
+    {
+     "path": "osfstorage:/outputFolder/eye_movement_data_clean.Rda",
+     "size": 1809433
+    },
+    {
+     "path": "osfstorage:/outputFolder/crowding_ranefs_23.Rda",
+     "size": 714
+    },
+    {
+     "path": "osfstorage:/outputFolder/Figure_2.png",
+     "size": 92092
+    },
+    {
+     "path": "osfstorage:/outputFolder/Figure_3.png",
+     "size": 54744
+    },
+    {
+     "path": "osfstorage:/outputFolder/Figure_4.png",
+     "size": 37665
+    },
+    {
+     "path": "osfstorage:/outputFolder/Figure_5.png",
+     "size": 36159
+    },
+    {
+     "path": "osfstorage:/outputFolder/crowding_ranefs_24.Rda",
+     "size": 734
+    },
+    {
+     "path": "osfstorage:/outputFolder/words_per_minute_normal.Rda",
+     "size": 1225
+    },
+    {
+     "path": "osfstorage:/outputFolder/gaze_word_ranefs.Rda",
+     "size": 101008
+    },
+    {
+     "path": "osfstorage:/outputFolder/Figure_6.png",
+     "size": 33390
+    },
+    {
+     "path": "osfstorage:/fovealCrowding/README.txt",
+     "size": 417
+    },
+    {
+     "path": "osfstorage:/fovealCrowding/foveal_crowding_plots.R",
+     "size": 4116
+    },
+    {
+     "path": "osfstorage:/eyeMovementData/eye_movements_data_preprocessing.R",
+     "size": 7110
+    },
+    {
+     "path": "osfstorage:/eyeMovementData/IA_report.txt",
+     "size": 4213872
+    },
+    {
+     "path": "osfstorage:/eyeMovementData/eye_movements_model_calculations.R",
+     "size": 11230
+    },
+    {
+     "path": "osfstorage:/eyeMovementData/fixation_report.txt",
+     "size": 2848634
+    },
+    {
+     "path": "osfstorage:/eyeMovementData/eye_movements_figures.R",
+     "size": 7139
+    },
+    {
+     "path": "osfstorage:/eyeMovementData/README.txt",
+     "size": 3122
+    },
+    {
+     "path": "osfstorage:/eyeMovementData/eye_movements_word_length_effects.R",
+     "size": 3913
+    },
+    {
+     "path": "osfstorage:/correlationCrowdingEyeMovement/correlating_eye_crowding.R",
+     "size": 3222
+    },
+    {
+     "path": "osfstorage:/correlationCrowdingEyeMovement/README.txt",
+     "size": 543
+    },
+    {
+     "path": "osfstorage:/comprehensionData/comprehension_analysis.R",
+     "size": 4918
+    },
+    {
+     "path": "osfstorage:/comprehensionData/comprehension_data.txt",
+     "size": 12372
+    },
+    {
+     "path": "osfstorage:/comprehensionData/README.txt",
+     "size": 1347
+    },
+    {
+     "path": "osfstorage:/commonFolder/participant_properties.Rda",
+     "size": 590
+    },
+    {
+     "path": "osfstorage:/commonFolder/text_properties.txt",
+     "size": 128
+    },
+    {
+     "path": "osfstorage:/commonFolder/comprehension_data.Rda",
+     "size": 2436
+    },
+    {
+     "path": "osfstorage:/commonFolder/word_properties.Rda",
+     "size": 46623
+    },
+    {
+     "path": "osfstorage:/commonFolder/summaryFunctionForGgplot2.R",
+     "size": 1621
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "5a2ud",
+   "status": 200,
+   "title": "digital reading  eye movement data and artificial neural networks",
+   "public": true,
+   "category": "project",
+   "date_created": "2025-02-13T11:24:19.684524",
+   "description": "",
+   "files": [
+    {
+     "path": "osfstorage:/script/map anlysis.py",
+     "size": 3433
+    },
+    {
+     "path": "osfstorage:/script/modelcode.py",
+     "size": 6427
+    },
+    {
+     "path": "osfstorage:/script/saccadecode.py",
+     "size": 7142
+    },
+    {
+     "path": "osfstorage:/dataset/saccadedataAOIofwholetext.xlsx",
+     "size": 73316
+    },
+    {
+     "path": "osfstorage:/dataset/saccadedata.npz",
+     "size": 11527
+    },
+    {
+     "path": "osfstorage:/dataset/questionnaire.xlsx",
+     "size": 16103
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "ud8s5",
+   "status": 200,
+   "title": "CopCo: The Copenhagen Corpus of Eye-Tracking Recordings from Natural Reading",
+   "public": true,
+   "category": "project",
+   "date_created": "2021-11-04T09:46:44.703951",
+   "description": "",
+   "files": [
+    {
+     "path": "osfstorage:/Experiment/CopCo_ExperimentBuilderFiles.zip",
+     "size": 33019890
+    },
+    {
+     "path": "osfstorage:/Experiment/CopCo_DeployedExperiments.zip",
+     "size": 598139169
+    },
+    {
+     "path": "osfstorage:/DatasetStatistics/participant_stats.csv",
+     "size": 4384
+    },
+    {
+     "path": "osfstorage:/DatasetStatistics/texts_stats.csv",
+     "size": 2642
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P03.csv",
+     "size": 861297
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P01.csv",
+     "size": 473844
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P05.csv",
+     "size": 836359
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P02.csv",
+     "size": 630452
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P04.csv",
+     "size": 262240
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P06.csv",
+     "size": 788076
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P07.csv",
+     "size": 524982
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P08.csv",
+     "size": 194780
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P09.csv",
+     "size": 94744
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P10.csv",
+     "size": 590082
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P12.csv",
+     "size": 483586
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P11.csv",
+     "size": 828690
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P13.csv",
+     "size": 287998
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P16.csv",
+     "size": 499771
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P15.csv",
+     "size": 552643
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P17.csv",
+     "size": 309888
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P18.csv",
+     "size": 534030
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P19.csv",
+     "size": 522516
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P20.csv",
+     "size": 779578
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P21.csv",
+     "size": 527279
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P22.csv",
+     "size": 569422
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P23.csv",
+     "size": 284088
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P25.csv",
+     "size": 400761
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P24.csv",
+     "size": 217659
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P26.csv",
+     "size": 319984
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P27.csv",
+     "size": 578513
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P28.csv",
+     "size": 602105
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P29.csv",
+     "size": 388957
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P31.csv",
+     "size": 168183
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P30.csv",
+     "size": 575045
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P32.csv",
+     "size": 423329
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P33.csv",
+     "size": 343183
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P34.csv",
+     "size": 306834
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P36.csv",
+     "size": 151812
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P35.csv",
+     "size": 524852
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P37.csv",
+     "size": 498393
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P38.csv",
+     "size": 300108
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P39.csv",
+     "size": 215274
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P40.csv",
+     "size": 494175
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P41.csv",
+     "size": 571977
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P42.csv",
+     "size": 290741
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P43.csv",
+     "size": 557330
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P45.csv",
+     "size": 632670
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P44.csv",
+     "size": 721345
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P46.csv",
+     "size": 1095559
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P47.csv",
+     "size": 565315
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P48.csv",
+     "size": 612582
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P49.csv",
+     "size": 348222
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P50.csv",
+     "size": 600176
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P51.csv",
+     "size": 644735
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P54.csv",
+     "size": 434402
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P52.csv",
+     "size": 835896
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P55.csv",
+     "size": 886590
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P53.csv",
+     "size": 664402
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P56.csv",
+     "size": 588737
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P57.csv",
+     "size": 245012
+    },
+    {
+     "path": "osfstorage:/ExtractedFeatures/P58.csv",
+     "size": 575971
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P02.txt",
+     "size": 1768248
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P05.txt",
+     "size": 2538689
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P04.txt",
+     "size": 1043607
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P03.txt",
+     "size": 2956679
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P01.txt",
+     "size": 2030871
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P06.txt",
+     "size": 2266208
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P07.txt",
+     "size": 2204004
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P08.txt",
+     "size": 448567
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P09.txt",
+     "size": 289807
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P10.txt",
+     "size": 2429182
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P11.txt",
+     "size": 2464178
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P13.txt",
+     "size": 874568
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P12.txt",
+     "size": 1767662
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P15.txt",
+     "size": 2010484
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P16.txt",
+     "size": 1438805
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P17.txt",
+     "size": 1228576
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P31.txt",
+     "size": 1734855
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P35.txt",
+     "size": 1581318
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P30.txt",
+     "size": 2183171
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P34.txt",
+     "size": 1715715
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P38.txt",
+     "size": 1888971
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P37.txt",
+     "size": 1544553
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P36.txt",
+     "size": 1717643
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P32.txt",
+     "size": 1901925
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P33.txt",
+     "size": 3295419
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P29.txt",
+     "size": 2096919
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P26.txt",
+     "size": 2615078
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P22.txt",
+     "size": 2073991
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P23.txt",
+     "size": 1117304
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P27.txt",
+     "size": 3110163
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P19.txt",
+     "size": 1770887
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P18.txt",
+     "size": 1667097
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P25.txt",
+     "size": 2190351
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P24.txt",
+     "size": 980143
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P28.txt",
+     "size": 2784792
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P21.txt",
+     "size": 1714653
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P20.txt",
+     "size": 2120199
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P39.txt",
+     "size": 960045
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P40.txt",
+     "size": 2060087
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P41.txt",
+     "size": 2624523
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P42.txt",
+     "size": 1146212
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P43.txt",
+     "size": 2583061
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P44.txt",
+     "size": 2989983
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P46.txt",
+     "size": 3440415
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P45.txt",
+     "size": 2493186
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P48.txt",
+     "size": 1734770
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P50.txt",
+     "size": 2911586
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P47.txt",
+     "size": 2379363
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P49.txt",
+     "size": 1692557
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P51.txt",
+     "size": 2336864
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P52.txt",
+     "size": 2861447
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P53.txt",
+     "size": 2070878
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P55.txt",
+     "size": 4298041
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P54.txt",
+     "size": 2163189
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P56.txt",
+     "size": 2204350
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P57.txt",
+     "size": 1185757
+    },
+    {
+     "path": "osfstorage:/FixationReports/FIX_report_P58.txt",
+     "size": 2556051
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P04.txt",
+     "size": 8414075
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P01.txt",
+     "size": 17423686
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P02.txt",
+     "size": 16899797
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P05.txt",
+     "size": 21194857
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P03.txt",
+     "size": 27891416
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P06.txt",
+     "size": 21706855
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P08.txt",
+     "size": 4644982
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P09.txt",
+     "size": 3265326
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P07.txt",
+     "size": 17126549
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P13.txt",
+     "size": 7288617
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P12.txt",
+     "size": 14944527
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P10.txt",
+     "size": 21503972
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P11.txt",
+     "size": 22956016
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P15.txt",
+     "size": 17695377
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P16.txt",
+     "size": 11675063
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P17.txt",
+     "size": 11326108
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P31.txt",
+     "size": 12281304
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P34.txt",
+     "size": 14763446
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P38.txt",
+     "size": 15606940
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P30.txt",
+     "size": 20008381
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P35.txt",
+     "size": 14706941
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P37.txt",
+     "size": 14099775
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P36.txt",
+     "size": 10805612
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P29.txt",
+     "size": 15414789
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P32.txt",
+     "size": 16829069
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P33.txt",
+     "size": 26298281
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P23.txt",
+     "size": 9787438
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P26.txt",
+     "size": 20583507
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P27.txt",
+     "size": 27111458
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P22.txt",
+     "size": 18969716
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P19.txt",
+     "size": 16101058
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P18.txt",
+     "size": 16406339
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P24.txt",
+     "size": 8904594
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P25.txt",
+     "size": 17960532
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P28.txt",
+     "size": 22980763
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P21.txt",
+     "size": 14921003
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P20.txt",
+     "size": 19474528
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P39.txt",
+     "size": 9548357
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P41.txt",
+     "size": 21592693
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P40.txt",
+     "size": 16840789
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P42.txt",
+     "size": 10413625
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P43.txt",
+     "size": 23585043
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P44.txt",
+     "size": 22769974
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P45.txt",
+     "size": 21533775
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P47.txt",
+     "size": 19892122
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P49.txt",
+     "size": 14173688
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P48.txt",
+     "size": 16195123
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P46.txt",
+     "size": 32599824
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P50.txt",
+     "size": 26127019
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P54.txt",
+     "size": 15279429
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P53.txt",
+     "size": 19306330
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P51.txt",
+     "size": 21658562
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P52.txt",
+     "size": 25993765
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P57.txt",
+     "size": 8038994
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P56.txt",
+     "size": 19562424
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P55.txt",
+     "size": 37383424
+    },
+    {
+     "path": "osfstorage:/InterestAreaReports/IA_report_P58.txt",
+     "size": 19013643
+    },
+    {
+     "path": "osfstorage:/RawData/P01.zip",
+     "size": 27775032
+    },
+    {
+     "path": "osfstorage:/RawData/P02.zip",
+     "size": 21774271
+    },
+    {
+     "path": "osfstorage:/RawData/P03.zip",
+     "size": 31234249
+    },
+    {
+     "path": "osfstorage:/RawData/P04.zip",
+     "size": 12454225
+    },
+    {
+     "path": "osfstorage:/RawData/P05.zip",
+     "size": 32742922
+    },
+    {
+     "path": "osfstorage:/RawData/P06.zip",
+     "size": 24830397
+    },
+    {
+     "path": "osfstorage:/RawData/P07.zip",
+     "size": 28124330
+    },
+    {
+     "path": "osfstorage:/RawData/P08.zip",
+     "size": 6047816
+    },
+    {
+     "path": "osfstorage:/RawData/P09.zip",
+     "size": 6660730
+    },
+    {
+     "path": "osfstorage:/RawData/P10.zip",
+     "size": 26842068
+    },
+    {
+     "path": "osfstorage:/RawData/P12.zip",
+     "size": 19131159
+    },
+    {
+     "path": "osfstorage:/RawData/P11.zip",
+     "size": 26355724
+    },
+    {
+     "path": "osfstorage:/RawData/P13.zip",
+     "size": 13594449
+    },
+    {
+     "path": "osfstorage:/RawData/P14.zip",
+     "size": 23251591
+    },
+    {
+     "path": "osfstorage:/RawData/P15.zip",
+     "size": 24567361
+    },
+    {
+     "path": "osfstorage:/RawData/P16.zip",
+     "size": 18794429
+    },
+    {
+     "path": "osfstorage:/RawData/P17.zip",
+     "size": 13134384
+    },
+    {
+     "path": "osfstorage:/RawData/P18.zip",
+     "size": 20923634
+    },
+    {
+     "path": "osfstorage:/RawData/P19.zip",
+     "size": 19731813
+    },
+    {
+     "path": "osfstorage:/RawData/P20.zip",
+     "size": 22358867
+    },
+    {
+     "path": "osfstorage:/RawData/P21.zip",
+     "size": 19880096
+    },
+    {
+     "path": "osfstorage:/RawData/P22.zip",
+     "size": 23282843
+    },
+    {
+     "path": "osfstorage:/RawData/P23.zip",
+     "size": 15349581
+    },
+    {
+     "path": "osfstorage:/RawData/P24.zip",
+     "size": 12289322
+    },
+    {
+     "path": "osfstorage:/RawData/P25.zip",
+     "size": 26333919
+    },
+    {
+     "path": "osfstorage:/RawData/P26.zip",
+     "size": 32541922
+    },
+    {
+     "path": "osfstorage:/RawData/P27.zip",
+     "size": 41205514
+    },
+    {
+     "path": "osfstorage:/RawData/P28.zip",
+     "size": 31757606
+    },
+    {
+     "path": "osfstorage:/RawData/P29.zip",
+     "size": 25608163
+    },
+    {
+     "path": "osfstorage:/RawData/P30.zip",
+     "size": 29920997
+    },
+    {
+     "path": "osfstorage:/RawData/P31.zip",
+     "size": 25266556
+    },
+    {
+     "path": "osfstorage:/RawData/P32.zip",
+     "size": 24285180
+    },
+    {
+     "path": "osfstorage:/RawData/P33.zip",
+     "size": 45169655
+    },
+    {
+     "path": "osfstorage:/RawData/P34.zip",
+     "size": 22013195
+    },
+    {
+     "path": "osfstorage:/RawData/P35.zip",
+     "size": 18392448
+    },
+    {
+     "path": "osfstorage:/RawData/P36.zip",
+     "size": 28257034
+    },
+    {
+     "path": "osfstorage:/RawData/P37.zip",
+     "size": 17342916
+    },
+    {
+     "path": "osfstorage:/RawData/P38.zip",
+     "size": 25049758
+    },
+    {
+     "path": "osfstorage:/RawData/P39.zip",
+     "size": 14310008
+    },
+    {
+     "path": "osfstorage:/RawData/P40.zip",
+     "size": 28614837
+    },
+    {
+     "path": "osfstorage:/RawData/P41.zip",
+     "size": 32994168
+    },
+    {
+     "path": "osfstorage:/RawData/P42.zip",
+     "size": 13860837
+    },
+    {
+     "path": "osfstorage:/RawData/P43.zip",
+     "size": 29088567
+    },
+    {
+     "path": "osfstorage:/RawData/P44.zip",
+     "size": 33345446
+    },
+    {
+     "path": "osfstorage:/RawData/P45.zip",
+     "size": 31035975
+    },
+    {
+     "path": "osfstorage:/RawData/P46.zip",
+     "size": 38264657
+    },
+    {
+     "path": "osfstorage:/RawData/P47.zip",
+     "size": 39883976
+    },
+    {
+     "path": "osfstorage:/RawData/P48.zip",
+     "size": 21706374
+    },
+    {
+     "path": "osfstorage:/RawData/P49.zip",
+     "size": 17467607
+    },
+    {
+     "path": "osfstorage:/RawData/P50.zip",
+     "size": 41998094
+    },
+    {
+     "path": "osfstorage:/RawData/P51.zip",
+     "size": 26500735
+    },
+    {
+     "path": "osfstorage:/RawData/P52.zip",
+     "size": 33342906
+    },
+    {
+     "path": "osfstorage:/RawData/P53.zip",
+     "size": 23789886
+    },
+    {
+     "path": "osfstorage:/RawData/P54.zip",
+     "size": 26070061
+    },
+    {
+     "path": "osfstorage:/RawData/P56.zip",
+     "size": 27794214
+    },
+    {
+     "path": "osfstorage:/RawData/P55.zip",
+     "size": 44780727
+    },
+    {
+     "path": "osfstorage:/RawData/P57.zip",
+     "size": 14787205
+    },
+    {
+     "path": "osfstorage:/RawData/P58.zip",
+     "size": 26675600
+    },
+    {
+     "path": "osfstorage:/RawData/csvs.zip",
+     "size": 787504511
+    },
+    {
+     "path": "github:/calibration_check.py",
+     "size": 2956
+    },
+    {
+     "path": "github:/char2word_mapping.py",
+     "size": 3373
+    },
+    {
+     "path": "github:/extract_features.py",
+     "size": 10369
+    },
+    {
+     "path": "github:/.gitignore",
+     "size": 16
+    },
+    {
+     "path": "github:/helpers.py",
+     "size": 1660
+    },
+    {
+     "path": "github:/participant_correlations.py",
+     "size": null
+    },
+    {
+     "path": "github:/participant_statistics.py",
+     "size": null
+    },
+    {
+     "path": "github:/participant_stats.csv",
+     "size": null
+    },
+    {
+     "path": "github:/README.md",
+     "size": 3646
+    },
+    {
+     "path": "github:/requirements.txt",
+     "size": 2809
+    },
+    {
+     "path": "github:/speech_statistics.py",
+     "size": null
+    },
+    {
+     "path": "github:/speech_stats.csv",
+     "size": null
+    },
+    {
+     "path": "github:/test_sent_splitting.py",
+     "size": null
+    },
+    {
+     "path": "github:/texts_statistics.py",
+     "size": null
+    },
+    {
+     "path": "github:/texts_stats.csv",
+     "size": null
+    },
+    {
+     "path": "github:/validate_data.py",
+     "size": null
+    },
+    {
+     "path": "github:/word2char_IA_mapping.csv",
+     "size": null
+    },
+    {
+     "path": "github:/utils/char2word.py",
+     "size": null
+    },
+    {
+     "path": "github:/utils/char_mapping.py",
+     "size": null
+    },
+    {
+     "path": "github:/utils/df_experimental_speeches.tsv",
+     "size": null
+    },
+    {
+     "path": "github:/utils/.DS_Store",
+     "size": null
+    },
+    {
+     "path": "github:/utils/letter_freq_dk.csv",
+     "size": null
+    },
+    {
+     "path": "github:/utils/ParticipantOverviewAnonymized.xlsx",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/.DS_Store",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/actual_TRIAL_DataSource_CopCo_part1_BLOCKTRIAL.dat",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/.DS_Store",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/eb_messages.log",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/error.log",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/RESULTS_FILE.txt",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/warning.log",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_10.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_11.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_12.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_13.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_14.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_15.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_16.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_17.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_18.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_19.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_1.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_20.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_21.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_22.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_23.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_24.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_25.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_26.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_27.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_28.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_29.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_2.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_30.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_31.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_32.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_33.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_34.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_35.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_36.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_37.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_38.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_39.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_3.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_40.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_41.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_42.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_43.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_44.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_45.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_46.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_47.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_48.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_49.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_4.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_50.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_51.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_52.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_53.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_54.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_55.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_56.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_57.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_58.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_59.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_5.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_60.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_61.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_6.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_7.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_8.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/graphics/VC_9.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_10.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_11.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_12.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_13.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_14.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_15.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_16.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_17.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_18.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_19.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_1.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_20.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_21.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_22.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_23.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_24.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_25.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_26.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_27.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_28.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_29.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_2.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_30.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_31.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_32.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_33.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_34.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_35.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_36.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_37.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_38.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_39.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_3.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_40.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_41.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_42.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_43.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_44.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_45.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_46.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_47.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_48.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_49.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_4.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_50.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_51.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_52.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_53.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_54.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_55.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_56.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_57.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_58.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_59.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_5.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_60.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_61.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_6.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_7.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_8.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/pilot-data/P00/aoi/IA_9.ias",
+     "size": null
+    },
+    {
+     "path": "github:/utils/lemma-10k-2017/lemma-10k-2017-ex.txt",
+     "size": null
+    },
+    {
+     "path": "github:/utils/lemma-10k-2017/lemma-10k-2017-in.txt",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/.DS_Store",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/actual_TRIAL_DataSource_CopCo_part1_BLOCKTRIAL.dat",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/eb_messages.log",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/error.log",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/RESULTS_FILE.txt",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/warning.log",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_10.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_11.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_12.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_13.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_14.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_15.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_16.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_17.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_18.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_19.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_1.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_20.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_21.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_22.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_23.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_24.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_25.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_26.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_27.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_28.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_29.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_2.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_30.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_31.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_32.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_33.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_34.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_35.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_36.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_37.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_38.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_39.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_3.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_40.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_41.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_42.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_43.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_44.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_45.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_46.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_47.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_48.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_49.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_4.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_50.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_51.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_52.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_53.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_54.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_55.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_56.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_57.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_58.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_59.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_5.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_60.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_61.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_62.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_63.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_64.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_65.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_66.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_67.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_68.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_69.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_6.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_70.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_71.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_72.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_73.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_74.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_75.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_76.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_77.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_78.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_79.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_7.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_80.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_81.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_8.vcl",
+     "size": null
+    },
+    {
+     "path": "github:/RawData/P29/graphics/VC_9.vcl",
+     "size": null
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "dn5hp",
+   "status": 200,
+   "title": "Potsdam Textbook Corpus",
+   "public": true,
+   "category": "data",
+   "date_created": "2021-01-22T18:49:24.531018",
+   "description": "This repository contains the Potsdam Textbook Corpus (PoTeC) which is a natural reading eye-tracking corpus. Four groups of participants (graduate/undergraduate level students of physics and biology) read 12 short texts taken from textbooks of physics and biology while their eye movements were monitored. The final dataset contains the reading data for 75 participants each reading all 12 texts. The study follows a 2x2x2 fully-crossed factorial design:\n\n    Factor 1: Discipline of studies of participant with the levels either physics or biology\n    Factor 2: Level of studies of participant with ",
+   "files": [
+    {
+     "path": "osfstorage:/README-OSF.md",
+     "size": 144
+    },
+    {
+     "path": "osfstorage:/stimuli/aoi_texts.zip",
+     "size": 113159
+    },
+    {
+     "path": "osfstorage:/eyetracking_data/EYETRACKING_DATA.md",
+     "size": 3923
+    },
+    {
+     "path": "osfstorage:/eyetracking_data/scanpaths_merged.zip",
+     "size": 70292226
+    },
+    {
+     "path": "osfstorage:/eyetracking_data/scanpaths.zip",
+     "size": 9796046
+    },
+    {
+     "path": "osfstorage:/eyetracking_data/reading_measures_merged.zip",
+     "size": 39458427
+    },
+    {
+     "path": "osfstorage:/eyetracking_data/reading_measures.zip",
+     "size": 3326244
+    },
+    {
+     "path": "osfstorage:/eyetracking_data/fixations.zip",
+     "size": 6456542
+    },
+    {
+     "path": "osfstorage:/eyetracking_data/raw_data.zip",
+     "size": 737322440
+    },
+    {
+     "path": "osfstorage:/eyetracking_data/original_uncorrected_fixation_report.txt",
+     "size": 24945581
+    },
+    {
+     "path": "osfstorage:/eyetracking_data/fixations_uncorrected.zip",
+     "size": 7496887
+    },
+    {
+     "path": "osfstorage:/eyetracking_data/asc_files.zip",
+     "size": 1999690108
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "7p4f2",
+   "status": 401,
+   "guid_status": 401,
+   "guid_type": null
+  },
+  {
+   "guid": "hnytf",
+   "status": 200,
+   "title": "Gaze allocation during thematic map reading in children",
+   "public": true,
+   "category": "project",
+   "date_created": "2026-10-13T15:08:09.074368",
+   "description": "",
+   "files": [
+    {
+     "path": "osfstorage:/README.md",
+     "size": 3412
+    },
+    {
+     "path": "osfstorage:/analysis.ipynb",
+     "size": 28163
+    },
+    {
+     "path": "osfstorage:/data_map_reading_children.csv",
+     "size": 23239
+    },
+    {
+     "path": "osfstorage:/results_table.csv",
+     "size": 2250
+    },
+    {
+     "path": "osfstorage:/figure_viewing_time.png",
+     "size": 244758
+    },
+    {
+     "path": "osfstorage:/map_with_aois.jpg",
+     "size": 195765
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "xp5ac",
+   "status": 200,
+   "title": "No evidence that same-language subtitles improve children\u2019s reading fluency",
+   "public": true,
+   "category": "project",
+   "date_created": "2025-08-05T11:46:06.034189",
+   "description": "Stimulus materials, data, analysis scripts, and Supplemental Materials of the intervention study, testing the causal hypothesis that six-weeks exposure to same-language subtitles improves children\u2019s reading fluency.",
+   "files": [
+    {
+     "path": "osfstorage:/Intervention/Instructions for the Control Group.pdf",
+     "size": 136753
+    },
+    {
+     "path": "osfstorage:/Intervention/Instructions for the Experimental Group.pdf",
+     "size": 283348
+    },
+    {
+     "path": "osfstorage:/Supplemental materials/Supplemental Materials.pdf",
+     "size": 333299
+    },
+    {
+     "path": "osfstorage:/Analysis script/0. README_Analysis.pdf",
+     "size": 27604
+    },
+    {
+     "path": "osfstorage:/Analysis script/analysis_script_intervention.Rmd",
+     "size": 31316
+    },
+    {
+     "path": "osfstorage:/Data/behavioural_pretest.csv",
+     "size": 11970
+    },
+    {
+     "path": "osfstorage:/Data/eyetracking4_reading_dataset.csv",
+     "size": 41478909
+    },
+    {
+     "path": "osfstorage:/Data/behavioural_reading_dataset.csv",
+     "size": 19773
+    },
+    {
+     "path": "osfstorage:/Data/eyetracking1_reading_dataset.csv",
+     "size": 15166215
+    },
+    {
+     "path": "osfstorage:/Data/eyetracking2_reading_dataset.csv",
+     "size": 34473710
+    },
+    {
+     "path": "osfstorage:/Data/eyetracking3_reading_dataset.csv",
+     "size": 18720045
+    },
+    {
+     "path": "osfstorage:/Data/intervention.csv",
+     "size": 2865
+    },
+    {
+     "path": "osfstorage:/Data/0. README_Data.pdf",
+     "size": 244571
+    },
+    {
+     "path": "osfstorage:/Stimulus materials/Subtitles.csv",
+     "size": 34114
+    },
+    {
+     "path": "osfstorage:/Stimulus materials/Author recognition test_ART.pdf",
+     "size": 44238
+    },
+    {
+     "path": "osfstorage:/Stimulus materials/Title recognition test_TRT.pdf",
+     "size": 45876
+    },
+    {
+     "path": "osfstorage:/Stimulus materials/0. README_Materials.pdf",
+     "size": 127146
+    }
+   ],
+   "components": []
+  }
+ ]
+}
