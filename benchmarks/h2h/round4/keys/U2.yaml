@@ -1,0 +1,150 @@
+task: U2
+prompt: >-
+  Find every public dataset, in any archive, of high-throughput sequencing data from the salamander chytrid fungus
+  Batrachochytrium salamandrivorans (Bsal): genome or transcriptome sequencing of Bsal isolates, or sequencing (for
+  example host RNA-seq or skin-microbiome amplicons) of amphibians experimentally or naturally infected with or exposed to
+  Bsal. Raw reads, assemblies and processed sequence tables all count. Sanger single-gene sequences, qPCR or other
+  non-sequencing detection data, sequencing of animals or environments never exposed to Bsal, B. dendrobatidis-only data,
+  and papers without deposited data do not count.
+criteria: >-
+  Topic: BACKUP (the primary topic, Tasmanian devil facial tumour disease sequencing, failed the size gate; see
+  size_verdict). Included: a public deposit holding high-throughput sequencing data (Illumina, PacBio, Nanopore, RNA-seq,
+  WGS, 16S amplicon) or products derived from it (genome assemblies, TSA transcriptome assemblies, ASV/OTU tables) that
+  either sequence Bsal itself (cultured isolates, zoospores) or sequence hosts that were infected with or exposed to Bsal
+  in an experiment or in a confirmed outbreak, sampled after exposure. Bsal exposure was taken from the deposit metadata
+  (titles, descriptions, BioSample treatment or disease fields) or, when the deposit is silent, from the linked paper's
+  full text. Deposits that mix Bsal-exposed hosts with Bd-exposed or control hosts count. A soil microcosm inoculated with
+  Bsal (bacterial 16S, no amphibian host) is kept as confidence: borderline. Excluded: qPCR, ddPCR, eDNA-qPCR and
+  prevalence tables; Sanger amplicon confirmation; phenotype, growth, survival and niche-model data without sequencing;
+  skin-microbiome or host sequencing of animals not exposed to Bsal (wild surveys where Bsal was absent or untested,
+  in-vitro mucosome assays, microbiomes sampled before exposure); Bd-only sequencing, including Bd genotyping panels that
+  carry one Bsal locus; journal supplements and code-only deposits that do not hold sequence data; umbrella BioProjects
+  with no data of their own. Unit = study (one paper or, for unpublished deposits, one BioProject). BioProject, SRA study,
+  GEO series, assembly and TSA accessions of one paper, and a Dryad or Figshare deposit holding that paper's processed
+  sequence tables, are aliases; separate deposits from different papers are separate studies.
+studies:
+  - key: S1
+    title: "Genomic innovations linked to infection strategies across emerging pathogenic chytrid fungi (Bsal AMFP13 genome, in vitro RNA-seq, and Tylototriton wenxianensis skin RNA-seq)"
+    year: 2017
+    ids: ["PRJNA311566", "SRP069871", "GCA_002006685.1", "GCA_002006685", "PRJNA326249", "SRP076803", "PRJNA300849", "SRP067225", "PRJNA323392", "GESS00000000", "GESS01000000"]
+    archives: [NCBI SRA, NCBI BioProject, NCBI Assembly, ENA, DDBJ]
+    evidence: "Farrer et al. 2017 Nat Commun (PMC5364385) data statement names PRJNA326249 and PRJNA311566 for Bsal (2 WGS + 3 in vitro RNA-seq runs, assembly Batr_sala_BS_V1) and the Tylototriton skin RNA-seq of Bd- or Bsal-infected and control newts (PRJNA300849, 9 runs; TSA GESS00000000 under PRJNA323392)."
+  - key: S2
+    title: "Diversity, multifaceted evolution, and facultative saprotrophism in the European Batrachochytrium salamandrivorans epidemic"
+    year: 2021
+    ids: ["PRJNA610831", "SRP251868", "PRJNA623491", "PRJNA623492", "PRJNA623493", "PRJNA623494", "PRJNA797021", "PRJNA797022", "GCA_021556655.1", "GCA_021556665.1", "GCA_021556675.1", "GCA_021556705.1", "GCA_020617715.1", "GCA_020617725.1", "GCA_020617735.1", "GCA_020617195.1"]
+    archives: [NCBI SRA, NCBI BioProject, NCBI Assembly, ENA, DDBJ]
+    evidence: "Kelly et al. 2021 Nat Commun (PMID 34795258, PMC8602665) lists PRJNA610831 (14 PacBio/Illumina WGS runs of nine isolates from six European outbreaks) and the AMFP13/1 and AMFP14/2 pseudohaplotype assemblies PRJNA623491-4, grouped under umbrellas PRJNA797021/PRJNA797022; all 8 GCAs resolve at ENA."
+  - key: S3
+    title: "Genome assembly of Batrachochytrium salamandrivorans strain AMFP13 (Two-speed genome evolution drives pathogenicity in fungal pathogens of animals)"
+    year: 2023
+    ids: ["PRJNA666901", "SRP286262", "GCA_002006685.2"]
+    archives: [NCBI SRA, NCBI BioProject, NCBI Assembly, ENA]
+    evidence: "Wacker et al. 2023 PNAS (PMC9926174) data statement: raw Bsal Nanopore reads in PRJNA666901 (1 run, public 2021-11) and the new Batr_sala_V2 assembly GCA_002006685.2, deposited under the Farrer BioProject PRJNA311566 (keyed in S1)."
+  - key: S4
+    title: "RNA seq of H2O, glucose, mannose or galactose-treated Batrachochytrium salamandrivorans zoospores"
+    year: 2021
+    ids: ["GSE161129", "PRJNA675619", "SRP291769"]
+    archives: [GEO, NCBI SRA, ENA]
+    evidence: "GEO series GSE161129 (24 GSMs, BioProject PRJNA675619, 24 RNA-seq runs) of Bsal zoospores treated with carbohydrates, from Wang et al. 2021 Nat Commun 'Epidermal galactose spurs chytrid virulence' (PMID 34608163, PMC8490390)."
+  - key: S5
+    title: "Genotypic and phenotypic diversity of the European Batrachochytrium salamandrivorans outbreak"
+    year: 2024
+    ids: ["PRJNA845763", "SRP378425", "GCA_044508915.1"]
+    archives: [NCBI SRA, NCBI BioProject, NCBI Assembly, ENA]
+    evidence: "4 WGS runs of Bsal isolates plus assembly AMFP19_1_pb (GCA_044508915.1), cited by Kelly et al. 2024 PLoS Pathog 'High phenotypic diversity correlated with genomic variation across the European Bsal epizootic' (PMC11515996); its Dryad phenotype deposit is a near miss."
+  - key: S6
+    title: "Disruption of skin microbiota contributes to salamander disease (fire salamander skin bacteria before and after Bsal infection)"
+    year: 2018
+    ids: ["PRJNA477390", "SRP151078", "10.5061/dryad.m40t6g7", "10.5061/dryad.m40t6g7/1"]
+    archives: [NCBI SRA, ENA, Dryad]
+    evidence: "PRJNA477390 holds 266 16S amplicon runs of Salamandra salamandra skin 'before and after infection with Bsal'; the Dryad deposit of the same paper (Bletz et al. 2018 Proc R Soc B 10.1098/rspb.2018.0758) is the 'Bacterial community, Bacterial Abundance, Bsal Infection, Cultured Isolate, and Metadata' workbook."
+  - key: S7
+    title: "Captivity and Infection by the Fungal Pathogen Batrachochytrium salamandrivorans Perturb the Amphibian Skin Microbiome (Newt Microbiome)"
+    year: 2019
+    ids: ["PRJNA430498", "SRP130045"]
+    archives: [NCBI SRA, ENA]
+    evidence: "Bates et al. 2019 Front Microbiol (PMC6716147) data statement gives PRJNA430498, 116 16S amplicon runs from the skin of Lissotriton vulgaris and Triturus cristatus, including experimentally Bsal-infected newts; the deposit text itself does not mention Bsal."
+  - key: S8
+    title: "Eastern newt chytrid coinfection (Incapacitating effects of fungal coinfection in a novel pathogen system)"
+    year: 2020
+    ids: ["PRJNA612733", "SRP252891"]
+    archives: [NCBI SRA, ENA]
+    evidence: "48 RNA-seq runs of Notophthalmus viridescens skin, spleen and liver; BioSample treatment fields are Bd, Bsal, Bd + Bsal or uninfected control (Cornell; McDonald et al. 2020 Mol Ecol 10.1111/mec.15452)."
+  - key: S9
+    title: "Transcriptomes from experimental infected amphibians with batrachochytrium fungi (Salamander-Batrachochytrium salamandrivorans interactions through dual transcriptomics)"
+    year: 2026
+    ids: ["PRJNA739374", "SRP324704"]
+    archives: [NCBI SRA, ENA]
+    evidence: "61 RNA-seq runs (public 2024-05) including skin and spleen of Bsal-infected and control Desmognathus and Eurycea salamanders; Torres-Sanchez 2026 Ecol Evol (PMC13329848) names PRJNA739374 for its SRA reads and TSA assemblies."
+  - key: S10
+    title: "Invasibility of a North American soil ecosystem to amphibian-killing fungal pathogens"
+    year: 2024
+    ids: ["PRJNA897848", "SRP406639", "10.5061/dryad.rv15dv4g1"]
+    archives: [NCBI SRA, ENA, Dryad]
+    evidence: "confidence: borderline (Bsal-inoculated soil microcosms with no amphibian host): 105 PacBio full-length 16S runs plus Dryad per-day Bsal and Bd 16S count tables (Bsal_D1/D4/D14_count_data.csv) from Blaser et al. 2024 Proc R Soc B (PMC11021929)."
+  - key: S11
+    title: "Bsal susceptibility depends on host origin but not on skin microbiota in captive Pleurodeles waltl (Skin microbiota samples of ribbed newts exposed to Bsal)"
+    year: 2025
+    ids: ["PRJNA1248485", "SRP577488", "10.6084/m9.figshare.28254434", "10.6084/m9.figshare.28254434.v1"]
+    archives: [NCBI SRA, ENA, Figshare]
+    evidence: "63 16S runs of P. waltl skin microbiota before and after Bsal exposure (Fieschi-Meric et al. 2025 Anim Microbiome, PMC12661705); the Figshare deposit under the paper's working title holds ps_raw.rds/ps_norm.rds phyloseq ASV objects and the Bsal-exposure metadata."
+  - key: S12
+    title: "Differential Immune Responses Correlate With Chytridiomycosis Severity in Italian Crested Newts (skin microbiota, skin and spleen mRNA of Triturus carnifex exposed to Bsal)"
+    year: 2026
+    ids: ["PRJNA1265256", "SRP586388", "PRJNA1266396", "SRP586974", "GLNC00000000", "GLNC01000000"]
+    archives: [NCBI SRA, ENA, NCBI TSA]
+    evidence: "Fieschi-Meric et al. 2026 Mol Ecol (PMC13329419) data statement names microbiota PRJNA1265256 (20 runs) and skin/spleen RNA-seq PRJNA1266396 (28 runs) from Bsal-exposed T. carnifex, plus TSA GLNC00000000."
+  - key: S13
+    title: "Skin mRNA of ribbed newts exposed to Bsal"
+    year: 2026
+    ids: ["PRJNA1399148", "SRP660197"]
+    archives: [NCBI SRA, ENA]
+    evidence: "Ghent BioProject (60 RNA-seq runs, public 2026-02) whose stated aim is the effect of Bsal exposure on Pleurodeles waltl epidermal gene expression; no linked paper was found in Europe PMC."
+  - key: S14
+    title: "mRNA of ribbed newts across different sample types"
+    year: 2026
+    ids: ["PRJNA1532440", "SRP738441"]
+    archives: [NCBI SRA, ENA]
+    evidence: "45 RNA-seq runs (public 2026-09) of P. waltl belly skin, toe-clip, tail-clip and swab samples whose BioSample disease field is Bsal or Control; no linked paper found, separate from S13 by aim and samples."
+near_misses:
+  - {ids: ["PRJNA326294"], why_excluded: "Broad 'Batrachochytrium salamandrivorans overview' umbrella BioProject with no data of its own; ENA lists child projects (including PRJNA623491-4), which are keyed in S1 and S2."}
+  - {ids: ["PRJNA352246", "SRP092628"], why_excluded: "USGS next-generation sequencing of swabs from wild Oregon amphibians that tested qPCR-ambiguous for Bsal; the project says the reads had no matches to Bsal, so the hosts are not Bsal-infected."}
+  - {ids: ["PRJNA555719", "SRP215676", "PRJNA625377", "SRP256399", "PRJNA608001", "SRP257521"], why_excluded: "Bd amplicon genotyping (Fluidigm panels with 191-239 Bd loci and one Bsal locus) of Bd-positive swabs from the Americas; Bd data, no Bsal infection."}
+  - {ids: ["PRJNA659464", "PRJNA731185", "PRJNA639992", "PRJNA843333", "PRJNA1134887", "PRJNA1220672", "PRJNA1176676", "PRJNA1163358", "PRJNA1113385", "PRJNA1039858", "PRJNA1157804"], why_excluded: "Amphibian skin-microbiome or host sequencing that mentions Bsal only as background or tests skin secretions against Bsal in vitro (Virginia salamanders, SF Bay Area, India, Utah tiger salamanders, Qinling, spotted and green salamanders, axolotls, Hong Kong newt, Appalachian salamanders); no host was Bsal-exposed."}
+  - {ids: ["10.7290/t7SaLlfxxe"], why_excluded: "Data for Carter et al. 2021 PLoS Pathog 'Winter is coming' (UT TRACE repository): the 16S/ITS microbiome swabs were taken after temperature acclimation but before Bsal exposure, plus wild Bd-surveyed newts; TRACE file contents were not checked."}
+  - {ids: ["10.5061/dryad.qv9s4mwj5", "10.5281/zenodo.7458947", "10.5281/zenodo.7331502", "10.5281/zenodo.7331503"], why_excluded: "Corticosterone and skin microbiome of eastern newts (with two fastq files), motivated by Bsal but with no Bsal exposure; infection data are natural Bd qPCR loads."}
+  - {ids: ["10.5061/dryad.4xgxd25j5", "10.5281/zenodo.10961017", "10.5281/zenodo.10961016"], why_excluded: "Kelly et al. 2024 Bsal thermal phenotype deposit (growth counts and qPCR loads only); the paper's genome data are keyed as S5."}
+  - {ids: ["10.6084/m9.figshare.c.4187861", "10.6084/m9.figshare.6930515", "10.6084/m9.figshare.c.7165752", "10.6084/m9.figshare.25546575", "10.6084/m9.figshare.25546578", "10.6084/m9.figshare.25546581", "10.6084/m9.figshare.25546584", "10.5281/zenodo.10697406", "10.5281/zenodo.10697405", "10.6084/m9.figshare.c.8174870", "10.6084/m9.figshare.30741194", "10.6084/m9.figshare.30741197", "10.6084/m9.figshare.30741200", "10.6084/m9.figshare.30741203", "10.6084/m9.figshare.30741206", "10.6084/m9.figshare.30741209"], why_excluded: "Publisher supplements and code releases of keyed papers (S6 Bletz 2018, S10 Blaser 2024, S11 Fieschi-Meric 2025): methods, taxa lists, figures and scripts rather than the sequence deposits, which are keyed."}
+  - {ids: ["10.5061/dryad.hdr7sqvp5", "10.5281/zenodo.8097817", "10.5281/zenodo.8097816", "10.5061/dryad.cjsxksn3v", "10.5061/dryad.x69p8czhj", "10.5281/zenodo.7892496", "10.5281/zenodo.7892495", "10.5281/zenodo.23333592", "10.5281/zenodo.21877574", "10.5281/zenodo.21875253", "10.5066/p9bgqa1t", "10.6084/m9.figshare.c.7009880", "10.5061/dryad.2j0h3"], why_excluded: "Bsal detection and prevalence data from qPCR, ddPCR or eDNA-qPCR (captive eDNA, Vietnam, Southeast US, Guangxi, Gorssel ponds (restricted), Europe-wide prevalence, USGS national survey, eDNA monitoring, sampling design); no sequencing."}
+  - {ids: ["10.1371/journal.pone.0305228"], why_excluded: "'Lack of variations in Bsal at its alleged origin' (Japan): Bsal confirmed by qPCR and 160-bp Sanger sequencing, data in supplements; no high-throughput sequencing."}
+  - {ids: ["10.6084/m9.figshare.28380581", "10.6084/m9.figshare.27239985", "10.6084/m9.figshare.21076129", "10.25349/D9JG8C", "10.5061/dryad.0jh5p", "10.5061/dryad.vdncjsxs1", "10.5061/dryad.12jm63xzd", "10.5281/zenodo.5510741", "10.5061/dryad.vq83bk3tg", "10.5281/zenodo.5655827", "10.5281/zenodo.7093361", "10.5281/zenodo.8300602", "10.5061/dryad.bk3j9kdhk", "10.5061/dryad.8gtht76ms"], why_excluded: "Bsal experiments and models without sequencing data: 2,4-D co-exposure disease metrics, A6 cell images, population counts, resistance/tolerance challenge loads, decision analysis, nitrile gloves, zooplankton grazing, Neotropical risk and niche models, fungicide MICs, management simulations, thermal behaviour."}
+  - {ids: ["PRJNA326253", "PRJNA413876", "PRJNA1061169", "PRJNA1071094", "10.6084/m9.figshare.4291274", "10.6084/m9.figshare.4291283"], why_excluded: "Non-Bsal sequencing cited in Bsal papers: Bd JEL423 in vitro RNA-seq (Farrer 2017 sibling), Bd isolate resequencing panels, Bd-infected Xenopus 16S, Bd resequencing, and Homolaphlyctis polyrhiza genome files."}
+  - {ids: ["10.5281/zenodo.10066393", "10.5281/zenodo.7986663", "10.5281/zenodo.7986664", "10.5281/zenodo.6984869", "10.5281/zenodo.6984870"], why_excluded: "A book-chapter PDF on assembling the Bsal genome and a preprint text of the two-speed genome paper; publications, not data deposits (the data are keyed in S3)."}
+queries:
+  - "PRIMARY topic size check, NCBI E-utilities esearch counts (bioproject / sra / gds / biosample): 'Sarcophilus harrisii[Organism]' 66 / 12027 / 105 / 17344; same AND (tumour OR tumor OR DFTD OR cancer OR DFT1 OR DFT2) 35 / 4171 / 39 / 1775; 'devil facial tumor' 18 / 1390 / 30 / 211; 'devil facial tumour' 18 / 585 / 30 / 10; 'DFTD' 18 / 673 / 8 / 113. All 66 S. harrisii BioProjects were esummary-screened."
+  - "PRIMARY topic size check, other archives: Dryad search 'devil facial tumor' 3; DataCite query '\"devil facial tumour\" OR \"devil facial tumor\" OR DFTD' 268; EBI Search ega domain 'devil facial tumour' 1 (fuzzy 'detail facial' match). Not screened further after the gate failed."
+  - "NCBI E-utilities esearch counts (bioproject / sra / gds / biosample / assembly): 'Batrachochytrium salamandrivorans[Organism]' 12 / 46 / 26 / 45 / 11; 'salamandrivorans' 25 / 527 / 26 / 66 / 0; 'Bsal AND (salamander OR newt OR amphibian OR chytrid)' 8 / 14 / 0 / 10 / 0; 'salamandrivorans[All Fields] OR \"salamander chytrid\"' 26 / 527 / 26 / 66 / 0."
+  - "NCBI SRA runinfo for 'salamandrivorans OR \"salamander chytrid\" OR Batrachochytrium salamandrivorans[Organism]': 527 runs in 13 BioProjects; SRA 'Bsal' 338 (340 runinfo rows) in 14 BioProjects (found PRJNA1532440); biosample 'Bsal OR salamandrivorans' 284; GEO gds 26 records = 1 series (GSE161129) + 24 GSMs + 1 GPL; bioproject->SRA/assembly/biosample/pubmed elinks for all 31 candidate BioProjects; BioSample attribute screens for PRJNA739374, PRJNA612733, PRJNA300849, PRJNA323392, PRJNA1532440."
+  - "NCBI bioproject (esummary-screened): 'Batrachochytrium NOT dendrobatidis' 22; 'txid8293[Organism:exp]' (all Caudata) 685, regex-filtered for chytrid/Bsal/infection/pathogen/fungal/disease/immune/microbiome/skin terms; 'chytrid AND (newt OR salamander OR ...genera)' 3; Caudata genera[Organism] AND (infection OR infected OR exposed OR pathogen OR fungal OR chytrid*) 4; '(synthetic community ...) AND (salamander OR amphibian OR Ambystoma)' 0; '(amphibian OR salamander OR newt) AND (eDNA OR environmental DNA) AND (chytrid OR Batrachochytrium)' 5."
+  - "ENA portal API: tax_tree(1357716) study 11, assembly 11, sample 41, wgs_set 10, analysis 0, read_run 44 runs in 6 studies (count endpoint returned HTTP 500); study_title='*salamandrivorans*' 14; study_description='*salamandrivorans*' 25; study_title='*Bsal*' 33 and study_description='*Bsal*' 36 (mostly unrelated substring hits); study_description='*salamander chytrid*' 0; study_title='*salamander*' AND study_description='*chytrid*' 2; study_description='*Gelderland*' 5, amphibian eDNA studies 14 (none Bsal). Every keyed BioProject was re-fetched from ENA (study + read_run count) and all 11 keyed GCAs from the ENA browser API."
+  - "DDBJ Search API (ddbj.nig.ac.jp/search/api/entries/<type>?keywords=salamandrivorans): bioproject 26, sra-study 18, biosample 45; all INSDC mirrors of NCBI records, no PRJDB/DRA entries."
+  - "NGDC (ngdc.cncb.ac.cn/search/api/specific): bioproject 'salamandrivorans' 19, gsa 502 (all insdc mirrors: 499 experiments, 2 runs, 1 SRA submission), biosample 45, gwh 11 (NCBI assemblies), genbase 0; 'Batrachochytrium' bioproject 100+, gsa 3835, biosample 1211 (Bd-dominated, not paged). No PRJCA/CRA records."
+  - "EGA via EBI Search domain 'ega': salamandrivorans 0, chytrid 0, Batrachochytrium 0 (positive control 'WTCCC' 34). The EGA metadata API has no working text search (search parameter ignored)."
+  - "BioStudies API search 'salamandrivorans' 76 (all S-EPMC literature mirrors); ArrayExpress collection 0."
+  - "Dryad API v2 search: 'salamandrivorans' 15; 'Bsal chytrid' 7; 'salamander chytrid' 5 (17 unique; 8 dataset records and file lists fetched). File downloads need a token, so the Bletz 2018 workbook was judged from its DataCite part title."
+  - "Zenodo records API: 'salamandrivorans' 45; '\"salamander chytrid\"' 2; 'Bsal AND (chytrid OR salamander OR newt)' 15; 7 records fetched with file lists."
+  - "Figshare POST /v2/articles/search: 'salamandrivorans' 196; 'Bsal chytrid' 51 (173 parent-title groups screened); 4 articles and 2 collections fetched with file lists, plus 10 Farrer/Fieschi-Meric items."
+  - "DataCite /dois query 'salamandrivorans OR \"salamander chytrid\"' 283 (151 Dataset, 26 Collection, 14 Other, 14 Software; 94 GBIF downloads ignored); same restricted to Dataset/Collection/Other/Software 205. All non-GBIF records title-screened."
+  - "Europe PMC: '(salamandrivorans OR \"salamander chytrid\")' 479 records; 331 open-access full texts fetched (fullTextXML) and regex-scanned for SRA/ENA/GEO/assembly/DOI-repository accessions (106 with at least one); 53 returned HTTP 500 twice (non-OA, abstracts only). Accession-term query 210; sequencing-term query 238; abstract query (salamandrivorans or Bsal) AND (transcriptom* / RNA-seq / 16S / microbiom* / genom* / sequencing / metabarcoding / amplicon / gene expression) 47, all titles screened. Data statements read for PMC5364385, PMC8602665, PMC9926174, PMC8490390, PMC11515996, PMC11021929, PMC6716147, PMC12661705, PMC13329419, PMC13329848, PMC7891748, PMC11175521, PMC11897979, PMC7536193, PMC12568929, PMC11290838, PMC12017111."
+  - "Europe PMC id searches: PRJNA1399148 0, PRJNA1532440 0, PRJNA612733 0, PRJNA845763 1, PRJNA1265256 1, 'Fieschi-Meric AND salamandrivorans' 4. Crossref /works checked for 10.1186/s42523-025-00485-x, 10.3390/ani15121777, 10.1111/mec.70438, 10.1002/ece3.73967, 10.1111/mec.15452."
+size_verdict: >-
+  backup used. The primary topic (DFTD sequencing) exceeds the 30-study ceiling: titles and descriptions of the 66
+  S. harrisii BioProjects alone gave about 30 distinct DFTD studies (tumour and cell-line genomes, transcriptomes,
+  methylomes, amplicon and RAD/capture population genomics of resistance, MHC/TCR typing; e.g. PRJEB21902, PRJEB51704,
+  PRJEB40407, PRJNA613730, PRJNA306495, PRJNA450403, PRJEB8782, PRJNA422612, PRJEB28680, PRJNA531105) before GEO, Dryad,
+  Figshare, Zenodo and the 268 DataCite DFTD records were screened. Backup topic B. salamandrivorans: 14 distinct studies
+  (13 firm, 1 borderline), within the 5-30 range, across 7 archives counted by native host (NCBI SRA/BioProject 14,
+  NCBI Assembly 3, GEO 1, NCBI TSA 2, Dryad 2, Figshare 1) with ENA and DDBJ mirroring every NCBI record and NGDC
+  mirroring most. No Bsal sequencing deposit exists natively in ENA, DDBJ, NGDC GSA, EGA or Zenodo (checked: those
+  archives' own APIs, see queries).

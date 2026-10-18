@@ -1,0 +1,169 @@
+task: U4
+prompt: >-
+  Find every public dataset, in any archive, that holds field measurements of microplastics (particle counts or
+  concentrations, polymer types, sizes or shapes) in snow, sea ice, glacier ice or ice cores collected in the Arctic,
+  in Antarctica, or on high-mountain glaciers (Alps, Himalaya/Tibetan Plateau, Andes and similar). Compilations that
+  include such measurements count. Seawater-only, sediment-only, biota-only and air or deposition-collector samples,
+  laboratory experiments, model output, and papers without deposited data do not count.
+criteria: >-
+  Topic: PRIMARY (microplastics in polar or high-mountain-glacier snow and ice). Included: a public deposit with
+  downloadable measurements (counts, concentrations, polymer, size or shape) of plastic particles in field samples of
+  snow, firn, sea ice, glacier ice or ice cores from the Arctic (including Svalbard, Greenland, the Canadian Arctic and
+  the central Arctic Ocean), from Antarctica or the Southern Ocean pack ice, or from high-mountain glaciers and their
+  snow cover (Alps, Himalaya, Tibetan Plateau, Andes, Cascades volcano glaciers). A deposit that mixes such samples with
+  seawater, sediment or other matrices counts if the snow or ice data are in the files. Flagged confidence: borderline
+  (kept in studies): deposits that quantify only NANOplastics (by TD-PTR-MS mass, not particle counts); supraglacial
+  debris (sediment lying on the glacier surface, not ice or snow); a multi-site mountain-snow deposit where only some
+  sites are glacier snow; a compilation whose files sit behind a registration-based download; and a journal-supplement
+  xlsx hosted on Figshare. Excluded (near misses): seawater, sediment, sediment-trap, biota, guano or air and
+  deposition-collector datasets; seasonal snow away from glaciers in mid-latitude mountains or cities (Sierra Nevada,
+  Utah, Türkiye, Hokkaido, Siberia); sea ice outside the Arctic and Antarctic (Okhotsk, Baltic, Sea of Japan, Bohai);
+  laboratory freezing or snow-darkening experiments; model output; code-only deposits; metadata-only project records
+  whose data must be requested (Canadian Polar Data Catalogue / CCIN Northern Contaminants Program records, Antarctica
+  NZ catalogue record); conference abstracts, article copies and supplement PDF/DOCX files; data cited in a
+  microplastics paper that are not microplastic data. Unit = study: versions, concept and version DOIs, and Mendeley
+  version DOIs are aliases of one study.
+studies:
+  - key: S1
+    title: "Microplastic and environmental data from Arctic sea ice"
+    year: 2018
+    ids: ["10.1594/PANGAEA.886593", "PANGAEA.886593"]
+    archives: [PANGAEA]
+    evidence: "PANGAEA ES + DataCite: sea-ice cores from the Arctic Ocean / Fram Strait (Polarstern) with microplastic concentrations, polymer types and sizes by FTIR (Peeken et al. 2018 Nat Commun 10.1038/s41467-018-03825-5, whose data statement points only to this DOI)."
+  - key: S2
+    title: "Microplastic in snow from European and Arctic sites"
+    year: 2019
+    ids: ["10.1594/PANGAEA.901447", "PANGAEA.901447"]
+    archives: [PANGAEA]
+    evidence: "PANGAEA: snow samples from Svalbard and Fram Strait ice floes plus Alpine and other European sites, microplastic counts and polymers by FTIR imaging (Bergmann et al. 2019 Sci Adv 10.1126/sciadv.aax1157); qualifies through the Arctic and Alpine (Davos/Tschuggen) samples."
+  - key: S3
+    title: "Southern Ocean Sea Ice Microplastic Analysis - PanAntarctic study 2004-2022"
+    year: 2024
+    ids: ["10.26179/qzf5-tr20", "AADC:PanAnt_MPs"]
+    archives: [Australian Antarctic Data Centre]
+    evidence: "AADC records API: 19 sea-ice cores from 10 expeditions (Weddell, Ross, Bellingshausen Seas, East Antarctica), FTIR microplastic concentration and polymer data, 1.02 MB Excel at data.aad.gov.au/eds/5992/download, CC-BY (Kelly et al. 2024 Water Emerg Contam 10.20517/wecn.2024.66)."
+  - key: S4
+    title: "Microplastics in sea ice methodology cores"
+    year: 2024
+    ids: ["10.25959/bn9r-2f27", "IMAS:58fdf02b-5009-4f11-ba1f-71de23fd74ef"]
+    archives: [IMAS Data Portal]
+    evidence: "IMAS GeoNetwork ISO record: five subsections of East Antarctic sea-ice cores analysed for microplastics; attachment MPs_in_sea_ice_methodology_5_cores.xlsx returns HTTP 200 (Kelly et al. 2025 Polar Biol 10.1007/s00300-025-03399-1, reporting 4-116 particles per litre and 14 polymers)."
+  - key: S5
+    title: "Microplastic abundance in Antarctic Snow samples"
+    year: 2025
+    ids: ["10.5285/ac6ade29-2815-4938-a93a-d84f0d322bd6", "GB/NERC/BAS/PDC/01975"]
+    archives: [UK Polar Data Centre]
+    evidence: "DataCite + BAS full record: microplastic concentrations (73-3099 MP per litre), sizes down to 11 um and polymers in snow from Union Glacier, Schanz Glacier and the South Pole, data on the BAS Ramadda server (Jones-Williams et al. 2025 Sci Total Environ 10.1016/j.scitotenv.2025.178543)."
+  - key: S6
+    title: "Microplastics and nanoplastics counts for an Antarcic transect (Dec 2023 - Jan 2024)"
+    year: 2026
+    ids: ["10.15784/602048", "USAP-DC:602048"]
+    archives: [USAP-DC]
+    evidence: "USAP-DC dataset page: georeferenced snow samples along the Hercules Inlet to South Pole traverse (Spiritus 2024), file AntarcticaSpiritusTraverse2024_Micro-Nano-Plastics.zip (xlsx) with micro- and nanoplastic counts, CC BY 4.0, NSF award 2334490."
+  - key: S7
+    title: "Microplastics on Mt. Everest (Napper et al., 2020)"
+    year: 2020
+    ids: ["10.17632/ggk9yhc5vc", "10.17632/ggk9yhc5vc.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley public API: two xlsx files, per-sample MP counts with locations, and per-particle colour, type, length, width and polymer, for Everest snow (Base Camp to the Balcony, 8440 m) and stream samples (Napper et al. 2020 One Earth)."
+  - key: S8
+    title: "Data for: First evidence of microplastic contamination in the supraglacial debris of an Alpine glacier"
+    year: 2019
+    ids: ["10.17632/vh7ffvvjt9", "10.17632/vh7ffvvjt9.1"]
+    archives: [Mendeley Data]
+    evidence: "confidence: borderline (supraglacial debris, not snow or ice). Mendeley public API: Forni microplastic.xlsx, MP abundance in 6 supraglacial debris samples from the Forni Glacier, Italian Alps, 2580 m (Ambrosini et al. 2019 Environ Pollut 10.1016/j.envpol.2019.07.005); DataCite lists the publisher as Bicocca Open Archive Research Data."
+  - key: S9
+    title: "Replication Data for: Latitudinal patterns of microplastic contamination in remote areas"
+    year: 2025
+    ids: ["10.13130/rd_unimi/pnvc2i", "doi:10.13130/RD_UNIMI/PNVC2I"]
+    archives: [UNIMI Dataverse]
+    evidence: "confidence: borderline (supraglacial debris). Dataverse API: MPs_glaciers_polymers_WW.tab and Dataset_WW.tab with MP abundance and polymers in 57 supraglacial debris samples from 9 glaciers, 46 S to 78 N, including Svalbard and Andean glaciers (Crosta et al. 2025 Environ Res 10.1016/j.envres.2025.121553)."
+  - key: S10
+    title: "Supplementary data to: Nanoplastics measurements in Northern and Southern Polar Ice"
+    year: 2022
+    ids: ["10.24416/uu01-h8zo62", "10.24416/UU01-H8ZO62"]
+    archives: [Utrecht University Yoda]
+    evidence: "confidence: borderline (nanoplastics by mass only). DataCite: raw TD-PTR-MS files and blank/LOD analysis for Greenland firn (snow pit) and an Antarctic sea-ice core, with polymer fingerprinting (Materic et al. 2022 Environ Res 10.1016/j.envres.2022.112741); DOI resolves to public.yoda.uu.nl."
+  - key: S11
+    title: "SUPPLEMENTARY DATA TO: Using a citizen science approach to assess nanoplastics pollution in remote high-altitude glaciers"
+    year: 2024
+    ids: ["10.5281/zenodo.14180715", "10.5281/zenodo.14180714", "zenodo:14180715"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (nanoplastics by mass only). Zenodo API: TD-PTR-ToF-MS sample, blank and calibration data (zips of 3-11 GB), blank-corrected analysis and per-polymer fingerprint xlsx for glacier samples collected by mountaineers (Materic et al. 2025 Sci Rep PMC11729883 cites this DOI)."
+  - key: S12
+    title: "Supplementary data to: Nanoplastic Detection and Quantification in High-Altitude Glacial Snow Samles from Italy, Switzerland and France"
+    year: 2026
+    ids: ["10.5281/zenodo.17942873", "10.5281/zenodo.17942874", "10.5281/zenodo.19466585", "10.5281/zenodo.21375866", "zenodo:21375866"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (nanoplastics by mass only). Zenodo API: HLR2_FinalData.xlsx with fingerprinting results, upscaling and final concentrations, plus processed data and code, for high-altitude glacial snow from the Alps; concept DOI 17942873 is cited in Sci Rep 2026 PMC13457595; DataCite lists the three version DOIs."
+  - key: S13
+    title: "Nanoplastics in the Arctic Ocean-Dataset"
+    year: 2025
+    ids: ["10.5281/zenodo.14532528", "10.5281/zenodo.14532529", "10.5281/zenodo.14536229", "10.5281/zenodo.14536630", "10.5281/zenodo.17102673", "zenodo:17102673"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (nanoplastics; mostly seawater). Zenodo API: files include 'Ice cores_nanoplastic distribution.csv' and 'Vertical matrices_nanoplastic distribution.csv' (snow, surface ice, ice-sea interface) next to surface-water sums, Svalbard to the North Pole 2022-2023 (Cai et al. 2026 npj PMC12863634, which cites 17102673); the separate R-code record 14537222 is a near miss."
+  - key: S14
+    title: "Exploring Microplastic Distribution in Western American Snow"
+    year: 2024
+    ids: ["10.5281/zenodo.13877244", "10.5281/zenodo.13877243", "zenodo:13877244"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (mixed sites; most are seasonal Sierra Nevada snow). Zenodo container listing of the 68 MB zip: per-sample xlsx particle tables include 'Summer Snow Data' from Mt Hood glacier areas (Above Palmer, Below Newton Clark, Zig Zag, Illumination) and Conness, plus one Alaska sample (Karapetrova et al. 2024 J Hazard Mater 10.1016/j.jhazmat.2024.136126)."
+  - key: S15
+    title: "Arctic Land Microplastics Dataset (2005-2024)"
+    year: 2026
+    ids: ["10.11888/Cryos.tpdc.303420", "TPDC:bdeadb5f-ade8-426b-a910-524ead3406d6"]
+    archives: [National Tibetan Plateau Data Center]
+    evidence: "confidence: borderline (compilation; registration-based download, files not opened). TPDC metadataView/page API: compilation of microplastic abundance, morphology, size and polymers in Arctic rivers, lakes, snow cover, sea ice, seawater and soils (ZHANG Yulan, share policy B, 2 downloads); the DOI resolves to the TPDC record."
+  - key: S16
+    title: "Micro- and Nanoplastics in Alpine Snow: A New Method for Chemical Identification and (Semi)Quantification in the Nanogram Range (supporting data files)"
+    year: 2020
+    ids: ["10.1021/acs.est.9b07540.s003", "10.1021/acs.est.9b07540.s004", "10.1021/acs.est.9b07540.s005", "10.6084/m9.figshare.11763645"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (ACS journal supplement on Figshare; high-alpine summit snow, Sonnblick, Austria). Figshare API: es9b07540_si_003.xlsx plus two zips of TD-PTR-MS data for a snow pit and surface snow in which PET, PVC and PPC micro/nanoplastics were identified (Materic et al. 2020 Environ Sci Technol); the s002 PDF supplement is not keyed."
+near_misses:
+  - {ids: ["10.21963/13195", "10.21963/13057", "polardata.ca:12869", "polardata.ca:12871", "polardata.ca:13058", "polardata.ca:13189", "polardata.ca:13260", "polardata.ca:13343", "polardata.ca:13372", "polardata.ca:13191", "polardata.ca:13230"], why_excluded: "Canadian Polar Data Catalogue / CCIN Northern Contaminants Program project records on microplastics in Arctic snow, sea ice and ice cores (Jantunen, Hamilton, Lu et al.): their schema.org metadata has no distribution, and the CIOOS Amundsen catalogue mirror lists only a data-access request form."}
+  - {ids: ["antcat:6ba42a52-7f06-4f9a-be61-24369335ba39", "10.5194/tc-16-2127-2022"], why_excluded: "Ross Island snow microplastics (Aves et al. 2022): the Antarctica NZ catalogue record is metadata-only ('GET DATA' by email); the paper's data are in its appendix, not deposited."}
+  - {ids: ["10.5194/tc-15-2531-2021"], why_excluded: "Antarctic glacier micro/mesoplastics pilot study: the data statement says all data are in the paper/supplement."}
+  - {ids: ["10.1038/s41598-020-61948-6", "10.3390/ijerph18020768", "10.1038/s41598-026-58097-7"], why_excluded: "Arctic sea-ice (Kanhai 2020), Western Italian Alps snow (Parolini 2021) and Türkiye snowpack papers: no repository deposit ('available without restriction' or on request)."}
+  - {ids: ["10.1594/PANGAEA.971334", "10.1594/PANGAEA.959830", "10.1594/PANGAEA.943818", "10.1594/PANGAEA.945408", "10.1594/PANGAEA.973860", "10.1594/PANGAEA.957637", "10.1594/PANGAEA.958466", "10.1594/PANGAEA.962669"], why_excluded: "MOSAiC sea-ice core physics, isotope, pigment and Be-7 datasets; they match 'microplastic' only through the core-type codebook ('lasses core for microplastics'), with no microplastic measurements."}
+  - {ids: ["10.1594/PANGAEA.879739", "10.1594/PANGAEA.972635", "10.1594/PANGAEA.950239", "10.1594/PANGAEA.941076", "10.1594/PANGAEA.941107", "10.1594/PANGAEA.974957", "10.1594/PANGAEA.995888", "10.1594/PANGAEA.950296"], why_excluded: "Polar microplastics in deep-sea or glacimarine sediment, seawater, sediment traps or zooplankton, not snow or ice."}
+  - {ids: ["10.1594/PANGAEA.937543"], why_excluded: "Cited by the western Arctic seawater and sea-ice microplastics paper (Toxics 2023), but it holds water stable isotopes and salinity, not microplastics."}
+  - {ids: ["10.5061/dryad.qrfj6q5bx", "zenodo:3983578"], why_excluded: "Evangeliou et al. 2020: FLEXPART model output of tyre/brake wear transport to remote regions, not field measurements."}
+  - {ids: ["10.5281/zenodo.4059832", "10.5281/zenodo.4059831"], why_excluded: "NEMO model output of plastic concentrations in sea ice and water."}
+  - {ids: ["10.5281/zenodo.17976508", "10.5281/zenodo.17976507"], why_excluded: "Dark microplastics and snow metamorphism: a field-plot experiment adding MPs to Pyrenean snow, not measurements of environmental MPs."}
+  - {ids: ["10.6084/m9.figshare.27834345", "10.1021/acs.estlett.5c00282.s001"], why_excluded: "Laboratory sea-ice formation experiments on contaminant and microplastic incorporation."}
+  - {ids: ["10.5281/zenodo.21830861", "10.5281/zenodo.15831819", "10.5281/zenodo.15831820"], why_excluded: "Event-scale microplastic deposition in seasonal Sierra Nevada snow: mid-latitude seasonal snowpack, no glacier or polar samples."}
+  - {ids: ["10.5281/zenodo.22018904", "10.5281/zenodo.21862593", "10.5281/zenodo.16967571", "10.5281/zenodo.20129081", "10.48436/qfpa8-ga860", "10.15485/1773176"], why_excluded: "Atmospheric microplastics (air filters, deposition collectors, aerosol) at Mount Everest, Ny-Ålesund, the Ross Sea voyage, Sonnblick PM and NADP sites in the western US, not snow or ice samples."}
+  - {ids: ["10.18739/A2Z02ZB6K"], why_excluded: "NSF ADC ice-fog residual particles in Fairbanks: airborne ice-fog particles, not microplastic counts in snow or ice; 'microplastic' matches only in the full text."}
+  - {ids: ["10.5285/88c79a01-d3c0-4fca-835c-481930948a5e", "10.5285/00fa6b5a-2b12-4356-950d-272d90378cef", "10.15784/601866", "10.57724/cndp_20250113_microant_mpe", "10.57724/hes_20250113_microant_krill", "10.57724/hes_20250113_microant_mn", "10.57724/jci_20250202_microant_mnc"], why_excluded: "Antarctic microplastics in penguin guano and excrement, the Scotia Sea water column, krill, neuston, fish and the midge Belgica antarctica (biota or seawater)."}
+  - {ids: ["10.57724/cndp_20250121_palantarice_slp"], why_excluded: "Spectral irradiance library of plastic materials at Hope Bay, Antarctica; not microplastic measurements in snow or ice."}
+  - {ids: ["10.5061/dryad.pk0p2nh5h", "10.17632/tbz5n588f9", "10.6084/m9.figshare.22015634", "10.6084/m9.figshare.34003056", "10.5281/zenodo.4321416", "10.5281/zenodo.10629004"], why_excluded: "Arctic or Himalayan microplastics in moss, lake and river water, coastal sediments and seawater (Baffin Island, Tilicho Lake, Kola Peninsula, Siberian seas, Finnish Sámi area)."}
+  - {ids: ["10.5281/zenodo.18783909", "10.5281/zenodo.15277130", "10.5281/zenodo.14537222"], why_excluded: "MICROSCAN IR spectra of Arctic marine microplastic particles, and the R-code companion of S13 (code only)."}
+  - {ids: ["10.11888/Terre.tpdc.302405", "10.11888/Terre.tpdc.300116"], why_excluded: "TPDC microplastic datasets for the Lalu wetland and the Huangshui River basin (wetland/river, not snow or ice)."}
+  - {ids: ["10.24416/uu01-6ly8gt"], why_excluded: "Sonnblick surface-snow PTR-MS organic matter (Materic 2019), not plastics."}
+  - {ids: ["10.6084/m9.figshare.34215780"], why_excluded: "Aconcagua snow microplastics: a Frontiers supplementary Table 1 .docx (journal supplement document)."}
+  - {ids: ["10.6084/m9.figshare.28169537", "10.6084/m9.figshare.22987784", "10.6084/m9.figshare.29421146"], why_excluded: "UTAS repository copies of the Kelly et al. sea-ice microplastics articles (no data files; the data are S3 and S4)."}
+  - {ids: ["10.5281/zenodo.18391981", "10.5281/zenodo.18387114", "10.5281/zenodo.18387548", "10.5281/zenodo.7216438", "10.5281/zenodo.18386851", "10.5281/zenodo.18389926", "10.5281/zenodo.18386307", "10.5281/zenodo.7217263"], why_excluded: "MICRO 2022/2024 conference abstracts (single PDFs) on glacier, Alpine, Greenland, Antarctic-snow and Siberian-snow microplastics; not data."}
+  - {ids: ["10.17632/xwd8kn2gxb", "10.17632/cwr8mwd3zx"], why_excluded: "Laboratory nanoplastic transport in agricultural soils under snowmelt infiltration."}
+queries:
+  - "PANGAEA Elasticsearch https://ws.pangaea.de/es/pangaea/panmd/_search?q=: 'microplastic* AND (snow OR ice OR glacier OR \"ice core\" OR \"sea ice\")' 29; 'microplastic*' 197 (all titles screened); 'microplastics snow' 29579 (OR semantics, top 200 screened); 'plastic* AND (snow OR \"sea ice\" OR glacier OR \"ice core\" OR cryoconite OR firn)' 124; 'microlitter OR \"micro-litter\" OR \"anthropogenic particles\" OR microfib* OR nanoplastic*' 45; '(fibres OR fibers OR polymer*) AND (snow OR \"sea ice\") AND (FTIR OR Raman OR \"Py-GC\")' 2; 'tire wear AND snow' 0; 'microplastic* AND MOSAiC' 15; parentIdDataSet:886593 / 901447 0 children each."
+  - "DataONE CN solr https://cn.dataone.org/cn/v2/query/solr (METADATA, not obsoleted): text:microplastic* 28; text:(microplastic* AND (snow OR ice OR glacier)) 4; title:plastic* 834; text:(plastic AND (snow OR \"sea ice\" OR glacier OR \"ice core\")) 403; union abstract/title/keywords microplastic/nanoplastic/plastic particles/anthropogenic particles/microfib* 425 (44 matched a cryosphere/polar regex); datasource PDC microplastic subset 23 (schema.org objects fetched: none has a distribution)."
+  - "NSF Arctic Data Center solr https://arcticdata.io/metacat/d1/mn/v2/query/solr (title/abstract/keywords): microplastic* 0; microplastics 0; plastic* 18; nanoplastic* 0; microfib* 0; '\"anthropogenic particles\"' 0; text:(microplastic OR microplastics OR \"micro-plastic\") 5 (ice fog and MEGA mercury geochemistry; neither holds MP data)."
+  - "USAP-DC https://www.usap-dc.org/dataset_search?free_text=: microplastic 2; microplastics 2; plastic 14; nanoplastic 1."
+  - "Australian Antarctic Data Centre https://data.aad.gov.au/metadata/records?format=json&size=4000 (full catalogue, 3431 records; the q parameters are ignored): regex microplastic|nanoplastic|microfib 1 (PanAnt_MPs); regex plastic|marine debris 70-odd (none on snow/ice MPs)."
+  - "IMAS GeoNetwork https://metadata.imas.utas.edu.au/geonetwork/srv/eng/q?any=: microplastic* 12; plastic 44."
+  - "UK Polar Data Centre / NERC EDS via DataCite prefix:10.5285 AND (microplastic* OR microplastics OR nanoplastic*) 28 (4 UK PDC); BAS record and Ramadda link checked for S5."
+  - "NIPR ADS: DataCite prefix:10.17592 (ADS, 362 DOIs) AND (microplastic* OR plastic*) 0; the KIWA ADS search page is JavaScript-only."
+  - "Norwegian Polar Institute https://api.npolar.no/dataset/?q=: microplastic 1 (Kongsfjorden sediment); plastic 6; mikroplast 0; DataCite prefix:10.21334 AND (microplastic* OR plastic*) 0; NIRD prefix:10.11582 0."
+  - "Zenodo https://zenodo.org/api/records?q= (size 25, fully paged): '(microplastic OR microplastics OR \"micro-plastic\" OR \"micro-plastics\" OR nanoplastic OR nanoplastics) AND (snow OR \"sea ice\" OR glacier OR glaciers OR \"ice core\" OR \"ice cores\" OR cryoconite OR firn OR snowpack OR \"ice sheet\")' 70; '(microplastic... OR \"tire wear\") AND (Antarctic OR Arctic OR Svalbard OR Greenland OR Himalaya OR Tibet OR Alps OR alpine OR Andes OR Everest OR Karakoram)' 188; '(plastic OR plastics OR polymer) AND (snow ... cryoconite) AND resource_type.type:dataset' 41; 'title:(microplastic* AND (snow OR ice OR glacier*))' 17; 'title:(microplastics OR microplastic) AND resource_type.type:dataset' 430; '(microplastic* OR microplastics) AND cryoconite' 0; '... AND (firn OR \"ice core\" OR \"ice cores\" OR \"ice cap\")' 5; '... AND snow AND dataset' 2; '... AND \"sea ice\" AND dataset' 3; '... AND (glacier OR glaciers OR supraglacial) AND dataset' 1. 671 unique records screened; zip container listing fetched for 13877244."
+  - "Figshare POST https://api.figshare.com/v2/articles/search: ':description: microplastic AND :description: snow' 21; 'microplastics AND \"sea ice\"' 21; 'microplastic AND glacier' 10; 'microplastics AND \"ice core\"' 6; ':title: microplastic AND :title: snow' 7; 'microplastic AND cryoconite' 0; 'microplastics AND Antarctica' 16; 'microplastics AND Arctic' 33; 'microplastics AND Himalaya' 1; 'microplastics AND Tibetan' 4; 'nanoplastics AND snow' 8; '\"anthropogenic particles\" AND snow' 0 (65 unique items; 9 article records fetched)."
+  - "Dryad https://datadryad.org/api/v2/search?q=: 'microplastic snow' 1; 'microplastics snow' 1; 'microplastic sea ice' 1; 'microplastic glacier' 0; 'microplastics ice core' 0; 'microplastic Antarctica' 0; 'microplastic Arctic' 3; 'microplastics Himalaya' 0; 'nanoplastics snow' 0; 'microplastic Tibetan' 0; microplastics 84 (all titles screened)."
+  - "Mendeley Data: DataCite prefix:10.17632 AND microplastic terms AND cryosphere/region terms 16; Mendeley research-data search API ('microplastic snow', 'microplastic glacier', 'microplastic sea ice', 'microplastics Antarctica snow', 'microplastic ice core', 'microplastics Tibetan Plateau glacier') 10 each, screened; public-api file listings fetched for ggk9yhc5vc and vh7ffvvjt9."
+  - "DataCite https://api.datacite.org/dois?query=: '(microplastic OR microplastics OR microplastic* OR nanoplastic* OR \"micro-plastics\" OR \"anthropogenic particles\" OR microlitter OR \"plastic particles\" OR microfibres OR microfibers) AND (snow OR snowpack OR \"sea ice\" OR glacier OR glaciers OR glacial OR \"ice core\" OR \"ice cores\" OR cryoconite OR firn OR \"ice sheet\" OR supraglacial OR snowfall)' 192; same MP terms AND polar/mountain region terms AND resourceTypeGeneral:(Dataset OR Collection OR Other OR Image OR Workflow OR Software OR Model) 149; MP AND snow AND (Dataset OR Collection) 24; MP AND \"sea ice\" AND (Dataset/Collection/Other) 13; MP AND glacier/supraglacial/cryoconite 10; (Iqaluktuuttiaq OR \"Cambridge Bay\") AND MP 0; prefixes: 10.57724 (Spanish Polar Data Centre) 5; 10.26179 (AADC) 3; 10.21963 (CCIN) 2; 10.17882 (SEANOE) 38; 10.22663 (KPDC) 0; 10.18710 (DataverseNO) 1; 10.48670 0; 10.5878 (SND) 10; 10.24416 (Yoda) 31; 10.12072 0; 10.11888 0 (TPDC DOIs are registered with ISTIC, not DataCite)."
+  - "National Tibetan Plateau Data Center POST https://data.tpdc.ac.cn/view/metadataView/page {title:...}: microplastic 3; Microplastics 3; 微塑料 0; nanoplastic 0; positive control 'black carbon' 45."
+  - "Dataverse search APIs: dataverse.unimi.it microplastic 1, microplastics 1, plastic 1; dataverse.harvard.edu and borealisdata.ca 'microplastic AND snow' 1 each, 'microplastic AND \"sea ice\"' 0, 'microplastic AND glacier' 0, 'microplastics AND Antarctica' 0, 'microplastics AND Arctic' 3 / 1 (none qualify)."
+  - "CIOOS Amundsen CKAN https://catalogue.amundsenscience.com/api/3/action/package_show?id=ca-cioos_ccin-<id> for 10 CCIN microplastic records: 5 returned, each with only a data-access request form; Antarctica NZ GeoNetwork JSON-LD record 6ba42a52 fetched."
+  - "Europe PMC search: '(microplastic* OR nanoplastic* OR \"micro-plastic*\" OR \"anthropogenic particles\" OR \"plastic particles\" OR \"tire wear particles\") AND (snow OR snowpack OR \"sea ice\" OR \"sea-ice\" OR glacier* OR \"ice core*\" OR cryoconite OR firn OR supraglacial OR \"ice sheet\")' 1004; TITLE_ABS MP terms AND TITLE_ABS cryosphere terms 174; full-text MP AND cryosphere AND region AND repository/data-availability terms 367; union 514 papers, 382 with PMCID, full texts fetched (fullTextXML, 17 errors) and regex-scanned for repository ids and data-availability statements."
+  - "Crossref https://api.crossref.org/works?query.title= (10 queries: microplastics + snow Antarctica/Arctic, sea ice, glacier, ice core, cryoconite, nanoplastics snow ice, Himalaya Tibetan, snowpack mountain, firn ice sheet; 60 rows each): 46 plastic+cryosphere titles; data-availability sections read on the landing pages for tc-16-2127-2022 and tc-15-2531-2021."
+  - "WebSearch (lead-finding only): 'data.tpdc.ac.cn microplastics glacier snow dataset'; 'microplastics snow OR \"sea ice\" OR glacier dataset Arctic Antarctic \"data are available\" zenodo OR pangaea OR figshare 2025' (led to the Antarctica NZ Ross Island record, verified via antcat GeoNetwork); 'microplastics ice core dataset Greenland OR Antarctica OR Svalbard repository doi'."
+size_verdict: "ok: 16 distinct studies, 7 firm + 9 borderline, across 11 archives (PANGAEA 2; Mendeley Data 2 [1 firm, 1 borderline]; Australian Antarctic Data Centre 1; IMAS 1; UK Polar Data Centre 1; USAP-DC 1; Zenodo 4 borderline; UNIMI Dataverse 1 borderline; Utrecht Yoda 1 borderline; National Tibetan Plateau Data Center 1 borderline; Figshare/ACS 1 borderline). The 7 firm studies span 6 archives, which meets the 5-30 firm studies across at least 3 archives gate, so the backup topic (black carbon on the Tibetan Plateau) was not used."

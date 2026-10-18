@@ -111,6 +111,27 @@ def _source_for_client(client_id: str) -> str:
     return client_id
 
 
+# A Figshare portal's landing page, on any host: ``/articles/<type>/<slug>/<id>`` or
+# ``/collections/<slug>/<id>``, then an optional version. Institutional portals mint
+# their DOIs under clients not named for Figshare (``monash.repo``, ``bl.qub``,
+# ``ardcx.deakin``…): in 6,000 DataCite records under ``/articles/`` or ``/collections/``
+# URLs outside the clients so named, 35 such clients had this shape (2,134 records) and 25
+# others never did (2026-10-17). figshare.files checks the article's DOI before it lists
+# any file, so a page of this shape that Figshare does not hold lists none.
+_FIGSHARE_PAGE = re.compile(
+    r"^https?://[^/\s]+/(?:articles/[^/\s]+/[^/\s]+/\d+|collections/[^/\s]+/\d+)(?:/\d+)?/?$"
+)
+
+
+def _source_for(client_id: str, landing: str | None) -> str:
+    """The repository holding the record: by its DataCite client, else, for a client no
+    rule names, Figshare when its landing page is a Figshare portal's."""
+    source = _source_for_client(client_id)
+    if source == client_id and landing and _FIGSHARE_PAGE.match(landing):
+        return "figshare"
+    return source
+
+
 # source name → per-repo file-manifest resolver (populates files[] at resolve).
 # Dryad is included (manifest-only); fetchability is gated separately in server.py.
 _FILE_RESOLVERS: dict[str, Callable[..., Awaitable[list[FileEntry]]]] = {
@@ -121,9 +142,14 @@ _FILE_RESOLVERS: dict[str, Callable[..., Awaitable[list[FileEntry]]]] = {
     "openneuro": openneuro.files,
 }
 
-# File resolvers whose host is a federation of installations: they take the record's
-# DataCite landing URL (``landing_url=``) to pick the installation that holds it.
-_LANDING_AWARE = frozenset({"dataverse"})
+# File resolvers that take the record's DataCite landing URL (``landing_url=``):
+# Dataverse, a federation of installations, to pick the one that holds it; Figshare, for
+# the article id a portal's older DOIs do not carry.
+_LANDING_AWARE = frozenset({"dataverse", "figshare"})
+
+# What a resolver's list leaves out, said in ``truncated["files"]``: OSF lists a node's
+# own storage, not its components' or its add-on storage.
+_UNLISTED: dict[str, Callable[..., Awaitable[str | None]]] = {"osf": osf.unlisted}
 
 # Zenodo's own DOI namespace. `resolve` returns the native Zenodo record for these
 # anyway, so the DataCite GET is pure latency — match on the requested DOI and skip
@@ -338,7 +364,7 @@ def _normalize(item: dict[str, Any]) -> DataResource:
     title = _main(a.get("titles"), "title", "titleType", None) or ""
     return DataResource(
         id=f"datacite:{doi}",
-        source=_source_for_client(client_id),
+        source=_source_for(client_id, a.get("url")),
         kind=_KIND_MAP.get(str(rt), _pushdown.OTHER_KIND),  # absent → "None" → other
         title=title,
         creators=[c for c in map(_creator, a.get("creators") or []) if c is not None],
@@ -464,8 +490,8 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
     if resolver is not None:
         try:
             if resource.source in _LANDING_AWARE:
-                # The host repo is a federation (Dataverse): the record's own landing URL
-                # names the installation that holds it. Any other server cannot resolve it.
+                # The record's own landing URL names the Dataverse installation that holds
+                # it, or the Figshare article an older portal DOI does not.
                 landing = data["attributes"].get("url")
                 file_list = await resolver(client, record_doi, landing_url=landing)
             else:
@@ -478,4 +504,9 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
             return resource.model_copy(update={"truncated": {**resource.truncated, "files": note}})
         if file_list:
             resource = resource.model_copy(update={"files": file_list})
+        unlisted = _UNLISTED.get(resource.source)
+        left_out = await unlisted(client, record_doi) if unlisted is not None else None
+        if left_out:
+            truncated = {**resource.truncated, "files": left_out}
+            resource = resource.model_copy(update={"truncated": truncated})
     return resource

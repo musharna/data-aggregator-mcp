@@ -1,0 +1,207 @@
+task: U3
+prompt: >-
+  Find every public dataset, in any archive, that holds mass-spectrometry proteomics data (including phosphoproteomics,
+  acetylomes and other PTM proteomics) from rice plants (Oryza sativa or other Oryza species) exposed to drought or water
+  deficit: soil drying, withholding water, reduced field capacity, or PEG-simulated drought. Raw or processed MS data
+  both count. Salt-, cold-, heat- or ABA-only treatments, other species, transcriptome-only or metabolome-only data, gel
+  images without MS data, and papers without deposited data do not count.
+criteria: >-
+  Topic: PRIMARY (rice drought MS proteomics). Included: a public deposit in any archive (ProteomeXchange members PRIDE,
+  iProX, jPOST, MassIVE, PeptideAtlas, Panorama; NGDC OMIX; Zenodo; Figshare; etc.) holding MS proteomics or PTM-proteomics
+  data (raw files, search results, or processed protein/peptide quantification tables) from Oryza plants where at least
+  one sampled group was drought-stressed. That covers soil drying, withheld water, reduced field capacity or soil water
+  potential, dehydration by withholding water, and PEG-6000 osmotic stress. Drought-stressed IP-MS or PTM-enrichment
+  samples count. Treatment and species were confirmed from the deposit's own record (PROXI/PRIDE sample protocol, iProX,
+  OMIX or Zenodo metadata, file names) or, if silent, from the linked paper (Europe PMC full text). Flagged
+  confidence: borderline: combined drought+salt+temperature stress applied together; publisher supplement tables on a
+  journal Figshare portal (ACS, Springer Nature/BMC, Taylor & Francis) that list MS-identified/quantified proteins but no
+  raw data; a supplement whose osmotic-stress agent is not stated in the deposit. Excluded: unreleased/private
+  accessions (even when printed in a paper); salt-, cold-, heat-, ABA- or pathogen-only rice proteomics; interactome or
+  in-vitro assays done on unstressed material, even in drought-themed papers; reanalysis-only datasets whose inputs
+  include no drought samples; other species (tef, wheat, sorghum, maize, Streptomyces) even when rice proteins were in the
+  search database; metabolomics-only and transcriptomics-only deposits; theses, paper records and primer/figure-only
+  supplements. Unit = study: a PXD and its iProX IPX project, its 10.6019 DOI, and publisher supplement items of the same
+  paper are aliases; two or more PXDs (or OMIX entries) that share one paper are grouped as one study. Separate deposits
+  with no shared paper stay separate studies even when they come from the same lab.
+studies:
+  - key: S1
+    title: "Manipulating root water supply elicits major shifts in the shoot proteome"
+    year: 2020
+    ids: ["PXD000319"]
+    archives: [PRIDE]
+    evidence: "PROXI/PRIDE: Nipponbare shoots after withholding water from all or half of a split root system, shotgun proteomics (Mirzaei et al. 2014 J Proteome Res 10.1021/pr400696u)."
+  - key: S2
+    title: "Comparative proteomics analysis of superior and inferior spikelets in hybrid rice during grain filling and response of inferior spikelets to drought stress using iTRAQ"
+    year: 2015
+    ids: ["PXD001046"]
+    archives: [PRIDE]
+    evidence: "PRIDE sample protocol: inferior spikelets under water stress of -20 or -40 kPa soil water potential, iTRAQ LC-MS/MS (Dong et al. 2014 Data Brief, PMC4459568, which cites PXD001046)."
+  - key: S3
+    title: "Quantitative proteomic analysis of two rice varieties: drought tolerance correlated with reduced photosynthetic machinery and increased ClpD1 protease (label-free and TMT)"
+    year: 2016
+    ids: ["PXD004096", "PXD004118"]
+    archives: [PRIDE]
+    evidence: "Two PXDs (label-free and TMT) of one paper: Nipponbare and IAC1131 leaves after moderate and extreme drought for 7 d plus re-watering (Wu et al. 2016 J Proteomics; Data Brief PMC6329202 cites both)."
+  - key: S4
+    title: "Proteomes of leaf growing zones in rice genotypes with contrasting drought tolerance"
+    year: 2019
+    ids: ["PXD008977"]
+    archives: [PRIDE]
+    evidence: "PROXI: TMT proteomics of leaf growth zones of IAC1131 and Nipponbare under soil drying and re-watering (Wu et al. 2019 Proteomics 10.1002/pmic.201800310)."
+  - key: S5
+    title: "Proteomic responses to drought vary widely among eight diverse genotypes of rice (Oryza sativa)"
+    year: 2020
+    ids: ["PXD016150"]
+    archives: [PRIDE]
+    evidence: "PROXI: label-free shotgun proteomics of leaves of eight upland/lowland genotypes exposed to drought at late vegetative stage (Hamzelou et al. 2020 IJMS, PMC6982093)."
+  - key: S6
+    title: "Wild and cultivated species of rice have distinctive proteomic responses to drought"
+    year: 2021
+    ids: ["PXD019885"]
+    archives: [PRIDE]
+    evidence: "PRIDE: O. sativa, O. glaberrima and O. australiensis leaves at 40% field capacity for 7 d vs well-watered, label-free proteomics (Hamzelou et al. 2020 IJMS, PMC7504292)."
+  - key: S7
+    title: "Rice (Pathumthani1) flag leaf LC-MSMS under cytokinin and drought treatment"
+    year: 2020
+    ids: ["PXD021005"]
+    archives: [PRIDE]
+    evidence: "PROXI: flag-leaf proteome of rice sprayed with a synthetic cytokinin under drought stress (Gujjar et al. 2020 Plants, PMC7569833, which cites PXD021005)."
+  - key: S8
+    title: "Dehydration-induced mitochondrial proteome dynamics and defense response in rice"
+    year: 2023
+    ids: ["PXD022269"]
+    archives: [PRIDE]
+    evidence: "PROXI/PRIDE: mitochondrial proteomes of 4-week-old seedlings dehydrated by withholding water for 3, 6 and 9 d vs control; cited by the OsDUF2488 paper (PMC12392968)."
+  - key: S9
+    title: "Protein phosphorylation in response to drought stress in rice"
+    year: 2022
+    ids: ["PXD031505", "IPX0004040000"]
+    archives: [iProX]
+    evidence: "iProX raw files HH3/HY73/HH7A _CK1-3 and _DT1-3 (control vs drought) phosphoproteomics; the ONAC023 paper (PMC11245485) calls it the phosphoproteome of drought-stress-treated HY73."
+  - key: S10
+    title: "Proteomic response of 5 mm root tips to water-deficit stress in two contrasting rice genotypes"
+    year: 2022
+    ids: ["PXD033343"]
+    archives: [PRIDE]
+    evidence: "PRIDE: IR64 and Azucena root tips after withholding water for 14 d (25-35% field capacity), TMT proteomics (Abdirad et al. 2022 Proteomics 10.1002/pmic.202200100)."
+  - key: S11
+    title: "Label Free MS quantitation of rice Oryza sativa (control vs drought)"
+    year: 2024
+    ids: ["PXD036637"]
+    archives: [PRIDE]
+    evidence: "PROXI: control vs drought label-free timsTOF data, linked to Zhang et al. 2024 J Exp Bot 'Analysis of sulfide signaling in rice highlights specific drought responses' (PMC11349868 cites PXD036637)."
+  - key: S12
+    title: "Quantitative proteome and acetylome analyses uncover novel integrated drought resistance mechanisms in rice (Lysine acetylome analysis of rice under drought)"
+    year: 2023
+    ids: ["PXD042247", "IPX0006149000"]
+    archives: [iProX]
+    evidence: "iProX (Ding W / Zhang X, Fudan): proteome fractions plus lysine-acetylome raw files of rice under drought; no linked paper, so it is kept apart from S16 (same group, separate deposit)."
+  - key: S13
+    title: "Integrated transcriptome, proteome and metabolome analyses revealed secondary metabolites and auxiliary carbohydrate metabolism augmenting drought tolerance in rice"
+    year: 2026
+    ids: ["PXD042392", "10.6019/PXD042392"]
+    archives: [PRIDE]
+    evidence: "PRIDE: root proteomes of N22 (drought-tolerant) and IR64 (drought-sensitive) under control and drought (paper 10.1016/j.plaphy.2023.107849); the 10.6019 DOI resolves to ProteomeCentral."
+  - key: S14
+    title: "Stress-induced nuclear translocation of ONAC023 improves drought and heat tolerance through multiple processes in rice (IP-MS)"
+    year: 2024
+    ids: ["PXD046729", "10.6019/PXD046729"]
+    archives: [PRIDE]
+    evidence: "PRIDE sample protocol: IP-MS of FLAG-ONAC023 and WT seedlings at relative soil moisture <10% for 3 d (drought) or 45 C (heat) (Chang et al. 2024 Nat Commun, PMC11245485)."
+  - key: S15
+    title: "Histone lysine beta-hydroxybutyrylation regulates drought response in rice"
+    year: 2026
+    ids: ["PXD059709", "PXD059711"]
+    archives: [PRIDE]
+    evidence: "Two PRIDE datasets (CK vs Treat timsTOF .d files, Kbhb and proteome) of one paper: Wei et al. 2026 Cell Discov 'Lysine beta-hydroxybutyrylation as a drought-responsive epigenetic mark in rice' (PMC12953871 cites both)."
+  - key: S16
+    title: "Proteome dynamics and lysine acetylome underlying drought resistance heterosis in hybrid rice HY73 flag leaves"
+    year: 2026
+    ids: ["PXD064898", "PXD064916"]
+    archives: [PRIDE]
+    evidence: "PRIDE: DIA proteome (PXD064898) and Kac acetylome (PXD064916) of HY73, HH3 and HH7B flag leaves under well-watered vs drought-stressed conditions; both reference Ding et al. 2026 Plant Commun 10.1016/j.xplc.2026.101936."
+  - key: S17
+    title: "Integrative comparative proteomics identifies core differentially expressed proteins and pathways for drought tolerance by exploiting contrasting rice varieties"
+    year: 2026
+    ids: ["PXD072923", "IPX0015056000", "10.3389/fpls.2026.1742602.s001", "10.3389/fpls.2026.1742602.s002", "10.3389/fpls.2026.1742602.s003", "10.3389/fpls.2026.1742602.s004", "10.3389/fpls.2026.1742602.s005", "10.3389/fpls.2026.1742602.s006"]
+    archives: [iProX, Figshare]
+    evidence: "iProX: 40 raw files of drought-tolerant vs sensitive rice varieties; Kuang et al. 2026 Front Plant Sci (PMC13002813) cites PXD072923. Its six supplementary tables on frontiersin.figshare.com are aliases."
+  - key: S18
+    title: "Habibpourmehraban et al Oct 2022 Supplementary Data S1 (rice proteome under mild, moderate and severe drought, salt and temperature)"
+    year: 2022
+    ids: ["10.5281/zenodo.7232767", "10.5281/zenodo.7232766"]
+    archives: [Zenodo]
+    evidence: "Zenodo xlsx (Haynes, Macquarie) has sheets 'Mild/Moderate/Severe Drought_Reproducible Pr' and 'Drought vs Ctrl' DEP tables for Nipponbare (Habibpourmehraban et al. 2022 IJMS, PMC9778788). The raw PXD037280 is still unreleased."
+  - key: S19
+    title: "Proteome-transcriptome discordance in rice under drought is modulated by post-translational modifications (proteome, acetylome, phosphoproteome of Nipponbare under a drought-rewatering cycle)"
+    year: 2026
+    ids: ["OMIX016543", "OMIX016544", "OMIX016545", "PRJCA052664"]
+    archives: [OMIX]
+    evidence: "NGDC OMIX, open access, type 'Proteomic Data by Mass Spectrometry', Oryza sativa Japonica, released 2026-05-18: proteome, acetylome and phosphoproteome of a drought-rewatering cycle. Data statement of Yan et al. 2026 Plants (PMC13210473); BioProject PRJCA052664 is the umbrella."
+  - key: S20
+    title: "Distinct proteomic responses to multiple abiotic stresses in two rice genotypes"
+    year: 2022
+    ids: ["PXD030428"]
+    archives: [PRIDE]
+    evidence: "confidence: borderline (drought applied only together with salt and temperature). PRIDE: IAC1131 and Nipponbare TMT leaf proteomes after 2 and 4 d of combined 50% field capacity + 50 mM NaCl + 33/18 C (PMC8836074; reused in PMC10253461)."
+  - key: S21
+    title: "Shotgun Proteomic Analysis of Long-distance Drought Signaling in Rice Roots (J Proteome Res supplements)"
+    year: 2012
+    ids: ["figshare:2566012", "figshare:2566024", "figshare:2566030", "https://acs.figshare.com/articles/dataset/Shotgun_Proteomic_Analysis_of_Long_distance_Drought_Signaling_in_Rice_Roots/2566012"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (publisher supplement, no raw data). ACS Figshare xls tables (5.2 MB) list proteins from IR64 split-root systems (watered, droughted, half-droughted roots; Mirzaei et al. 2012, 10.1021/pr2008779). The figshare-listed .s00x DOIs do not resolve at doi.org."
+  - key: S22
+    title: "Identification of Extracellular Matrix Proteins of Rice Involved in Dehydration-Responsive Network: A Proteomic Approach (J Proteome Res supplements)"
+    year: 2010
+    ids: ["figshare:2756677", "figshare:2756683", "https://acs.figshare.com/articles/dataset/Identification_of_Extracellular_Matrix_Proteins_of_Rice_i_Oryza_sativa_i_L_Involved_in_Dehydration_Responsive_Network_A_Proteomic_Approach/2756677"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (publisher supplement of a gel-based study). ACS Figshare xls holds Mascot protein/peptide/score identifications from LC-MS/MS of dehydration-responsive rice ECM proteins (10.1021/pr901098p); the companion item is the SI PDF."
+  - key: S23
+    title: "Combined proteomics, metabolomics and physiological analyses of rice growth and grain yield with heavy nitrogen application before and after drought (BMC Plant Biology additional files)"
+    year: 2020
+    ids: ["10.6084/m9.figshare.c.5237103", "10.6084/m9.figshare.13364418", "10.6084/m9.figshare.13364406", "10.6084/m9.figshare.13364409", "10.6084/m9.figshare.13364412", "10.6084/m9.figshare.13364415", "10.6084/m9.figshare.13364421"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (publisher supplement, no raw MS). Springer Nature Figshare Dataset S1 (13364418) gives per-replicate quantities of DEPs (NBD vs NAD) for Wufengyou 286 before vs after drought (10.1186/s12870-020-02772-y). No PX deposit was found."
+  - key: S24
+    title: "Phosphoproteome analysis reveals chitosan-induced resistance to osmotic stress in rice (Oryza sativa L.) seedlings (J Plant Interactions supplements)"
+    year: 2022
+    ids: ["10.6084/m9.figshare.20624797"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (publisher supplement; osmotic agent not stated in the deposit, paper behind 403). Taylor & Francis Figshare xlsx list LC-MS/MS phosphopeptides (peptide, ID score, ANOVA p) of KDML105 leaves under osmotic stress. The same lab's companion Plants paper (PMC9611960) used PEG6000."
+near_misses:
+  - {ids: ["PXD037280"], why_excluded: "Rice individual-stress proteomics (three drought levels, Habibpourmehraban 2022 IJMS): ProteomeCentral reports DatasetNotYetReleased; its processed tables are keyed as S18 (Zenodo)."}
+  - {ids: ["PXD072795"], why_excluded: "Koshihikari drought proteomics (PMC13664928) said to be deposited in jPOST, but ProteomeCentral reports DatasetNotYetReleased by jPOST."}
+  - {ids: ["PXD007907"], why_excluded: "Eragrostis tef drought iTRAQ; Oryza sativa appears only as a search-database species."}
+  - {ids: ["PXD052228"], why_excluded: "ACL1 TurboID interactome from 7-day-old unstressed seedlings, even though the paper covers drought."}
+  - {ids: ["PXD082936", "IPX0019108000"], why_excluded: "DST ubiquitination sites from a semi-in vivo ubiquitination assay; no drought treatment."}
+  - {ids: ["PXD027157", "JPST001231"], why_excluded: "GPX1 interactome from unstressed 2-week-old seedlings (osmotic-stress paper, but no stressed MS samples)."}
+  - {ids: ["PXD045243", "JPST002247", "PXD045242", "JPST002248"], why_excluded: "Rice leaves/roots treated with endophytic fungi; drought is mentioned only as background."}
+  - {ids: ["PXD046188", "10.6019/PXD046188"], why_excluded: "Phosphoproteomics meta-analysis that reanalyses PXD000923, PXD002222, PXD002756, PXD004705, PXD004939, PXD005241, PXD012764 and PXD019291, none of them drought data."}
+  - {ids: ["PXD004705", "PXD004939", "PXD071854", "JPST004224", "OMIX010611"], why_excluded: "ABA-induced phosphoproteomes or ABA-receptor data (ABA only, no water deficit)."}
+  - {ids: ["PXD014669", "MSV000082921", "MSV000083655", "PXD053678", "MSV000091686"], why_excluded: "Rice salinity proteomics (FL478, salt-responsive phospho); MSV000091686 is also not public."}
+  - {ids: ["OMIX005150", "PXD066634", "PXD024034"], why_excluded: "Heat N-terminal acetylome, PET-microplastic root proteome, and flooding under low temperature (no drought)."}
+  - {ids: ["MSV000093246"], why_excluded: "Drought-induced plant-associated microbes; deposit species is Streptomyces, not rice tissue."}
+  - {ids: ["OMIX002006", "OMIX017007", "OMIX017012", "OMIX017018", "OMIX017029", "10.5524/100632"], why_excluded: "Rice drought metabolomics only (OsCIPK17, HY73 heterosis, GigaDB combined drought-heat recovery)."}
+  - {ids: ["10.3389/fpls.2017.01903.s001", "10.3389/fpls.2017.01903.s002"], why_excluded: "cpm2 drought proteomics paper supplements: Table1.docx holds qRT-PCR primers, the PDF holds figures; no MS data deposited."}
+  - {ids: ["10.25949/25440046", "10.25949/19437887", "10.14457/cu.the.2011.149", "10.14457/cu.the.2011.155"], why_excluded: "Theses (Macquarie rice/crop drought proteomics; Chulalongkorn chitosan/OsCam1 protein theses), not data deposits."}
+  - {ids: ["10.25405/ncl.34271763"], why_excluded: "Newcastle repository record of the qDTY12.1 drought proteomics paper with no files."}
+  - {ids: ["10.6084/m9.figshare.32120167", "10.5281/zenodo.7274487", "10.5281/zenodo.10489119"], why_excluded: "OsCobB enzyme kinetics/MD supplement, an E3-ligase poster, and a single OsAlba1 figure; no drought MS proteomics data."}
+  - {ids: ["IPX0000758000", "PXD021446"], why_excluded: "Wheat (and pearl millet) drought proteomics; other species (relevant only to the backup topic)."}
+queries:
+  - "ProteomeCentral PROXI https://proteomecentral.proteomexchange.org/api/proxi/v0.1/datasets?resultType=compact&search=: drought 171; Oryza 337; rice 554; 'water deficit' 12; dehydration 25; osmotic 58 (888 unique rows; 575 rice/Oryza rows, 574 full records fetched via /datasets/<PXD> and description-screened for drought|water deficit|dehydrat|osmotic|PEG|withhold|soil drying|field capacity|re-water|mannitol). Follow-up searches: norfloxacin 3, microplastic 23, cytoskeleton 132, 'guard cell' 25, 'glycine betaine' 0, 'salicylic acid' 30, flood 40, submergence 7, cytokinin 21, thylakoid 63, 'upland rice' 0, 'nuclear proteome' 29, Discordance 1, PEG 43. Species facet for 'Oryza sativa' filter: 267."
+  - "PRIDE v3 https://www.ebi.ac.uk/pride/ws/archive/v3/search/projects?keyword= (all pages): 'rice drought' 3; 'Oryza drought' 0; drought 204; 'water deficit' 32; dehydration 322; PEG 328; 'osmotic stress' 79; 'water stress' 16; 'Oryza sativa' 226; rice 367 (1246 unique; organism Oryza + protocol/description regex screen)."
+  - "PRIDE v2 https://www.ebi.ac.uk/pride/ws/archive/v2/search/projects?keyword=: 'rice drought' 3; 'Oryza drought' 0; 'rice dehydration' 0; 'rice water deficit' 0; 'rice osmotic' 0; 'rice PEG' 0; 'Oryza sativa' 226 (no project beyond v3/PROXI)."
+  - "MassIVE PROXI https://massive.ucsd.edu/ProteoSAFe/proxi/v0.1/datasets?search=: drought 34; rice 145; Oryza 27; 'water deficit' 952 (fuzzy); dehydration 111 (1226 unique; no rice drought proteomics; MSV000091686 404 private)."
+  - "jPOST PROXI https://repository.jpostdb.org/proxi/datasets (keyword ignored; full listing paged): 3213 datasets, 30 rice/Oryza, regex drought|water|dehydrat|osmotic|PEG: 2 hits (JPST001231, JPST002247), neither qualifying."
+  - "iProX https://www.iprox.cn/selectPros.jsonp?onlyPub=1&search[value]= (title search; proxi endpoint timed out/403): drought 36; rice 86; Oryza 15; 'water deficit' 1; dehydration 5; PEG 7; osmotic 9; 'water stress' 0; desiccation 3 (149 unique; IPX-only projects checked, none rice drought)."
+  - "PeptideAtlas PASSEL https://db.systemsbiology.net/sbeams/cgi/passel/query_repository.cgi?cmd=downloadtable: 157 experiments, 1 rice (embryogenesis), 0 drought."
+  - "Panorama Public LabKey query-selectRows ExperimentAnnotations (AllFolders): 767 experiments, 0 rice drought."
+  - "NGDC OMIX https://ngdc.cncb.ac.cn/search/api/specific?db=omix&q=: 'rice drought' 7; 'Oryza drought' 9; 'rice drought proteomic' 2; 'rice dehydration' 0; 'rice osmotic' 0; 'rice proteome' 2; 'Oryza sativa proteomic' 19; 'rice phosphoproteome' 0; 'rice acetylome' 2; 'rice water deficit' 0; drought 42; Oryza 87; rice 92. The /omix/releaseList table has 4484 rows (truncated, no OMIX016xxx). Lead came from Europe PMC (PMC13210473)."
+  - "Zenodo https://zenodo.org/api/records?q= (size 25, up to 300 screened): '(rice OR Oryza) AND drought AND (proteomic... OR \"mass spectrometry\")' 69; '(rice OR Oryza) AND (drought OR water deficit OR dehydration OR PEG OR osmotic stress) AND (proteom* OR ...)' 66; same + resource_type.type:dataset 0; 'rice drought proteome' 39098; 'Oryza sativa drought LC-MS/MS' HTTP 500; '(rice OR Oryza) AND (drought OR water deficit OR dehydration) AND resource_type.type:dataset' 38; 'proteom* AND (rice OR Oryza) AND resource_type.type:dataset' 12; 'PXD AND (rice OR Oryza)' 0."
+  - "Figshare POST https://api.figshare.com/v2/articles/search (page_size 100, up to 1000): ':title: rice AND :title: drought' 688; ':description: rice AND drought AND proteomic' 33; '... proteome' 33; ':description: Oryza AND drought AND proteom*' 6; ':title: rice AND :title: proteom*' 336; ':description: rice AND \"water deficit\" AND protein' 19; ':description: rice AND dehydration AND proteom*' 3; 'rice drought proteomics' 39; ':title: proteom* AND :title: drought' 198; ':title: proteomic AND :title: dehydration' 54; ':title: phosphoproteom* AND :title: drought' 1; ':title: \"water deficit\" AND :title: proteom*' 0; ':title: proteom* AND :title: osmotic' 34; ':title: proteom* AND :title: \"water stress\"' 0; ':title: Oryza AND :title: drought' 90; ':title: acetylom* AND :title: drought' 0; ':title: proteins AND drought AND rice' 29; ':title: rice AND :title: dehydration' 5; ':title: rice AND :title: osmotic' 64; ':title: rice AND :title: PEG' 8; ':title: rice AND :title: phosphoproteom*' 13; ':title: rice AND :title: iTRAQ' 28; ':title: rice AND :title: TMT' 10 (2732 unique, grouped by resource_doi)."
+  - "Dryad https://datadryad.org/api/v2/search?q=: 'rice drought proteomics' 0; 'rice drought proteome' 0; 'Oryza drought protein' 0; 'rice dehydration proteome' 0; 'rice water deficit' 3; 'rice drought' 10; 'rice proteomics' 3; 'Oryza proteome' 1 (none qualify)."
+  - "Mendeley Data https://data.mendeley.com/api/research-data/search?query= (top 500 ranked each): 'rice drought proteomics' 1313; 'rice drought proteome' 1123; 'Oryza sativa drought proteomic' 811; 'rice dehydration proteome' 874; 'rice osmotic stress proteomics' 4323; 'rice drought phosphoproteomics' 873 (1196 unique; only a rice lipidomics set matched the regex, not proteomics)."
+  - "DataCite https://api.datacite.org/dois?query=: '(titles.title:rice OR titles.title:Oryza OR descriptions.description:rice OR Oryza) AND (drought OR \"water deficit\" OR dehydration OR \"osmotic stress\" OR PEG OR \"water stress\") AND (proteome... OR \"mass spectrometry\")' 79; '(title rice OR Oryza) AND (title proteom*/phosphoproteom*/acetylome) AND types.resourceTypeGeneral:Dataset' 208."
+  - "Europe PMC REST search: broad rice AND drought-terms AND proteomics-terms AND (PXD OR ProteomeXchange OR iProX OR jPOST OR MassIVE OR PRIDE OR IPX0 OR JPST OR MSV0) 2483; TITLE_ABS rice AND TITLE_ABS drought-terms AND accession terms 122; TITLE_ABS rice AND drought-terms AND proteomics-terms 178 (278 unique; fullTextXML of 162 OA papers regex-screened for PXD/IPX/JPST/MSV/PASS); TITLE_ABS rice AND drought-terms AND (OMIX OR National Genomics Data Center OR figshare OR zenodo OR dryad OR Mendeley Data OR PeptideAtlas OR Panorama) 75. Full-text data statements read for PMC11245485, PMC13664928, PMC12392968, PMC13002813, PMC9778788, PMC9611960, PMC13210473, PMC12304625."
+  - "WebSearch (lead-finding only): 'Pongprayoon chitosan osmotic stress rice phosphoproteome KDML105 PEG 6000 seedlings Journal of Plant Interactions 2022' (led to PMC9611960, verified in Europe PMC; the T&F article page returned 403)."
+size_verdict: "ok: 24 distinct studies (19 firm, 5 borderline) across 5 archives (studies per archive: PRIDE 15 [14 firm + 1 borderline], iProX 3, Zenodo 1, NGDC OMIX 1, Figshare 5 [4 borderline publisher-supplement studies + the S17 alias tables]). The firm count (19 across PRIDE, iProX, Zenodo and OMIX) is within the 5-30 range with at least 3 archives, so the backup wheat topic was not used."

@@ -4,7 +4,6 @@ Shapes from the live API (2026-10-02): see ``test_hf_datasets_server_answers.py`
 """
 
 import inspect
-import logging
 
 import httpx
 import pytest
@@ -203,21 +202,15 @@ async def test_the_name_is_the_files_path_on_the_conversion_branch():
     ]
 
 
-@pytest.mark.parametrize(
-    "n", [hf_datasets_server.MAX_DSS_FILES, hf_datasets_server.MAX_DSS_FILES + 1]
-)
+@pytest.mark.parametrize("n", [3, 1006])
 @pytest.mark.asyncio
-async def test_the_file_list_is_capped_in_order_and_the_cap_is_logged(n, caplog):
-    body = {"parquet_files": [_entry(i) for i in range(n)], "partial": False}
+async def test_every_converted_file_is_listed_in_order(n):
+    # allenai/c4 converts to 1,006 files (live 2026-10-17); the first 100 were listed, so
+    # the rest could not be asked for by name. 3 is the control below the old cap.
+    body = {"parquet_files": [_entry(i) for i in range(n)], "partial": True}
     async with _client(lambda r: httpx.Response(200, json=body)) as c:
-        with caplog.at_level(logging.WARNING, logger=hf_datasets_server.logger.name):
-            files = await hf_datasets_server.parquet_files(c, "o/n")
-    cap = hf_datasets_server.MAX_DSS_FILES
-    assert [f.name for f in files] == [f"c/s/{i:04d}.parquet" for i in range(cap)]
-    expected = (
-        [] if n == cap else [f"datasets-server: o/n exposes {n} parquet files; capping to {cap}"]
-    )
-    assert [m.getMessage() for m in caplog.records] == expected
+        files = await hf_datasets_server.parquet_files(c, "o/n")
+    assert [f.name for f in files] == [f"c/s/{i:04d}.parquet" for i in range(n)]
 
 
 @pytest.mark.asyncio

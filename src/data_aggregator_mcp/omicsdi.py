@@ -19,7 +19,7 @@ import re
 import httpx
 
 from data_aggregator_mcp import _http, metabolights, pride
-from data_aggregator_mcp._relevance import with_plurals
+from data_aggregator_mcp._relevance import drop_stray_marks, with_plurals
 from data_aggregator_mcp.errors import NotFoundError
 from data_aggregator_mcp.models import Creator, DataResource, Link, compact
 
@@ -237,6 +237,7 @@ async def search(
     offset: int = 0,
     plurals: bool = True,
 ) -> tuple[int, list[DataResource]]:
+    query = drop_stray_marks(query, ":")
     words = with_plurals(query) if plurals else query
     params = {"query": _modality_query(words), "size": str(min(size, MAX_SIZE))}
     if offset:

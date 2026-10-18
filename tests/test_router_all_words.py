@@ -101,6 +101,36 @@ async def test_a_failed_stream_is_an_error_not_an_empty_match(monkeypatch) -> No
     assert errors["all_words"].startswith("omics/geo matched nothing: it returns ")
 
 
+async def test_a_source_one_of_whose_streams_failed_is_not_called_empty(monkeypatch) -> None:
+    """GEO's query as written failed and its plurals stream answered 0, and the note
+    said GEO matched nothing (live, 2026-10-17): the records it would have sent are
+    unknown, not absent."""
+    sent: list[str] = []
+
+    def plural_split(*, main_fails: bool):
+        async def search_subsource(client, sub, q, *, size=10, offset=0):
+            sent.append(q)
+            if main_fails and " NOT " not in q:
+                raise RuntimeError("upstream down")
+            return 0, []
+
+        return types.SimpleNamespace(
+            SUBSOURCES=("geo",),
+            search_subsource=search_subsource,
+            PREFIXES=frozenset(),
+            REQUIRES_EVERY_WORD=True,
+            PLURAL_STREAM=True,
+        )
+
+    errors = await _errors(monkeypatch, {"omics": plural_split(main_fails=True)})
+    assert len(sent) == 2 and any(" NOT " in q for q in sent), sent  # both streams ran
+    assert errors["omics/geo"] == "RuntimeError: upstream down"
+    assert "all_words" not in errors
+    # Positive control: both streams answered with nothing, so GEO is named.
+    errors = await _errors(monkeypatch, {"omics": plural_split(main_fails=False)})
+    assert errors["all_words"].startswith("omics/geo matched nothing: it returns ")
+
+
 async def test_several_empty_sources_are_named_together(monkeypatch) -> None:
     errors = await _errors(
         monkeypatch,
