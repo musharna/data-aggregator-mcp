@@ -66,6 +66,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   over requests (0.11 s now), and the median page took 13.7 s (9.4 s now). Zenodo's
   search and DataCite are now paced within their documented limits (30 a minute and
   500 per 5 minutes per IP), which nothing enforced before.
+- A PubMed record of a whole NCBI Bookshelf book (GeneReviews, PMID 20301295) is titled
+  by its book title; it was listed with an empty title. Its chapters keep their own.
 
 ## [0.74.1] - 2026-10-16
 
