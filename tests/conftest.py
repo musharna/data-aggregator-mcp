@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from data_aggregator_mcp import _ratelimit, egress, europepmc, router, taxonomy, zenodo
+from data_aggregator_mcp import _ratelimit, egress, europepmc, massive, router, taxonomy, zenodo
 from tests._upstream_down import (  # noqa: F401 - registered by name: a live outage is a skip
     _record_down_upstreams,
     pytest_runtest_makereport,
@@ -58,11 +58,13 @@ def _reset_process_singletons():
     router._RESOLVE_CACHE.clear()
     taxonomy._CACHE.clear()
     zenodo._SEARCH_CACHE.clear()  # search-seeded record cache (resolve double-fetch skip)
+    massive._COUNTS.clear()  # word counts kept for the next search
     yield
     _ratelimit.reset()
     router._RESOLVE_CACHE.clear()
     taxonomy._CACHE.clear()
     zenodo._SEARCH_CACHE.clear()
+    massive._COUNTS.clear()
 
 
 @pytest.fixture(autouse=True)

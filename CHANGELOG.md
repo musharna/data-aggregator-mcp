@@ -30,6 +30,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   NASA CMR, OmicsDI, OpenML, NGDC), whose query parsers refuse it. The unmatched mark is
   now dropped before the query is sent, `errors.unbalanced` says what was searched, and
   every source answers. Multi-query variants are repaired the same way.
+- MassIVE no longer holds up a search page. It counts each word of a query with its own
+  request, and an agent's searches repeat words, so a session of 83 searches sent 356
+  counts, 235 of them for a word already counted; under that load MassIVE took up to
+  104 s a search and answered 429. A word's count is now kept ten minutes. Replaying
+  the same 83 searches: MassIVE 184 requests, p90 8.9 s (was 20.9 s), dropped for 429s
+  from one search (was 6);
+  the page p90 14.6 s (was 20.9 s). The rows are still read with a fresh count, so
+  results are unchanged.
 
 ## [0.74.1] - 2026-10-16
 

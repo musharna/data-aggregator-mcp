@@ -62,7 +62,7 @@ def _client(sent: list[tuple[str, int, int]], answers: dict[str, object]):
     the answer to every page, a ``(count, rows)`` pair answers ``pageSize=1`` with the
     first and anything else with the second, and an unlisted text the empty answer. A
     servlet request is answered from ``answers["info:<acc>"]`` (bytes, or a str sent as
-    404 text)."""
+    404 text). A callable answers each page from its ``(pageSize, offset)``."""
 
     def handler(request: httpx.Request) -> httpx.Response:
         params = request.url.params
@@ -79,6 +79,8 @@ def _client(sent: list[tuple[str, int, int]], answers: dict[str, object]):
         size, offset = int(params["pageSize"]), int(params["offset"])
         sent.append((text, size, offset))
         body = answers.get(text, _EMPTY)
+        if callable(body):
+            body = body(size, offset)
         if isinstance(body, tuple):
             body = body[0] if size == 1 else body[1]
         assert isinstance(body, bytes)
@@ -191,6 +193,60 @@ async def test_past_max_rows_the_newest_rows_of_the_rarest_word_are_read(monkeyp
 
 
 @pytest.mark.asyncio
+async def test_a_word_counted_for_one_search_is_not_counted_again_for_the_next():
+    """An agent's searches rephrase one another: 235 of the 356 word counts of an
+    83-search session repeated a word already counted (2026-10-17)."""
+    (_, first), sent = await _search("pocillopora heatwave")
+    assert sorted(sent[:2]) == [("heatwave", 1, 0), ("pocillopora", 1, 0)]
+    (_, again), sent = await _search("heatwave pocillopora")
+    assert sent == [("heatwave", 3, 0)]  # the rows alone: both counts were kept
+    assert again == first
+    # Positive control: a word not counted before is counted.
+    _, sent = await _search("pocillopora wave")
+    assert sent == [("wave", 1, 0), ("pocillopora", 16, 0)]
+
+
+@pytest.mark.parametrize(
+    ("max_rows", "reads", "newest"),
+    [(5000, [(15, 0), (16, 0)], 16), (10, [(10, 5), (10, 6)], 10)],
+)
+@pytest.mark.asyncio
+async def test_a_kept_count_that_has_grown_reads_the_rows_where_the_fresh_count_puts_them(
+    monkeypatch, max_rows, reads, newest
+):
+    monkeypatch.setattr(massive, "MAX_ROWS", max_rows)
+    rows = _rows("massive_rows_pocillopora.json")  # 16, oldest first, as the server sends
+
+    def page(size: int, offset: int) -> bytes:
+        return _answer(rows[offset : offset + size], total=16)
+
+    massive._COUNTS.set("pocillopora", 15)  # kept before the newest dataset was deposited
+    sent: list[tuple[str, int, int]] = []
+    async with _client(sent, {"pocillopora": page}) as c:
+        total, recs = await massive.search(c, "pocillopora", size=50)
+    assert sent == [("pocillopora", *r) for r in reads]
+    assert [r.id for r in recs] == [f"massive:{r['dataset']}" for r in reversed(rows)][:newest]
+    assert total == newest
+    # Positive control: the fresh count was kept, so the next search reads once.
+    sent.clear()
+    async with _client(sent, {"pocillopora": page}) as c:
+        await massive.search(c, "pocillopora", size=50)
+    assert sent == [("pocillopora", *reads[1])]
+
+
+@pytest.mark.asyncio
+async def test_a_kept_count_is_counted_again_after_ten_minutes(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr(massive._COUNTS, "_now", lambda: clock[0])
+    await _search("heatwave")
+    clock[0] = 599.0
+    assert massive._COUNTS.get("heatwave") == 3  # a search now would read the rows alone
+    clock[0] = 600.0
+    _, sent = await _search("heatwave")
+    assert sent == [("heatwave", 1, 0), ("heatwave", 3, 0)]
+
+
+@pytest.mark.asyncio
 async def test_no_match_is_one_request_and_an_empty_page():
     (total, recs), sent = await _search("zzqxnonword")
     assert (total, recs, sent) == (0, [], [("zzqxnonword", 1, 0)])
@@ -201,6 +257,7 @@ async def test_a_short_word_is_required_but_not_sent_unless_it_is_all_there_is()
     (total, recs), sent = await _search("pocillopora heatwave ms")
     assert {s[0] for s in sent} == {"pocillopora", "heatwave"}
     assert total == 1  # S15's description says "LC-MS/MS"
+    massive._COUNTS.clear()  # so the words are counted again, not kept
     (total, recs), sent = await _search("pocillopora heatwave zq")
     assert {s[0] for s in sent} == {"pocillopora", "heatwave"}
     assert total == 0  # required, though never sent
