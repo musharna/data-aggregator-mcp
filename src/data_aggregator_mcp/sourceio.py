@@ -13,6 +13,7 @@ checks every hop, and the parsers downstream get a file object or a local path:
 - ``open_source``: a seekable file; a remote read is one HTTP Range request per read,
   so the Parquet footer and the CSV sniff fetch only what the parser asks for.
 - ``local_copy``: a local path for DuckDB; a remote file is downloaded first.
+- ``utf8_copy``: that path, or a UTF-8 copy of a UTF-16 text file, which DuckDB cannot read.
 - ``size``: the size the server declares, for operate's ceiling.
 
 ``file://`` URLs (operate allows them only behind ``DATA_AGGREGATOR_MCP_ALLOW_FILE_URLS``)
@@ -26,6 +27,7 @@ DNS rebinding between the two is not covered.
 
 from __future__ import annotations
 
+import codecs
 import contextlib
 import io
 import tempfile
@@ -47,6 +49,14 @@ _HEADERS = {"Accept-Encoding": "identity"}
 _GET = "GET"
 _RANGE = "Range"
 _CONTENT_LENGTH = "Content-Length"
+# A text file's encoding, by its byte-order mark. UTF-16 files (Excel's "Unicode Text"
+# export) start with one; read as UTF-8, every character was U+FFFD in schema and
+# preview, and DuckDB refuses them ("not utf-8 encoded"). A UTF-8 mark is dropped, as
+# DuckDB drops it, so a first column's name is the same in every reader.
+_UTF16 = "utf-16"
+_UTF8 = "utf-8-sig"
+_UTF16_MARKS = (codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
+_TRANSCODE_CHARS = 1 << 20
 
 
 def _is_remote(url: str) -> bool:
@@ -201,6 +211,34 @@ def open_source(url: str) -> Iterator[IO[bytes]]:
         return
     with _client() as client, _RangeFile(client, url) as remote:
         yield remote  # type: ignore[misc]  # file-like, not nominally IO
+
+
+def text_encoding(head: bytes) -> str:
+    """The encoding a text file's first bytes name: UTF-16 (either byte order) by its
+    mark, else UTF-8."""
+    return _UTF16 if head.startswith(_UTF16_MARKS) else _UTF8
+
+
+@contextlib.contextmanager
+def utf8_copy(path: str) -> Iterator[str]:
+    """``path``, or for a UTF-16 text file a UTF-8 copy of it in a temporary directory
+    removed on exit. DuckDB reads UTF-8 only: its own ``encoding='utf-16'`` reads a
+    big-endian file as one garbled column."""
+    with open_source(path) as f:
+        encoding = text_encoding(f.read(len(codecs.BOM_UTF16_LE)))
+    if encoding != _UTF16:
+        yield path
+        return
+    with tempfile.TemporaryDirectory(prefix="dam-operate-", ignore_cleanup_errors=True) as tmp:
+        dest = Path(tmp) / "source"
+        with (
+            open_source(path) as raw,
+            io.TextIOWrapper(raw, encoding=_UTF16, newline="") as text,
+            dest.open("w", encoding="utf-8", newline="") as out,
+        ):
+            while chunk := text.read(_TRANSCODE_CHARS):
+                out.write(chunk)
+        yield str(dest)
 
 
 @contextlib.contextmanager

@@ -18,9 +18,6 @@ from data_aggregator_mcp import sourceio
 
 _PARQUET_EXTS = (".parquet", ".pq")
 _CSV_SNIFF_BYTES = 64_000
-# A leading UTF-8 byte-order mark (Excel's "CSV UTF-8" writes one) is not part of the
-# first column's name: DuckDB drops it, so head/sql and schema/preview must agree.
-_TEXT_ENCODING = "utf-8-sig"
 _CUT_MARK = "_"  # see _preview_csv; any character but a quote, delimiter or line break
 
 
@@ -60,7 +57,9 @@ def _read_head_text(url: str, n: int) -> tuple[str, bool]:
     with no line break in the window is reported cut by both readers."""
     with sourceio.open_source(url) as f:
         raw = f.read(n + 1)
-    return raw[:n].decode(_TEXT_ENCODING, "replace"), len(raw) > n
+    # Decoded as head/sql read it (``sourceio.text_encoding``), so every reader names
+    # the columns alike.
+    return raw[:n].decode(sourceio.text_encoding(raw), "replace"), len(raw) > n
 
 
 def _schema_csv(url: str, file: str) -> dict:
