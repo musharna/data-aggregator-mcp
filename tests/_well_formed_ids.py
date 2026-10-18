@@ -12,6 +12,7 @@ WELL_FORMED = {
     "gbif": "6d27080f-ed47-48e2-90e8-cdebaba11a03",
     "gwas": "GCST000028",
     "hf": "owner/name",
+    "kaggle": "ivanfel/honey-bee-pollen",
     "massive": "MSV000101299",
     "mwb": "ST004329",
     "nasacmr": "C2586786218-POCLOUD",

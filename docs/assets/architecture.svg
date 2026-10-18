@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 590" width="820" height="590" role="img" aria-labelledby="t d">
   <title id="t">How one search runs</title>
-  <desc id="d">A search for transcriptome data on Orobanche aegyptiaca. NCBI Taxonomy maps the organism to its current name, Phelipanche aegyptiaca; the 12 sources that accept synonyms search both names, and the other 8 get the plain query. The query goes to 20 sources in parallel: 10 archives, 9 omics sources and 1 literature source. Records that share a DOI collapse to one, keeping the copy that can be downloaded. A record can then be resolved to its files and checksums, fetched with the checksum verified where the source publishes one, or queried with SQL without downloading it.</desc>
+  <desc id="d">A search for transcriptome data on Orobanche aegyptiaca. NCBI Taxonomy maps the organism to its current name, Phelipanche aegyptiaca; the 12 sources that accept synonyms search both names, and the other 9 get the plain query. The query goes to 21 sources in parallel: 11 archives, 9 omics sources and 1 literature source. Records that share a DOI collapse to one, keeping the copy that can be downloaded. A record can then be resolved to its files and checksums, fetched with the checksum verified where the source publishes one, or queried with SQL without downloading it.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M0 0 L10 5 L0 10 z" fill="#57606a"/>
@@ -30,13 +30,13 @@
   <text class="step" x="20" y="125">2 · expand</text>
   <rect class="box" x="120" y="90" width="680" height="72" rx="8"/>
   <text x="136" y="119"><tspan class="head">NCBI Taxonomy:</tspan> Orobanche aegyptiaca → <tspan class="hit">Phelipanche aegyptiaca</tspan> (current)</text>
-  <text class="note" x="136" y="146">12 sources search both names; the other 8 get the plain query and say so.</text>
+  <text class="note" x="136" y="146">12 sources search both names; the other 9 get the plain query and say so.</text>
 
   <!-- 3 fan out -->
   <text class="step" x="20" y="219">3 · fan out</text>
   <rect class="hub" x="120" y="184" width="680" height="190" rx="8"/>
-  <text class="head" x="136" y="212">20 sources, queried in parallel</text>
-  <text class="note" x="136" y="244">archives · 10</text>
+  <text class="head" x="136" y="212">21 sources, queried in parallel</text>
+  <text class="note" x="136" y="244">archives · 11</text>
   <text x="136" y="268">Zenodo · DataCite</text>
   <text x="136" y="290">DataONE · Hugging Face</text>
   <text x="136" y="312">OpenML · RCSB PDB</text>

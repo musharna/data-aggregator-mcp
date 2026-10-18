@@ -17,6 +17,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   225 (30 to 39 distinct of 47), and the queries finding one from 18 to 25; the
   MassIVE search's median time rose from 4.5 to 11.0 s. A third word's rows cost 11
   more requests and found fewer (220).
+- `kaggle`, Kaggle's public datasets searched natively (discovery-only, no account
+  needed). Many machine-learning datasets are deposited only there, with no DOI: in
+  round 3 T4 (labelled honey bee images) six key datasets were held nowhere else, and
+  Kaggle's search returns all six for "honey bee" or "bee varroa". Kaggle needs every
+  word (each also as a prefix), reads no OR, pages by 20 and reports no total, so the
+  total counts the rows up to the page read, plus one when the page is full. Licence
+  names are read as SPDX ids where they have one. A Kaggle DOI names one version at
+  DataCite and links to no dataset, so a DOI'd dataset can be listed from both sources,
+  and `collapse_mirrors` does not fold the two (a Kaggle hit has no year until resolved).
 
 ### Fixed
 
