@@ -366,3 +366,118 @@ def test_preflight_stops_on_a_bad_oracle_or_an_unpinned_resolution(
     monkeypatch.setattr(run, "_mentions", lambda text, alias: False)
     with pytest.raises(SystemExit, match="oracle check failed"):
         run.preflight(tasks, args)
+
+
+def _rl(status: str = "allowed", five: float = 0.3, seven: float = 0.4, resets: float = 0) -> dict:
+    return {"type": "rate_limit_event", "rate_limit_info": {
+        "status": status, "resetsAt": resets, "unifiedWindows": {
+            "five_hour": {"utilization": five, "resetsAt": resets},
+            "seven_day": {"utilization": seven, "resetsAt": resets + 1}}}}  # fmt: skip
+
+
+def _claude_script(calls: list, outcomes: list[list[dict]]):
+    """A fake ``claude -p`` whose n-th call writes the n-th event list as its transcript."""
+
+    def fake(cmd, cwd, stdout, **kw):
+        calls.append(cmd)
+        for e in outcomes[min(len(calls), len(outcomes)) - 1]:
+            stdout.write(json.dumps(e) + "\n")
+        return run.subprocess.CompletedProcess(cmd, 0, "", "")
+
+    return fake
+
+
+@pytest.fixture
+def gate(monkeypatch: pytest.MonkeyPatch) -> dict:
+    """A fresh usage gate, and a fake clock: sleeping advances it, nothing really waits."""
+    clock = {"now": 1_000_000.0, "slept": []}
+    monkeypatch.setattr(run, "_GATE", {"resume_at": 0.0, "stopped": None})
+    monkeypatch.setattr(run.time, "time", lambda: clock["now"])
+
+    def sleep(s: float) -> None:
+        clock["slept"].append(s)
+        clock["now"] += s
+
+    monkeypatch.setattr(run.time, "sleep", sleep)
+    return clock
+
+
+def test_usage_gate_reruns_a_rate_limited_run_once_and_pauses_until_the_reset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
+) -> None:
+    cfg = _cfg(model="m", budget_usd="1", claude_code="v")
+    task = {**TASK, "prompt": "Find every dataset."}
+    reset = gate["now"] + 600
+    rejected = [_rl("rejected", 1.0, 0.5, reset)]  # the limit, before any answer
+    answered = [_rl(), {"type": "result", **OK}]
+    calls: list = []
+    monkeypatch.setattr(run.subprocess, "run", _claude_script(calls, [rejected, answered]))
+    rd = run.run_one(task, "dam", 1, tmp_path, cfg)
+    assert len(calls) == 2  # run once more, after the pause
+    assert sum(gate["slept"]) >= 600  # held until the window reset (+60 s)
+    meta = json.loads((rd / "meta.json").read_text())
+    assert meta["api_failure"] is None and meta["rate_limit"]["status"] == "allowed"
+    kept = tmp_path / "_ratelimited" / "dam-X-r1-1" / "meta.json"
+    assert json.loads(kept.read_text())["api_failure"] == "rate_limited"
+    log = [json.loads(x) for x in (tmp_path / "ratelimited.jsonl").read_text().splitlines()]
+    assert [(e["arm"], e["rep"]) for e in log] == [("dam", 1)]
+    pauses = [json.loads(x) for x in (tmp_path / "pauses.jsonl").read_text().splitlines()]
+    assert len(pauses) == 1 and pauses[0]["until"] == reset + 60
+    # Control: an answered run under the limit is one call, no pause, no retry.
+    run.run_one(task, "web", 1, tmp_path, cfg)
+    assert len(calls) == 3 and len((tmp_path / "pauses.jsonl").read_text().splitlines()) == 1
+    # The rule reads the transcript: a rejection the run then got past is no failure.
+    assert run.api_failure(rejected) == "rate_limited"
+    assert run.api_failure([*rejected, {"type": "result", **OK}]) is None
+    # A second rejection stays as the run's row (invalid): never a third attempt.
+    calls.clear()
+    monkeypatch.setattr(run.subprocess, "run", _claude_script(calls, [rejected, rejected]))
+    rd = run.run_one(task, "tu", 1, tmp_path, cfg)
+    assert len(calls) == 2
+    assert json.loads((rd / "meta.json").read_text())["api_failure"] == "rate_limited"
+
+
+def test_usage_gate_pauses_at_five_hour_085_and_stops_at_seven_day_080(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
+) -> None:
+    cfg = _cfg(model="m", budget_usd="1", claude_code="v")
+    task = {**TASK, "prompt": "Find every dataset."}
+    calls: list = []
+    hot = [_rl("allowed_warning", 0.85, 0.5, gate["now"] + 300), {"type": "result", **OK}]
+    monkeypatch.setattr(run.subprocess, "run", _claude_script(calls, [hot]))
+    run.run_one(task, "dam", 1, tmp_path, cfg)
+    assert gate["slept"] == []  # the run that read 0.85 is a result, not re-run
+    run.run_one(task, "dam", 2, tmp_path, cfg)
+    assert sum(gate["slept"]) >= 300 and len(calls) == 2  # the next one waited
+    weekly = [_rl("allowed", 0.2, 0.80, gate["now"] + 300), {"type": "result", **OK}]
+    monkeypatch.setattr(run.subprocess, "run", _claude_script(calls, [weekly, weekly, weekly]))
+    calls.clear()
+    assert run.run_one(task, "dam", 3, tmp_path, cfg) is not None
+    assert run.run_one(task, "web", 3, tmp_path, cfg) is None  # stopped: nothing runs
+    assert len(calls) == 1 and run._GATE["stopped"]
+    stop = json.loads((tmp_path / "pauses.jsonl").read_text().splitlines()[-1])
+    assert stop["stop"] is True and stop["seven_day"] == 0.80
+
+
+def test_server_spec_runs_dam_from_a_pushed_commit_and_preflight_checks_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sha = "0123456789abcdef0123456789abcdef01234567"
+    spec = f"git+https://github.com/musharna/data-aggregator-mcp@{sha}"
+    dam = run.mcp_config("dam", _cfg(server_spec=spec))["mcpServers"]["data-aggregator"]
+    assert dam["args"] == ["--exclude-newer", "2026-10-17T00:00:00Z", "--from", spec,
+                           "data-aggregator-mcp"]  # fmt: skip
+    assert run.server_spec("dam", _cfg(server_spec=spec)) == spec
+    assert run.server_spec("dam", _cfg()) == "data-aggregator-mcp==0.74.0"  # control
+    tasks = json.loads((H2H / "round4" / "tasks.json").read_text())[:1]
+    installed = {"data-aggregator-mcp": "0.75.1", "data-aggregator-mcp@commit": sha}
+    monkeypatch.setattr(run, "installed_versions", lambda p, v, x, s=None: dict(installed))
+    args = _cfg(arms="dam", out=tmp_path, server_spec=spec)
+    run.preflight(tasks, args)  # control: the commit asked for is the one installed
+    versions = json.loads((tmp_path / "versions.json").read_text())
+    assert versions["dam"]["server_spec"] == spec
+    installed["data-aggregator-mcp@commit"] = "f" * 40
+    with pytest.raises(SystemExit, match=f"installed commit f{{40}}, not {sha}"):
+        run.preflight(tasks, args)
+    with pytest.raises(SystemExit, match="is not git"):
+        run.preflight(tasks, _cfg(arms="dam", out=tmp_path, server_spec=spec[:-1]))

@@ -14,6 +14,20 @@ with ``uvx --exclude-newer``, so their dependencies resolve as of one fixed date
     python3 benchmarks/h2h/run.py --tasks round4/tasks.json --out <runs> --workers 1
     python3 benchmarks/h2h/run.py --score-only --tasks round4/tasks.json --out <runs>
 
+``--server-spec git+https://github.com/musharna/data-aggregator-mcp@<40-hex sha>`` runs
+the dam arm on an unreleased commit instead of the PyPI pin (``uvx --from``, with the same
+``--exclude-newer`` for its dependencies); preflight checks the installed package came
+from that commit, and the spec is recorded in every row and in ``versions.json``.
+
+Usage gate (added 2026-10-18; the runs share the account's limits with its owner): after
+every run its transcript's last ``rate_limit_event`` is read and kept in ``meta.json``.
+A five-hour utilization at or above ``PAUSE_AT`` or a ``rejected`` status holds every
+later run until that window's ``resetsAt`` (each pause appended to ``pauses.jsonl``); a
+seven-day utilization at or above ``STOP_AT`` stops the sweep. A run the rate limit
+rejected before the model answered (``api_failure``) is a harness failure, not a result:
+it is moved to ``_ratelimited/``, logged in ``ratelimited.jsonl`` and run once more after
+the pause; a second such failure stays as the run's (invalid) row.
+
 Standard library only, so it runs without this package's environment.
 """
 
@@ -29,6 +43,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -40,6 +55,9 @@ TU_VERSION = "1.5.7"  # latest on PyPI, 2026-10-16
 # Dependencies of both servers resolve as of this instant (after both releases).
 EXCLUDE_NEWER = "2026-10-17T00:00:00Z"
 RUN_TIMEOUT_S = 15 * 60
+PAUSE_AT = 0.85  # five-hour utilization that holds the sweep until the window resets
+STOP_AT = 0.80  # seven-day utilization that stops the sweep
+SERVER_SPEC = re.compile(r"git\+https://github\.com/musharna/data-aggregator-mcp@([0-9a-f]{40})")
 BUDGET_USD = "6"  # Opus 5.5 costs twice Sonnet 5.5 per token
 SYSTEM_PROMPT = (
     "You are a research assistant who finds public scientific datasets. Use only the "
@@ -66,6 +84,8 @@ LIST_TAIL = (
 def server_spec(arm: str, cfg: argparse.Namespace) -> str | None:
     """What the arm's server is, as recorded in every score row."""
     if arm == "dam":
+        if getattr(cfg, "server_spec", None):
+            return cfg.server_spec
         return (
             f"checkout:{cfg.dam_dir}" if cfg.dam_dir else f"data-aggregator-mcp=={cfg.dam_version}"
         )
@@ -109,6 +129,9 @@ def mcp_config(arm: str, cfg: argparse.Namespace, state: Path | None = None) -> 
         if cfg.dam_dir:  # a checkout under development, not a release: say so in rows
             args = ["run", "--no-sync", "--directory", cfg.dam_dir, "data-aggregator-mcp"]
             return {"mcpServers": {"data-aggregator": {"command": "uv", "args": args}}}
+        if getattr(cfg, "server_spec", None):  # an unreleased commit, pushed to GitHub
+            args = [*pin, "--from", cfg.server_spec, "data-aggregator-mcp"]
+            return {"mcpServers": {"data-aggregator": {"command": "uvx", "args": args}}}
         # The README's `uvx data-aggregator-mcp`, pinned to the release under test.
         server = {"command": "uvx", "args": [*pin, f"data-aggregator-mcp=={cfg.dam_version}"]}
         return {"mcpServers": {"data-aggregator": server}}
@@ -174,12 +197,117 @@ def claude_version() -> str:
     return proc.stdout.strip()
 
 
-def run_one(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace) -> Path:
+def _events(log: Path) -> list[dict]:
+    out = []
+    for line in log.read_text().splitlines() if log.exists() else []:
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return out
+
+
+def rate_limit(events: list[dict]) -> dict | None:
+    """The run's last ``rate_limit_event``, reduced to what the usage gate reads."""
+    info = None
+    for e in events:
+        if e.get("type") == "rate_limit_event":
+            info = e.get("rate_limit_info") or {}
+    if info is None:
+        return None
+    w = info.get("unifiedWindows") or {}
+    return {
+        "status": info.get("status"),
+        "five_hour": (w.get("five_hour") or {}).get("utilization"),
+        "five_hour_resets": (w.get("five_hour") or {}).get("resetsAt") or info.get("resetsAt"),
+        "seven_day": (w.get("seven_day") or {}).get("utilization"),
+        "seven_day_resets": (w.get("seven_day") or {}).get("resetsAt"),
+    }
+
+
+def api_failure(events: list[dict]) -> str | None:
+    """``rate_limited`` when the account's limit rejected the run before the model
+    answered: a ``rejected`` rate-limit event and no successful result. Read from the
+    transcript alone, never from the list or its score, so one rule picks rows in every
+    arm. A timeout or a budget stop is not one: it stays a result."""
+    result = next((e for e in reversed(events) if e.get("type") == "result"), None)
+    ok = result is not None and result.get("subtype") == "success" and not result.get("is_error")
+    rejected = any(
+        e.get("type") == "rate_limit_event"
+        and (e.get("rate_limit_info") or {}).get("status") == "rejected"
+        for e in events
+    )
+    return "rate_limited" if rejected and not ok else None
+
+
+# The usage gate, shared by every worker: no run starts before _GATE["resume_at"], and
+# none at all once the seven-day window passed STOP_AT.
+_GATE: dict = {"resume_at": 0.0, "stopped": None}
+_GATE_LOCK = threading.Lock()
+
+
+def _log(root: Path, name: str, entry: dict) -> None:
+    with _GATE_LOCK, (root / name).open("a") as fh:
+        fh.write(json.dumps(entry) + "\n")
+
+
+def _hold(root: Path) -> bool:
+    """Wait out a pause; False once the sweep is stopped."""
+    while True:
+        with _GATE_LOCK:
+            stopped, resume_at = _GATE["stopped"], _GATE["resume_at"]
+        if stopped:
+            return False
+        wait = resume_at - time.time()
+        if wait <= 0:
+            return True
+        time.sleep(min(wait, 60))
+
+
+def _observe(root: Path, run_dir: Path, rl: dict | None) -> None:
+    """Pause or stop the sweep on the reading a run just left."""
+    if rl is None:
+        return
+    now = time.time()
+    if (rl.get("seven_day") or 0) >= STOP_AT:
+        with _GATE_LOCK:
+            _GATE["stopped"] = f"seven_day {rl['seven_day']} >= {STOP_AT}"
+        _log(root, "pauses.jsonl", {"at": now, "stop": True, "after": str(run_dir), **rl})
+        return
+    if rl.get("status") == "rejected" or (rl.get("five_hour") or 0) >= PAUSE_AT:
+        until = float(rl.get("five_hour_resets") or now + 3600) + 60
+        with _GATE_LOCK:
+            _GATE["resume_at"] = max(_GATE["resume_at"], until)
+        _log(root, "pauses.jsonl", {"at": now, "until": until, "after": str(run_dir), **rl})
+
+
+def run_one(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace) -> Path | None:
+    """One (task, arm, rep) through the usage gate: None if the sweep was stopped first."""
     run_dir = root / arm / task["id"] / f"r{rep}"
     if (run_dir / "meta.json").exists():
         # Finished, whatever the outcome: a timeout, a budget stop or an error is a
         # result (scored invalid), never silently re-run.
         return run_dir
+    for attempt in (1, 2):
+        if not _hold(root):
+            return None
+        _attempt(task, arm, rep, root, cfg)
+        meta = json.loads((run_dir / "meta.json").read_text())
+        _observe(root, run_dir, meta.get("rate_limit"))
+        if meta.get("api_failure") != "rate_limited" or attempt == 2:
+            return run_dir
+        # Rejected by the account's limit before any answer: a harness failure. Kept,
+        # logged, and run once more after the pause.
+        dest = root / "_ratelimited" / f"{arm}-{task['id']}-r{rep}-1"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(run_dir), dest)
+        _log(root, "ratelimited.jsonl", {"arm": arm, "task": task["id"], "rep": rep,
+                                         "kept": str(dest)})  # fmt: skip
+    return run_dir
+
+
+def _attempt(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace) -> Path:
+    run_dir = root / arm / task["id"] / f"r{rep}"
     if run_dir.exists():
         # The harness itself died mid-run (no meta.json). The same rule for every arm:
         # keep the attempt under _aborted/, log it, and run again.
@@ -244,6 +372,9 @@ def run_one(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace)
         "server": server_spec(arm, cfg),
         "tools": arm_tools(arm, task.get("kind") == "list"),
     }
+    events = _events(log)
+    meta["rate_limit"] = rate_limit(events)
+    meta["api_failure"] = api_failure(events)
     (run_dir / "meta.json").write_text(json.dumps(meta))
     return run_dir
 
@@ -623,15 +754,21 @@ def _portable(answer: str, run_dir: Path, cwd: str | None = None) -> str:
     return answer
 
 
-def installed_versions(package: str, version: str, exclude_newer: str) -> dict[str, str]:
+def installed_versions(
+    package: str, version: str, exclude_newer: str, spec: str | None = None
+) -> dict[str, str]:
     """Every distribution in the environment ``uvx`` builds for the arm's server, read
-    from that environment, not from what was asked for."""
+    from that environment, not from what was asked for. With ``spec`` (a git URL), the
+    package's ``direct_url.json`` commit is returned too, under ``<package>@commit``."""
     code = (
         "import importlib.metadata as m, json; "
-        "print(json.dumps({d.metadata['Name'].lower(): d.version for d in m.distributions()}))"
+        "v = {d.metadata['Name'].lower(): d.version for d in m.distributions()}; "
+        f"u = m.distribution({package!r}).read_text('direct_url.json'); "
+        f"v[{package + '@commit'!r}] = (json.loads(u).get('vcs_info') or {{}}).get('commit_id') if u else None; "
+        "print(json.dumps(v))"
     )
     proc = subprocess.run(
-        ["uvx", "--exclude-newer", exclude_newer, "--from", f"{package}=={version}",
+        ["uvx", "--exclude-newer", exclude_newer, "--from", spec or f"{package}=={version}",
          "python", "-c", code],
         capture_output=True, text=True, check=True, timeout=900,
     )  # fmt: skip
@@ -650,8 +787,20 @@ def preflight(tasks: list[dict], args: argparse.Namespace) -> None:
         "dam": ("data-aggregator-mcp", args.dam_version),
         "tu": ("tooluniverse", args.tu_version),
     }
+    spec = getattr(args, "server_spec", None)
     for arm, (package, version) in pins.items():
         if arm not in arms or (arm == "dam" and args.dam_dir):
+            continue
+        if arm == "dam" and spec:
+            m = SERVER_SPEC.fullmatch(spec)
+            if not m:
+                raise SystemExit(f"--server-spec {spec!r} is not git+https://github.com/"
+                                 "musharna/data-aggregator-mcp@<40-hex sha>")  # fmt: skip
+            got = installed_versions(package, version, args.exclude_newer, spec)
+            if got.get(f"{package}@commit") != m.group(1):
+                raise SystemExit(f"dam: uvx installed commit {got.get(f'{package}@commit')}, "
+                                 f"not {m.group(1)}")  # fmt: skip
+            versions[arm] = {**got, "server_spec": spec}
             continue
         got = installed_versions(package, version, args.exclude_newer)
         if got.get(package) != version:
@@ -675,6 +824,11 @@ def main() -> None:
     ap.add_argument("--tu-version", default=TU_VERSION)
     ap.add_argument("--exclude-newer", default=EXCLUDE_NEWER)
     ap.add_argument("--dam-dir", help="run the dam arm from a checkout, not the release")
+    ap.add_argument(
+        "--server-spec",
+        help="run the dam arm on an unreleased commit: "
+        "git+https://github.com/musharna/data-aggregator-mcp@<40-hex sha>",
+    )
     ap.add_argument("--score-only", action="store_true")
     ap.add_argument("--adjudication", type=Path, help="list tasks: pooled additions/rejects")
     ap.add_argument(
@@ -694,7 +848,10 @@ def main() -> None:
         with concurrent.futures.ThreadPoolExecutor(args.workers) as pool:
             futures = [pool.submit(run_one, t, a, r, args.out, args) for t, a, r in jobs]
             for f in concurrent.futures.as_completed(futures):
-                print("done", f.result(), flush=True)
+                if f.result() is not None:
+                    print("done", f.result(), flush=True)
+        if _GATE["stopped"]:
+            print("STOPPED by the usage gate:", _GATE["stopped"], flush=True)
     rows = []
     for t, a, r in jobs:
         run_dir = args.out / a / t["id"] / f"r{r}"
