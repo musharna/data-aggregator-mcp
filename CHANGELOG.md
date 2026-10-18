@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A record that holds only some of the search's words (a source's any-word fill) no longer
+  ranks above that source's records holding every word, and loses a tie with any hit.
+  Ranked on shown text alone, an OmicsDI study holding "nitrogen" only in its protocol
+  tied with fill records naming "Chlamydomonas"; 14 of OmicsDI's 39 every-word hits for
+  "Chlamydomonas nitrogen" fell off a page of 50 behind 25 fill records. Across sources
+  the shown text decides, as before.
+- The nightly mutation job copies `benchmarks/` into mutmut's working copy. Without it,
+  `tests/test_h2h_score.py` could not import the benchmark scorer, the suite failed to
+  collect, and no mutant was checked.
+
 ## [0.75.1] - 2026-10-18
 
 ### Fixed

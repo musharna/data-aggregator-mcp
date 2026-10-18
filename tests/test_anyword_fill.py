@@ -76,6 +76,38 @@ async def test_hits_holding_some_words_rank_below_those_naming_more(monkeypatch)
     assert page.total == 2 + 1
 
 
+async def test_no_fill_record_ranks_above_its_own_sources_every_word_hits(monkeypatch) -> None:
+    """Nightly live (2026-10-18): OmicsDI's PXD055071 holds "nitrogen" only in its protocol,
+    so named one word of "Chlamydomonas nitrogen"; ranked on text alone it tied with the
+    fill's records naming one word, and sat 51st behind 25 of them."""
+    # Each holds the words it does not name out of sight; the weaker is the bar for the fill.
+    every = [_hit("dc", "e2", "honey bee hive"), _hit("dc", "e1", "honey hive")]
+    # Upstream order puts the fill record naming less first; its text reorders them.
+    some = [_hit("dc", "f2", "honey production"), _hit("dc", "f1", "bee pollen images")]
+    other = [_hit("loose", "l1", "bee pollen loads"), _hit("loose", "l2", "pollen")]
+    monkeypatch.setattr(
+        router,
+        "_ADAPTERS",
+        {
+            "dc": _source(
+                [], {_Q: every, _FILL: some}, REQUIRES_EVERY_WORD=True, ANY_WORD_FILL=True
+            ),
+            "loose": _source([], {"*": other}),
+        },
+    )
+    async with httpx.AsyncClient() as c:
+        page = await router.search_page(c, query=_Q, size=10)
+    ids = [r.id for r in page.results]
+    # The fill's record naming 2 words now ranks below the every-word hit naming 1.
+    assert ids.index("dc:e1") < ids.index("dc:f1")
+    # Positive controls: across sources the text still decides, so another source's hit
+    # naming 2 words ties the every-word hit naming 2, above the one naming 1; within the
+    # fill, the record naming more comes first; and a fill record loses a tie with another
+    # source's hit naming as much.
+    assert set(ids[:2]) == {"dc:e2", "loose:l1"}
+    assert set(ids[2:4]) == {"dc:e1", "loose:l2"} and ids[4:] == ["dc:f1", "dc:f2"]
+
+
 @pytest.mark.parametrize("query", ["pollen", "the pollen", "honey AND bee", '"honey bee"'])
 async def test_no_fill_for_one_word_or_a_query_with_syntax(monkeypatch, query) -> None:
     dc: list[str] = []
