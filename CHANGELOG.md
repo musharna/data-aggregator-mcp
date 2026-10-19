@@ -18,6 +18,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The nightly mutation job copies `benchmarks/` into mutmut's working copy. Without it,
   `tests/test_h2h_score.py` could not import the benchmark scorer, the suite failed to
   collect, and no mutant was checked.
+- The `search` tool description no longer tells models that MassIVE lacks a some-words
+  search or to keep MassIVE queries short; MassIVE has had one since 0.75.0. A test now
+  derives the description's two source lists from the adapters' flags.
 
 ## [0.75.1] - 2026-10-18
 
