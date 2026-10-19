@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import gc
 import json
 import os
 from pathlib import Path
@@ -701,3 +702,90 @@ async def test_resolve_needs_the_dataset_query_to_hold_it_even_when_the_servlet_
     answers[S15] = _raw("massive_id_MSV000101299.json")
     async with _client(sent, answers) as c:
         assert (await massive.resolve(c, f"massive:{S15}")).id == f"massive:{S15}"
+
+
+@pytest.mark.parametrize(("fresh", "reads"), [(0, [(15, 0)]), (1, [(15, 0), (1, 0)])])
+@pytest.mark.asyncio
+async def test_rows_are_read_again_unless_the_fresh_count_is_the_kept_one_or_none(fresh, reads):
+    """A kept count of 15 and an answer counting ``fresh``: with no dataset left there is
+    nothing to read again; with one, it is read where the fresh count puts it."""
+    row = _rows("massive_rows_pocillopora.json")[0]
+
+    def page(size: int, offset: int) -> bytes:
+        return _answer([row][offset : offset + size] if fresh else [], total=fresh)
+
+    massive._COUNTS.set("pocillopora", 15)
+    sent: list[tuple[str, int, int]] = []
+    async with _client(sent, {"pocillopora": page}) as c:
+        total, recs = await massive.search(c, "pocillopora", size=50)
+    assert sent == [("pocillopora", *r) for r in reads]
+    assert (total, [r.id for r in recs]) == (fresh, [f"massive:{row['dataset']}"][:fresh])
+
+
+@pytest.mark.asyncio
+async def test_a_failed_second_read_names_the_massive_search():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if int(request.url.params["pageSize"]) == 5:  # the read the kept count sized
+            return httpx.Response(200, content=_answer([], total=16), headers=_LATIN1)
+        return httpx.Response(500)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
+        with pytest.raises(UpstreamUnavailableError) as exc:
+            await massive._newest_rows(c, "pocillopora", 5)
+    assert str(exc.value) == (
+        "[UpstreamUnavailableError] MassIVE search exhausted 3 retries (last HTTP 500)"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_shared_request_leaves_no_exception_for_the_loop_to_report():
+    """``_once`` shields its request, so when every caller is cut off nobody awaits its
+    outcome; ``_forget`` retrieves it, or Python 3.11 and 3.12 report "exception was never
+    retrieved" when the task is collected (3.13+'s shield logs the failure itself). A
+    cancelled request has no exception to retrieve: asking raises in the callback."""
+    loop = asyncio.get_running_loop()
+    seen: list[str] = []
+    old = loop.get_exception_handler()
+    loop.set_exception_handler(lambda _loop, ctx: seen.append(ctx["message"]))
+    try:
+        # Positive control: an unretrieved failure is reported, so the check can see one.
+        async def boom() -> None:
+            raise RuntimeError("boom")
+
+        stray = loop.create_task(boom())
+        await _tick()
+        del stray
+        gc.collect()
+        await _tick()
+        assert seen == ["Task exception was never retrieved"]
+        seen.clear()
+
+        gate = asyncio.Event()
+
+        async def fails() -> None:
+            await gate.wait()
+            raise RuntimeError("upstream down")
+
+        caller = asyncio.ensure_future(massive._once(("fails",), fails))
+        await _tick()
+        caller.cancel()  # every caller gone before the request fails
+        await _tick()
+        gate.set()
+        await _tick()
+
+        async def hangs() -> None:
+            await asyncio.Event().wait()
+
+        waiting = asyncio.ensure_future(massive._once(("hangs",), hangs))
+        await _tick()
+        massive._PENDING[("hangs",)].cancel()  # the request itself cancelled
+        with pytest.raises(asyncio.CancelledError):
+            await waiting
+        await _tick()
+        del caller, waiting
+        gc.collect()
+        await _tick()
+    finally:
+        loop.set_exception_handler(old)
+    assert [m for m in seen if m != "RuntimeError exception in shielded future"] == []
+    assert massive._PENDING == {}

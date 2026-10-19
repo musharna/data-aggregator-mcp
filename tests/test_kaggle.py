@@ -20,6 +20,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import kaggle, router
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
+from data_aggregator_mcp.models import Creator, DataResource, Link, Metrics
 
 _FIX = Path(__file__).parent / "fixtures"
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
@@ -212,6 +213,46 @@ def test_the_year_is_the_first_versions_not_the_latest() -> None:
     assert kaggle._normalize(_with(_VIEW, versions=versions[:1])).year == 2025
 
 
+def test_a_dataset_is_read_into_every_field() -> None:
+    """The verbatim answer, its creator and owner told apart (both are "Masuel" in it)."""
+    r = kaggle._normalize(_with(_VIEW, creatorName="Creator C", ownerName="Owner O"))
+    assert r == DataResource(
+        id="kaggle:masuel/bee-hyperspectral-dataset",
+        source="kaggle",
+        kind="dataset",
+        title="Bee Dataset BUT-HS2",
+        creators=[Creator(name="Creator C")],
+        year=2025,  # the first of three versions, 2025-03-11
+        description=_VIEW["description"],
+        subjects=["biology"],
+        license="LGPL-3.0",
+        access="open",
+        metrics=Metrics(views=572, downloads=45, likes=0),
+        last_updated="2025-06-02T07:36:36.16Z",
+        links=[
+            Link(
+                rel="landing_page",
+                target_id="https://www.kaggle.com/datasets/masuel/bee-hyperspectral-dataset",
+            )
+        ],
+    )
+    # With no creator the owner stands in; with no description the subtitle does; with
+    # no count at all there are no metrics; a tag with no name is no subject.
+    bare = _with(
+        _VIEW, creatorName=None, description="", viewCount=None, downloadCount=None,
+        voteCount=None, tags=[{"name": None}, {"name": "bees"}],
+    )  # fmt: skip
+    b = kaggle._normalize(bare)
+    assert (b.creators, b.description, b.metrics, b.subjects) == (
+        [Creator(name="Masuel")],
+        "Selected spectra bee dataset",
+        None,
+        ["bees"],
+    )
+    nobody = kaggle._normalize(_with(bare, ownerName=None, subtitle=None, versions=None))
+    assert (nobody.creators, nobody.description, nobody.year) == ([], None, None)
+
+
 def _with(row: dict, **fields) -> dict:
     out = copy.deepcopy(row)
     out.update(fields)
@@ -230,6 +271,34 @@ _MALFORMED = [
 ]
 
 
+_OPTIONAL = (
+    "subtitle", "description", "licenseName", "lastUpdated", "creatorName", "ownerName",
+    "downloadCount", "viewCount", "voteCount", "tags", "versions",
+)  # fmt: skip
+_WRONG = [
+    ("ref", 7), ("ref", "no slash"), ("title", 7),
+    *((k, 7) for k in ("subtitle", "description", "licenseName", "lastUpdated")),
+    ("creatorName", 7), ("ownerName", 7),
+    *((k, "12") for k in ("downloadCount", "viewCount", "voteCount")),
+    *((k, True) for k in ("downloadCount", "viewCount", "voteCount")),
+    ("tags", "image"), ("tags", ["image"]), ("tags", [{"name": 7}]),
+    ("versions", "v1"), ("versions", [1]), ("versions", [{"creationDate": 2025}]),
+]  # fmt: skip
+
+
+def test_every_field_the_normalizer_reads_is_checked_for_its_type() -> None:
+    """``_normalize`` reads each of these at one type; any other type is a malformed
+    answer, refused before it is read. Absent or null is fine for each optional one."""
+    assert kaggle._is_dataset(_VIEW)  # positive control: the verbatim answer passes
+    for key in _OPTIONAL:
+        assert key in _VIEW, key  # the control holds every field it is checked without
+        assert kaggle._is_dataset(_with(_VIEW, **{key: None})), key
+        assert kaggle._is_dataset({k: v for k, v in _VIEW.items() if k != key}), key
+    for key, bad in _WRONG:
+        assert not kaggle._is_dataset(_with(_VIEW, **{key: bad})), (key, bad)
+    assert not kaggle._is_dataset([_VIEW]) and not kaggle._is_dataset(None)
+
+
 @pytest.mark.parametrize("body", _MALFORMED)
 async def test_an_answer_of_the_wrong_shape_fails_the_search(httpx_mock: HTTPXMock, body) -> None:
     httpx_mock.add_response(url=_LIST, json=body, is_reusable=True)
@@ -240,6 +309,66 @@ async def test_an_answer_of_the_wrong_shape_fails_the_search(httpx_mock: HTTPXMo
         httpx_mock.reset()
         httpx_mock.add_response(url=_LIST, json=_P2)
         assert len((await kaggle.search(c, "varroa"))[1]) == 5
+
+
+async def test_a_malformed_answer_names_the_call_and_what_was_wrong(httpx_mock: HTTPXMock) -> None:
+    """A dataset of the wrong shape is refused before it is read, by search and by
+    resolve, and the error says which call and what it got."""
+    view = "https://www.kaggle.com/api/v1/datasets/view/masuel/bee-hyperspectral-dataset"
+    httpx_mock.add_response(url=_LIST, json=[_with(_P2[0], title=7)], is_reusable=True)
+    httpx_mock.add_response(url=view, json=_with(_VIEW, title=7), is_reusable=True)
+    async with httpx.AsyncClient() as c:
+        with pytest.raises(UpstreamUnavailableError) as e:
+            await kaggle.search(c, "varroa")
+        assert e.value.args[0].startswith(
+            "Kaggle search returned an unparseable 200 body after 3 tries: "
+            'UpstreamEnvelopeError("no Kaggle dataset list in [{'
+        )
+        with pytest.raises(UpstreamUnavailableError) as e:
+            await kaggle.resolve(c, "kaggle:masuel/bee-hyperspectral-dataset")
+        assert e.value.args[0].startswith(
+            "Kaggle resolve returned an unparseable 200 body after 3 tries: "
+            'UpstreamEnvelopeError("no Kaggle dataset in {'
+        )
+        # Positive control: the verbatim answers are read.
+        httpx_mock.reset()
+        httpx_mock.add_response(url=_LIST, json=_P2)
+        httpx_mock.add_response(url=view, json=_VIEW)
+        assert len((await kaggle.search(c, "varroa"))[1]) == 5
+        assert (await kaggle.resolve(c, "kaggle:masuel/bee-hyperspectral-dataset")).year == 2025
+
+
+async def test_kaggle_is_asked_for_json(httpx_mock: HTTPXMock) -> None:
+    """Both calls ask for JSON; httpx alone would send ``Accept: */*``."""
+    accepts: list[str] = []
+
+    def answer(body: object):
+        def respond(request: httpx.Request) -> httpx.Response:
+            accepts.append(request.headers["accept"])
+            return httpx.Response(200, json=body)
+
+        return respond
+
+    view = "https://www.kaggle.com/api/v1/datasets/view/masuel/bee-hyperspectral-dataset"
+    httpx_mock.add_callback(answer(_P2), url=_LIST)
+    httpx_mock.add_callback(answer(_VIEW), url=view, is_reusable=True)
+    async with httpx.AsyncClient() as c:
+        await kaggle.search(c, "varroa")
+        await kaggle.resolve(c, "kaggle:masuel/bee-hyperspectral-dataset")
+        # Control: the header is the client's to set, and a bare request sends httpx's own.
+        await c.get(view)
+    assert accepts == ["application/json", "application/json", "*/*"]
+
+
+async def test_an_offset_on_a_later_full_page_takes_only_the_size_asked(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Offset 22 of size 3 is rows 2-4 of page 2, even when page 2 is full."""
+    _pages(httpx_mock, {2: _P1})
+    async with httpx.AsyncClient() as c:
+        total, got = await kaggle.search(c, "varroa", size=3, offset=22)
+    assert [r.id for r in got] == [f"kaggle:{d['ref']}" for d in _P1[2:5]]
+    assert total == 41
 
 
 @pytest.mark.parametrize(

@@ -103,6 +103,20 @@ async def test_omicsdi_and_ngdc_send_the_colon_dropped(plurals: bool) -> None:
     assert [_query_part(q) for q in ng] == ["(bees mites ants", "(title:bees"]
 
 
+async def test_omicsdi_and_ngdc_drop_only_their_marks() -> None:
+    """Only the marks each upstream reads as syntax are dropped: a word's own last letter
+    stays ("SOX" is not "SO")."""
+    od: list[str] = []
+    ng: list[str] = []
+    od_body = {"count": 0, "datasets": []}
+    ng_body = {"code": "200", "result": {"data": {"recordsTotal": 0, "data": []}}}
+    async with httpx.AsyncClient(transport=_capture(od, "query", od_body)) as c:
+        await omicsdi.search(c, "SOX mites: ants", plurals=False)
+    async with httpx.AsyncClient(transport=_capture(ng, "q", ng_body)) as c:
+        await ngdc.search(c, "SOX mites: ants", plurals=False)
+    assert [_query_part(q) for q in od + ng] == ["(SOX mites ants", "(SOX mites ants"]
+
+
 _COLON_TITLES = [
     (
         "omicsdi",
