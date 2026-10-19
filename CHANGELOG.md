@@ -16,6 +16,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   calls were answered elsewhere, and the nightly live suite read it as a code break. A
   403 naming `datasets.get` is still a dataset Kaggle does not have.
 
+### Security
+
+- The lock file now pins aiohttp 3.14.5 (CVE-2026-111063, CVE-2026-111064 and
+  GHSA-2g87-pp6c-29x5, fixed in 3.14.4; aiohttp comes with the `operate` extra) and yarl
+  1.25.1, which it requires. An install from PyPI resolves its own versions within the
+  declared ranges.
+
 ## [0.75.2] - 2026-10-18
 
 ### Fixed
