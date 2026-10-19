@@ -119,6 +119,9 @@ _FORBIDDEN = re.compile(
 def audit(events: list[dict], work: Path) -> dict:
     """What the builder touched: MCP calls, paths outside its directory, hosts reached."""
     mcp, outside, hosts = [], [], set()
+    # Claude Code saves a result too large to return under the session's own project
+    # directory and hands the agent that path: reading it back is the builder's own output.
+    own_results = str(Path.home() / ".claude" / "projects" / str(work).replace("/", "-"))
     for e in events:
         msg = e.get("message") if isinstance(e.get("message"), dict) else {}
         for b in msg.get("content", []) if isinstance(msg.get("content"), list) else []:
@@ -128,7 +131,8 @@ def audit(events: list[dict], work: Path) -> dict:
             if name.startswith("mcp__"):
                 mcp.append(name)
             hosts.update(h.lower() for h in _HOST.findall(text))
-            for m in _FORBIDDEN.finditer(text.replace(str(work), "<work>")):
+            text = text.replace(own_results, "<own-results>").replace(str(work), "<work>")
+            for m in _FORBIDDEN.finditer(text):
                 outside.append({"tool": name, "match": m.group(0), "input": text[:300]})
     init = next((e for e in events if e.get("subtype") == "init"), {})
     return {
