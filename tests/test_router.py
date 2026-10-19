@@ -1539,33 +1539,42 @@ async def test_live_relate_emits_real_hint() -> None:
     Runs come from the SRA stream itself: through ``search_page`` the ranking lists records
     naming every query word first, and run titles rarely say "RNA-seq" (2026-10-12: the
     first SRA run was 30th of 56, behind BioProject and GEO, so the top 20 held none).
+    The control comes from a second query: one submission can fill the newest runs of a
+    query (2026-10-18: all 20 "RNA-seq" runs were from SRP746816).
     """
     from data_aggregator_mcp import omics
 
+    def study_in(r) -> str | None:
+        return next((a for a in r.accessions if a.startswith(("SRP", "ERP", "DRP"))), None)
+
     async with httpx.AsyncClient(follow_redirects=True) as client:
         runs = [r.id for r in (await omics.search_subsource(client, "sra", "RNA-seq", size=20))[1]]
-        study_of: dict[str, str] = {}
         pair: list[str] = []
+        study = None
         for rid in runs:
-            r = await router.resolve(client, rid)
-            studies = [a for a in r.accessions if a.startswith(("SRP", "ERP", "DRP"))]
-            if studies:
-                study_of[rid] = studies[0]
-            if studies and not pair:
-                sib = (await omics.search_subsource(client, "sra", studies[0], size=10))[1]
-                sibs = [x.id for x in sib if x.id != rid]
-                # A text search can return a run from another study; pair only a sibling
-                # whose own record carries the study, so a missing hint can only be relate's.
-                for sid in sibs:
-                    if studies[0] in (await router.resolve(client, sid)).accessions:
-                        pair = [rid, sid]
-                        break
-            if pair and any(s != study_of[pair[0]] for s in study_of.values()):
+            study = study_in(await router.resolve(client, rid))
+            if study is None:
+                continue
+            sib = (await omics.search_subsource(client, "sra", study, size=10))[1]
+            # A text search can return a run from another study; pair only a sibling
+            # whose own record carries the study, so a missing hint can only be relate's.
+            for sid in [x.id for x in sib if x.id != rid]:
+                if study in (await router.resolve(client, sid)).accessions:
+                    pair = [rid, sid]
+                    break
+            if pair:
                 break
         assert pair, f"no live SRA run in {runs} has a resolved sibling run in its study"
-        study = study_of[pair[0]]
-        other = next((rid for rid, s in study_of.items() if s != study), None)
-        assert other, f"every live SRA run in {runs} is from {study}; no run for the control"
+        others = [
+            r.id for r in (await omics.search_subsource(client, "sra", "ChIP-seq", size=20))[1]
+        ]
+        other = None
+        for rid in others:
+            s = study_in(await router.resolve(client, rid))
+            if s is not None and s != study:
+                other = rid
+                break
+        assert other, f"no live SRA run in {others} is from a study other than {study}"
         out = await router.relate(client, [*pair, other])
     assert out.errors == {} and len(out.resolved) == 3, out
     # every hint is well-formed: >=2 distinct resources and a non-empty evidence key
