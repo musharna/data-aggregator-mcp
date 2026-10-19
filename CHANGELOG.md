@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- A Kaggle 403 with no body is reported as Kaggle refusing this client ("Kaggle search
+  refused this client (HTTP 403)"), the way an outage is, instead of as an unexpected
+  answer. GitHub's runners got one for every Kaggle call on 2026-10-18 while the same
+  calls were answered elsewhere, and the nightly live suite read it as a code break. A
+  403 naming `datasets.get` is still a dataset Kaggle does not have.
+
 ## [0.75.2] - 2026-10-18
 
 ### Fixed
