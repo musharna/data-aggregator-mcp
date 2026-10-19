@@ -70,6 +70,18 @@ DATACITE_QUERY = {
     "U3": "rice drought proteomics",
     "U4": "microplastics snow ice",
     "U5": "eye-tracking children reading",
+    # Round 5: the queries PREREG_2026-10-18.md fixed before any fetch (backup topics used
+    # for V4, V5 and V6, whose primaries passed the 30-study cap).
+    "V1": "spatial transcriptomics cochlea",
+    "V2": "cnidarian ATAC-seq",
+    "V3": "stuttering MRI",
+    "V4": "bird window collisions",
+    "V5": "honey metabolomics",
+    "V6": "ice core methanesulfonic acid",
+    "V7": "whale aerial imagery detection",
+    "V8": "Parkinson speech recordings",
+    "V9": "hospital sink drain microbiome",
+    "V10": "dental calculus ancient DNA animal",
 }
 DATACITE_TOP = 100
 
@@ -202,8 +214,16 @@ def rescore(round_dir: Path, run_dir: Path, reps: int) -> list[dict]:
 
 def fetch_datacite(path: Path) -> dict:
     """The naive shortcut's results, fetched once (2 s between requests)."""
-    out = {"fetched": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "top": DATACITE_TOP, "tasks": {}}
+    # A task already fetched keeps its results (rounds 2 to 4 are from 2026-10-16); only
+    # new tasks are fetched, each stamped with its own date.
+    out = (
+        json.loads(path.read_text())
+        if path.exists()
+        else {"fetched": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "top": DATACITE_TOP, "tasks": {}}
+    )
     for task, query in DATACITE_QUERY.items():
+        if task in out["tasks"]:
+            continue
         url = "https://api.datacite.org/dois?" + urllib.parse.urlencode({
             "query": query, "resource-type-id": "dataset",
             "page[size]": DATACITE_TOP, "fields[dois]": "doi",
@@ -214,6 +234,7 @@ def fetch_datacite(path: Path) -> dict:
         out["tasks"][task] = {
             "query": query, "url": url, "dois": [d["attributes"]["doi"] for d in body["data"]],
             "total": body.get("meta", {}).get("total"),
+            "fetched": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         }  # fmt: skip
         time.sleep(2)
     path.write_text(json.dumps(out, indent=1) + "\n")
@@ -289,7 +310,10 @@ def main() -> None:
         for s in summarize(name, rows):
             summary.append({**s, "about": about})
         comparisons += compare(name, rows)
-    for round_name in ("round2", "round3", "round4"):
+    for round_name in ("round2", "round3", "round4", "round5"):
+        if not (HERE / round_name / "tasks.json").exists():  # round 5's lands after its sweep
+            print(f"{round_name}: no tasks.json yet, baselines skipped", file=sys.stderr)
+            continue
         rows = baselines(round_name, datacite)
         for arm in sorted({r["arm"] for r in rows}):
             mine = [r for r in rows if r["arm"] == arm]
