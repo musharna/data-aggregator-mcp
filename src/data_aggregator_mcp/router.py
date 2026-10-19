@@ -646,7 +646,8 @@ async def _fetch_page(
     """Fan out every stream at its offset, dedup, (re-)rank, emit up to ``size`` records
     that pass ``filters``, and account for what was handled per stream. The candidates are
     ordered by ``tiers`` (hits naming more of the search first, round-robin within equal
-    hits); a ``rank_query`` then re-ranks them by embedding similarity to it."""
+    hits; a source's every-word hits before its fill, in the places its hits hold); a
+    ``rank_query`` then re-ranks them by embedding similarity to it."""
     base = {s.key: _stored_offset(offsets, s.key) for s in streams}
     outcomes = await asyncio.gather(
         *(_by_deadline(s.call(size=size, offset=base[s.key])) for s in streams),
@@ -731,6 +732,23 @@ async def _fetch_page(
 
     # Stable: hits that name as much of the search keep the round-robin order.
     kept.sort(key=rank, reverse=True)
+    # A source's fill holds records lacking a word, and its every-word streams records
+    # holding every word, named in their text or not: within the places the text gives
+    # that source, its every-word hits come first, then its fill, each in text order.
+    # Ranked on text alone, an OmicsDI hit holding "nitrogen" only in its protocol tied
+    # with the fill's records naming one word of "Chlamydomonas nitrogen", and 14 of its
+    # 39 such hits fell off a page of 50 behind 25 fill records (2026-10-18). The places
+    # stay the text's: whether another source's hit holds every word is unknown, and
+    # capping the fill below its own hits sank DataCite's "Siberian lake ebullition" from
+    # 26th to 44th behind other sources' hits naming less (2026-10-18).
+    source_of = {s.key: s.source for s in streams}
+    fill = {s.key for s in streams if s.fill}
+    for src in {source_of[k] for k in fill}:
+        slots = [i for i, c in enumerate(kept) if source_of[c[0]] == src]
+        rows = [kept[i] for i in slots if kept[i][0] not in fill]
+        rows += [kept[i] for i in slots if kept[i][0] in fill]
+        for i, c in zip(slots, rows, strict=True):  # pragma: no mutate
+            kept[i] = c
 
     if rank_query is not None:
         reordered, reason = await embeddings.rerank(client, rank_query, [c[2] for c in kept])
