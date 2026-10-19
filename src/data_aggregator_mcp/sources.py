@@ -676,4 +676,4 @@ def resolver_for(prefix: str) -> SourceAdapter | None:
 def example_id(name: str) -> str:
     """The first id_example of source ``name``: the one example id that is resolved live, so
     a tool description quoting it cannot go stale on its own."""
-    return _BY_NAME[name].id_example.split("|")[0].strip()
+    return _BY_NAME[name].id_example.partition("|")[0].strip()
