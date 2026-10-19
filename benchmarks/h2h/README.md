@@ -9,7 +9,9 @@ What separates the arms is tool calls: this server made 7.7 fewer per run than
 web search (95% CI 1.8 to 13.1) and 24.9 fewer than ToolUniverse (12.8 to 47.1),
 while cost and wall time against web search are not separated. The main
 limitation is size: 5 held-out tasks, with every earlier round used to tune the
-server. Round 4, a fresh held-out round, has not run yet.
+server. Round 4 (2026-10-19, Opus 5.5, keys and adjudication by agents without this
+server) did not separate the arms either: mean recall 0.66 with this server, 0.66 with
+web search, 0.59 with ToolUniverse; see [Re-run 2026-10-18](#re-run-2026-10-18).
 
 ## Arms
 
@@ -57,7 +59,49 @@ draws, seed 0). Medians are over runs. Mean recall is the mean over tasks of eac
 task's mean over runs. [`summary.tsv`](summary.tsv) has every run set by arm, with
 the baseline rows; [`comparisons.tsv`](comparisons.tsv) has every paired test.
 
-## Controls
+## Re-run 2026-10-18
+
+Rules for rounds 4 and 5 were committed before either ran:
+[`PREREG_2026-10-18.md`](PREREG_2026-10-18.md). Every $ figure is the API-equivalent
+price Claude Code reports. The runs used a subscription with overage off, so the
+binding budget was seven-day utilization, reported alongside.
+
+**Where the tokens go** ([`diagnose.py`](diagnose.py), 80 round-2/3 runs per arm,
+medians): dam spends $0.54 a run against web's $0.43 and tu's $0.57. About 80% of dam's
+cost is cache writes (108k tokens against web's 48k), and about half of those are
+search output: roughly 1k characters per hit, with the model asking for 30 hits.
+Tool definitions are about 4.8k tokens (21.5k fixed context against web's 17.8k).
+Tool inputs are small (3.3k characters), so no payloads are pasted. The one tool-name
+failure: 11 calls to a bare `resolve` in 5 of 60 round-2 dam runs, none since. Output
+size was left alone because the endpoint is recall, not cost.
+
+**Server change** (round 5 only, run from commit 0e3661f with `--server-spec`): a
+description that names another tool first says the client may list it with a prefix
+(`mcp__data-aggregator__resolve`).
+
+**Round 4** (5 held-out tasks × 4 arms × 3 runs, dam 0.74.0 from PyPI, tu 1.5.7; U5's
+key re-frozen 2026-10-18 after an OSF file-level re-check; 87 pooled entries judged
+blind by fresh agents with no MCP server):
+
+| arm | mean recall (95% CI) | valid-only | precision | median cost | median calls | median wall, s | valid runs |
+|---|---|---|---|---|---|---|---|
+| dam | 0.66 (0.46–0.86) | 0.66 | 0.88 | $1.87 | 20 | 176 | 15 of 15 |
+| web | 0.66 (0.44–0.87) | 0.83 | 0.77 | $1.86 | 57 | 677 | 12 of 15 |
+| tu | 0.59 (0.34–0.81) | 0.59 | 0.81 | $2.16 | 34 | 187 | 15 of 15 |
+| bare | 0.02 (0.00–0.04) | 0.02 | 0.33 | $0.05 | 1 | 19 | 15 of 15 |
+| DataCite top 100, no model | 0.17 (0.04–0.32) | | 0.39 | | | | |
+
+Per task (dam / web): U1 0.55 / 0.64, U2 0.95 / 0.95, U3 0.90 / 0.30 (two web
+timeouts), U4 0.63 / 0.92, U5 0.29 / 0.49. **Against the pre-committed rule
+(dam above web on at least 4 of 5 tasks and the interval above 0): not separated.**
+dam was higher on 1 task, web on 3, and they tied on 1. The difference is +0.004
+(−0.22 to 0.32). Counting only valid runs, web leads (0.83 against 0.66). What does
+separate: dam made fewer tool calls than web (−34 a run, −50 to −15) and finished
+faster (−454 s, −633 to −220), and it was more precise (+0.12, 0.02 to 0.24). It cost
+less than tu (−$0.51, −0.83 to −0.25). Cost against web was not separated. Bare-name
+refusals: 0 in 15 dam runs. The sweep cost $90.61 and seven-day utilization rose
+0.24 → 0.30.
+
 
 - Oracle (positive and negative): for all 15 tasks of rounds 2 to 4, the key
   listed by its own ids scores recall 1.0, precision 1.0 and nothing unjudged, and
