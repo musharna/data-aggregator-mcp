@@ -23,7 +23,7 @@ Usage gate (added 2026-10-18; the runs share the account's limits with its owner
 every run its transcript's last ``rate_limit_event`` is read and kept in ``meta.json``.
 A five-hour utilization at or above ``PAUSE_AT`` or a ``rejected`` status holds every
 later run until that window's ``resetsAt`` (each pause appended to ``pauses.jsonl``); a
-seven-day utilization at or above ``STOP_AT`` stops the sweep. A run the rate limit
+seven-day utilization at or above ``--stop-at`` (default ``STOP_AT``) stops the sweep. A run the rate limit
 rejected before the model answered (``api_failure``) is a harness failure, not a result:
 it is moved to ``_ratelimited/``, logged in ``ratelimited.jsonl`` and run once more after
 the pause; a second such failure stays as the run's (invalid) row.
@@ -269,9 +269,10 @@ def _observe(root: Path, run_dir: Path, rl: dict | None) -> None:
     if rl is None:
         return
     now = time.time()
-    if (rl.get("seven_day") or 0) >= STOP_AT:
+    stop_at = _GATE.get("stop_at", STOP_AT)
+    if (rl.get("seven_day") or 0) >= stop_at:
         with _GATE_LOCK:
-            _GATE["stopped"] = f"seven_day {rl['seven_day']} >= {STOP_AT}"
+            _GATE["stopped"] = f"seven_day {rl['seven_day']} >= {stop_at}"
         _log(root, "pauses.jsonl", {"at": now, "stop": True, "after": str(run_dir), **rl})
         return
     if rl.get("status") == "rejected" or (rl.get("five_hour") or 0) >= PAUSE_AT:
@@ -829,6 +830,10 @@ def main() -> None:
         help="run the dam arm on an unreleased commit: "
         "git+https://github.com/musharna/data-aggregator-mcp@<40-hex sha>",
     )
+    ap.add_argument(
+        "--stop-at", type=float, default=STOP_AT,
+        help=f"seven-day utilization that stops the sweep (default {STOP_AT})",
+    )  # fmt: skip
     ap.add_argument("--score-only", action="store_true")
     ap.add_argument("--adjudication", type=Path, help="list tasks: pooled additions/rejects")
     ap.add_argument(
@@ -842,6 +847,7 @@ def main() -> None:
         tasks = [t for t in tasks if t["id"] in keep]
     arms = args.arms.split(",")
     jobs = [(t, a, r) for r in range(1, args.reps + 1) for t in tasks for a in arms]
+    _GATE["stop_at"] = args.stop_at
     if not args.score_only:
         preflight(tasks, args)
         args.claude_code = claude_version()

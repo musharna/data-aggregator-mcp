@@ -461,6 +461,33 @@ def test_usage_gate_pauses_at_five_hour_085_and_stops_at_seven_day_080(
     assert stop["stop"] is True and stop["seven_day"] == 0.80
 
 
+def test_stop_at_lowers_the_seven_day_stop_for_one_sweep(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
+) -> None:
+    cfg = _cfg(model="m", budget_usd="1", claude_code="v")
+    task = {**TASK, "prompt": "Find every dataset."}
+    run._GATE["stop_at"] = 0.60
+    calls: list = []
+    below = [_rl("allowed", 0.2, 0.59, gate["now"] + 300), {"type": "result", **OK}]
+    at = [_rl("allowed", 0.2, 0.60, gate["now"] + 300), {"type": "result", **OK}]
+    monkeypatch.setattr(run.subprocess, "run", _claude_script(calls, [below, at, at]))
+    assert run.run_one(task, "dam", 1, tmp_path, cfg) is not None  # 0.59: keeps going
+    assert run.run_one(task, "dam", 2, tmp_path, cfg) is not None  # reads 0.60
+    assert run.run_one(task, "web", 2, tmp_path, cfg) is None  # stopped below 0.80
+    assert len(calls) == 2 and run._GATE["stopped"] == "seven_day 0.6 >= 0.6"
+    # The flag reaches the gate, and its default stays 0.80.
+    monkeypatch.setattr(run, "preflight", lambda *a: None)
+    monkeypatch.setattr(run, "claude_version", lambda: "v")
+    monkeypatch.setattr(run, "run_one", lambda *a: None)
+    tasks = tmp_path / "tasks.json"
+    tasks.write_text(json.dumps([task]))
+    for argv, want in (([], 0.80), (["--stop-at", "0.6"], 0.60)):
+        monkeypatch.setattr(sys, "argv", ["run.py", "--tasks", str(tasks), "--out",
+                                              str(tmp_path / "o"), *argv])  # fmt: skip
+        run.main()
+        assert run._GATE["stop_at"] == want
+
+
 def test_server_spec_runs_dam_from_a_pushed_commit_and_preflight_checks_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
