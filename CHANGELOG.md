@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.75.3] - 2026-10-19
+
 ### Fixed
 
 - A Kaggle 403 with no body is reported as Kaggle refusing this client ("Kaggle search
