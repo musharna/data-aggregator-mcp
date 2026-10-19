@@ -362,6 +362,27 @@ async def test_a_sub_source_of_another_kind_is_not_searched(monkeypatch) -> None
     assert unfiltered.total == 2 + 5 + 2 and unfiltered.count == 9
 
 
+async def test_a_composite_naming_no_kinds_has_every_sub_source_searched(monkeypatch) -> None:
+    """With no ``SUBSOURCE_KINDS`` no sub-source is known to hold one kind, so a kind filter
+    skips none and post-filters each."""
+    held = {
+        "a": [DataResource(id="a:0", source="a", kind="study", title="a 0")],
+        "b": [DataResource(id="b:0", source="b", kind="dataset", title="b 0")],
+    }
+    asked: list[str] = []
+
+    async def search_subsource(client, sub, q, *, size=10, offset=0):
+        asked.append(sub)
+        return len(held[sub]), held[sub][offset : offset + size]
+
+    adapter = types.SimpleNamespace(SUBSOURCES=("a", "b"), search_subsource=search_subsource)
+    monkeypatch.setattr(router, "_ADAPTERS", {"omics": adapter})
+    async with httpx.AsyncClient() as client:
+        page = await router.search_page(client, query="q", kind="study")
+    assert sorted(asked) == ["a", "b"]
+    assert [r.id for r in page.results] == ["a:0"]  # control: the filter still held
+
+
 async def test_cursor_minted_before_pushdown_continues_unpushed(monkeypatch) -> None:
     """Its offsets index the UNFILTERED upstream order; pushing the filters on page 2
     would index a different, shorter list and skip records."""

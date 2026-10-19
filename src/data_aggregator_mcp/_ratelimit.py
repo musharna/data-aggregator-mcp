@@ -234,7 +234,7 @@ def _bucket_for(service: str, url: str) -> str:
     host, path = _host_path(url)
     if host == _NCBI_DOMAIN or host.endswith("." + _NCBI_DOMAIN):
         return "ncbi"
-    if (host, path.rstrip("/")) == _ZENODO_SEARCH:
+    if (host, path.removesuffix("/")) == _ZENODO_SEARCH:
         return "zenodo-search"
     if host == "api.datacite.org":
         return "datacite"

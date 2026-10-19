@@ -103,6 +103,15 @@ def test_a_doi_collision_keeps_the_better_copy_and_a_tie_keeps_the_first() -> No
     ]
 
 
+def test_two_copies_under_the_deposits_own_doi_keep_the_first_seen() -> None:
+    """One record from two streams: both copies carry the deposit's own DOI at one fetch
+    priority, so neither outranks the other and the first seen stays, in either order."""
+    a = _r("zenodo:1", doi="10.5281/zenodo.1")
+    b = _r("zenodo:1-again", doi="10.5281/ZENODO.1")
+    assert _mirror.dedup_by_deposit([a, b]) == [a]
+    assert _mirror.dedup_by_deposit([b, a]) == [b]
+
+
 def test_records_without_a_fingerprint_never_match_on_the_missing_part() -> None:
     """Two records from different sources with the same title but no author (or no
     year) have no fingerprint, so nothing joins them; the same pair with an author and

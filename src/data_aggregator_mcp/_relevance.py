@@ -121,7 +121,7 @@ def balance_query(query: str) -> tuple[str, list[str]]:
     quotes = [i for i, c in enumerate(query) if c == '"' and (i == 0 or query[i - 1] != "\\")]
     drop = {quotes[-1]} if len(quotes) % 2 else set()
     open_parens: list[int] = []
-    in_quote = False
+    in_quote = False  # pragma: no mutate: None reads alike (only `not in_quote` reads it)
     for i, c in enumerate(query):
         if i in quotes and i not in drop:
             in_quote = not in_quote
