@@ -370,6 +370,25 @@ def _node(children: tuple[int, object], storage: tuple[int, object]) -> httpx.Mo
         ),
         # ... and with both withheld there is nothing to say.
         ((401, None), (401, None), None),
+        # One component is singular, two plural; every one named is no "…".
+        (
+            (200, {"data": [{"id": "aaaaa", "type": "nodes"}], "links": {"meta": {"total": 1}}}),
+            (200, {"data": []}),
+            "not listed: the files of its 1 component (osf.io/aaaaa). "
+            "Only the node's own OSF storage is listed",
+        ),
+        (
+            (
+                200,
+                {
+                    "data": [{"id": "aaaaa", "type": "nodes"}, {"id": "bbbbb", "type": "nodes"}],
+                    "links": {"meta": {"total": 2}},
+                },
+            ),
+            (200, {"data": []}),
+            "not listed: the files of its 2 components (osf.io/aaaaa, osf.io/bbbbb). "
+            "Only the node's own OSF storage is listed",
+        ),
     ],
 )
 async def test_unlisted_names_what_each_answered_list_holds(children, storage, note) -> None:

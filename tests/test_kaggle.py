@@ -311,6 +311,66 @@ async def test_an_answer_of_the_wrong_shape_fails_the_search(httpx_mock: HTTPXMo
         assert len((await kaggle.search(c, "varroa"))[1]) == 5
 
 
+async def test_a_malformed_answer_names_the_call_and_what_was_wrong(httpx_mock: HTTPXMock) -> None:
+    """A dataset of the wrong shape is refused before it is read, by search and by
+    resolve, and the error says which call and what it got."""
+    view = "https://www.kaggle.com/api/v1/datasets/view/masuel/bee-hyperspectral-dataset"
+    httpx_mock.add_response(url=_LIST, json=[_with(_P2[0], title=7)], is_reusable=True)
+    httpx_mock.add_response(url=view, json=_with(_VIEW, title=7), is_reusable=True)
+    async with httpx.AsyncClient() as c:
+        with pytest.raises(UpstreamUnavailableError) as e:
+            await kaggle.search(c, "varroa")
+        assert e.value.args[0].startswith(
+            "Kaggle search returned an unparseable 200 body after 3 tries: "
+            'UpstreamEnvelopeError("no Kaggle dataset list in [{'
+        )
+        with pytest.raises(UpstreamUnavailableError) as e:
+            await kaggle.resolve(c, "kaggle:masuel/bee-hyperspectral-dataset")
+        assert e.value.args[0].startswith(
+            "Kaggle resolve returned an unparseable 200 body after 3 tries: "
+            'UpstreamEnvelopeError("no Kaggle dataset in {'
+        )
+        # Positive control: the verbatim answers are read.
+        httpx_mock.reset()
+        httpx_mock.add_response(url=_LIST, json=_P2)
+        httpx_mock.add_response(url=view, json=_VIEW)
+        assert len((await kaggle.search(c, "varroa"))[1]) == 5
+        assert (await kaggle.resolve(c, "kaggle:masuel/bee-hyperspectral-dataset")).year == 2025
+
+
+async def test_kaggle_is_asked_for_json(httpx_mock: HTTPXMock) -> None:
+    """Both calls ask for JSON; httpx alone would send ``Accept: */*``."""
+    accepts: list[str] = []
+
+    def answer(body: object):
+        def respond(request: httpx.Request) -> httpx.Response:
+            accepts.append(request.headers["accept"])
+            return httpx.Response(200, json=body)
+
+        return respond
+
+    view = "https://www.kaggle.com/api/v1/datasets/view/masuel/bee-hyperspectral-dataset"
+    httpx_mock.add_callback(answer(_P2), url=_LIST)
+    httpx_mock.add_callback(answer(_VIEW), url=view, is_reusable=True)
+    async with httpx.AsyncClient() as c:
+        await kaggle.search(c, "varroa")
+        await kaggle.resolve(c, "kaggle:masuel/bee-hyperspectral-dataset")
+        # Control: the header is the client's to set, and a bare request sends httpx's own.
+        await c.get(view)
+    assert accepts == ["application/json", "application/json", "*/*"]
+
+
+async def test_an_offset_on_a_later_full_page_takes_only_the_size_asked(
+    httpx_mock: HTTPXMock,
+) -> None:
+    """Offset 22 of size 3 is rows 2-4 of page 2, even when page 2 is full."""
+    _pages(httpx_mock, {2: _P1})
+    async with httpx.AsyncClient() as c:
+        total, got = await kaggle.search(c, "varroa", size=3, offset=22)
+    assert [r.id for r in got] == [f"kaggle:{d['ref']}" for d in _P1[2:5]]
+    assert total == 41
+
+
 @pytest.mark.parametrize(
     ("name", "want"),
     [
