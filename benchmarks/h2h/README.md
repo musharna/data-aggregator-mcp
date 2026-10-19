@@ -175,6 +175,7 @@ name.
 | 10-12 | #277, #278, #281 fixed on round 3; rerun on 0.71.0 | gap audit | 0.55 / 0.43 / 0.30; now tuning data | `r3_071` |
 | 10-16 | harness isolation (#298): pinned PyPI releases with `uvx --exclude-newer`, a fresh `/tmp` directory per run, no user settings, one system prompt, Opus 5.5, provenance per row | runs inherited the developer's settings and a checkout | pilot only; the round-4 sweep has not run | `r4_pilot` |
 | 10-16 | fairness fixes (#298): server arms get Read; `bare` arm; ToolUniverse cache per run; no silent re-run; validity rule; leak scan; oracle and version preflight; URL-form ids for every archive, accessions matched exactly | ToolUniverse could not read its own saved results; a timed-out run had been kept as valid | re-score below | |
+| 10-19 | round 4 as pre-committed, dam 0.74.0, tu 1.5.7, plus `bare`; blind adjudication by fresh agents | held-out check after the harness fixes | 0.66 / 0.66 / 0.59; not separated | `r4` (`r4_runs`) |
 
 Re-scoring every archived run with the fixed scorer changed no row. The only
 differences from the committed score files are in round 2 R4, whose key grew from
