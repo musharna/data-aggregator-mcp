@@ -153,7 +153,8 @@ async def _count(client: httpx.AsyncClient, word: str) -> int:
     """The count of datasets matching ``word``, kept ``_COUNTS.ttl`` seconds."""
     n = _COUNTS.get(word)
     if n is MISS:
-        n = await _once(("count", word), lambda: _counted(client, word))
+        # Keyed by the function asked, so a count and a read of one word never share.
+        n = await _once((_counted, word), lambda: _counted(client, word))
     return n
 
 
@@ -164,7 +165,7 @@ async def _counted(client: httpx.AsyncClient, word: str) -> int:
 
 
 async def _shared_rows(client: httpx.AsyncClient, word: str, total: int) -> list[dict]:
-    return await _once(("rows", word, total), lambda: _newest_rows(client, word, total))
+    return await _once((_newest_rows, word, total), lambda: _newest_rows(client, word, total))
 
 
 async def _newest_rows(client: httpx.AsyncClient, word: str, total: int) -> list[dict]:

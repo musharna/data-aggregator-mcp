@@ -20,6 +20,7 @@ from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import kaggle, router
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
+from data_aggregator_mcp.models import Creator, DataResource, Link, Metrics
 
 _FIX = Path(__file__).parent / "fixtures"
 LIVE = os.environ.get("DATA_AGGREGATOR_MCP_LIVE") == "1"
@@ -212,6 +213,46 @@ def test_the_year_is_the_first_versions_not_the_latest() -> None:
     assert kaggle._normalize(_with(_VIEW, versions=versions[:1])).year == 2025
 
 
+def test_a_dataset_is_read_into_every_field() -> None:
+    """The verbatim answer, its creator and owner told apart (both are "Masuel" in it)."""
+    r = kaggle._normalize(_with(_VIEW, creatorName="Creator C", ownerName="Owner O"))
+    assert r == DataResource(
+        id="kaggle:masuel/bee-hyperspectral-dataset",
+        source="kaggle",
+        kind="dataset",
+        title="Bee Dataset BUT-HS2",
+        creators=[Creator(name="Creator C")],
+        year=2025,  # the first of three versions, 2025-03-11
+        description=_VIEW["description"],
+        subjects=["biology"],
+        license="LGPL-3.0",
+        access="open",
+        metrics=Metrics(views=572, downloads=45, likes=0),
+        last_updated="2025-06-02T07:36:36.16Z",
+        links=[
+            Link(
+                rel="landing_page",
+                target_id="https://www.kaggle.com/datasets/masuel/bee-hyperspectral-dataset",
+            )
+        ],
+    )
+    # With no creator the owner stands in; with no description the subtitle does; with
+    # no count at all there are no metrics; a tag with no name is no subject.
+    bare = _with(
+        _VIEW, creatorName=None, description="", viewCount=None, downloadCount=None,
+        voteCount=None, tags=[{"name": None}, {"name": "bees"}],
+    )  # fmt: skip
+    b = kaggle._normalize(bare)
+    assert (b.creators, b.description, b.metrics, b.subjects) == (
+        [Creator(name="Masuel")],
+        "Selected spectra bee dataset",
+        None,
+        ["bees"],
+    )
+    nobody = kaggle._normalize(_with(bare, ownerName=None, subtitle=None, versions=None))
+    assert (nobody.creators, nobody.description, nobody.year) == ([], None, None)
+
+
 def _with(row: dict, **fields) -> dict:
     out = copy.deepcopy(row)
     out.update(fields)
@@ -228,6 +269,34 @@ _MALFORMED = [
     pytest.param([_with(_P2[0], tags=["image"])], id="tag-not-an-object"),
     pytest.param([_with(_P2[0], versions=[{"creationDate": 2025}])], id="version-date-not-text"),
 ]
+
+
+_OPTIONAL = (
+    "subtitle", "description", "licenseName", "lastUpdated", "creatorName", "ownerName",
+    "downloadCount", "viewCount", "voteCount", "tags", "versions",
+)  # fmt: skip
+_WRONG = [
+    ("ref", 7), ("ref", "no slash"), ("title", 7),
+    *((k, 7) for k in ("subtitle", "description", "licenseName", "lastUpdated")),
+    ("creatorName", 7), ("ownerName", 7),
+    *((k, "12") for k in ("downloadCount", "viewCount", "voteCount")),
+    *((k, True) for k in ("downloadCount", "viewCount", "voteCount")),
+    ("tags", "image"), ("tags", ["image"]), ("tags", [{"name": 7}]),
+    ("versions", "v1"), ("versions", [1]), ("versions", [{"creationDate": 2025}]),
+]  # fmt: skip
+
+
+def test_every_field_the_normalizer_reads_is_checked_for_its_type() -> None:
+    """``_normalize`` reads each of these at one type; any other type is a malformed
+    answer, refused before it is read. Absent or null is fine for each optional one."""
+    assert kaggle._is_dataset(_VIEW)  # positive control: the verbatim answer passes
+    for key in _OPTIONAL:
+        assert key in _VIEW, key  # the control holds every field it is checked without
+        assert kaggle._is_dataset(_with(_VIEW, **{key: None})), key
+        assert kaggle._is_dataset({k: v for k, v in _VIEW.items() if k != key}), key
+    for key, bad in _WRONG:
+        assert not kaggle._is_dataset(_with(_VIEW, **{key: bad})), (key, bad)
+    assert not kaggle._is_dataset([_VIEW]) and not kaggle._is_dataset(None)
 
 
 @pytest.mark.parametrize("body", _MALFORMED)

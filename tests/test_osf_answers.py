@@ -335,3 +335,67 @@ def test_a_component_or_storage_list_missing_what_unlisted_reads_is_refused(chec
     check(good)  # positive control: the live shape passes
     with pytest.raises(_http.UpstreamEnvelopeError):
         check(bad)
+
+
+def _node(children: tuple[int, object], storage: tuple[int, object]) -> httpx.MockTransport:
+    """OSF answering a node's component list and its storage list with (status, body)."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        status, body = children if request.url.path.endswith("/children/") else storage
+        return httpx.Response(status, json=body) if body is not None else httpx.Response(status)
+
+    return httpx.MockTransport(handler)
+
+
+@pytest.mark.parametrize(
+    ("children", "storage", "note"),
+    [
+        (
+            (200, _CHILDREN),
+            (200, _STORAGE),
+            "not listed: the files of its 49 components (osf.io/ezum7, …); its files on github. "
+            "Only the node's own OSF storage is listed",
+        ),
+        # A withheld list (401: a withdrawn or private node) leaves that part out ...
+        (
+            (401, None),
+            (200, _STORAGE),
+            "not listed: its files on github. Only the node's own OSF storage is listed",
+        ),
+        (
+            (200, _CHILDREN),
+            (401, None),
+            "not listed: the files of its 49 components (osf.io/ezum7, …). "
+            "Only the node's own OSF storage is listed",
+        ),
+        # ... and with both withheld there is nothing to say.
+        ((401, None), (401, None), None),
+    ],
+)
+async def test_unlisted_names_what_each_answered_list_holds(children, storage, note) -> None:
+    async with httpx.AsyncClient(transport=_node(children, storage)) as c:
+        assert await osf.unlisted(c, "10.17605/osf.io/ezcuj") == note
+
+
+@pytest.mark.parametrize(
+    ("children", "storage", "said"),
+    [
+        (
+            (200, {"data": None}),
+            (200, _STORAGE),
+            "OSF components returned an unparseable 200 body after 3 tries: "
+            "UpstreamEnvelopeError(\"no OSF component list in {'data': None}\")",
+        ),
+        (
+            (200, _CHILDREN),
+            (200, {"data": None}),
+            "OSF storage returned an unparseable 200 body after 3 tries: "
+            "UpstreamEnvelopeError(\"no OSF storage list in {'data': None}\")",
+        ),
+    ],
+)
+async def test_unlisted_fails_on_a_list_missing_what_it_reads(children, storage, said) -> None:
+    async with httpx.AsyncClient(transport=_node(children, storage)) as c:
+        with pytest.raises(UpstreamUnavailableError) as exc:
+            await osf.unlisted(c, "10.17605/osf.io/ezcuj")
+    assert str(exc.value) == f"[UpstreamUnavailableError] {said}"
