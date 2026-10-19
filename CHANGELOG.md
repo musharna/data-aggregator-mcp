@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.75.2] - 2026-10-18
+
 ### Fixed
 
 - A record that holds only some of the search's words (a source's any-word fill) no longer
