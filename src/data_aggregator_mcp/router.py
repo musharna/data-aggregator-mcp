@@ -961,8 +961,18 @@ async def _multi_query_page(
     plain = raw_variants if raw_variants is not None else variants
     streams: list[_Stream] = []
     notes: list[str] = []
+    # No title tier and no some-words fill: each variant already fans out to every source,
+    # and either would double that again. They are for the single query (R4 measured the
+    # title tier there). Equivalent mutants: None reads as False, and the deposit tier only
+    # divides the title tier; test_multi_query_sends_each_variant_once_without_title_tier_or_fill
+    # pins the title tier and the fill off.
+    # pragma: no mutate start
+    variant_streams = functools.partial(
+        _source_streams, title_tier=False, deposit_tier=False, any_words=False
+    )
+    # pragma: no mutate end
     for vi in range(len(variants)):
-        streams += _source_streams(
+        streams += variant_streams(
             client,
             adapters,
             expanded=variants[vi],
@@ -971,12 +981,6 @@ async def _multi_query_page(
             pushdown=pushdown,
             plurals=plurals,
             plural_streams=plural_streams,
-            # No title tier and no some-words fill: each variant already fans out to every
-            # source, and either would double that again. They are for the single query (R4
-            # measured the title tier there). The deposit tier only divides the title tier.
-            title_tier=False,
-            deposit_tier=False,  # pragma: no mutate
-            any_words=False,
             vi=vi,
             groups=groups,
             notes=notes,

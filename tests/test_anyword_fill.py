@@ -243,6 +243,33 @@ async def test_a_source_matching_words_in_code_is_asked_for_some_words(monkeypat
     assert page.errors["all_words"].startswith("c held no record with every word")
 
 
+async def test_the_in_code_fill_is_the_every_word_call_asking_for_some_words(monkeypatch) -> None:
+    """Its plurals and pushed filters are the every-word call's: only ``some_words`` differs.
+    No in-code fill reads plurals or takes filters today; the next one must not lose them."""
+    calls: list[dict] = []
+
+    async def search(client, q, *, size=10, offset=0, **kw):
+        calls.append(kw)
+        return 0, []
+
+    adapter = types.SimpleNamespace(
+        search=search,
+        pushable=lambda filters, /: {k: v for k, v in filters.items() if k == "published_after"},
+        PREFIXES=frozenset(),
+        REQUIRES_EVERY_WORD=True,
+        ANY_WORD_FILL=True,
+        FILLS_IN_CODE=True,
+        QUERY_PLURALS=True,
+    )
+    monkeypatch.setattr(router, "_ADAPTERS", {"c": adapter})
+    async with httpx.AsyncClient() as c:
+        await router.search_page(c, query=_Q, published_after=2019)
+    every, fill = sorted(calls, key=lambda kw: kw.get("some_words", False))
+    # Control: the every-word call was sent the filter, and plurals were left on.
+    assert every == {"filters": {"published_after": 2019}}
+    assert fill == {**every, "some_words": True}
+
+
 @pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
 async def test_live_datacite_fill_finds_a_study_missing_one_query_word() -> None:
     # Round 3, T4 S21 (HyDaT, Monash Figshare): DataCite holds no record with all six words.

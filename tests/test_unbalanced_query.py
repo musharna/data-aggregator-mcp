@@ -29,6 +29,8 @@ from data_aggregator_mcp.models import DataResource
         ("liver proteome)", "liver proteome", [")"]),
         ("(a OR (b) c", "a OR (b) c", ["("]),
         ('a ")" (b', 'a ")" b', ["("]),  # a parenthesis inside quotes is text, not syntax
+        # The quote opening a query has nothing before it: the backslash ending it is not.
+        ('"snow leopard\\', "snow leopard\\", ['"']),
     ],
 )
 def test_an_unmatched_mark_is_dropped_and_named(query, repaired, dropped) -> None:

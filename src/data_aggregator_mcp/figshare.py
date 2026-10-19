@@ -48,8 +48,7 @@ def _article_id(doi: str, landing_url: str | None = None) -> str | None:
     m = (
         _ARTICLE_ID.search(doi)
         or _TRAILING_ID.search(doi)
-        # "" stands for no page; any other string without "/articles/" reads the same.
-        or _PAGE_ARTICLE_ID.search(landing_url or "")  # pragma: no mutate
+        or (_PAGE_ARTICLE_ID.search(landing_url) if landing_url else None)
     )
     return m.group(1) if m else None
 
