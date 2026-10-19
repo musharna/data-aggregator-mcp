@@ -171,6 +171,37 @@ async def test_an_unknown_dataset_is_not_found_and_other_refusals_are_trouble(
         assert (await kaggle.resolve(c, "kaggle:masuel/bee-hyperspectral-dataset")).year == 2025
 
 
+async def test_a_bare_403_is_kaggle_refusing_the_caller(httpx_mock: HTTPXMock) -> None:
+    """GitHub's runners got a 403 with no body for every Kaggle call on 2026-10-18 while
+    the same calls were answered elsewhere: the host not serving us, so ``down``. A 403
+    that says something is an answer and stays not ``down``; "datasets.get" stays not
+    found."""
+    view = "https://www.kaggle.com/api/v1/datasets/view/masuel/bee-hyperspectral-dataset"
+    async with httpx.AsyncClient() as c:
+        httpx_mock.add_response(url=_LIST, status_code=403, text="")
+        with pytest.raises(UpstreamUnavailableError, match="refused this client") as e:
+            await kaggle.search(c, "varroa")
+        assert e.value.down
+        httpx_mock.add_response(url=view, status_code=403, text="")
+        with pytest.raises(UpstreamUnavailableError, match="refused this client") as e:
+            await kaggle.resolve(c, "kaggle:masuel/bee-hyperspectral-dataset")
+        assert e.value.down
+        # Controls: a 403 with a body is an answer, not the host down ...
+        httpx_mock.add_response(
+            url=view, status_code=403, text='{"code":403,"message":"Forbidden"}'
+        )
+        with pytest.raises(UpstreamUnavailableError, match="HTTP 403") as e:
+            await kaggle.resolve(c, "kaggle:masuel/bee-hyperspectral-dataset")
+        assert not e.value.down
+        # ... "datasets.get" is still a dataset Kaggle does not have ...
+        httpx_mock.add_response(url=view, status_code=403, text=_MISSING)
+        with pytest.raises(NotFoundError):
+            await kaggle.resolve(c, "kaggle:masuel/bee-hyperspectral-dataset")
+        # ... and an answer is read.
+        httpx_mock.add_response(url=_LIST, json=_P1)
+        assert len((await kaggle.search(c, "varroa", size=20))[1]) == 20
+
+
 def test_the_year_is_the_first_versions_not_the_latest() -> None:
     """``lastUpdated`` and the newest version date the latest upload; a dataset first
     published in 2019 and updated in 2025 is from 2019. Positive control: one version."""

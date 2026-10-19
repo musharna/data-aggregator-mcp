@@ -87,6 +87,7 @@ async def _retrying(
     follow_redirects: bool = True,
     no_content_returns: Any = _RAISE,
     empty_answer: Callable[[httpx.Response], bool] | None = None,
+    refused: Callable[[httpx.Response], bool] | None = None,
     extensions: Mapping[str, Any] | None = None,
 ) -> Any:
     """Issue ``method url`` with retry + classification. Transport errors and
@@ -105,6 +106,10 @@ async def _retrying(
     ``empty_answer(resp)`` lets an endpoint that encodes "zero hits" as an error status
     say so precisely (OpenML: ``412`` with error code ``372``); a matching response
     returns ``no_content_returns``, every other error status is classified as usual.
+
+    ``refused(resp)`` names an error answer that refuses this client rather than answering
+    the request (Kaggle: a bare 403 to GitHub's runners on some nights, while it answers
+    elsewhere): it raises ``UpstreamUnavailableError`` with ``down`` set, at once.
     """
     if max_retries < 1:
         raise ValueError(f"max_retries must be at least 1, got {max_retries}")
@@ -159,6 +164,10 @@ async def _retrying(
         # Every 2xx has returned, retried or raised above: what follows is an error status.
         if empty_answer is not None and no_content_returns is not _RAISE and empty_answer(resp):
             return no_content_returns
+        if refused is not None and refused(resp):
+            raise UpstreamUnavailableError(
+                f"{service} refused this client (HTTP {resp.status_code})", down=True
+            )
         if resp.status_code == 404:
             if not_found_returns is not _RAISE:
                 return not_found_returns
@@ -303,6 +312,7 @@ async def request_json(
     not_found_returns: Any = _RAISE,
     no_content_returns: Any = _RAISE,
     empty_answer: Callable[[httpx.Response], bool] | None = None,
+    refused: Callable[[httpx.Response], bool] | None = None,
     check: Callable[[Any], None] | None = None,
     extensions: Mapping[str, Any] | None = None,
 ) -> Any:
@@ -340,6 +350,7 @@ async def request_json(
         parse=parse,
         no_content_returns=no_content_returns,
         empty_answer=empty_answer,
+        refused=refused,
         extensions=extensions,
     )
 
