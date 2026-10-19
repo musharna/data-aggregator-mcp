@@ -532,3 +532,24 @@ def test_adjudication_verdicts_merge_into_the_scorers_format_and_rescore(tmp_pat
         adjudicate.merge({"X": verdicts["X"][:3]}, pool)
     with pytest.raises(SystemExit, match="bad verdict"):
         adjudicate.merge({"X": [*verdicts["X"][:4], {"id": "zenodo:42", "verdict": "maybe"}]}, pool)
+
+
+def test_valid_only_comparison_drops_invalid_runs_and_tasks_an_arm_lacks() -> None:
+    import analyze
+
+    def row(task: str, arm: str, recall: float, valid: bool = True) -> dict:
+        return {"task": task, "arm": arm, "recall": recall, "valid": valid, "relevant": 1,
+                "listed": 1, "tool_calls": 1, "cost_usd": 1.0, "wall_s": 1.0}  # fmt: skip
+
+    rows = [
+        row("A", "dam", 0.5), row("A", "web", 0.9), row("A", "web", 0.7, valid=False),
+        row("B", "dam", 0.6), row("B", "web", 0.2, valid=False),  # web: no valid run
+        row("C", "dam", 0.4), row("C", "web", 0.1),
+    ]  # fmt: skip
+    got = {c["metric"]: c for c in analyze.compare("s", rows) if c["b"] == "web"}
+    primary, valid = got["recall"], got["recall_valid_only"]
+    # Primary: an invalid run scores 0 (A: web 0.45, B: web 0); dam higher on all 3.
+    assert (primary["tasks"], primary["a_higher"], primary["b_higher"]) == (3, 3, 0)
+    # Valid-only: A's invalid web run is dropped (web 0.9 > dam), B drops out.
+    assert (valid["tasks"], valid["a_higher"], valid["b_higher"]) == (2, 1, 1)
+    assert valid["mean_diff"] == pytest.approx(((0.5 - 0.9) + (0.4 - 0.1)) / 2)

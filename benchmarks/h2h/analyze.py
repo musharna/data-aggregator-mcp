@@ -180,8 +180,13 @@ def summarize(name: str, rows: list[dict]) -> list[dict]:
 def compare(name: str, rows: list[dict]) -> list[dict]:
     out = []
     for a, b in PAIRS:
-        for metric in ("recall", "precision_listed", "cost", "wall_s", "calls"):
-            ma, mb = task_means(rows, a, metric), task_means(rows, b, metric)
+        for metric in ("recall", "recall_valid_only", "precision_listed", "cost", "wall_s",
+                       "calls"):  # fmt: skip
+            if metric == "recall_valid_only":  # the PREREG's agreement check: valid runs
+                ok = [r for r in rows if r["valid"]]  # only; a task either arm lacks drops
+                ma, mb = task_means(ok, a, "recall"), task_means(ok, b, "recall")
+            else:
+                ma, mb = task_means(rows, a, metric), task_means(rows, b, metric)
             both = sorted(set(ma) & set(mb))
             if not both:
                 continue
