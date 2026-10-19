@@ -177,22 +177,23 @@ async def test_hits_naming_the_query_as_written_outrank_its_words_scattered(monk
     assert [r.id for r in nxt.results] == ["nasacmr:1"]
 
 
-@pytest.mark.parametrize("described", ["datacite", "dataone"])
+@pytest.mark.parametrize("described", ["datacite", "dataone", "both"])
 async def test_a_deposit_ranks_by_its_best_described_copy(monkeypatch, described) -> None:
     """The DOI dedup keeps the most fetchable copy (DataONE's), which has no description;
     ranked on its own text it sank below hits naming nothing, and its DataCite twin, never
     handled, held DataCite's offset in place for every later page. Either copy may be the
-    described one, so the rank is the best copy's, not the last one seen."""
+    described one, so the rank is the best copy's, not the last one seen; with both
+    described, the kept copy's own rank stands and no other copy is named."""
     doi = "10.5061/dryad.66t1g1k2t"
     title = "Data from: Age estimation using methylation-sensitive markers"
     about = {"description": "Faecal DNA of wild snow leopards in Mongolia."}
     copy = DataResource(
         id="dataone:sha256:1", source="dataone", kind="dataset", title=title, doi=doi,
-        **(about if described == "dataone" else {}),
+        **(about if described in ("dataone", "both") else {}),
     )  # fmt: skip
     twin = DataResource(
         id=f"datacite:{doi}", source="dryad", kind="dataset", title=title, doi=doi.upper(),
-        **(about if described == "datacite" else {}),
+        **(about if described in ("datacite", "both") else {}),
     )  # fmt: skip
     log = DataResource(
         id="nasacmr:1", source="nasacmr", kind="dataset", title="Casey station log",

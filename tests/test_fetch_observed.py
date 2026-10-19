@@ -361,6 +361,31 @@ async def test_http_and_transport_failures_name_the_file_and_the_url(tmp_path: P
     }
 
 
+async def test_a_file_host_is_down_on_429_or_any_5xx_and_answering_on_another_status(
+    tmp_path: Path,
+) -> None:
+    """``down`` is what the nightly live suite reads to skip an outage: 429 and every 5xx
+    from 500 up, not another 4xx, which is the host answering."""
+    statuses = {"r429.bin": 429, "r500.bin": 500, "r503.bin": 503, "r403.bin": 403, "r499.bin": 499}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(statuses[request.url.path.lstrip("/")])
+
+    down = {}
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        for name in statuses:
+            with pytest.raises(UpstreamUnavailableError) as exc:
+                await fetch_mod.fetch_files(client, _record(_entry(name)), dest=str(tmp_path))
+            down[name] = exc.value.down
+    assert down == {
+        "r429.bin": True,
+        "r500.bin": True,
+        "r503.bin": True,
+        "r403.bin": False,
+        "r499.bin": False,
+    }
+
+
 async def test_a_private_address_is_refused_by_file_name(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.delenv("DATA_AGGREGATOR_MCP_ALLOW_PRIVATE_EGRESS", raising=False)
     async with _serving({}) as client:

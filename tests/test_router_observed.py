@@ -937,7 +937,7 @@ def test_a_nan_cache_ttl_falls_back_and_the_fallback_is_logged(monkeypatch, capl
     monkeypatch.setenv("CACHE_TTL_SECONDS", "nan")
     with caplog.at_level(logging.WARNING, logger=router.__name__):
         assert router._cache_ttl() == 3600.0
-    assert "CACHE_TTL_SECONDS='nan'" in caplog.text
+    assert caplog.messages == ["CACHE_TTL_SECONDS='nan' is not a number of seconds; using 3600"]
     for kept in ("inf", "-1", "0"):
         monkeypatch.setenv("CACHE_TTL_SECONDS", kept)
         assert router._cache_ttl() == float(kept)

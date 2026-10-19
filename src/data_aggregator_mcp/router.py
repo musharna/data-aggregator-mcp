@@ -331,10 +331,10 @@ def _source_streams(
     filters: dict[str, Any],
     pushdown: bool,
     plurals: bool,
-    title_tier: bool = False,
-    deposit_tier: bool = False,
-    plural_streams: bool = False,
-    any_words: bool = False,
+    title_tier: bool,
+    deposit_tier: bool,
+    plural_streams: bool,
+    any_words: bool,
     vi: int | None = None,
     groups: Sequence[FacetGroup] = (),
     notes: list[str] | None = None,
@@ -501,7 +501,7 @@ def _adapter_call(
     return call
 
 
-def _all_words_note(empty: list[str], query: str | None, filled: Sequence[str] = ()) -> str | None:
+def _all_words_note(empty: list[str], query: str | None, filled: Sequence[str]) -> str | None:
     """Advisory for streams whose upstream requires every query word and matched
     nothing: without it, a source's 0 next to errors{} reads as "no such data", when the
     words only failed to meet in one record (GEO: "tardigrade" 221, "tun" 464,
@@ -971,8 +971,12 @@ async def _multi_query_page(
             pushdown=pushdown,
             plurals=plurals,
             plural_streams=plural_streams,
-            # No title_tier: each variant already fans out to every source, and the title
-            # split would double that again. It is for the single query (R4 measured that path).
+            # No title tier and no some-words fill: each variant already fans out to every
+            # source, and either would double that again. They are for the single query (R4
+            # measured the title tier there). The deposit tier only divides the title tier.
+            title_tier=False,
+            deposit_tier=False,  # pragma: no mutate
+            any_words=False,
             vi=vi,
             groups=groups,
             notes=notes,
