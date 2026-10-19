@@ -1,0 +1,146 @@
+task: V3
+prompt: >-
+  Find every public dataset, in any archive, that holds brain imaging or brain recording data (structural or
+  functional MRI, diffusion MRI/DTI, EEG or event-related potentials, MEG, fNIRS) from people who stutter (children or
+  adults with developmental stuttering, usually compared with fluent controls). Raw or processed data both count,
+  including group statistical maps and per-participant derived measures. Speech-audio, behavioural, questionnaire,
+  genetic, kinematic or vocal-tract-only data, fluent speakers imitating stuttering, meta-analysis maps built from
+  published coordinates, journal supplement PDFs or summary tables, and deposits that are not openly accessible do not count.
+criteria: >-
+  Topic: PRIMARY (brain imaging/recording of people who stutter). Included: an openly accessible deposit (OSF, NeuroVault,
+  Zenodo, Mendeley Data, Dataverse installations such as GRO.data, Figshare, etc.) whose files hold MRI/fMRI/DTI,
+  EEG/ERP, MEG or fNIRS data from people who stutter (PWS/AWS/CWS), raw or processed: cleaned or epoched recordings,
+  source/ROI time series, per-participant spectral, ERP, ERPAC or laterality values, and group-level statistical maps
+  (including maps of PWS alone or PWS vs controls). Group membership and modality were confirmed from the deposit text
+  and file names or, where silent, from the linked paper (Europe PMC full text or preprint). Journal supporting-information
+  files that hold per-participant brain measures are kept but flagged borderline. Excluded: speech/audio corpora,
+  behavioural, questionnaire, genetic, physiological (autonomic) and articulatory/vocal-tract MRI data; TMS motor-evoked
+  potentials; fMRI/fNIRS of fluent speakers simulating disfluency; ALE meta-analysis maps and their classroom copies;
+  journal supplement PDFs, figures and group-summary tables; preregistrations and code-only or empty projects; private
+  or login-gated records (OSF 401, INFN login redirect); NDA-style controlled access. Unit = study: concept/version DOIs,
+  OSF GUID and DOI, NeuroVault numeric id and private-link key, and qualifying deposits of the same paper in two archives
+  are aliases of one study; sibling deposits of the same paper that hold only behaviour or PDFs are near misses.
+studies:
+  - key: S1
+    title: "Adjusted power of resting state EEG data in typically fluent and adults who stutter"
+    year: 2024
+    ids: ["10.17632/v6346g59xh", "10.17632/v6346g59xh.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley public API: 62 files (8.7 MB) of 128-channel EGI EEG component spectra and mu/alpha/theta ERD .mat/.xlsx split by fluent (c) and stuttering (st) groups, 23 AWS and 23 fluent adults (Bowers; Neuropsychologia 10.1016/j.neuropsychologia.2024.108906)."
+  - key: S2
+    title: "classification of stuttering events and ERPAC data"
+    year: 2026
+    ids: ["10.5281/zenodo.22982941", "10.5281/zenodo.22982940"]
+    archives: [Zenodo]
+    evidence: "Zenodo record 22982941 (concept 22982940): Alldata6a.xlsx holds per-participant left/right hemisphere alpha/beta EEG ERPAC measures for controls (c1..) and stutterers (s1..) with OASES scores; plus R code (Saltuklaroglu)."
+  - key: S3
+    title: "Data - Stuttering and social speech"
+    year: 2026
+    ids: ["10.25625/OQBVSL", "doi:10.25625/OQBVSL"]
+    archives: [GRO.data (Göttingen Research Online Dataverse)]
+    evidence: "Dataverse API: 23 NIfTI fMRI maps (Neef, UMG) including ANOVA Interaction/Mode/Person maps for aws, awns and aws-vs-awns, share-vs-private maps correlated with OASES/PAiS in AWS, averageBOLD; group-level processed only."
+  - key: S4
+    title: "Cortical tracking of speech is reduced in adults who stutter when listening for speaking"
+    year: 2023
+    ids: ["osf.io/7gpyb", "7gpyb"]
+    archives: [OSF]
+    evidence: "OSF files API: data/EEG_data_clean/stutt/ and /contr/ hold per-subject cleaned EEG .mat (~180 MB each, comp and prod tasks) plus coherence files (153 entries); Gastaldon et al. 2024 JSLHR (10.1044/2024_jslhr-24-00227), AWS vs TFA."
+  - key: S5
+    title: "Data for 'When inefficient speech-motor control affects speech comprehension: atypical electrophysiological correlates in stuttering'"
+    year: 2021
+    ids: ["osf.io/5jkur", "5jkur"]
+    archives: [OSF]
+    evidence: "OSF files: ERP_differential.RData, Comprehension_/Production_differential.RData (ROI time-frequency data) and RTs; README ties them to Gastaldon et al. 2023 Cereb Cortex (10.1093/cercor/bhad004), AWS vs controls. Processed EEG only."
+  - key: S6
+    title: "No Evidence of Altered Language Laterality in People Who Stutter across Different Brain Imaging Studies of Speech and Language"
+    year: 2024
+    ids: ["10.17605/OSF.IO/TQ8J5", "osf.io/tq8j5", "neurovault:collection:16872", "https://neurovault.org/collections/16872/"]
+    archives: [OSF, NeuroVault]
+    evidence: "OSF files: Data/BA44, BA45, frontal, temporal folders of per-participant fMRI laterality-index csv files (overt/covert reading, auditory naming, picture naming tasks) for PWS and controls, with scan-details table (Watkins lab). NeuroVault collection 16872 'Language Laterality in Stuttering' (8 group T maps, PWS vs TFS for the same four tasks, owner Birtan_Demirel) is the image deposit of the same study."
+  - key: S7
+    title: "Differences in dynamic motor selection in stuttering"
+    year: 2026
+    ids: ["10.17605/OSF.IO/GP84X", "osf.io/gp84x"]
+    archives: [OSF]
+    evidence: "OSF files: data/meg/epos/sub_7xxM(C|P)A/ folders of Glasser-parcellated MEG epoch .fif files (~70 MB each) plus OASES, PAiS and SSI-4 tables and MEG analysis notebooks; PWS vs controls."
+  - key: S8
+    title: "Speech Timing Deficit of Stuttering: Evidence from Contingent Negative Variations"
+    year: 2017
+    ids: ["figshare:4532570", "10.1371/journal.pone.0168836.s001", "10.1371/journal.pone.0168836.s002", "10.1371/journal.pone.0168836.s003"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (journal supporting-information files, not a stand-alone deposit). Figshare item 4532570 (PLOS ONE SI) holds S1-S3 File.xls with per-participant ERP amplitudes (N1/N2/P2/P3, CNV C400-C700 at F3..P4) labelled AWS/AFS; 15 AWS, 15 fluent adults."
+  - key: S9
+    title: "An fMRI study of initiation and inhibition of manual and spoken responses in people who stutter"
+    year: 2020
+    ids: ["neurovault:collection:8669", "https://neurovault.org/collections/8669/"]
+    archives: [NeuroVault]
+    evidence: "NeuroVault API: 16 group fMRI-BOLD Z maps (go, successful/unsuccessful stop, stop>go) for PWS (n=33 manual/27 speech) and controls; cited as the MRI data deposit in Wiltshire et al. (PMC12330837). The OSF sibling 10.17605/OSF.IO/ZJSWA holds behaviour only."
+  - key: S10
+    title: "Neural changes after training with transcranial direct current stimulation to increase speech fluency in adults who stutter"
+    year: 2022
+    ids: ["neurovault:collection:12207", "https://neurovault.org/collections/12207/"]
+    archives: [NeuroVault]
+    evidence: "NeuroVault API: 4 group fMRI-BOLD T maps (PWS speech vs rest n=25, PWS vs PWNS n=40, PWNS, change PWS-active vs sham tDCS) (Chesters et al.; follow-up of Brain 10.1093/brain/awy011). OSF q9f8n has only the paper PDFs."
+  - key: S11
+    title: "Differences in brain activity during sentence repetition in people who stutter"
+    year: 2025
+    ids: ["neurovault:collection:21188", "https://neurovault.org/collections/21188/"]
+    archives: [NeuroVault]
+    evidence: "NeuroVault API: 2 FSL zstat images described as average brain activity for groups of people who stutter and typically fluent speakers during sentence repetition (owner Birtan_Demirel); named as the data deposit (group averages in standard space) of the preprint PPR1047095 pooling fMRI from four studies (56 PWS, 53 controls)."
+  - key: S12
+    title: "RIC (data for 'Reactive Inhibitory Control Precedes Overt Stuttering Events')"
+    year: 2024
+    ids: ["osf.io/97tsm", "97tsm"]
+    archives: [OSF]
+    evidence: "OSF files: epochs_TF/R16xx_all-epo.fif per-participant MEG epochs (0.4-0.7 GB each, 29 files), fsaverage inverse operators, behaviour and stuttering-severity xlsx, PSD/TF scripts; named as data deposit of Neurobiology of Language 2024 MEG study of 29 stutterers (PMC11192511)."
+  - key: S13
+    title: "CS-GIMME data (The Speech Network in Childhood Stuttering: functional connectivity of planning and motor circuits)"
+    year: 2025
+    ids: ["osf.io/uv263", "uv263"]
+    archives: [OSF]
+    evidence: "OSF files: demographics xlsx plus RS_extraction_individual_subjects/*.txt (149 entries) of per-child preprocessed resting-state fMRI time series from 12 speech-network ROIs; data statement of PMC12978680 (73 CWS, 74 CNS, rsfMRI)."
+  - key: S14
+    title: "Differences in multi-parameter maps in adults who stutter"
+    year: 2021
+    ids: ["neurovault:collection:9572", "https://neurovault.org/collections/UPUDTUZJ/", "UPUDTUZJ"]
+    archives: [NeuroVault]
+    evidence: "NeuroVault API (unlisted private-link collection UPUDTUZJ = id 9572, owner gabriel.j.cler): 12 structural-MRI TFCE group-difference maps (MT, R1, R2* in grey and white matter, PWS vs controls, n=73); cited as the data in Cler et al. 2021 'Elevated iron concentration in putamen ... developmental stuttering' (PMC8634076)."
+  - key: S15
+    title: "PAC data analysis-NBL (ERPAC in quiet vs informational-masking speech planning, adults who stutter vs controls)"
+    year: 2026
+    ids: ["10.5281/zenodo.21906356", "10.5281/zenodo.21906355"]
+    archives: [Zenodo]
+    evidence: "Zenodo record 21906356 (concept 21906355, Saltuklaroglu): README says Data/ holds per-subject ERPAC .npy arrays and trial-averaged mu waveforms from IC-weighted EEG (left/right sensorimotor mu) for AWS and controls; Data zip 47 MB plus Alldata6b.xlsx and PAConlylong.xlsx; raw single-trial EEG not included."
+near_misses:
+  - {ids: ["10.23641/asha.12682874", "10.23641/asha.14110454", "10.23641/asha.27234885"], why_excluded: "ASHA journal supplements (Hampton Wray & Spray 2020 ERP; Boley et al. 2021 VBM; Gastaldon et al. 2024 EEG): PDF supplementary material only, no data files."}
+  - {ids: ["10.6084/m9.figshare.14322328"], why_excluded: "SciELO copy of article Tables 1-4 (group MMN/P300 latencies in children who stutter); journal tables, not a data deposit."}
+  - {ids: ["10.6084/m9.figshare.20015000", "10.6084/m9.figshare.20022339", "10.6084/m9.figshare.20022386"], why_excluded: "SciELO auditory-feedback papers: figures/behavioural fluency measures, no brain recordings."}
+  - {ids: ["figshare:947003", "figshare:360751", "figshare:360796", "figshare:360842", "figshare:289473", "10.6084/m9.figshare.30794", "figshare:25268498", "figshare:3998946"], why_excluded: "PLOS figure/table copies on Figshare (fMRI self-regulation figures, Xuan et al. 2012 resting-state tables, DTI figure, review schematic, TMS motor thresholds); no data."}
+  - {ids: ["figshare:9937307", "figshare:11898507", "figshare:11898525", "figshare:16553979"], why_excluded: "Frontiers supplementary images/data-sheet PDFs (tongue somatotopy fMRI, vocal pitch compensation ERP, vestibular response); figures/PDFs only."}
+  - {ids: ["figshare:7189985"], why_excluded: "PLOS SI docx tables of TMS motor-evoked potentials in AWS; brain stimulation/EMG, not imaging or recording."}
+  - {ids: ["10.15161/oar.it/212676", "10.15161/oar.it/212675", "10.15161/oar.it/143649", "10.15161/oar.it/143648"], why_excluded: "INFN Open Access Repository (Busan, stuttering treatment / HD-tRNS projects): doi.org redirects to a login page and the API returns 403, so not openly accessible."}
+  - {ids: ["10.17605/OSF.IO/ZJSWA", "osf.io/zjswa"], why_excluded: "Behavioural csv, R script and preprint only; the fMRI maps of this study are NeuroVault 8669 (S9)."}
+  - {ids: ["osf.io/q9f8n"], why_excluded: "Paper and supplement PDFs only; maps are NeuroVault 12207 (S10)."}
+  - {ids: ["10.17605/OSF.IO/JMB6F"], why_excluded: "Frontal aslant tract DTI paper: OSF project has no files; data statement says imaging data cannot be shared."}
+  - {ids: ["osf.io/wr5hc", "osf.io/t5k74", "osf.io/quskp"], why_excluded: "Named in data statements (somatosensory evoked potentials; rsfMRI disfluency types PMC12468764; multisensory feedback) but the OSF API returns 401 (private)."}
+  - {ids: ["10.17605/OSF.IO/2P7UR", "osf.io/zc9xk"], why_excluded: "fNIRS / fMRI of fluent speakers simulating (pseudo)stuttering, not people who stutter."}
+  - {ids: ["10.17605/OSF.IO/3QDNV", "10.23641/asha.14782092"], why_excluded: "Vocal-tract (articulatory) real-time MRI of speech movements, not brain imaging."}
+  - {ids: ["10.17605/OSF.IO/UMCNB", "osf.io/pkzyu", "osf.io/c4t27", "osf.io/9mukg", "osf.io/u4s2b"], why_excluded: "Registered-report/preregistration or review projects with no data files (TMS-EMA preprint; diffusion and FC preregistrations; VEMP prereg; M/EEG meta-analysis)."}
+  - {ids: ["osf.io/gb5j4", "osf.io/s84df", "osf.io/67xkw", "osf.io/5bk6t", "osf.io/3xfpv", "osf.io/79j4b", "osf.io/xse5g"], why_excluded: "Stuttering studies with behavioural, acoustic, kinematic or meta-analytic data only."}
+  - {ids: ["neurovault:collection:2317", "neurovault:collection:2312", "neurovault:collection:2308", "neurovault:collection:2309", "neurovault:collection:2310", "neurovault:collection:2311", "neurovault:collection:2313", "neurovault:collection:2314", "neurovault:collection:2315", "neurovault:collection:2316", "neurovault:collection:2319", "neurovault:collection:2321", "neurovault:collection:2322", "neurovault:collection:2326", "neurovault:collection:2327", "neurovault:collection:2328", "neurovault:collection:2329", "neurovault:collection:2338", "neurovault:collection:2339", "neurovault:collection:2345", "neurovault:collection:2347", "neurovault:collection:2358", "neurovault:collection:2361", "neurovault:collection:2369", "neurovault:collection:3640", "neurovault:collection:3642", "neurovault:collection:3646", "neurovault:collection:3647", "neurovault:collection:4629", "neurovault:collection:4631", "neurovault:collection:4642", "neurovault:collection:4646", "neurovault:collection:4651", "neurovault:collection:4659"], why_excluded: "GingerALE maps of the Brown et al. 2005 stuttering meta-analysis (hbm.20140) and ~33 classroom copies; coordinate-based meta-analysis, not imaging data. Collections 2325, 2334, 3644 are empty."}
+  - {ids: ["10.5281/zenodo.22647104", "10.5281/zenodo.22647103"], why_excluded: "Maxfield et al.: trial-level behavioural responses to stuttered/fluent sentences, no EEG."}
+  - {ids: ["10.5281/zenodo.23209983", "10.5281/zenodo.23209982"], why_excluded: "Russian 'fMRI results in diagnosing stuttering in children' record typed dataset but holds one article PDF."}
+  - {ids: ["10.7910/DVN/UGZ1IG"], why_excluded: "ARSD BioPac physiological (autonomic) recordings of 48 listeners rating videos, not brain recordings."}
+  - {ids: ["OpenNeuro:ds003469", "OpenNeuro:ds007394"], why_excluded: "Speech-disfluency comprehension in a normal population; 'Stutterer' is a film stimulus title. No people who stutter."}
+  - {ids: ["10.5281/zenodo.6801844", "10.21415/6yth-5b59", "10.21415/p2jb-ca45", "kaggle:ikrbasak/sep-28k", "10.5683/SP3/NKVOGQ"], why_excluded: "Stuttered-speech audio/annotation corpora (KSoF, FluencyBank, SEP-28k, LibriStutter); no brain data."}
+  - {ids: ["10.5281/zenodo.15006076"], why_excluded: "Blue Brain neuron models; matched only on 'stutter' firing-pattern term."}
+queries:
+  - "OpenNeuro GraphQL advancedSearch keywords: stutter 26 (fuzzy, 3 returned), stuttering 0, stutterers 1, disfluency 0, fluency 20. Full catalogue via datasets() paging: 1912 datasets, Name+README regex stutter|stammer|disfluen|cluttering -> 2 (ds003469, ds007394; both near misses)."
+  - "DataCite (titles/descriptions/subjects stutter* OR stammer*): 4299 records, paged and regex-filtered for stutter/stammer + imaging terms -> 707, non-text types screened by hand. Free-text 'stuttering OR stutterers OR \"who stutter\" OR stammering ...': 1792 (0 new). Non-English: 口吃 698, 吃音 484, Stottern 127, bégaiement 94, заикание 62, tartamudez 41, gagueira 13, kekemelik 5, balbuzie 2, jąkanie 1, stotteren 1 (dataset-type hits screened). Creator searches (Dataset/Collection/Image/Other) for 38 stuttering-neuroimaging authors (Bowers 2, Saltuklaroglu 4, Jenson 5, Neef 26, Watkins 22, Busan 6, Cler 4, Maxfield 7, Guenther 27, etc.)."
+  - "Zenodo /api/records (25/page, fully paged): 'stuttering OR stutter OR stutterers OR stammering OR \"who stutter\"' 360; creators.name: Saltuklaroglu 2, Bowers 0, Jenson 30, Busan 1, Neef 135, Gastaldon 1, Chesters 94, Daliri 19, Toyomura 0, Sowman 1, Jackson 1, Usler 3, Cler 3, Kell 117, Korzeczek 5, Demirel 321 (titles screened)."
+  - "Figshare POST /v2/articles/search: ':title: stuttering' 281 (field prefixes ignored; same 281 for stutter/stutterers), ':title: stammering' 18, ':description: stammering' 36, ':description: \"who stutter\"' 173; 'stuttering EEG' 4, 'stuttering MRI' 13, 'stuttering ERP' 2, 'stuttering fNIRS' 0, 'stuttering brain' 76, 'stuttering MEG' 1, 'stuttering diffusion' 3, 'stuttering event-related potentials' 4, 'stutter neural' 32, 'who stutter fMRI' 2; 20 candidate items' file lists fetched; resource_doi 10.1371/journal.pone.0333205 8."
+  - "OSF API v2 nodes filter[title][icontains]=stutter 64, =stammer 7; filter[description][icontains]=stutter 49, =stammer 4 (88 unique, all screened); filter[tags]: stuttering 18, stammering 3, 'developmental stuttering' 2, 'adults who stutter' 1, fluency 32, disfluency 11, others 0. Recursive file listings fetched for 25 projects; 4 registrations checked (no files)."
+  - "NeuroVault /api/collections (all 18005 collections paged with curl): regex stutter|stammer|disfluen in name/description/authors -> 42 collections; image lists fetched for all 42; plus unlisted private-link collection UPUDTUZJ found via PMC8634076."
+  - "Dryad /api/v2/search: stuttering 4, stutter 4, stammering 1, 'who stutter' 0 (none relevant). Harvard Dataverse search (federated): stuttering 8, stutter 9, stammering 4 (none relevant); Dataverse API for GRO.data doi:10.25625/OQBVSL and Harvard doi:10.7910/DVN/UGZ1IG. DANDI search stutter/stuttering/stammer 0. Kaggle /api/v1/datasets/list: stuttering 7, stutter 13, stammering 3, 'stuttering eeg'/'mri'/'brain'/'fmri' 0 (all speech audio). PhysioNet published projects 739, regex 0 relevant. NITRC group search stuttering/stutter 0. EBRAINS KG search 0. Mendeley Data public search API ignored the query (Mendeley covered via DataCite 10.17632). GIN search API timed out twice and ScienceDB query API did not filter, so neither was searched."
+  - "Europe PMC: '(stutter* OR stammer*) AND (MRI OR fMRI OR EEG OR MEG OR NIRS ... )' 4674; same AND repository/data-availability terms 1393; title/abstract stuttering AND imaging terms 1028, of which HAS_FT:Y 596 (591 PMCIDs); fullTextXML fetched 591, 315 returned XML (277 HTTP 500, non-OA) and were regex-scanned for repository ids and data-availability sections. Repository-name queries with (stutter* OR stammer*): neurovault 8, openneuro 5, osf.io 376, zenodo 224, figshare 124, 'mendeley data' 15, dryad 293, dataverse 20, gin.g-node 0, nda.nih.gov 4, fcon_1000 2, INDI 679, kaggle 9, ebrains 2, OpenfMRI 0, scidb 0, physionet 11; union of osf/neurovault/zenodo/figshare/mendeley 734 (105 stuttering-titled, incl. preprints PPR1047095, PPR828140 whose full texts were read)."
+size_verdict: "ok: 15 distinct studies, 14 firm + 1 borderline, across 6 archives (OSF 6 [S4, S5, S6, S7, S12, S13; S6 is also in NeuroVault], NeuroVault 5 [S6, S9, S10, S11, S14], Zenodo 2, Mendeley Data 1, GRO.data 1, Figshare 1 borderline). This is within 5-30 firm with at least 3 archives, so the backup topic was not used."

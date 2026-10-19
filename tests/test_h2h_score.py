@@ -209,7 +209,7 @@ def test_versions_fold_only_inside_one_deposit_and_accessions_match_exactly() ->
 
 
 def test_oracle_every_round_key_scores_100_and_a_wrong_list_0() -> None:
-    for name in ("round2", "round3", "round4"):
+    for name in ("round2", "round3", "round4", "round5"):
         tasks = json.loads((H2H / name / "tasks.json").read_text())
         assert run.oracle_problems(tasks) == [], name
         o = run.oracle(tasks[0])

@@ -1,0 +1,252 @@
+task: V4
+prompt: >-
+  Find every public dataset, in any archive, that holds records of birds colliding with buildings, windows or other glass
+  structures: carcass or collision surveys at buildings, citizen-science collision reports, counts or case records of
+  building/window-collision victims, or field and flight-tunnel tests of glass or window treatments with birds. Raw or
+  processed data both count. Collisions with wind turbines, power lines, towers, vehicles or aircraft, studies that only use
+  window-killed birds as specimens for unrelated questions, opinion surveys of people, code-only deposits and papers without
+  deposited data do not count.
+criteria: >-
+  Topic: BACKUP (bird collisions with buildings or glass); the primary topic (wind-turbine carcass search / collision
+  monitoring) failed the size gate (see size_verdict). Included: a public deposit holding bird collision records at
+  buildings, windows, glass facades, glass bus shelters or illuminated buildings (per-carcass or per-incident records,
+  collision counts per building/facade/night, searcher-efficiency and carcass-persistence trials of collision surveys,
+  citizen-science collision reports, rehabilitation case records of building-collision victims), or experimental tests of
+  glass/window treatments with birds (field BACI tests, flight-tunnel choice tests). Deposits in a general archive (Dryad,
+  Zenodo, Figshare, Mendeley Data, OSF, GBIF/SiB Colombia, Kaggle) count; journal supplementary data files hosted on Figshare
+  or Zenodo by the publisher (PLOS, Pensoft, SciELO) are kept but flagged borderline, as are datasets whose rows are
+  building-collision specimens but whose study question is not collisions (morphology time series of Chicago collision
+  specimens) and unattributed re-uploads. Excluded: collisions with wind turbines, power lines, communication towers,
+  vehicles or aircraft; bats; light-attraction trapping without building collisions; general wildlife-rehabilitation or
+  museum datasets where window collision is one cause among many; opinion/behaviour surveys of residents or students;
+  code-only deposits; posters, theses, reviews and article PDFs; journal tables that exist only inside the article.
+  Unit = study: Dryad deposits and their Zenodo mirrors, concept/version DOIs and copies of the same files are aliases.
+studies:
+  - key: S1
+    title: "Data from: Predicting bird-window collisions with weather radar"
+    year: 2020
+    ids: ["10.5061/dryad.b2rbnzsd2", "zenodo:4311837"]
+    archives: [Dryad, Zenodo]
+    evidence: "Dryad API: Supplementary_bird_data.xlsx (23 KB) with species and carcass counts from window-collision surveys in Stillwater, Oklahoma (J Appl Ecol 10.1111/1365-2664.13832). Zenodo 4311837 is the Dryad mirror (same DOI and file)."
+  - key: S2
+    title: "Building façade-level correlates of bird-window collisions in a small urban area"
+    year: 2020
+    ids: ["10.5061/dryad.gb5mkkwkf", "zenodo:4308656"]
+    archives: [Dryad, Zenodo]
+    evidence: "Dryad API: Chap3_Data_Condor.xlsx (52 KB) from collision surveys at 16 buildings (façade level) in Stillwater, Oklahoma (Condor 10.1093/condor/duz065). Zenodo 4308656 mirrors it."
+  - key: S3
+    title: "Heavy migration traffic and bad weather are a dangerous combination: Bird collisions in New York City"
+    year: 2024
+    ids: ["10.5061/dryad.41ns1rnmw", "zenodo:10473709"]
+    archives: [Dryad, Zenodo]
+    evidence: "Dryad API: collisions_migration_weather_spring_fall_dataset.csv (973 KB) + README, 5 years of bird-building collision counts in New York City with weather and radar migration traffic. Zenodo 10473709 mirrors it."
+  - key: S4
+    title: "Bird-building collisions increase with weather conditions that favor nocturnal migration and with inclement and changing weather"
+    year: 2022
+    ids: ["10.5061/dryad.12jm63z25", "zenodo:7320346"]
+    archives: [Dryad, Zenodo]
+    evidence: "Dryad API: four csv files (spring/fall entire-night and within-night) from daily collision monitoring at 21 Minneapolis buildings over 4 migration seasons (Ornithological Applications 10.1093/ornithapp/duac045). Zenodo 7320346 mirrors it."
+  - key: S5
+    title: "Year-round monitoring at a Pacific coastal campus reveals similar winter and spring collision mortality and high vulnerability of the Varied Thrush"
+    year: 2022
+    ids: ["10.5061/dryad.hqbzkh1g6", "zenodo:6373683"]
+    archives: [Dryad, Zenodo]
+    evidence: "Dryad API: Observed.Collision.Counts.csv, Search.Efficiency.csv, Carcass.Persistence.csv, Search.Schedule.csv and point counts from window-collision surveys at 8 UBC buildings, 2015-2017 (10.1093/ornithapp/duab027). Zenodo 6373683 mirrors it."
+  - key: S6
+    title: "Data from: Nocturnal flight-calling behaviour predicts vulnerability to artificial light in migratory birds"
+    year: 2019
+    ids: ["10.5061/dryad.8rr0498", "zenodo:4987639"]
+    archives: [Dryad, Zenodo]
+    evidence: "Dryad API: Chicago_collision_data.csv (2.4 MB), Cleveland_collision_data.csv and Light_levels_dryad.csv, 40 years of passerine building-collision records (Winger et al. 2019 Proc R Soc B 10.1098/rspb.2019.0364). Zenodo 4987639 mirrors it."
+  - key: S7
+    title: "Dataset for \"Drivers of fatal bird collisions in an urban center\""
+    year: 2021
+    ids: ["10.17632/mjvt3yxdkv", "10.17632/mjvt3yxdkv.1", "10.17632/mjvt3yxdkv.2"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley public API (v2): data.tar.gz (7.0 GB), code, figures and README for Van Doren et al. 2021 PNAS, fatal collisions of nocturnal migrants at a Chicago building with lighting and weather. Not downloaded (over 50 MB). The .1 and .2 version DOIs resolve in DataCite."
+  - key: S8
+    title: "Data and analysis for: What causes bird-building collision risk? Seasonal dynamics and weather drivers"
+    year: 2023
+    ids: ["10.6084/m9.figshare.14226167", "10.6084/m9.figshare.14226167.v1"]
+    archives: [Figshare]
+    evidence: "Figshare API: chicago_mig_collisions_20230113.csv and toronto_mig_collisions_20230113.csv (about 0.4 MB each) plus R script. The data statement of the paper (PMC10082152) cites this item."
+  - key: S9
+    title: "Data for: The influence of artificial light at night and polarized light on bird-building collisions"
+    year: 2019
+    ids: ["10.17632/vcm4pbcvgp", "10.17632/vcm4pbcvgp.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley public API: 'Lao et al 2019 data BiolCon.csv' (4.6 KB) of bird-building collisions with window light emission and façade polarized light (Biol Conserv 10.1016/j.biocon.2019.108358)."
+  - key: S10
+    title: "The influence of building surroundings and glass cover in bird collisions"
+    year: 2024
+    ids: ["10.17632/spfyh38ndx", "10.17632/spfyh38ndx.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley public API: 'Raw data GLM.xlsx' (151 KB), described as 'Data about bird collision at UFOP' (Universidade Federal de Ouro Preto campus buildings, Brazil)."
+  - key: S11
+    title: "Powdermill tunnel scores 2010-2011"
+    year: 2019
+    ids: ["10.17632/bccnfc6jw6", "10.17632/bccnfc6jw6.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley public API: per-test xls score sheets (frit, UV, stripe and grid patterns) from the binomial-choice flight tunnel at Powdermill Avian Research Center, which tests glass treatments meant to prevent bird-glass collisions."
+  - key: S12
+    title: "Data for Korner et al. \"Birds and the Post Tower in Bonn: A case study of light pollution\""
+    year: 2022
+    ids: ["10.5281/zenodo.6444620", "10.5281/zenodo.6444619"]
+    archives: [Zenodo]
+    evidence: "Zenodo API: one txt data file (226 KB) of hourly casualty counts over six autumns at an illuminated 41-storey building in Bonn; the description says that most casualties collided with the building (J Ornithol 10.1007/s10336-022-01985-2)."
+  - key: S13
+    title: "Dataset and code for: \"BIRD-WINDOW COLLISIONS: a comprehensive dataset for the Neotropical region\""
+    year: 2025
+    ids: ["10.5281/zenodo.15271127", "10.5281/zenodo.15271126"]
+    archives: [Zenodo]
+    evidence: "Zenodo container listing: BWC_Neotropical_region.csv (899 KB) plus R glimpse script (GitHub release ajpiratelli/Data-Paper-BWC); Ecology data paper PMC12163362 cites this DOI."
+  - key: S14
+    title: "Code and data from: Window markers reduce bird-window collisions in a real-world application"
+    year: 2026
+    ids: ["10.5281/zenodo.20058828", "10.5281/zenodo.20058827"]
+    archives: [Zenodo]
+    evidence: "Zenodo container listing: 'BACI facade counts.csv', Rates.csv and adjusted mortality from a before-after control-impact test of Feather Friendly window markers on 6 glass façades at Oklahoma State University."
+  - key: S15
+    title: "vivizulian/BirdCollisionsUniVictoria (Seasonally frugivorous forest birds and window collision fatalities)"
+    year: 2025
+    ids: ["10.5281/zenodo.16797374", "10.5281/zenodo.15396539"]
+    archives: [Zenodo]
+    evidence: "Zenodo container listing: collisionsData_Fall/Winter.csv, CarcassPersistenceData.csv, SearcherEfficiencyData.csv and per-species collision files from University of Victoria building surveys. Paper PMC12401023 cites the DOI."
+  - key: S16
+    title: "Rehabilitation outcomes of bird-building collision victims in the Northeastern United States (AvianWindowCollisions data)"
+    year: 2023
+    ids: ["10.5281/zenodo.8280339", "10.5281/zenodo.8280226", "10.1371/journal.pone.0306362.s001"]
+    archives: [Zenodo, Figshare]
+    evidence: "Zenodo container listing (63 MB zip, not downloaded): WinCol_data_Suppmat.xlsx (1.75 MB) and Window.Collision.R-Ready.res.csv. PLOS ONE S1 Dataset on Figshare (pone.0306362.s001.xlsx, 1.74 MB) is 'Wildlife rehabilitation cases of avian patients admitted due to building collisions', the same table. Paper PMC11305546 cites the Zenodo DOI."
+  - key: S17
+    title: "Dataset for paper: Insights on the Status of Bird-Window Collisions in the Philippines from 2013-2025 Through a Citizen Science Project"
+    year: 2026
+    ids: ["10.6084/m9.figshare.30985105", "10.6084/m9.figshare.30985105.v1"]
+    archives: [Figshare]
+    evidence: "Figshare API: 'Datasheet_Ramos et al.xlsx' (43 KB) of citizen-science bird-window collision reports in the Philippines, 2013-2025."
+  - key: S18
+    title: "Bird-window collisions at three college campuses during 2021-2023 fall migration seasons in the triangle area of NC, USA"
+    year: 2026
+    ids: ["10.6084/m9.figshare.31282609", "10.6084/m9.figshare.31282609.v1"]
+    archives: [Figshare]
+    evidence: "Figshare API: BWC_08012021_11302023_fall_3campus.xlsx (36 KB) from structured collision surveys at 25 buildings (UNC, NC State, Meredith College) plus incidental reports."
+  - key: S19
+    title: "Colisión de aves contra ventanas en Costa Rica"
+    year: 2026
+    ids: ["10.15468/ypsd84", "gbif:a1272b24-4c1c-433f-8e33-db3e38682db0"]
+    archives: [GBIF]
+    evidence: "GBIF dataset API: occurrence dataset of birds that collided with windows or glass doors in Costa Rica (citizen science, biologists, museums), with species, date, coordinates and alive/dead status. Occurrence search returns 1506 records."
+  - key: S20
+    title: "Registros sobre colisiones de aves contra estructuras, principalmente ventanales, en Colombia"
+    year: 2025
+    ids: ["10.15472/nkrlhr", "gbif:7e2b9e0d-b268-4c31-8971-ab2171acf556"]
+    archives: [GBIF, SiB Colombia]
+    evidence: "GBIF dataset API (published via SiB Colombia IPT): 431 georeferenced reports of bird collisions with structures, mainly windows, mostly Bogotá 2023-2025. The occurrence search returns 431 records, with remarks such as 'La colisión fue letal'."
+  - key: S21
+    title: "Where are the Blue Jays? A Study on Bird-Window Collisions on Johns Hopkins' Homewood Campus"
+    year: 2026
+    ids: ["10.17605/OSF.IO/9CNEX", "osf:9cnex"]
+    archives: [OSF]
+    evidence: "OSF API: public project whose 'Data Tables' folder holds TotalDataByDate.csv, Fall/SpringSpeciesByDate.csv and species counts of bird-window collisions on the JHU campus, plus a birdstrikes.R script. The DOI is registered in DataCite."
+  - key: S22
+    title: "Comparing the use of community science and standardized data to address bird-window collisions"
+    year: 2026
+    ids: ["osf:zpgt7", "https://osf.io/zpgt7/"]
+    archives: [OSF]
+    evidence: "OSF API: public project with sw_single_obsv_2025.csv (1.4 MB), binary_coll_standard_data.csv (1.4 MB) and standard_count_colldata.csv of community-science and standardized bird-window collision data, with R analyses. No DOI is registered."
+  - key: S23
+    title: "Evaluating the efficacy of window treatments to reduce bird-window collisions"
+    year: 2026
+    ids: ["osf:v5nu4", "https://osf.io/v5nu4/"]
+    archives: [OSF]
+    evidence: "OSF API: Data folder with 24_25_count_survey_data.csv, facade_env_var_2025.csv and RF_collisions_DF.csv (2.6 MB) from collision surveys testing window treatments (preprint PPR1164520). No DOI is registered."
+  - key: S24
+    title: "Bird Window Collision data for NB-GLM"
+    year: 2025
+    ids: ["10.34740/kaggle/dsv/13812706", "kaggle:hacheolsung/bird-window-collision-data-for-nb-glm"]
+    archives: [Kaggle]
+    evidence: "Kaggle public API: GJ_windowcollsion_GLM_R.txt (5 KB), a per-building table of collided-bird counts (nocolbirds), collision rate, height, treatment (Untreated/Raptor Sticker/Dot Sticker) and land cover. The DOI is in DataCite."
+  - key: S25
+    title: "Bird Window Collison (bird-window-collision-death.csv)"
+    year: 2022
+    ids: ["kaggle:bhavinmoriya/bird-window-collison"]
+    archives: [Kaggle]
+    evidence: "confidence: borderline (unattributed upload with no description or licence; provenance inferred). Kaggle file bird-window-collision-death.csv (13 KB) has per-carcass records (date, building number, side, species, deaths) from Oct 2013, matching the Virginia Tech Corporate Research Center survey design of Schneider et al. 2018 (PMC5889704)."
+  - key: S26
+    title: "Shared morphological consequences of global warming in North American migratory birds"
+    year: 2020
+    ids: ["10.5061/dryad.8pk0p2nhw"]
+    archives: [Dryad]
+    evidence: "confidence: borderline (rows are building-collision specimens, but the study is about morphology). Dryad API: Weeks_etal_2020_Data.csv (5.3 MB) of 70,716 specimens of 52 species from the Chicago Field Museum collision salvage series, 1978-2016, with collection date (Ecol Lett 10.1111/ele.13434)."
+  - key: S27
+    title: "Long-term increases in wing length occur independently of changes in climate and climate-driven shifts in body size"
+    year: 2024
+    ids: ["10.5061/dryad.bvq83bkk9"]
+    archives: [Dryad]
+    evidence: "confidence: borderline (collision specimens used for morphology). Dryad API: Data.zip (0.8 MB) + README of 27,366 specimens of five passerines. Paper PMC11750374 states the specimens 'were salvaged after fatal collisions with buildings in Chicago'. Zenodo 14226724 is a code-only sibling."
+  - key: S28
+    title: "Relationship between bird-of-prey decals and bird-window collisions on a Brazilian university campus (Brisque et al. 2017 supplements)"
+    year: 2017
+    ids: ["10.3897/zoologia.34.e13729.suppl5", "zenodo:904689", "10.6084/m9.figshare.20037617", "10.6084/m9.figshare.20037617.v1"]
+    archives: [Zenodo, Figshare]
+    evidence: "confidence: borderline (journal supplements). Pensoft deposited Table S1 (docx), total bird-window collision fatalities on the UFSCar Sorocaba campus Aug 2014 - Mar 2016, on Zenodo. SciELO Figshare 20037617 holds the article figures plus Table_1.xls. Other Pensoft supplements (904681-904687) are figures only."
+  - key: S29
+    title: "Bird-Window Collisions at a West-Coast Urban Park Museum (PLOS ONE supporting data)"
+    year: 2016
+    ids: ["10.1371/journal.pone.0144600.s001", "10.1371/journal.pone.0144600.s002", "figshare:1633829"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (journal supplement). PLOS Figshare item 1633829 lists S1 Data.XLSX 'Window Strike Data' (211 KB) and S2 Data area searches, 5 years of window strikes at the California Academy of Sciences (PMC4701451)."
+  - key: S30
+    title: "Factors influencing bird-building collisions in the downtown area of a major North American city (PLOS ONE supporting data)"
+    year: 2019
+    ids: ["10.1371/journal.pone.0224164.s007", "10.1371/journal.pone.0224164.s008", "10.1371/journal.pone.0224164.s009", "figshare:10261217"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (journal supplement). PLOS Figshare item 10261217 has three xlsx: S1 Dataset (GenEst input of collision counts and removal/detection trials) and S2-S3 (building-level data for 21 Minneapolis buildings incl. U.S. Bank Stadium). The data statement of PMC6834121 points to these files."
+  - key: S31
+    title: "Bird-building collision risk: An assessment of the collision risk of birds with buildings by phylogeny and behavior using two citizen-science datasets (PLOS ONE supporting data)"
+    year: 2018
+    ids: ["10.1371/journal.pone.0201558.s004", "figshare:6951275"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (journal supplement). PLOS Figshare item 6951275 has xlsx supplements. S1 Table is described as 'collision records of all birds collected by Project BirdSafe during April and May of 2007 through 2010' (PMC6084936). Opened s004.xlsx (23 KB): per-bird Date, Species, Tag Number rows from April 2007 onward."
+  - key: S32
+    title: "Avian cognition and collision incidence analysis"
+    year: 2026
+    ids: ["10.5281/zenodo.18866599", "10.5281/zenodo.17437872"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (species-level compiled counts, mixed with tower and turbine collisions). Zenodo final_dataframe.csv (103 KB) has a log building-collision count (lbuildingcoll) per species beside tower/turbine counts and traits. Paper PMID 41933443 analyses 259,873 lethal collision events across 854 species."
+near_misses:
+  - {ids: ["10.5061/dryad.8tr8b48", "zenodo:5001082"], why_excluded: "Radio-tracked fledgling survival in an urban landscape; building strikes are a few of 127 tracked birds' fates, not collision records."}
+  - {ids: ["10.5061/dryad.qbzkh18wd", "10.17605/OSF.IO/GBHCF", "10.17632/7jkmnbb9gc"], why_excluded: "Surveys of residents or students about bird-safe windows or citizen science; no bird collision data."}
+  - {ids: ["10.17605/OSF.IO/FQ2HN"], why_excluded: "Bird-building collision education resources; no files."}
+  - {ids: ["10.5061/dryad.vdncjsxqm"], why_excluded: "Birds attracted/trapped by coloured lights at gathering sites in China; no collisions with buildings or glass."}
+  - {ids: ["10.5061/dryad.3xsj3txqp", "10.6084/m9.figshare.26050390", "10.5061/dryad.rjdfn2zh2"], why_excluded: "Banding-station or derived analysis files (species associations, phenology, PGLS outputs); no collision records."}
+  - {ids: ["10.6084/m9.figshare.11997108"], why_excluded: "Journal figure/table copy of a literature review of bird-window collision causes."}
+  - {ids: ["10.6084/m9.figshare.5982394"], why_excluded: "Code only for Schneider et al. 2018 (Virginia Tech window collisions); data are in the PeerJ supplement, not an archive."}
+  - {ids: ["10.6084/m9.figshare.29645593"], why_excluded: "Mitogenome supplementary docs of window-killed bulbuls; genetics, not collision records."}
+  - {ids: ["10.6084/m9.figshare.32025609", "10.13016/n6eq-gavy", "10.11575/prism/25141", "10.5281/zenodo.7733139"], why_excluded: "Poster, dissertation, thesis and article PDF, not datasets."}
+  - {ids: ["10.6084/m9.figshare.c.4440227", "10.6084/m9.figshare.7867703"], why_excluded: "Royal Society supplementary-information document for Winger et al. 2019; the data are in S6 (Dryad)."}
+  - {ids: ["10.1371/journal.pone.0053371", "10.1371/journal.pone.0178667"], why_excluded: "PLOS articles whose collision tables exist only as article tables or PDF supplements (Hager-style Illinois buildings; Stillwater bus shelters), no data file."}
+  - {ids: ["10.15468/uypa42", "10.15468/hqrtbv", "10.15468/jwddqq"], why_excluded: "Museum/barcode bird collections whose specimens partly come from window collisions; collision is not recorded as the dataset subject."}
+  - {ids: ["10.5281/zenodo.15648030"], why_excluded: "Berlin wildlife-rehabilitation admissions for all causes; window collision is one category among many."}
+  - {ids: ["10.5281/zenodo.21431693", "10.5281/zenodo.18020665"], why_excluded: "Bat-window collisions (bats, not birds); 56 MB zip not opened."}
+  - {ids: ["10.5061/dryad.fbg79cp1g"], why_excluded: "Genetic ID of avian remains at solar energy facilities; not building or window collisions."}
+  - {ids: ["10.5061/dryad.h9w0vt4s4", "10.5281/zenodo.21518475", "10.5281/zenodo.7270376", "kaggle:iamtapendu/bird-strike-by-aircafts-data"], why_excluded: "Bird strikes with aircraft."}
+  - {ids: ["10.5061/dryad.1rn8pk0vj", "10.5061/dryad.rbnzs7h9n", "10.5061/dryad.70rxwdcfh"], why_excluded: "Collisions with power lines / linear infrastructure."}
+  - {ids: ["10.5068/d1dd4f"], why_excluded: "Genomic assignment of geographic origin for bird carcasses (Dryad); genetics, not collision records."}
+  - {ids: ["10.34944/1atz-6b62"], why_excluded: "Presentation on bird migration and collisions at Temple University; not a dataset."}
+  - {ids: ["10.17632/8s3fps4vvb.2", "10.5281/zenodo.14732337", "10.5281/zenodo.6624690"], why_excluded: "Vulture soaring and aircraft bird-strike risk; Dutch wind-energy KEC collision tables; bird-bird collision avoidance signals."}
+queries:
+  - "PRIMARY topic, DataCite https://api.datacite.org/dois (cursor-paged): title turbine* AND (bat|bird|avian|fatalit*|mortality|carcass*|collision*) OR description 'wind turbine' AND (carcass*|fatalit*|collision*): 519; ('wind farm*'|'wind energy'|'wind power'|'wind facilit*'|'wind turbine*'|windfarm*|'wind project*'|'wind plant*') AND (carcass*|fatalit*|mortality|'searcher efficiency'|scavenging|'carcass persistence'|collision*|killed|strike*) AND (bat|bird|avian|raptor*|eagle*|Chiroptera) OR Schlagopfer*|Kollisionsopfer*: 737. About 25 research deposits found (Dryad, Zenodo, Mendeley, USGS, Figshare, Recherche Data Gouv)."
+  - "PRIMARY topic, Zenodo https://zenodo.org/api/records: (turbine|'wind farm'|'wind energy'|'wind power'|windfarm) AND (carcass|fatalit*|mortality|collision*|killed) AND (bat|bird|avian|raptor|eagle) AND resource_type.type:dataset: 47. Dryad /api/v2/search: 'wind turbine carcass' 6; 'wind turbine fatality' 11; 'wind farm mortality bats' 2; 'wind farm mortality birds' 4; 'wind turbine collision' 28; 'carcass persistence' 25; 'searcher efficiency' 1; 'wind energy fatalities' 9; 'eagle wind turbine' 7; 'bats killed wind' 7. Figshare /v2/articles/search: four field queries (0, 0, 46, 500) and six phrase queries (500-capped; PLOS/ESA/RS supplements). Mendeley Data: 4 queries. ScienceBase /catalog/items: 16 queries (0-193 hits; P14NMJJR, P937H9LQ, P9M0S3BV, hoary-bat genetics)."
+  - "PRIMARY topic, GBIF https://api.gbif.org/v1/dataset/search, 13 queries (capped at 1000 each): 'wind turbine' 19; 'wind turbines' 11; 'wind farm' 288; 'wind energy' 106; 'wind power' 151; 'parque eólico' 16; 'parques eólicos' 14; 'parc éolien' 3628; 'éolienne' 4318; windpark 22; 'wind facility' 101; aerogenerador 0; 'complexo eólico' 13. Of 1884 wind-related datasets, 561 mention mortality terms and 421 have 'mortalit' (mostly DEPOBIO 'Suivi de mortalité' carcass-search datasets per French wind farm and year). Spot-checked 10.15468/yp98cw (8 occurrences) and 10.15468/xmhzjf (9 occurrences). This failed the size gate, so the backup was used."
+  - "BACKUP, DataCite: ((bird*|avian) AND (window*|glass|building*|facade*|skyscraper*|'built structure*') AND (collision*|strike*|crash*|'window-kill*'|mortality|carcass*)) OR 'window strike*' OR 'window collision*' OR 'bird-window' OR 'bird-building' OR 'bird-glass' OR Vogelschlag OR 'glass collision*': 640; 'window-killed'|'window kills'|'building-killed'|'building collisions'|'collision victims'|'McCormick Place'|'bird-safe'|'bird-friendly glass'|'fritted glass'|'flight tunnel'|'colisiones de aves'|'colisão de aves'|Glasanflug|Vogelanprall|'collisions with glass/windows/buildings': 372; creators (Zimova, Winger, Hager, Klem, Riding, Elmore, Machtans, Piratelli) AND collision/window/glass: 62; ('flight tunnel'|'tunnel test(s)'|'tunnel experiment*') AND bird AND (glass|window|collision): 2; (bird|avian) AND (window*|glass) AND (decal*|markers|UV|ultraviolet|film*|'patterned glass'|'window treatment*') AND (collision*|strike*): 85; (bird|avian|aves) AND (collision(s)|colisiones) AND (campus|university|downtown|skyscraper|museum|stadium|'bus shelter(s)'|'noise barrier(s)'|'glass wall(s)'): 328."
+  - "BACKUP, Zenodo: (bird|birds|avian) AND (window(s)|glass|building(s)|facade) AND (collision(s)|strike(s)|'window-killed'): 155; 'window-killed'|'window kills'|'building-killed'|'collision victims'|'McCormick Place': 4; Spanish/Portuguese colisiones/colisões AND aves AND ventanas/vidrios/janelas/edificios: 1; Vogelschlag|Glasanflug|Vogelanprall|'collisions aviaires': 0; 'bird-friendly'|'bird-safe'|'UV glass'|'flight tunnel': 1; (bird|avian) AND (collision(s)|'window-killed'|'window kills') AND (dataset|software): 88. Zipped GitHub releases were checked with the /files/<key>/container listing."
+  - "BACKUP, Dryad /api/v2/search: 'bird window collisions' 8; 'bird building collisions' 7; 'window strikes birds' 0; 'window-killed birds' 0; 'collision mortality buildings' 10; 'glass collisions birds' 2; 'bird collisions' 64; 'artificial light at night collisions' 3; 'building collision' 16; 'Chicago birds collisions' 1; 'dead birds buildings' 0; 'Zimova migration timing' 0; 'Chicago building collisions' 1; 'Field Museum collisions' 0; 'window collisions' 9; 'window strike' 5; 'collisions with glass' 3; 'bird strikes buildings' 2; 'nocturnal migrants collisions' 5; 'Toronto FLAP' 0. Candidate datasets fetched with /datasets/<doi> and version file lists."
+  - "BACKUP, Figshare POST /v2/articles/search: '\"bird-window collisions\"' 43; '\"window collisions\"' 44; '\"bird-building collisions\"' 25; '\"building collisions\" birds' 500 (capped); '\"window strikes\" birds' 500 (capped); '\"window-killed\"' 1; '\"colisiones de aves\"' 0; '\"colisões de aves\"' 0; 'bird collisions glass' 25; '\"bird-window collisions\"' item_type=dataset 16. PLOS article items and S-files were read with /v2/articles/<id>(/files); three small PLOS xlsx were opened."
+  - "BACKUP, Mendeley Data /api/research-data/search?query= (10 per page, up to 4 pages): 'bird window collisions', 'bird building collisions', 'window strikes birds', 'bird collisions glass', 'colisiones aves ventanas', 'colisão aves vidro', 'window-killed birds', 'bird collision carcass survey', 'bird collisions', 'flight tunnel birds glass', 'window collisions'. Records were read via /public-api/datasets/<id>."
+  - "BACKUP, GBIF /v1/dataset/search (title+description filtered for window/glass/building AND collision terms): 'bird window collision' 2; 'window collisions' 5; 'bird collisions' 48; 'colisión de aves' 187; colisiones 59; 'ventanas aves' 52; colisão 493; 'window strike' 48; 'building collisions' 3; glass 689; collision 148; 'window-killed' 44; salvage 363; 'dead birds' 48; 'vidrios aves' 58; 'collision aves' 19; 'mortalidad aves' 9; vidraças 0; 'janelas aves' 13; 'choques de aves' 129; ventanales 76; 'bird strikes' 109; 'collision mortality' 23; Vogelschlag 0; 'fenêtres oiseaux' 1; window 1264. Qualifying: ypsd84, nkrlhr."
+  - "BACKUP, OSF /v2/nodes|registrations|preprints ?filter[title]=: collision 103/30/24; window 236/110/115; bird-safe 0; glass 220/118/79 (bird titles screened). /v2/search full-text returned 0 for the 4 phrase queries. Harvard Dataverse /api/search: '\"bird collisions\"' 1, '\"window collisions\"' 0, '\"bird-window\"' 0, '\"building collisions\"' 0, 'birds AND window AND collision' 0. Borealis: 3 queries, 0. ScienceBase: 5 queries, 0. PANGAEA ES: 3 queries, 0."
+  - "BACKUP, Kaggle /api/v1/datasets/list?search=: 'bird window collision' 3; 'bird collisions' 6; 'window strikes' 5; 'bird building collisions' 0; 'chicago bird collisions' 0; 'bird collision' 9; collisions 20; 'window collision' 20; 'tidytuesday birds' 0; 'bird strike building' 0; 'dead birds' 4. Two small qualifying files were downloaded, read and deleted."
+  - "BACKUP, Europe PMC REST search: (bird|birds|avian) AND ('window collision(s)'|'window strike(s)'|'bird-window'|'bird-building'|'building collision(s)'|'window-killed'|'collisions with glass'|'glass collisions'|'collisions with windows'|'collisions with buildings'|'bird-glass'|'window kills'): 229. About 40 OA full texts (fullTextXML) were regex-scanned for repository ids and data statements. Broader: (bird|avian) AND (collision(s)|'window-killed'|salvaged) AND (window(s)|glass|building(s)) AND (dryad|zenodo|figshare|'mendeley data'|osf.io|dataverse|gbif|kaggle|'data repository') AND OPEN_ACCESS:Y: 539 (499 new). Of the 499 new papers, 567 OA full texts were fetched cumulatively (3 HTTP errors) and regex-scanned for strong window/building-collision phrases plus repository ids. 13 papers matched, all passing mentions in migration, genomics, urban-ecology or wind papers; none gave a new qualifying deposit."
+  - "doi.org handle API: all 30 keyed DOIs return 200 (scratch/doi_check.txt). OSF zpgt7/v5nu4 and the Kaggle bhavinmoriya upload have no DOI; they were confirmed through the OSF and Kaggle APIs."
+size_verdict: "BACKUP topic used. The primary topic (carcass-search or collision-monitoring data for birds or bats at wind turbines) failed the 30-study ceiling. GBIF alone lists about 420 wind-farm datasets with mortality in the title/description, mostly DEPOBIO post-construction 'Suivi de mortalité' carcass-search datasets (one per wind farm and year, separate studies), on top of about 25 research deposits; see scratch/primary_topic_notes.md. Backup result: 32 studies, 24 firm + 8 borderline, across 8 archives. Firm studies by home archive: Dryad 6 (all mirrored on Zenodo), Zenodo 5, Mendeley Data 4, Figshare 3, OSF 3, GBIF 2 (one via SiB Colombia), Kaggle 1. This is within 5-30 firm across at least 3 archives."

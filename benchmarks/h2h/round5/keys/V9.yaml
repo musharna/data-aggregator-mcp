@@ -1,0 +1,229 @@
+task: V9
+prompt: >-
+  Find every public dataset, in any archive, that holds culture-independent metagenomic (shotgun) or amplicon
+  (16S/18S/ITS) sequencing of the wastewater side of hospital plumbing: sink drains, drain covers and tailpieces, P-traps
+  / sink traps, toilets, shower, bath or floor drains, and in-building sewer pipework of hospitals. Raw reads or processed
+  community tables both count, and studies that also sampled other sites count if the drain/trap samples are part of the
+  deposit. Isolate-only genome sequencing, species-specific typing amplicons, culture-only work, lab model drains, drinking
+  water supply/faucets, non-hospital buildings, and pooled hospital effluent or sewage do not count.
+criteria: >-
+  Topic: PRIMARY. Included: a public deposit (INSDC SRA/ENA/DDBJ BioProject, Zenodo, Figshare, etc.) of shotgun
+  metagenomes or community-marker amplicons (16S/18S rRNA, ITS) generated directly (culture-independently) from samples
+  of hospital wastewater plumbing inside the building: sink drain biofilm or swabs, drain covers, tailpieces, P-trap /
+  sink-trap / waste-trap water or biofilm, toilet bowl/drain, burns-bath, shower and floor drains or traps, and sewer
+  biofilm within a hospital's pipework. Mixed-site studies count when drain/trap samples are among the deposited samples.
+  Long-read MinION metagenomes count. Healthcare means human hospitals. Borderline: sinks sampled only as basin/sink
+  swabs where the drain itself is not specified; hospital-derived plumbing studied ex situ; biofilm coupons in hospital
+  sewers sampled alongside effluent. Excluded: isolate WGS (even of sink-drain isolates), HiSST or other species-typing
+  amplicons, culture/plate-sweep metagenomes, culturomics or qPCR-only studies, laboratory sink-drain models, drinking
+  water/faucet/shower-hose supply side, sink rims, taps and surfaces, university/residential/veterinary/food-industry
+  sinks, pooled hospital effluent/sewage and treatment plants, registered BioProjects with no released data, and journal
+  supplement PDFs. Unit = study: a BioProject, its SRA/ENA/DDBJ study accessions and any Zenodo/Figshare copies of the
+  same study's processed tables are aliases. Separate BioProjects from different papers are separate studies; isolate-only
+  sibling BioProjects of a qualifying paper are not aliases. Every keyed accession was fetched from the ENA portal API
+  and/or NCBI E-utilities (run counts, library strategy/source, BioSample isolation source), with linked papers checked
+  in Europe PMC full text where available.
+studies:
+  - key: S1
+    title: "Surveillance of Escherichia coli and Klebsiella spp. in hospital sink drains (Constantinides et al. 2020)"
+    year: 2020
+    ids: ["PRJEB36775", "ERP120005", "10.6084/m9.figshare.11860893", "10.6084/m9.figshare.11860893.v1", "10.6084/m9.figshare.12337283", "10.6084/m9.figshare.12337283.v1"]
+    archives: [ENA, Figshare]
+    evidence: "ENA: 20 WGS METAGENOMIC runs titled 'Sink drain metagenome' (first public 2020-02-17); Microbial Genomics PMC7478627 cites PRJEB36775 and the Figshare 'Enterobacterales colonisation of hospital sink drains' supplementary data repository (sinks-supp.zip, v1 and v2; not downloaded, >50 MB); isolate project PRJNA604910 is a sibling, not an alias."
+  - key: S2
+    title: "Hospital Plumbing Sink Biofilm Metagenome (old vs new plumbing replacement, Univ. of Virginia)"
+    year: 2020
+    ids: ["PRJNA587635", "SRP239799"]
+    archives: [SRA]
+    evidence: "SRA/ENA: 36 WGS METAGENOMIC runs 'Room N Old/New Plumbing biofilm metagenome', Charlottesville; data statement of npj Antimicrob Resist PMC12847690 (2026, 'Biofilm removal in hospital sink drains drives unintended surges in antibiotic resistance'; preprint 10.1101/2020.11.06.372326) cites PRJNA587635."
+  - key: S3
+    title: "Understanding the microbiologic dynamics of carbapenemase-producing organisms in hospital wastewater premise plumbing"
+    year: 2020
+    ids: ["PRJNA574189", "SRP226867"]
+    archives: [SRA]
+    evidence: "SRA/ENA: 36 WGS METAGENOMIC 'Sink 1-7 biofilm metagenome' runs (biofilm metagenome, Charlottesville, first public 2020-04-14); BioProject describes sink traps in the hospital environment as CPO reservoirs."
+  - key: S4
+    title: "Counterproductive effects of using foam disinfectant to target antimicrobial resistant organisms in hospital sinks"
+    year: 2025
+    ids: ["PRJNA1280267", "SRP593558"]
+    archives: [SRA]
+    evidence: "ENA: 358 WGS METAGENOMIC biofilm-metagenome runs ('Whole shotgun metagenomic sequencing of <sink> Drain biofilm') plus 8 isolate genomes; preprint PPR1172504 (Research Square 10.21203/rs.3.rs-9163989/v1) cites PRJNA1280267."
+  - key: S5
+    title: "Hospital Sink Drain Biofilm study before and after disinfection"
+    year: 2025
+    ids: ["PRJNA1310651", "SRP612388"]
+    archives: [SRA]
+    evidence: "SRA: 147 WGS METAGENOMIC runs (119 short-read + 24 long-read sink drain biofilm metagenomes, 12 operational hospital sinks, plus controls); Nat Commun 2026 paper PMC13385395 cites PRJNA1310651."
+  - key: S6
+    title: "Pathogen suppression in hospital sinks by foaming hydrogen peroxide (16S of tailpieces, P-traps and countertops)"
+    year: 2026
+    ids: ["PRJNA1433472", "SRP681738"]
+    archives: [SRA]
+    evidence: "ENA: 2076 AMPLICON METAGENOMIC runs ('16S amplicon sequencing of environmental microbiome'), isolation sources include 'Hospital sink P-trap' and 'Hospital sink countertop'; matching preprint on Zenodo (10.5281/zenodo.19569884) reports 16S of 1,957 tailpiece, P-trap and countertop samples from 30 hospital rooms."
+  - key: S7
+    title: "Hospital Built Environment: recolonization of hospital sink surfaces after cleaning (Yale New Haven Hospital)"
+    year: 2025
+    ids: ["PRJNA1203679", "SRP554142"]
+    archives: [SRA]
+    evidence: "ENA: 251 AMPLICON runs (hospital metagenome); BioSamples env_local_scale drain (105), ptrap (39), drain cover, sink basin, tap; matches J Hosp Infect 2025 'Bacterial recolonization of hospital sink biofilms' (PMID 40466811, N=251 drainpipes, drain covers, basins, p-trap liquid)."
+  - key: S8
+    title: "SinkBug metagenomes: sink-traps across 29-30 UK hospitals"
+    year: 2025
+    ids: ["PRJNA1190863", "SRP547662"]
+    archives: [SRA]
+    evidence: "ENA: 293 WGS METAGENOMIC wastewater-metagenome runs; BioSamples env_local_scale 'sink fixture', env_medium wastewater, env_broad_scale hospital; matches medRxiv 10.1101/2025.07.25.25332191 ('Sink-ome', metagenomics of 287 sink-traps in 29 UK hospitals)."
+  - key: S9
+    title: "The drainome: metagenomic nanopore sequencing of hospital sink wastewater"
+    year: 2024
+    ids: ["PRJNA1090773", "SRP723315"]
+    archives: [SRA]
+    evidence: "ENA: 109 WGS METAGENOMIC runs (first public 2026-08-02) with BioSample isolation_source 'hospital sink p-trap wastewater' aspirated from ICU bed-space sinks, plus water controls; J Hosp Infect 2024 drainome paper PMC11825382 cites PRJNA1090773."
+  - key: S10
+    title: "Sink drain biofilms in intensive care units (France; resistome independent of microbiota)"
+    year: 2025
+    ids: ["PRJEB83107", "ERP166773"]
+    archives: [ENA]
+    evidence: "ENA: 44 AMPLICON METAGENOMIC wastewater-metagenome runs (first public 2025-01-23); description matches Water Research 2025 / medRxiv 10.1101/2024.12.07.24318639 on sink drain biofilms and wastewater of two ICUs."
+  - key: S11
+    title: "Factors impacting hospital-associated microbial communities composition and stability (multi-kingdom 16S/ITS/18S of sink P-traps)"
+    year: 2026
+    ids: ["PRJEB111259", "ERP191900"]
+    archives: [ENA]
+    evidence: "ENA: 258 AMPLICON METAGENOMIC runs (16S, ITS and 18S sample names; organism mislabeled Homo sapiens), first public 2026-09-30; description: 93 samples from p-traps of 14 sinks in a former ICU ward 2021-2023, matching bioRxiv 10.64898/2026.09.25.754391."
+  - key: S12
+    title: "Microbiome in hospital sink drain surfaces (Japan, before/after cleaning)"
+    year: 2026
+    ids: ["PRJDB40572", "DRP017409"]
+    archives: [DDBJ]
+    evidence: "DDBJ/ENA: 216 AMPLICON METAGENOMIC MiSeq runs (hospital metagenome), first public 2026-04-15; description: swabs of sink drain surfaces in twelve rooms before and after cleaning, V3-V4 16S."
+  - key: S13
+    title: "Complex biofilms across One Health sectors and different countries (COMBAT sink drain biofilms)"
+    year: 2026
+    ids: ["PRJEB121104", "ERP201177"]
+    archives: [ENA]
+    evidence: "ENA: 59 AMPLICON METAGENOMIC biofilm-metagenome runs (first public 2026-09-13); sample titles include 'Sink drain biofilm COM_GER_HOSPITAL_Pool1-4 (Hospital, Germany)', 'COM_UKC_HOSPITAL_6 (Hospital, United Kingdom)' and EHL (Hospital, Estonia) alongside home and farm drains."
+  - key: S14
+    title: "Using genomics to identify hospital transmission of carbapenem-resistant Enterobacteriales (North London)"
+    year: 2024
+    ids: ["PRJEB76684"]
+    archives: [ENA]
+    evidence: "ENA: 36 MinION METAGENOMIC runs (strategy OTHER, selection PCR, 'hospital metagenome') whose BioSamples are 'Environmental metagenomic sample' from hand-wash-basin drain waste traps, sink traps and toilet bowls, alongside CRE isolate genomes; description notes metagenomic sampling of the ward."
+  - key: S15
+    title: "Hospital Plumbing Metagenomes involved in Brisbane CR-Ab outbreak 2016-2018"
+    year: 2020
+    ids: ["PRJNA631351", "SRP260965"]
+    archives: [SRA]
+    evidence: "ENA: 5 WGS METAGENOMIC hospital-metagenome runs with isolation sources incl. 'ENV:burns bath drain' and 'ENV:floor trap water'; Microbial Genomics 2021 PMC8190620 says all metagenomic reads are under PRJNA631351 (isolate projects PRJNA631347/631348/631491 are siblings)."
+  - key: S16
+    title: "IMP4 CPE outbreak: direct metagenomes of burns-unit bath floor traps (Brisbane)"
+    year: 2017
+    ids: ["PRJNA383436", "SRP106560"]
+    archives: [SRA]
+    evidence: "SRA: 6 runs 'Direct Illumina metagenome sequencing of hospital environmental samples' (hospital metagenome) from BioSamples 'ENV1-5: Burns bath floor trap' and 'ENV6: Bathroom floor drain', alongside isolate WGS; paper PMC6981164 (Microb Genom 2020) cites PRJNA383436/SRP106560."
+  - key: S17
+    title: "Cartography of opportunistic pathogens and antibiotic resistance genes in a tertiary hospital environment (Chng et al. 2020)"
+    year: 2020
+    ids: ["PRJEB31632", "ERP114207"]
+    archives: [ENA]
+    evidence: "ENA: 2727 WGS METAGENOMIC runs plus isolate genomes; Nat Med PMC7303012 sampled sink traps (site F) and sink aerators alongside surfaces in Tan Tock Seng Hospital wards and cites PRJEB31632."
+  - key: S18
+    title: "Ecological dynamics of three opportunistic pathogens in hospital (NICU) sink drains (Bourdin et al.)"
+    year: 2023
+    ids: ["PRJNA1042964", "SRP472967", "10.5281/zenodo.14980789", "10.5281/zenodo.10205179"]
+    archives: [SRA, Zenodo]
+    evidence: "ENA: 354 'hospital metagenome' AMPLICON runs titled 'Hypervariable regions V3-V4 of the 16S rRNA gene for the sink sample' from 'NICU Sink drain' (plus tap water, newborn faeces and HiSST typing runs); Zenodo concept 10205179 / version 14980789 'Supplementary tables' of Bourdin et al. include Table S1 16S barcodes/ASV counts; mSystems 2026 paper PMC13011461 cites PRJNA1042964."
+  - key: S19
+    title: "Characterization of bacterial communities in a hospital NICU during a Serratia marcescens outbreak (16S and gyrB)"
+    year: 2018
+    ids: ["PRJNA432186", "SRP131754"]
+    archives: [SRA]
+    evidence: "ENA: 56 AMPLICON METAGENOMIC indoor-metagenome runs; BioSamples (Montreal NICU) include 'Drain' swabs in positive and control rooms among other sites; BioProject says 16S rRNA and gyrB amplicon sequencing (J Clin Microbiol 2018, PMC6113457)."
+  - key: S20
+    title: "16S amplicons from multiple body sites and hospital rooms after pediatric traumatic brain injury"
+    year: 2020
+    ids: ["PRJNA579377", "SRP226997"]
+    archives: [SRA]
+    evidence: "ENA: 970 AMPLICON runs incl. 396 hospital-metagenome runs; BioSample isolation_source includes 'Hospital Room Sink Drain Swab' (52 samples) alongside patient and surface swabs (Pediatr Crit Care Med 2022, PMID 35283451)."
+  - key: S21
+    title: "Multicenter exploration of microbial communities in hospital toilets (Qiita study 14921)"
+    year: 2024
+    ids: ["PRJEB80895", "ERP164848", "qiita:14921"]
+    archives: [ENA, Qiita]
+    evidence: "ENA: 140 AMPLICON METAGENOMIC hospital-metagenome runs with sample names '14921.*'; paper PMC12220145 (2025) points to Qiita 14921/ENA and sampled toilets by brushing the toilet drain and swabbing the bowl water line on oncology vs low-antibiotic wards."
+  - key: S22
+    title: "Hospital metagenome sewage study: ARG transmission from patients through ICU sinks to hospital wastewater (Latvia)"
+    year: 2025
+    ids: ["PRJEB79274", "ERP163461"]
+    archives: [ENA]
+    evidence: "ENA: 101 WGS METAGENOMIC 'hospital metagenome' runs (samples SN_*) plus 7 hospital-sewage 'wastewater metagenome' runs, first public 2025-03-01; description: metagenomic sequencing of samples from ten sinks in two ICUs and a 24-h composite from the building outlet (Pauls Stradins hospital, Latvia)."
+  - key: S23
+    title: "Metagenomes from hospital (NICU) surfaces and sinks (Brooks et al. 2017; 16S of Brooks et al. 2018)"
+    year: 2017
+    ids: ["PRJNA376580", "SRP103137", "PRJNA471744"]
+    archives: [SRA]
+    evidence: "confidence: borderline (sinks sampled as sink-basin interiors / basin drain grill, not drain or trap) - ENA: 24 WGS + 15 AMPLICON indoor-metagenome runs; PMC5703836 sampled 'sink basin interiors' and PMC6011520 'sink basins' incl. the 'sink basin drain grill'; PRJNA471744 holds eukaryotic genomes binned from the same SRR5420274-297 reads (PMC6377789)."
+  - key: S24
+    title: "Bacterial colonization dynamics in the hospital environment after first patient occupancy (Klassert et al. 2021)"
+    year: 2020
+    ids: ["PRJNA672813", "SRP289383"]
+    archives: [SRA]
+    evidence: "confidence: borderline (sink swabs, drain not specified) - ENA: 1262 AMPLICON runs; BioSample 'paragraph' Sink (285) with Floor/Doorhandle and patient swabs; Microbiome PMC8359561 sampled 'the sink' weekly in a new Berlin ward without saying basin or drain."
+  - key: S25
+    title: "Comparative analysis of surface sanitization protocols on the bacterial community structures in the hospital environment (Klassert et al. 2022)"
+    year: 2022
+    ids: ["PRJNA774945", "SRP343378"]
+    archives: [SRA]
+    evidence: "confidence: borderline (washbasin 'WB' swabs, drain not specified) - ENA: 1290 AMPLICON runs, 340 with sample description 'Sink' (alias WB.*) plus floor, door handle and patient swabs (Clin Microbiol Infect 2022, PMID 35272014)."
+  - key: S26
+    title: "Metagenomic sequencing of various municipal and hospital water and biofilm samples (Swedish hospital sewers)"
+    year: 2026
+    ids: ["PRJNA1426335", "SRP678392"]
+    archives: [SRA]
+    evidence: "confidence: borderline (hospital sewer biofilm on deployed metal plates; most samples are 24 h hospital effluent composites) - SRA: 63 METAGENOMIC runs; BioSamples incl. 'Hospital Biofilm' (21) scraped from metal plates, 'Hospital Wastewater' (150) and municipal samples; description: selection of resistant bacteria within Swedish hospital sewers."
+  - key: S27
+    title: "Hospital surface microbiome (year-long metagenomic surveillance under chlorine disinfection)"
+    year: 2026
+    ids: ["PRJNA1393330"]
+    archives: [SRA]
+    evidence: "confidence: borderline (only 5 'Female toilet bowl' swabs within a touch-surface survey; bowl interior vs rim not stated) - ENA: WGS METAGENOMIC runs whose isolation sources are keyboards, desks, soap dispensers, handrails and 'Female toilet bowl'."
+  - key: S28
+    title: "Microbiome of the hospital environment (side-room surfaces incl. sinks before/after decontamination)"
+    year: 2026
+    ids: ["PRJNA1402335", "SRP661961"]
+    archives: [SRA]
+    evidence: "confidence: borderline (sink surface swabs, drain not specified) - ENA: 93 AMPLICON (16S) runs, first public 2026-08-14; BioProject: surface swabs of doors, floor, bed-trays, sinks and walls of hospital side-rooms."
+near_misses:
+  - {ids: ["PRJNA1540402"], why_excluded: "Hospital drain vs urban wastewater 16S BioProject is registered but has no released BioSamples or runs in SRA/ENA."}
+  - {ids: ["PRJNA575544", "SRP224109"], why_excluded: "ICU renovation 16S (PMC7278141): sinks were swabbed along the rim, not the drain."}
+  - {ids: ["PRJEB46174"], why_excluded: "ICU room VRE study (PMC8809377): composite surface swab of bed rails, pumps, sink lip and floor, with no drain samples."}
+  - {ids: ["PRJNA737285"], why_excluded: "Moscow infectious-disease hospital 16S: surfaces including the sink tap and toilet seat, with no drains."}
+  - {ids: ["PRJEB41002", "PRJEB24007", "PRJNA1105564", "PRJNA917438"], why_excluded: "Hospital touch-surface microbiome surveys with no drain or trap samples."}
+  - {ids: ["PRJNA1402132"], why_excluded: "Healthcare air/surface long-read metagenomics; its 'drain' samples are freezer/fridge drains and drainage tanks, not wastewater plumbing."}
+  - {ids: ["PRJNA1310799"], why_excluded: "ICU plumbing-related sites sequenced only as culture plate sweeps (not culture-independent)."}
+  - {ids: ["PRJNA1030081", "PRJNA910571", "PRJNA729113", "PRJNA1009139"], why_excluded: "NICU sink-drain samples sequenced only with HiSST species-typing amplicons, not community 16S/ITS or shotgun."}
+  - {ids: ["PRJNA604910", "PRJNA1138263", "PRJNA1138264", "PRJNA1026567", "PRJNA611540", "PRJNA868296", "PRJNA497126", "PRJNA741123", "PRJNA430813", "PRJNA430442", "PRJNA1170947", "PRJEB65302", "PRJEB115929", "PRJEB108637", "PRJNA1467107", "PRJNA1295720", "PRJNA1207498", "PRJEB39942", "PRJNA1140135", "PRJEB76256", "PRJNA762702", "PRJNA631491", "PRJNA1291254"], why_excluded: "Isolate genome sequencing of bacteria cultured from hospital sinks, drains, traps or patients; no metagenomes or community amplicons."}
+  - {ids: ["PRJEB43840", "PRJNA487668", "PRJNA1532523", "PRJNA1360409"], why_excluded: "Laboratory sink-trap or drain-biofilm models, bench-scale P-traps or synthetic communities, not hospital plumbing samples."}
+  - {ids: ["PRJNA1254264", "PRJEB42256", "PRJNA860571", "PRJNA1363208", "PRJNA1250189"], why_excluded: "Sinks in university buildings, residences or public washrooms, not hospitals."}
+  - {ids: ["PRJEB84924", "PRJNA1335652"], why_excluded: "Veterinary clinic environments, not human hospitals."}
+  - {ids: ["PRJNA299404", "PRJNA1299060", "PRJNA235905"], why_excluded: "Hospital water supply side (shower hoses, shower systems, hot-water system), not wastewater plumbing."}
+  - {ids: ["PRJEB78708"], why_excluded: "TRACS Liverpool: 350 metagenome runs among isolate genomes, but no sample metadata identifying sink or drain sources, so this could not be confirmed."}
+  - {ids: ["PRJNA1280118", "PRJNA1280114"], why_excluded: "CDC healthcare wastewater umbrella project: broth enrichments and plate cultures of facility wastewater."}
+  - {ids: ["PRJNA1033037", "PRJNA989503", "PRJEB80084", "PRJNA1197663", "PRJNA1179688", "PRJEB109763", "PRJEB60913", "PRJNA999488"], why_excluded: "Pooled hospital effluent, sewage or treatment-plant metagenomes (examples of about 200 such projects), not in-building drains or traps."}
+  - {ids: ["PRJNA376566", "PRJNA221723"], why_excluded: "Preterm infant gut metagenomes; siblings of the Brooks NICU room study (S23)."}
+  - {ids: ["10.5281/zenodo.19569884"], why_excluded: "Preprint PDF about enhanced sink-drain cleaning, not a dataset; its data are S6."}
+  - {ids: ["10.6084/m9.figshare.c.7905958", "10.3389/fmicb.2024.1501170.s001"], why_excluded: "Journal supplement collections (hospital toilets paper; hospital sink-drain culturomics), not sequence data deposits."}
+  - {ids: ["PRJNA167667", "PRJNA193445"], why_excluded: "Single-cell genome assemblies from a hospital sink biofilm, not metagenomes or amplicons."}
+queries:
+  - "NCBI BioProject: sink/drain/trap/plumbing terms AND hospital terms 103; 'sink drain(s)' 29; 'sink trap OR p-trap' 10; 'hospital sink' 42; 'hospital drain' 17; 'hospital plumbing' 13; 'hospital wastewater' 312; 'u-bend' 1; 'hospital sinks' 31; fixture terms (handbasin, faucet, shower, toilet, sewer biofilm, washbasin) AND hospital 37; hospital AND (wastewater OR sewage OR pipe OR biofilm) AND (metagenome OR 16S OR amplicon) 199."
+  - "NCBI SRA (grouped by BioProject): sink AND hospital AND metagenomic 6288 runs / 28 projects; drain/trap/plumbing AND hospital AND metagenomic 3738 / 25; 'sink drain(s)/sink trap(s)/p-trap(s)' 6870 / 70; fixture terms AND hospital AND metagenomic 4011 / 31; hospital metagenome organism AND plumbing terms 1978 / 21; faucet/handbasin drain biofilm 320 / 2; Ireland pipe terms 81 / 10; Bolivia sinks 1346 / 31; hospital sink nanopore metagenomic 151 / 3."
+  - "ENA portal: read_run filereports for every candidate; study title/description wildcard searches (5 queries); metagenomic runs with isolation_source matching sink/drain/trap/toilet/siphon/plumbing/u-bend/shower 36566 runs (about 250 projects screened); sample XML for PRJEB76684, PRJEB79274, PRJEB121104."
+  - "NCBI BioSample attribute summaries (elink + esummary) for 25 candidate projects."
+  - "DDBJ Search API bioproject: 'hospital sink' 46; 'sink drain' 31; 'hospital drain' 16; 'sink trap' 9."
+  - "Europe PMC: title/abstract plumbing terms AND hospital AND sequencing terms 148; plumbing terms AND accession-type filter 277 (79 hospital-related full texts mined); targeted title searches for about 15 known papers; full-text accession extraction for about 110 papers and preprints."
+  - "DataCite: plumbing terms AND hospital terms AND Dataset/Collection/Other 181."
+  - "Zenodo: title plumbing terms AND hospital 75; description sink drain/trap AND sequencing terms 3; 'hospital sink(s)/plumbing/drains, sink-trap(s)' 4."
+  - "Figshare: 8 queries (sink drain, sink trap/p-trap, hospital AND sink, hospital AND drain, hospital plumbing, drain biofilm) 0-100 each; only the Constantinides repository qualified."
+  - "Dryad: 'hospital sink' 0; 'sink drain' 7; 'hospital drain' 0; 'hospital plumbing' 0; 'p-trap' 38; 'hospital wastewater biofilm' 0 (none relevant)."
+  - "MG-RAST search: sink 103; hospital 860; drain 16 (no hospital plumbing projects)."
+  - "Qiita public study page 14921 checked; CNGB search endpoint not reachable (302 redirect)."
+size_verdict: "ok: primary topic kept; 28 distinct studies (22 firm, 6 borderline) across 6 archives (firm studies per archive: SRA 13, ENA 8, DDBJ 1; Zenodo and Figshare host processed-data aliases of S18 and S1, and Qiita hosts S21)."

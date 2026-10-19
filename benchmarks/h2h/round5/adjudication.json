@@ -1,0 +1,289 @@
+{
+ "V1": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "KAP241832",
+     "KGD10063443",
+     "KGD10063444"
+    ]
+   }
+  ],
+  "optional": [],
+  "reject": [],
+  "alias": {}
+ },
+ "V10": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "PRJEB103957"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "PRJNA1031168",
+     "SRP467950"
+    ]
+   }
+  ],
+  "reject": [
+   "PRJEB41528",
+   "PRJEB127169",
+   "PRJEB35596",
+   "PRJEB106305",
+   "PRJEB104944"
+  ],
+  "alias": {}
+ },
+ "V2": {
+  "add": [],
+  "optional": [],
+  "reject": [
+   "GSE260568",
+   "PRJNA664900",
+   "PRJNA1515428"
+  ],
+  "alias": {}
+ },
+ "V3": {
+  "add": [],
+  "optional": [],
+  "reject": [
+   "10.17605/osf.io/zjswa"
+  ],
+  "alias": {}
+ },
+ "V4": {
+  "add": [],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "10.15468/dl.3dpgzn",
+     "10.15468/dl.heq2nw"
+    ]
+   }
+  ],
+  "reject": [
+   "datacite:10.6084/m9.figshare.32025609",
+   "figshare:114863",
+   "10.1371/journal.pone.0024708",
+   "10.25334/q4zt3f",
+   "10.1371/journal.pone.0053371",
+   "10.1371/journal.pone.0178667.t002",
+   "10.1371/journal.pone.0053371.t002",
+   "10.6084/m9.figshare.32025609"
+  ],
+  "alias": {}
+ },
+ "V5": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "10.17617/3.1ddavp",
+     "10.17617/3.93v7dd",
+     "10.17617/3.a6enhh",
+     "10.17617/3.bvkvjf",
+     "10.17617/3.knfemp",
+     "10.17617/3.rcdk6m",
+     "10.17617/3.rzrnt8",
+     "10.17617/3.wpyyf3"
+    ]
+   },
+   {
+    "key": "A2",
+    "ids": [
+     "10.17632/vtbg4xn26v"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "10.5281/zenodo.4572396"
+    ]
+   },
+   {
+    "key": "B2",
+    "ids": [
+     "10.13012/b2idb-6733018_v1"
+    ]
+   }
+  ],
+  "reject": [
+   "10.5281/zenodo.17954317",
+   "10.5281/zenodo.17954316",
+   "MSV000101829",
+   "MSV000092846",
+   "10.5281/zenodo.4780883",
+   "10.17632/5cdpbpbkcz"
+  ],
+  "alias": {
+   "S12": [
+    "MSV000084590"
+   ]
+  }
+ },
+ "V6": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "10.18739/A25X25D07",
+     "doi:10.18739/A2793K"
+    ]
+   },
+   {
+    "key": "A2",
+    "ids": [
+     "hdl:2115/87441"
+    ]
+   }
+  ],
+  "optional": [],
+  "reject": [
+   "UNVERIFIED: NOAA NCEI Paleo - Lomonosovfonna, Svalbard ice core ion chemistry incl. MSA (Isaksson, Kekonen et al.)",
+   "https://www.polardata.ca/pdcsearch/PDCSearch.jsp?doi_id=256",
+   "UNVERIFIED: PANGAEA - Akademii Nauk ice cap, Severnaya Zemlya ion chemistry incl. MSA (Weiler, Fritzsche, Opel et al.)",
+   "UNVERIFIED: NOAA NCEI Paleo - NEEM-2011-S1 MSA and bromine (Maselli et al. 2017)",
+   "https://www.polardata.ca/pdcsearch/PDCSearch.jsp?doi_id=258",
+   "UNVERIFIED: NOAA NCEI Paleo - Mount Logan PR Col ice core major ions and MSA (Osterberg et al. 2008)",
+   "10.18739/A2TB0XV7T",
+   "UNVERIFIED: Lomonosovfonna MSA (Isaksson/O'Dwyer)",
+   "UNVERIFIED: NOAA NCEI Paleo - Eclipse Icefield, Yukon ice core chemistry (Yalcin, Wake et al.)",
+   "UNVERIFIED: Akademii Nauk ice core chemistry (Weiler et al. 2005; Opel et al.)"
+  ],
+  "alias": {
+   "S2": [
+    "UNVERIFIED: NOAA NCEI Paleo - Greenland ice core MSA records (Osman et al. 2019)",
+    "UNVERIFIED: NOAA NCEI Paleo study for Osman et al. 2019 (paper doi:10.1038/s41586-019-1060-4)"
+   ],
+   "S4": [
+    "UNVERIFIED: Penny Ice Cap MSA",
+    "UNVERIFIED: NOAA NCEI Paleo - Penny Ice Cap, Baffin Island ice core chemistry (Grumet et al.)"
+   ],
+   "S1": [
+    "https://www.ncei.noaa.gov/pub/data/paleo/icecore/greenland/summit/gisp2/chem/",
+    "UNVERIFIED: GISP2 MSA (Saltzman et al. 1997)",
+    "UNVERIFIED: NOAA NCEI Paleo - GISP2 methanesulfonate (Saltzman et al. 1997)",
+    "UNVERIFIED: NSIDC GISP2 CD-ROM chemistry (gisp2/chem)"
+   ],
+   "S11": [
+    "UNVERIFIED: Arctic Data Center - Greenland Summit ice core MSA (Jongebloed et al. 2023)"
+   ],
+   "S3": [
+    "UNVERIFIED: PANGAEA - GRIP MSA and sulfate (Legrand et al. 1997)"
+   ]
+  }
+ },
+ "V7": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "LucieLprt-Dvldr/WhaleDrone",
+     "https://huggingface.co/datasets/LucieLprt-Dvldr/WhaleDrone",
+     "https://huggingface.co/datasets/pierreadorni/WhaleDrone-YOLO",
+     "pierreadorni/WhaleDrone-YOLO"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "https://universe.roboflow.com/welding-gisso/dronewhale"
+    ]
+   },
+   {
+    "key": "B2",
+    "ids": [
+     "10.5281/zenodo.20070987",
+     "10.5281/zenodo.21401889"
+    ]
+   }
+  ],
+  "reject": [
+   "10.34992/sgs5-yw58",
+   "Boulent2023_beluga_aerial_human_in_the_loop",
+   "10.5285/c1afe32c-493c-4b0a-8de4-2f1e6f8b6b4c",
+   "10.5285/c1afe32c-493c-4dc5-8c9b-7fe7d1be1b6c",
+   "Guirado2019_whale_counting_satellite",
+   "https://universe.roboflow.com/whale-detect",
+   "10.5285/C1AFE32C-493C-4ADD-9B2E-6E4C4A2D1F4D"
+  ],
+  "alias": {
+   "S1": [
+    "https://github.com/WSiqiqi/WSDataset"
+   ],
+   "S13": [
+    "Borowicz2019_aerial_trained_cetaceans_satellite"
+   ],
+   "S2": [
+    "Green2023_gray_whale_satellite_detection"
+   ]
+  }
+ },
+ "V8": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "10.25439/rmt.12618755"
+    ]
+   },
+   {
+    "key": "A2",
+    "ids": [
+     "10.5281/zenodo.16874898",
+     "https://stimmdb.coli.uni-saarland.de/"
+    ]
+   }
+  ],
+  "optional": [],
+  "reject": [
+   "kaggle:cycoool29/movement-disorders-voice",
+   "10.5281/zenodo.10777657",
+   "kaggle:feimuzhao/parkinson-audio"
+  ],
+  "alias": {
+   "S15": [
+    "https://github.com/SJTU-YONGFU-RESEARCH-GRP/Parkinson-Patient-Speech-Dataset"
+   ]
+  }
+ },
+ "V9": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "CNP0005378"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "https://opus4.kobv.de/opus4-rhein-waal/frontdoor/index/index/docId/2082"
+    ]
+   }
+  ],
+  "reject": [
+   "PRJEB115929",
+   "PRJNA741124",
+   "PRJNA487668",
+   "PRJNA1540402",
+   "PRJNA924001"
+  ],
+  "alias": {}
+ }
+}

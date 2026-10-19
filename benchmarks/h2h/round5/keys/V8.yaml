@@ -1,0 +1,151 @@
+task: V8
+prompt: >-
+  Find every public dataset, in any archive, that holds audio recordings of the speech or voice of people with
+  Parkinson's disease (sustained vowels, reading, diadochokinetic syllables, spontaneous speech, and so on) that can be
+  used for acoustic analysis; datasets that also include healthy controls or other conditions count if they contain
+  Parkinson's speakers. Tables of acoustic features or measurements without the audio, synthetic or simulated voices,
+  animal models, recordings available only by application or under a data use agreement, and papers without deposited
+  audio do not count.
+criteria: >-
+  Topic: PRIMARY (speech/voice recordings of people with Parkinson's disease, for acoustic analysis). Included: a public
+  deposit (Zenodo, Figshare, IEEE DataPort, journal-supplement platforms on Figshare, NAKALA, Kaggle, Hugging Face, etc.)
+  whose files include audio (wav/mp3, or video with the speech soundtrack) of human speakers diagnosed with idiopathic
+  Parkinson's disease. Deposits that are openly downloadable or need only a free account (IEEE DataPort open access,
+  Kaggle) count as public. Copies and mirrors of one corpus on other platforms (Figshare, Kaggle, Hugging Face re-uploads)
+  are aliases of the original study. Flagged confidence: borderline are journal-supplement audio or video examples (a
+  few files illustrating a paper rather than a dataset), a single teaching example, resynthesized or synthesized replicas
+  of real PD voices, processed speech clips whose format could not be confirmed, and re-uploads whose provenance is not
+  stated. Excluded (near_misses): feature-only or measurement-only tables, even when extracted from PD recordings (UCI
+  Parkinsons, Telemonitoring, Sakar, Naranjo, Neurovoz Rasta-PLP, Mendeley feature sets, OSF Praat/formant tables);
+  restricted, credentialed or application-only corpora (NeuroVoz, EWA-DB, ParkCeleb, HeyJay!, Bridge2AI-Voice, mPower,
+  Radboud CHASING, Zenodo restricted records); synthetic data; perceptual ratings without audio; journal supplements of
+  PDFs, docx or tables; animal models (Pink1-/- rat, zebra finch); other disorders without PD speakers (ALS, ataxia,
+  corticobasal syndrome, cerebral palsy, TORGO/UA-Speech); code-only records.
+studies:
+  - key: S1
+    title: "Mobile Device Voice Recordings at King's College London (MDVR-KCL) from both early and advanced Parkinson's disease patients and healthy controls"
+    year: 2019
+    ids: ["10.5281/zenodo.2867216", "10.5281/zenodo.2867215", "zenodo:2867216", "10.6084/m9.figshare.32588973", "10.6084/m9.figshare.32588973.v1", "10.6084/m9.figshare.32588973.v2", "kaggle:nutansingh/mdvr-kcl-dataset", "kaggle:shivam17818/parkinsons-dataset", "huggingface:Hahad14/Parkinsons_Disease_Speech", "huggingface:harishBattula2/Parkinsons_Disease_Speech"]
+    archives: [Zenodo, Figshare, Kaggle, Hugging Face]
+    evidence: "Zenodo API: open record with 26_29_09_2017_KCL.zip (606 MB) of smartphone recordings (ReadText and SpontaneousDialogue) of early/advanced PD patients and controls made at KCL in Sept 2017; the Figshare 'Parkinson-Disease-voice-Dataset' (39 files ID02_pd_2_0_0.wav ...) and the Kaggle/Hugging Face uploads list the same IDxx_pd/hc_*.wav files under 26-29_09_2017_KCL/ReadText, so they are copies."
+  - key: S2
+    title: "Italian Parkinson's Voice and Speech"
+    year: 2019
+    ids: ["10.21227/aw6b-tg17", "10.21227/kv93-ak67", "kaggle:ieeeai/italian-parkinsons-voice-and-speech", "kaggle:anshsavla/italian-parkinsons-speech", "huggingface:birgermoell/Italian_Parkinsons_Voice_and_Speech"]
+    archives: [IEEE DataPort, Kaggle, Hugging Face]
+    evidence: "IEEE DataPort open-access page (both DataCite DOIs resolve to the same URL): one 565 MB zip of wav files plus xlsx for 15 young controls, 22 elderly controls and 28 PD patients (Dimauro et al. 2017 IEEE Access), CC BY, free IEEE login needed; the Hugging Face and Kaggle uploads cite DOI 10.21227/aw6b-tg17 and list the same B1/B2/PR1*.wav files."
+  - key: S3
+    title: "Voice Samples for Patients with Parkinson's Disease and Healthy Controls"
+    year: 2023
+    ids: ["10.6084/m9.figshare.23849127", "10.6084/m9.figshare.23849127.v1", "kaggle:drishyatomar/voice-samples-for-parkinsons-and-healthy-controls"]
+    archives: [Figshare, Kaggle]
+    evidence: "Figshare API: PD_AH.zip and HC_AH.zip of telephone-recorded sustained /a/ wav files plus Demographics_age_sex.xlsx (Iyer, Kemp, Virmani, Prior et al., UAMS; data-availability statement of PMC10667335); the Kaggle copy lists 40 PD_AH and 41 HC_AH wav files."
+  - key: S4
+    title: "Audios_vowel_A_PD"
+    year: 2022
+    ids: ["10.6084/m9.figshare.21453867", "10.6084/m9.figshare.21453867.v1"]
+    archives: [Figshare]
+    evidence: "Figshare API: A_Audios.zip (50 MB) with folders A_EP_Audios and A_noEP_Audios of sustained /a/ from Argentine speakers with and without PD, plus data_information.csv (age, sex, disease duration; Giuliano et al., UNLaM)."
+  - key: S5
+    title: "Arabic Parkinson's Disease Speech Dataset"
+    year: 2026
+    ids: ["10.5281/zenodo.22036480", "10.5281/zenodo.22036479", "zenodo:22036480"]
+    archives: [Zenodo]
+    evidence: "Zenodo API and download of MDP3.zip (38.6 MB, then deleted): 40 MP3 files in MDP3/PARKINSON and MDP3/NORMAL from 17 PD and 23 control native Arabic speakers (vowels, reading passage, spontaneous speech; Hassanat et al. 2026, 10.1177/11795735261448278)."
+  - key: S6
+    title: "VOC-PD Dataset: Multi-task Mandarin Speech Recordings of Parkinson's Disease Patients and Healthy Controls"
+    year: 2026
+    ids: ["10.5281/zenodo.21775027", "10.5281/zenodo.21775026", "zenodo:21775027"]
+    archives: [Zenodo]
+    evidence: "Zenodo API: open record with 'VOC-PD database.zip' (367 MB, 1,551 wav files: 811 PD, 740 controls; numbers, phrases, sentences, vowels, monophthong tasks), participants.xlsx, data_dictionary.xlsx and README.md."
+  - key: S7
+    title: "Voice treatment for speakers with dysarthria (Hsu et al., 2022)"
+    year: 2022
+    ids: ["10.23641/asha.19529017", "10.23641/asha.19529017.v1"]
+    archives: [Figshare (ASHA journals)]
+    evidence: "confidence: borderline (journal-supplement audio examples, not a curated dataset). Figshare API: nine wav files S1-S9 (0.9-1.8 MB each) supplementing Hsu et al. 2022 AJSLP, an acoustic study of nine Mandarin speakers with hypokinetic dysarthria due to PD recorded before and after LSVT-style treatment."
+  - key: S8
+    title: "Increased Intelligibility in Speakers With Parkinson's Disease (Tjaden et al., 2014)"
+    year: 2014
+    ids: ["10.23641/asha.6170453", "10.23641/asha.6170453.v1"]
+    archives: [Figshare (ASHA journals)]
+    evidence: "confidence: borderline (eight short supplement wav files, mostly resynthesized hybrid sentences). Figshare API: JSLHR_57_4_1191Supp1-8.wav, conversational, clear and hybridized versions of sentences read by two speakers with PD in an analysis-resynthesis study."
+  - key: S9
+    title: "Neurological modulation of singing and speech (Kim et al., 2023)"
+    year: 2023
+    ids: ["10.23641/asha.21809544", "10.23641/asha.21809544.v1"]
+    archives: [Figshare (ASHA journals)]
+    evidence: "confidence: borderline (one supplementary video; contents not opened, 310 MB). Figshare API: S1_JSLHR-22-00274kim.mp4, supplement to a study of spontaneous, modelled and sung speech in speakers with PD, cerebellar disease and controls."
+  - key: S10
+    title: "Dual-task performance in Parkinson disease (Whitfield et al., 2019)"
+    year: 2019
+    ids: ["10.23641/asha.8637008", "10.23641/asha.8637008.v1"]
+    archives: [Figshare (ASHA journals)]
+    evidence: "confidence: borderline (three small illustrative video clips, 0.4-0.6 MB). Figshare API: SuppS1-S3.mp4 for a JSLHR study of connected-speech acoustics in PD and controls under single- and dual-task conditions."
+  - key: S11
+    title: "Dysarthrie parkinsonnienne"
+    year: 2022
+    ids: ["10.34847/nkl.60888k55"]
+    archives: [NAKALA]
+    evidence: "confidence: borderline (a single teaching example). NAKALA API: one wav file 10_Phon.Clin.MDP.wav (906 KB, CC BY-NC-ND, embargo ended 2022-10-11) by F. Viallet in the TIPA 38 audio collection of clinical phonetics examples."
+  - key: S12
+    title: "Synthetic vowels of speakers with Parkinson's disease and Parkinsonism"
+    year: 2019
+    ids: ["10.6084/m9.figshare.7628819", "10.6084/m9.figshare.7628819.v1"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (synthesized replicas, not the original recordings). Figshare API: records.zip (934 MB) and dataset.csv with synthesized replicas of sustained /A/ and /I/ by HC, PD, MSA and PSP speakers (Hlavnicka et al. 2019 IEEE Access), meant for testing pitch detectors."
+  - key: S13
+    title: "Processed Multimodal MRI and Speech Datasets for Parkinson's Disease Classification"
+    year: 2026
+    ids: ["10.5281/zenodo.22082939", "10.5281/zenodo.22082938"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (dataset.zip is 1.3 GB, so the clip format could not be confirmed). Zenodo API: 'processed speech clips' (266 PD and 236 non-PD from public sources, plus 163 PD and 295 non-PD from Xinjiang Medical University) paired with MRI for ParkMultiNet."
+  - key: S14
+    title: "Parkinson's Voice Dataset (Kaggle, ucimachinelearning)"
+    year: 2026
+    ids: ["kaggle:ucimachinelearning/parkinsons-voice-dataset"]
+    archives: [Kaggle]
+    evidence: "confidence: borderline (no description or provenance; the account is not the UCI repository). Kaggle API: CC0, 68 MB; the paged file listing (first 400 files) shows only Voice_Dataset/Healthy/healthy_NNN.wav, so a PD folder could not be confirmed; cited as a PD voice source by PMC13663969."
+  - key: S15
+    title: "Parkinson Patient Speech Dataset (GitHub)"
+    year: 2025
+    ids: ["kaggle:drishyatomar/parkinson-patient-speech-dataset-github"]
+    archives: [Kaggle]
+    evidence: "confidence: borderline (Kaggle re-upload of a GitHub repository 'Parkinson-Patient-Speech-Dataset-master' with no description). Kaggle API: 411 MB, MIT licence, denoised-speech-dataset/ folders of per-speaker wav and txt files (DL, Faces/BG_au, Faces/JC_au) plus DL_au_all.csv."
+near_misses:
+  - {ids: ["10.24432/C59C74", "uci:174", "10.21227/f3as-xs70", "10.17632/xf72thfgdv", "10.17632/xf72thfgdv.1", "10.5281/zenodo.22300217", "10.5281/zenodo.22300216", "10.5281/zenodo.15298993", "10.5281/zenodo.15298992", "kaggle:pypiahmad/oxford-parkinsons-disease-detection-dataset"], why_excluded: "UCI 'Parkinsons' (Little et al. 2007): 22 dysphonia measures for 195 recordings of 31 people, no audio. The IEEE DataPort, Mendeley, Zenodo MoveAtlas and Kaggle records are copies of the same csv; Zenodo 15298993 is a student report bundling it."}
+  - {ids: ["10.24432/C5ZS3N", "uci:189", "10.6084/m9.figshare.33212514", "10.6084/m9.figshare.33212514.v1"], why_excluded: "UCI Parkinsons Telemonitoring (Tsanas & Little): 16 voice measures per home recording with UPDRS, no audio; Figshare 'Dataset for Parkinson Disease' is parkinsons_updrs.csv copied from it."}
+  - {ids: ["10.24432/C5NC8M", "uci:301", "10.34740/kaggle/ds/1846807", "kaggle:jeevanantham006/parkinson-multiple-sound-recordings"], why_excluded: "UCI Parkinson's Speech with Multiple Types of Sound Recordings (Sakar et al. 2013): 26 extracted features per voice sample, no audio files (Kaggle copy likewise)."}
+  - {ids: ["10.24432/C5MS4X", "uci:470", "10.21227/0tz7-jt13", "kaggle:dipayanbiswas/parkinsons-disease-speech-signal-features"], why_excluded: "UCI Parkinson's Disease Classification (Sakar et al. 2018): 753 features from sustained /a/ of 252 people, no audio. IEEE DataPort 'PD_dataset' is pd_speech_features.csv of the same 758 instances behind a subscription."}
+  - {ids: ["10.24432/C5W02Q", "uci:392", "10.24432/C5QK6J", "kaggle:ruslankl/early-biomarkers-of-parkinsons-disease"], why_excluded: "UCI Early biomarkers of PD based on natural connected speech (Hlavnicka et al. 2017): speech-timing features for 30 PD, 50 RBD and 50 controls, no audio. C5QK6J redirects to UCI dataset 478, which the API reports as not found."}
+  - {ids: ["10.24432/C5701F", "uci:489", "10.6084/m9.figshare.19322543", "kaggle:hugosouza/parkinson-replicated-acoustic-features-dataset", "10.5281/zenodo.21897611", "10.5281/zenodo.21897610"], why_excluded: "UCI Parkinson Dataset with replicated acoustic features (Naranjo, Perez et al. 2016): features from three /a/ replications of 80 subjects, no audio. Figshare/Kaggle copies; Zenodo 21897611 is a code release bundling this file and the UCI 174 file."}
+  - {ids: ["10.24432/C52S4Z", "uci:282"], why_excluded: "UCI LSVT Voice Rehabilitation (Tsanas 2014): 310 dysphonia features for 126 phonations by 14 PD patients in LSVT. Feature matrix only, no audio. Found through Europe PMC PMC11280556; the name lacks the word Parkinson, so UCI search missed it."}
+  - {ids: ["10.5281/zenodo.3557758", "10.5281/zenodo.3401685", "10.5281/zenodo.3401684"], why_excluded: "Neurovoz Rasta-PLP features of six sentences (47 PD, 32 controls; Moro-Velazquez et al. 2019 Sci Rep): frame-level features only, no audio."}
+  - {ids: ["10.5281/zenodo.13647600", "10.5281/zenodo.10777656", "10.5281/zenodo.10777657"], why_excluded: "NeuroVoz Castilian Spanish corpus of parkinsonian speech (2,977 audio files, 54 PD, 58 controls): Zenodo access_right=restricted, files given only on request."}
+  - {ids: ["10.5281/zenodo.10952480", "10.5281/zenodo.10952479", "10.5281/zenodo.13954768", "10.5281/zenodo.13954767", "10.3886/ICPSR39448", "10.3886/ICPSR39448.V1", "physionet:b2ai-voice", "syn4993293", "10.34973/0w4g-bb09", "10.34973/h19s-c122", "10.5281/zenodo.7260196", "10.5281/zenodo.8032538", "10.5281/zenodo.20760172", "10.23641/asha.27078079"], why_excluded: "Restricted, credentialed or application-only: EWA-DB Slovak speech database (restricted), ParkCeleb (restricted metadata and YouTube links only), HeyJay! atypical speech (ICPSR restricted), Bridge2AI-Voice (PhysioNet credentialed/restricted), mPower voice task (Synapse controlled access), Radboud CHASING Treasure Hunters recordings (Restricted Access), three Zenodo restricted PD voice/sEMG records, and the Speech Accessibility Project (DUA; the ASHA record is a PDF supplement)."}
+  - {ids: ["10.5281/zenodo.10406860", "10.5281/zenodo.10406859", "10.17632/fjd6fcfkwn", "10.17632/fjd6fcfkwn.1", "10.17632/jrm7nw6b7b", "10.17632/jrm7nw6b7b.1", "10.17632/zdp72s54cd", "10.17632/zdp72s54cd.1"], why_excluded: "Extremadura group (Campos-Roca, Perez, Madruga, Carron) feature tables from PD and control recordings: VOT plosive features, mobile-app acoustic features, smartphone-mismatch features and noisy DDK features. csv/xlsx only, no audio."}
+  - {ids: ["10.25824/redu/DQDY7K", "10.5281/zenodo.19606497", "10.5281/zenodo.19606496", "kaggle:vvaseekaran/parkinsons-voice-data-sri-lanka", "10.6084/m9.figshare.29951852", "10.6084/m9.figshare.29951852.v1", "10.6084/m9.figshare.30069190", "10.6084/m9.figshare.30069190.v1", "10.1371/journal.pone.0185613", "10.3389/fnhum.2025.1566274.s001"], why_excluded: "Acoustic-measure tables without audio: Unicamp REDU 24 prosodic-acoustic parameters (Parameters.tab); Fumel et al. rhythm metrics for PD and SCA (data.csv: %V, VarcoV, nPVI per trial); Sri Lankan Praat features (Kaggle csv); Figshare 'Extended Dataset of Extracted Acoustic Features' (combined_dataset.csv) and its figures-only companion; PLOS ONE 2017 Lithuanian supplements (captions: 'extracted audio features'; raw recordings on request); Frontiers dysprosody data sheet (98 KB zip)."}
+  - {ids: ["osf:cvuhw", "osf:geyb7", "osf:hfuq5", "osf:h7zpa", "osf:x8tzd", "osf:9bsqy", "osf:txs87", "osf:5s34w", "osf:frjc2", "osf:q7ncx", "osf:x425d", "osf:7d32x", "osf:9sy7j", "osf:8fybs", "10.23641/asha.12170112", "osf:ktg5q"], why_excluded: "OSF and ASHA deposits of measurements derived from PD speech with no audio: PC-GITA phonological posteriors and HNR (cvuhw), prosodic prominence pitch/intensity/duration (geyb7), acoustic and kinematic VSA and diphthong measures (hfuq5, with child projects h7zpa and x8tzd), Praat/RAPT f0 of one bilingual PD speaker (txs87), face-mask spectral measures (5s34w), cross-linguistic acoustic measures with listener ratings (frjc2), AVQI values with crowdsourced ratings (x425d), qVAI/VOT RData (7d32x), LSVT formant tokens with ratings (8fybs = ASHA 12170112 Nightingale et al., same files), and dysarthria entrainment model fits (ktg5q)."}
+  - {ids: ["10.5281/zenodo.17753641", "10.5281/zenodo.17753640", "10.6084/m9.figshare.32933759", "10.5281/zenodo.17756970", "10.5281/zenodo.22878092", "10.5281/zenodo.22735798", "10.21227/qw2a-8m11"], why_excluded: "Synthetic data generated from PC-GITA or UCI, and code-only releases (CNN/MFCC pipeline for PC-GITA, reproducibility report, IEEE DataPort code). No real PD recordings deposited."}
+  - {ids: ["10.17632/44c93kk73t", "10.17632/44c93kk73t.1", "osf:mf4d5", "osf:prf95", "10.23641/asha.21644798", "10.23641/asha.21210944", "10.23641/asha.6615401", "10.23641/asha.23681529", "10.23641/asha.22669747", "10.23641/asha.33345129", "10.23641/asha.12735875", "10.23641/asha.7291940", "10.6084/m9.figshare.20310015", "10.6084/m9.figshare.24260595", "10.6084/m9.figshare.18271061", "10.6084/m9.figshare.30926114", "10.6084/m9.figshare.21431364", "10.6084/m9.figshare.7508597", "10.6084/m9.figshare.28924061", "10.1371/journal.pone.0199054.s001"], why_excluded: "Perceptual ratings or journal supplements of PDF, docx, xls tables or figures about PD speech, with no audio: voice-tremor ratings of DBS vowels (Mendeley), listener-perception results (OSF), and ASHA, Taylor & Francis, Karger, SciELO and PLOS supplements."}
+  - {ids: ["10.5061/dryad.pc866t205", "10.25422/azu.data.16619782", "10.25422/azu.data.29387402"], why_excluded: "Animal models: ultrasonic vocalizations of Pink1-/- rats (Dryad) and zebra finch song (University of Arizona)."}
+  - {ids: ["10.23641/asha.32867075", "physionet:voiced", "kaggle:darubiano57/dataset-of-vowels", "huggingface:XANJEEV/Parkinson_Classification_Dataset", "10.17632/j5bgddf6rp", "10.6084/m9.figshare.30465545", "10.1371/journal.pone.0292460.s007", "10.34847/nkl.2bc314s6", "10.34847/nkl.3d10e2lo"], why_excluded: "Speech data without PD speakers: corticobasal syndrome LSVT videos, the VOICED voice-pathology database, a Kaggle vowel set used as non-PD data, a TORGO-style F/M Con/Dys upload, ADAPTIVE (UASPEECH features), Greek dysarthria timing, Korean ALS vowel data, and NAKALA ALS and ataxic samples."}
+  - {ids: ["10.5061/dryad.3qm0152", "10.5281/zenodo.4955885", "osf:pdnzj", "osf:s952g", "osf:75dae", "osf:qejrh", "10.17632/3wgxpsbch7", "10.5281/zenodo.17259721", "10.15129/ef3770dd-1a75-4d28-9e09-fe6a45e5425f", "10.6084/m9.figshare.13607441", "10.60593/ur.d.29410703", "kaggle:anshsavla/pd-speech-features-extraction", "kaggle:asthamishra96/parkinson-multi-model-dataset-2-0"], why_excluded: "PD deposits without speech audio: smartphone motor-testing supplements (TIFF figures only), glottic-closure endoscopy measures, the EXPANd trial and HiCommunication registration, an RBD review, dance-protocol PDFs, interview transcripts, prosody-perception EEG, speech-graph tables, and screening metadata. The two Kaggle items are multi-source compilations re-bundling S1 and S2 files."}
+queries:
+  - "Zenodo https://zenodo.org/api/records type=dataset: parkinson* AND (speech OR voice OR phonation OR vowel OR dysarthria): 26; parkinson* AND (recording* OR audio OR acoustic) AND (speech OR voice): 19; parkinson* AND (sustained OR diadochokinetic OR 'reading passage' OR prosody OR hypokinetic): 10; dysphonia AND parkinson*: 1; 'hypokinetic dysarthria': 1; parkinsonian AND (speech OR voice): 2; (LSVT OR 'deep brain stimulation' OR DBS) AND (speech OR voice OR vowel): 3; parkinson* AND (habla OR voz OR fala OR Sprache OR parole): 2; 'PD' AND (speech OR voice) AND (recordings OR audio OR wav): 20; parkinson* AND (wav OR audio OR recordings): 49. All types: parkinson* AND (speech OR voice OR vowel OR dysarthria): 375 (first 200 screened)"
+  - "DataCite https://api.datacite.org/dois: (titles/descriptions parkinson*) AND (speech OR voice OR vowel OR phonation OR dysarthria OR dysphonia), resource-type dataset: 215; (parkinson* OR parkinsonian OR 'hypokinetic dysarthria') AND (audio OR recordings OR wav OR 'speech corpus' OR 'speech database' OR 'voice database'): 1057; title parkinson*/PD AND title speech/voice/vocal/acoustic/vowel/phonation/dysarthria/prosody/articulation/intelligibility: 702; parkinson* AND (voz OR habla OR fala OR Sprache OR parole OR voix): 213; parkinson* AND (Sound OR Audiovisual type OR wav/audio formats): 456; (dysarthria OR dysarthric) AND parkinson*: 303; publisher 'ASHA journals' AND (parkinson* OR 'hypokinetic dysarthria'): 106 (file types of all 50 records checked via the Figshare API); publisher 'IEEE DataPort' AND parkinson*: 49; prefix 10.18112 (OpenNeuro) and client dandi.dandi with parkinson* AND speech terms: 0 and 0"
+  - "Figshare https://api.figshare.com/v2/articles/search: free text 'parkinson speech recordings' 22, 'parkinson voice recordings' 49, 'parkinson sustained vowel' 0; item_type=3 (dataset) 'parkinson' 1000+ (first 1000), 'parkinsons' 1000+, \"parkinson's disease speech\" 133, 'dysarthria' 252; item_type=2 (media) 'parkinson' 275, 'parkinsons' 83, \"parkinson's disease speech\" 6, 'dysarthria' 42; titles screened for speech terms and candidates opened for file lists"
+  - "Mendeley Data https://data.mendeley.com/api/research-data/search (query=, first 300 per query screened): 'parkinson voice' 306; 'parkinson speech' 556; 'parkinson vowel' 95; 'parkinson dysarthria' 57; 'parkinson acoustic' 653. Public-api dataset records read for 9 candidates; none hold audio"
+  - "Dryad https://datadryad.org/api/v2/search: 'parkinson speech' 0; 'parkinson voice' 1; 'parkinson dysarthria' 0; 'parkinson vowel' 0; 'parkinson acoustic' 1; 'parkinson' 140 (all abstracts screened for speech terms: 2)"
+  - "Harvard Dataverse https://dataverse.harvard.edu/api/search parkinson AND (speech OR voice OR vowel OR dysarthria), type=dataset: 2 (both ICPSR HeyJay!); Unicamp REDU Dataverse API read for 10.25824/redu/DQDY7K"
+  - "OSF https://api.osf.io/v2 nodes filter[title][icontains]=parkinson: 463 (31 with speech terms opened); dysarthria: 13; registrations parkinson: 397; dysarthria: 8. File trees and child components read for 34 projects"
+  - "UCI https://archive.ics.uci.edu/api/datasets/list?search=parkinson: 8 (5 speech/voice). Each was read through /api/dataset and the static zip HEAD. LSVT Voice Rehabilitation (dataset 282) was found through Europe PMC"
+  - "PhysioNet https://physionet.org/api/v1/project/published/ (739 projects) screened for parkinson/dysarthria/speech/voice: 17 (b2ai-voice credentialed/restricted, voiced not PD)"
+  - "Kaggle https://www.kaggle.com/api/v1/datasets/list search: 'parkinson speech' 14; 'parkinson voice' 15; 'parkinson dysarthria' 2; 'parkinsons audio' 3; 'parkinson vowel' 0; 'parkinson acoustic' 3; 'dysarthria' 32; 'parkinson' 100; 'parkinsons' 100; \"parkinson's disease\" 100 (240 unique refs screened; 18 opened via datasets/view and datasets/list)"
+  - "Hugging Face https://huggingface.co/api/datasets?search=: parkinson 39; parkinsons 30; dysarthria 14 (8 audio candidates opened)"
+  - "NAKALA https://api.nakala.fr: record 10.34847/nkl.60888k55 and its three collections (TIPA 38: 43 items, 5 dysarthria samples)"
+  - "Synapse https://repo-prod.prod.sagebase.org/repo/v1/entity/syn4993293 (mPower, controlled access)"
+  - "OpenNeuro GraphQL search('parkinson'): returned null (search not exposed); covered via DataCite prefix 10.18112"
+  - "Europe PMC REST search (TITLE/ABSTRACT parkinson*) AND (TITLE speech/voice/vocal/dysarthria/phonation/acoustic/vowel/prosody) AND repository terms (zenodo, figshare, osf.io, mendeley data, physionet, ieee-dataport, dataverse, datadryad, kaggle, synapse.org, uci machine learning): 89. Full-text XML of 74 OA papers scanned for repository links and accessions (6 returned HTTP 500). Second pass: TITLE (parkinson* OR dysarthria OR hypokinetic) AND TITLE speech terms AND OPEN_ACCESS:y, 2012-2026: 510 (444 new PMC full texts scanned, 1 fetch error). Leads followed up: OSF projects, Zenodo 21897611/13954768/3243139/293021/10155614, Mendeley 3wgxpsbch7, Kaggle darubiano57, Figshare 13607441, UCI C52S4Z"
+  - "doi.org resolution checked for the primary id of every keyed study (see size_verdict)"
+size_verdict: "ok: PRIMARY topic kept. 15 studies after alias grouping: 6 firm (S1-S6) and 9 borderline (S7-S15). The firm studies sit in 3 archives of origin (Zenodo: S1, S5, S6; Figshare: S3, S4; IEEE DataPort: S2), with alias copies on Figshare, Kaggle and Hugging Face. The borderline studies are on Figshare/ASHA, NAKALA, Zenodo and Kaggle. Counting feature-only tables would have given about 28 more firm studies, near the 30 ceiling, but they do not match the need for recordings, so they are listed as near_misses (18 entries). Every keyed DOI resolves at doi.org (302 to the archive landing page), and the keyed Kaggle pages return 200."

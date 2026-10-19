@@ -22,7 +22,9 @@ the primary fails the size gate (5 to 30 firm studies in at least 3 archives).
 Keys are built under `~/data-aggregator-mcp-artifacts/h2h/round5/keys/`, outside the
 repository, by builders that have neither this server, nor its code, nor ToolUniverse
 (see `../PREREG_2026-10-18.md`). Their sha256 values are committed before the sweep and
-the keys themselves after it, so the web arm cannot read them during the run.
+the keys themselves after it, so the web arm cannot read them during the run. Keys and
+`tasks.json` were committed on 2026-10-19 after the sweep and match those hashes.
+Results: [`../README.md`](../README.md#re-run-2026-10-18).
 
 ## Keys as built (frozen 2026-10-18)
 
