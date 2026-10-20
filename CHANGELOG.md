@@ -6,6 +6,20 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.75.4] - 2026-10-19
+
+### Fixed
+
+- A tool description that names another tool, in its text or a parameter's, first says
+  that the client may list tool names with a prefix (in Claude Code,
+  `mcp__data-aggregator__resolve`) and that the listed name is the one to call. Models
+  that copied a bare `resolve` out of a description called a tool the client did not have.
+
+### Changed
+
+- The README's "Does it help?" section reports held-out rounds 4 and 5 against web search
+  and ToolUniverse.
+
 ## [0.75.3] - 2026-10-19
 
 ### Fixed
