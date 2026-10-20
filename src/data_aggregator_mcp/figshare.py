@@ -48,7 +48,7 @@ def _article_id(doi: str, landing_url: str | None = None) -> str | None:
     m = (
         _ARTICLE_ID.search(doi)
         or _TRAILING_ID.search(doi)
-        or _PAGE_ARTICLE_ID.search(landing_url or "")
+        or (_PAGE_ARTICLE_ID.search(landing_url) if landing_url else None)
     )
     return m.group(1) if m else None
 

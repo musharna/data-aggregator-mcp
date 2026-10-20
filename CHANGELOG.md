@@ -6,6 +6,41 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.75.3] - 2026-10-19
+
+### Fixed
+
+- A Kaggle 403 with no body is reported as Kaggle refusing this client ("Kaggle search
+  refused this client (HTTP 403)"), the way an outage is, instead of as an unexpected
+  answer. GitHub's runners got one for every Kaggle call on 2026-10-18 while the same
+  calls were answered elsewhere, and the nightly live suite read it as a code break. A
+  403 naming `datasets.get` is still a dataset Kaggle does not have.
+
+### Security
+
+- The lock file now pins aiohttp 3.14.5 (CVE-2026-111063, CVE-2026-111064 and
+  GHSA-2g87-pp6c-29x5, fixed in 3.14.4; aiohttp comes with the `operate` extra) and yarl
+  1.25.1, which it requires. An install from PyPI resolves its own versions within the
+  declared ranges.
+
+## [0.75.2] - 2026-10-18
+
+### Fixed
+
+- A record that holds only some of the search's words (a source's any-word fill) no longer
+  ranks above that source's records holding every word: within the places its hits hold
+  on the page, a source's every-word hits come first, then its fill. Ranked on shown text
+  alone, an OmicsDI study holding "nitrogen" only in its protocol tied with fill records
+  naming "Chlamydomonas"; 14 of OmicsDI's 39 every-word hits for "Chlamydomonas nitrogen"
+  fell off a page of 50 behind 25 fill records. Which places each source holds is decided
+  by the shown text, as before.
+- The nightly mutation job copies `benchmarks/` into mutmut's working copy. Without it,
+  `tests/test_h2h_score.py` could not import the benchmark scorer, the suite failed to
+  collect, and no mutant was checked.
+- The `search` tool description no longer tells models that MassIVE lacks a some-words
+  search or to keep MassIVE queries short; MassIVE has had one since 0.75.0. A test now
+  derives the description's two source lists from the adapters' flags.
+
 ## [0.75.1] - 2026-10-18
 
 ### Fixed

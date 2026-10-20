@@ -40,18 +40,18 @@
    "_relevance.py:MatchTiers.unshown": 8,
    "_relevance.py:_names": 1124,
    "_relevance.py:_normalize": 472,
+   "_relevance.py:_plain": 12,
+   "_relevance.py:_plain.<locals>.<genexpr>": 12,
    "_relevance.py:_pluralisable": 368,
    "_relevance.py:_text": 228,
    "_relevance.py:_text.<locals>.<genexpr>": 228,
    "_relevance.py:any_word": 4,
-   "_relevance.py:any_word.<locals>.<genexpr>": 4,
    "_relevance.py:balance_query": 1,
    "_relevance.py:escape_stray_colons": 28,
    "_relevance.py:query_phrase": 4,
    "_relevance.py:query_phrase.<locals>.<genexpr>": 4,
    "_relevance.py:query_terms": 4,
    "_relevance.py:title_clause": 8,
-   "_relevance.py:title_clause.<locals>.<genexpr>": 8,
    "_relevance.py:with_plurals": 28,
    "_relevance.py:with_plurals.<locals>.plural": 360,
    "datacite.py:_access_from_rights": 68,
@@ -129,7 +129,7 @@
    "zenodo.py:_opt": 900,
    "zenodo.py:search": 12
   },
-  "calls_total": 13448,
+  "calls_total": 13460,
   "http": {
    "api.datacite.org": 16,
    "zenodo.org": 12
@@ -369,21 +369,21 @@
    "_relevance.py:MatchTiers.names_every_term": 66,
    "_relevance.py:MatchTiers.score": 152,
    "_relevance.py:MatchTiers.score.<locals>.<genexpr>": 304,
-   "_relevance.py:MatchTiers.unshown": 3,
-   "_relevance.py:_names": 769,
-   "_relevance.py:_normalize": 313,
+   "_relevance.py:MatchTiers.unshown": 4,
+   "_relevance.py:_names": 772,
+   "_relevance.py:_normalize": 314,
+   "_relevance.py:_plain": 3,
+   "_relevance.py:_plain.<locals>.<genexpr>": 3,
    "_relevance.py:_pluralisable": 92,
-   "_relevance.py:_text": 155,
-   "_relevance.py:_text.<locals>.<genexpr>": 155,
+   "_relevance.py:_text": 156,
+   "_relevance.py:_text.<locals>.<genexpr>": 156,
    "_relevance.py:any_word": 1,
-   "_relevance.py:any_word.<locals>.<genexpr>": 1,
    "_relevance.py:balance_query": 1,
    "_relevance.py:escape_stray_colons": 7,
    "_relevance.py:query_phrase": 1,
    "_relevance.py:query_phrase.<locals>.<genexpr>": 1,
    "_relevance.py:query_terms": 1,
    "_relevance.py:title_clause": 2,
-   "_relevance.py:title_clause.<locals>.<genexpr>": 2,
    "_relevance.py:with_plurals": 7,
    "_relevance.py:with_plurals.<locals>.plural": 90,
    "datacite.py:_access_from_rights": 40,
@@ -469,7 +469,7 @@
    "zenodo.py:_opt": 450,
    "zenodo.py:search": 3
   },
-  "calls_total": 7258,
+  "calls_total": 7268,
   "http": {
    "api.datacite.org": 4,
    "huggingface.co": 1,
@@ -480,7 +480,7 @@
    "errors": [
     "next_page"
    ],
-   "ids": "612b19dbdb55c75a",
+   "ids": "4f015c5985efcfd1",
    "results": 10
   }
  }

@@ -314,6 +314,7 @@ def test_failed_source_names_every_real_router_stream(vi: int | None) -> None:
         plurals=True,
         title_tier=True,
         deposit_tier=True,
+        plural_streams=False,
         any_words=True,
         vi=vi,
     )

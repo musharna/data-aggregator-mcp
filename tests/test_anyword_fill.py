@@ -76,6 +76,32 @@ async def test_hits_holding_some_words_rank_below_those_naming_more(monkeypatch)
     assert page.total == 2 + 1
 
 
+async def test_a_sources_every_word_hits_take_its_places_before_its_fill(monkeypatch) -> None:
+    """Nightly live (2026-10-18): OmicsDI's PXD055071 holds "nitrogen" only in its protocol,
+    so named one word of "Chlamydomonas nitrogen"; ranked on text alone it tied with the
+    fill's records naming one word, and sat 51st behind 25 of them."""
+    every = [_hit("dc", "e0", "hive images")]  # holds every word, names none
+    # Upstream order puts the fill record naming less first; its text reorders them.
+    some = [_hit("dc", "f3", "hive frames"), _hit("dc", "f1", "bee pollen images")]
+    monkeypatch.setattr(
+        router,
+        "_ADAPTERS",
+        {
+            "dc": _source(
+                [], {_Q: every, _FILL: some}, REQUIRES_EVERY_WORD=True, ANY_WORD_FILL=True
+            ),
+            "loose": _source([], {"*": [_hit("loose", "l1", "pollen")]}),
+        },
+    )
+    async with httpx.AsyncClient() as c:
+        page = await router.search_page(c, query=_Q, size=10)
+    # Text alone ranks f1 (2 words), l1 (1), e0 and f3 (0): dc holds places 1, 3 and 4.
+    # Its every-word hit takes the first of them, then its fill in text order (f1, f3).
+    # Positive control: the other source keeps the place its text gives it, above dc's
+    # fill record naming more words; capping the fill below e0 put l1 first (2026-10-18).
+    assert [r.id for r in page.results] == ["dc:e0", "loose:l1", "dc:f1", "dc:f3"]
+
+
 @pytest.mark.parametrize("query", ["pollen", "the pollen", "honey AND bee", '"honey bee"'])
 async def test_no_fill_for_one_word_or_a_query_with_syntax(monkeypatch, query) -> None:
     dc: list[str] = []
@@ -215,6 +241,33 @@ async def test_a_source_matching_words_in_code_is_asked_for_some_words(monkeypat
     assert sorted(calls) == [(_Q, False), (_Q, True)]
     assert [r.id for r in page.results] == ["c:s1"] and page.total == 0
     assert page.errors["all_words"].startswith("c held no record with every word")
+
+
+async def test_the_in_code_fill_is_the_every_word_call_asking_for_some_words(monkeypatch) -> None:
+    """Its plurals and pushed filters are the every-word call's: only ``some_words`` differs.
+    No in-code fill reads plurals or takes filters today; the next one must not lose them."""
+    calls: list[dict] = []
+
+    async def search(client, q, *, size=10, offset=0, **kw):
+        calls.append(kw)
+        return 0, []
+
+    adapter = types.SimpleNamespace(
+        search=search,
+        pushable=lambda filters, /: {k: v for k, v in filters.items() if k == "published_after"},
+        PREFIXES=frozenset(),
+        REQUIRES_EVERY_WORD=True,
+        ANY_WORD_FILL=True,
+        FILLS_IN_CODE=True,
+        QUERY_PLURALS=True,
+    )
+    monkeypatch.setattr(router, "_ADAPTERS", {"c": adapter})
+    async with httpx.AsyncClient() as c:
+        await router.search_page(c, query=_Q, published_after=2019)
+    every, fill = sorted(calls, key=lambda kw: kw.get("some_words", False))
+    # Control: the every-word call was sent the filter, and plurals were left on.
+    assert every == {"filters": {"published_after": 2019}}
+    assert fill == {**every, "some_words": True}
 
 
 @pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")

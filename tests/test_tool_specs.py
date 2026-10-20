@@ -196,3 +196,36 @@ def test_a_description_says_tool_names_are_client_prefixed_before_naming_another
         assert shown in names, shown
         noted += 1
     assert noted >= 4  # control: search, fetch, list_sources, operate and relate name others
+
+
+def _flagged(flag: str) -> set[str]:
+    import importlib
+
+    return {
+        name
+        for name in _SEARCH_LABELS
+        if getattr(importlib.import_module(f"data_aggregator_mcp.{name}"), flag, False)
+    }
+
+
+def _labels_in(sentence: str, names: set[str]) -> set[str]:
+    short = {"mwb": "Workbench"}  # the description names it "the Workbench" after first use
+    return {n for n in _SEARCH_LABELS if short.get(n, _SEARCH_LABELS[n]) in sentence} & names
+
+
+def test_search_description_says_which_every_word_sources_also_search_some_words():
+    """0.75.0 gave MassIVE a some-words fill, but the search description kept telling models
+    MassIVE had none and to keep its queries short. The two lists are derived here from the
+    flags the adapters act on, so a source that gains or loses a fill fails this test until
+    the description is changed with it."""
+    desc = next(t for t in tool_specs.TOOLS if t.name == "search").description
+    every = _flagged("REQUIRES_EVERY_WORD")
+    fill = _flagged("ANY_WORD_FILL")
+    assert "datacite" in fill and "omics" in every - fill  # positive control: known flags read
+    assert fill <= every, "a some-words fill only exists for an every-word source"
+    also = re.search(r"([^.]*) are also searched for records holding only some", desc)
+    short = re.search(r"keep queries to ([^.]*) short", desc)
+    assert also and short, "the description no longer has the two sentences this test reads"
+    assert _labels_in(desc.split(" match only records holding every query word")[0], every) == every
+    assert _labels_in(also[1], every) == fill
+    assert _labels_in(short[1], every) == every - fill

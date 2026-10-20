@@ -119,6 +119,31 @@ async def test_multi_query_fans_out_all_variant_source_pairs(monkeypatch) -> Non
     assert result.query_expansion.variants == ["orig", "alt one", "alt two"]
 
 
+async def test_multi_query_sends_each_variant_once_without_title_tier_or_fill(
+    monkeypatch,
+) -> None:
+    """Each variant already fans out to every source, so a variant gets neither the title
+    tier nor the some-words fill: one DataCite query per variant. Control: the same
+    two-word search without variants does send DataCite those extra queries."""
+    _no_embeddings(monkeypatch)
+    _mock_expand(monkeypatch, ["bee hive"])
+    seen: list[str] = []
+
+    async def fake_datacite_search(client, query, **kw):
+        seen.append(query)
+        return 0, []
+
+    monkeypatch.setattr("data_aggregator_mcp.datacite.search", fake_datacite_search)
+    async with httpx.AsyncClient() as client:
+        await router.search_page(
+            client, query="honey pollen", sources=["datacite"], multi_query=True
+        )
+        assert seen == ["honey pollen", "bee hive"]
+        seen.clear()
+        await router.search_page(client, query="honey pollen", sources=["datacite"])
+    assert len(seen) > 1 and any(" OR " in q for q in seen), seen
+
+
 async def test_multi_query_variant_assembly_ci_dedup_and_cap(monkeypatch) -> None:
     _no_embeddings(monkeypatch)
     # Original "RNA", plus a ci-duplicate "rna" and 5 distinct → cap to 4 incl. original.

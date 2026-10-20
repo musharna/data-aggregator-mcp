@@ -121,7 +121,7 @@ def balance_query(query: str) -> tuple[str, list[str]]:
     quotes = [i for i, c in enumerate(query) if c == '"' and (i == 0 or query[i - 1] != "\\")]
     drop = {quotes[-1]} if len(quotes) % 2 else set()
     open_parens: list[int] = []
-    in_quote = False
+    in_quote = False  # pragma: no mutate: None reads alike (only `not in_quote` reads it)
     for i, c in enumerate(query):
         if i in quotes and i not in drop:
             in_quote = not in_quote
@@ -158,9 +158,14 @@ def _pluralisable(word: str) -> bool:
     )
 
 
-# Words of letters, digits, hyphens and apostrophes, separated by spaces: nothing an
-# upstream query language reads as syntax.
-_PLAIN_WORDS = re.compile(r"[A-Za-z0-9][A-Za-z0-9'-]*(?: +[A-Za-z0-9][A-Za-z0-9'-]*)*")
+# A word of letters, digits, hyphens and apostrophes: nothing an upstream query language
+# reads as syntax.
+_PLAIN_WORD = re.compile(r"[A-Za-z0-9][A-Za-z0-9'-]*")
+
+
+def _plain(words: list[str]) -> bool:
+    """One or more words, each letters and digits (with inner ' or -), none an operator."""
+    return bool(words) and all(_PLAIN_WORD.fullmatch(w) and w not in _OPERATORS for w in words)
 
 
 def title_clause(query: str, field: str) -> str | None:
@@ -169,7 +174,7 @@ def title_clause(query: str, field: str) -> str | None:
     ``query`` is plain words; an operator, quote, field or wildcard means the caller
     already wrote the query they want."""
     words = query.split()
-    if not _PLAIN_WORDS.fullmatch(" ".join(words)) or any(w in _OPERATORS for w in words):
+    if not _plain(words):
         return None
     phrase = " ".join(words)
     if not _pluralisable(words[-1]):
@@ -183,7 +188,7 @@ def any_word(query: str) -> str | None:
     operator, quote, field or wildcard means the caller already wrote the query they
     want, and one word ORed is the query itself."""
     words = query.split()
-    if not _PLAIN_WORDS.fullmatch(" ".join(words)) or any(w in _OPERATORS for w in words):
+    if not _plain(words):
         return None
     kept = [w for w in words if w.casefold() not in _STOP_WORDS]
     return " OR ".join(kept) if len(kept) > 1 else None

@@ -177,22 +177,23 @@ async def test_hits_naming_the_query_as_written_outrank_its_words_scattered(monk
     assert [r.id for r in nxt.results] == ["nasacmr:1"]
 
 
-@pytest.mark.parametrize("described", ["datacite", "dataone"])
+@pytest.mark.parametrize("described", ["datacite", "dataone", "both"])
 async def test_a_deposit_ranks_by_its_best_described_copy(monkeypatch, described) -> None:
     """The DOI dedup keeps the most fetchable copy (DataONE's), which has no description;
     ranked on its own text it sank below hits naming nothing, and its DataCite twin, never
     handled, held DataCite's offset in place for every later page. Either copy may be the
-    described one, so the rank is the best copy's, not the last one seen."""
+    described one, so the rank is the best copy's, not the last one seen; with both
+    described, the kept copy's own rank stands and no other copy is named."""
     doi = "10.5061/dryad.66t1g1k2t"
     title = "Data from: Age estimation using methylation-sensitive markers"
     about = {"description": "Faecal DNA of wild snow leopards in Mongolia."}
     copy = DataResource(
         id="dataone:sha256:1", source="dataone", kind="dataset", title=title, doi=doi,
-        **(about if described == "dataone" else {}),
+        **(about if described in ("dataone", "both") else {}),
     )  # fmt: skip
     twin = DataResource(
         id=f"datacite:{doi}", source="dryad", kind="dataset", title=title, doi=doi.upper(),
-        **(about if described == "datacite" else {}),
+        **(about if described in ("datacite", "both") else {}),
     )  # fmt: skip
     log = DataResource(
         id="nasacmr:1", source="nasacmr", kind="dataset", title="Casey station log",
@@ -210,6 +211,33 @@ async def test_a_deposit_ranks_by_its_best_described_copy(monkeypatch, described
     assert page.results[0].ranked_by_copy == (twin.id if described == "datacite" else None)
     # both copies are handled, so DataCite moves on
     assert router._cursor.decode(page.next_cursor)["offsets"]["datacite"] == 1
+
+
+async def test_of_two_copies_ranking_a_deposit_alike_the_first_seen_is_named(monkeypatch) -> None:
+    """The kept copy (DataONE's, the most fetchable) names nothing; DataCite's and CMR's
+    copies name the search alike. The note names the first of them in the round-robin
+    (DataONE, DataCite, then CMR), not whichever came last."""
+    doi = "10.5061/dryad.66t1g1k2t"
+    title = "Data from: Age estimation using methylation-sensitive markers"
+    about = {"description": "Faecal DNA of wild snow leopards in Mongolia."}
+    bare = DataResource(
+        id="dataone:sha256:1", source="dataone", kind="dataset", title=title, doi=doi
+    )
+    twin = DataResource(
+        id=f"datacite:{doi}", source="dryad", kind="dataset", title=title, doi=doi, **about
+    )
+    cmr = DataResource(
+        id="nasacmr:9", source="nasacmr", kind="dataset", title=title, doi=doi, **about
+    )
+    _serve(monkeypatch, "dataone", [bare])
+    _serve(monkeypatch, "datacite", [twin])
+    _serve(monkeypatch, "nasacmr", [cmr])
+    async with _client() as client:
+        page = await router.search_page(
+            client, query="snow leopard", sources=["dataone", "datacite", "nasacmr"]
+        )
+    assert [r.id for r in page.results] == ["dataone:sha256:1"]
+    assert page.results[0].ranked_by_copy == twin.id
 
 
 async def test_a_hit_ranked_on_its_twin_s_organism_names_the_twin(monkeypatch) -> None:

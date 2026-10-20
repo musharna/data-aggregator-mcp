@@ -29,6 +29,8 @@ from data_aggregator_mcp.models import DataResource
         ("liver proteome)", "liver proteome", [")"]),
         ("(a OR (b) c", "a OR (b) c", ["("]),
         ('a ")" (b', 'a ")" b', ["("]),  # a parenthesis inside quotes is text, not syntax
+        # The quote opening a query has nothing before it: the backslash ending it is not.
+        ('"snow leopard\\', "snow leopard\\", ['"']),
     ],
 )
 def test_an_unmatched_mark_is_dropped_and_named(query, repaired, dropped) -> None:
@@ -75,6 +77,11 @@ async def test_the_router_sends_the_repaired_query_and_says_so(monkeypatch) -> N
     )
     assert [r.id for r in page.results + more.results] == [r.id for r in recs]
     assert "unbalanced" not in plain.errors  # positive control: a balanced query, no note
+    async with httpx.AsyncClient() as client:
+        two = await router.search_page(client, query='"snow (leopard', size=2)
+    assert two.errors["unbalanced"] == (
+        'dropped an unmatched " ( that most sources cannot parse; searched for: snow leopard'
+    )
 
 
 async def test_a_multi_query_variant_is_repaired_too(monkeypatch) -> None:

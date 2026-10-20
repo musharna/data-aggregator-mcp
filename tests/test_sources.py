@@ -404,6 +404,9 @@ def _streams(spec: sources.SourceSpec, filters: dict[str, Any], **queries: str) 
         pushdown=True,
         plurals=True,
         title_tier=True,
+        deposit_tier=False,
+        plural_streams=False,
+        any_words=False,
     )
 
 
@@ -477,3 +480,13 @@ async def test_live_a_source_listing_cursor_serves_new_records_on_page_2(spec) -
             new = {r.id for r in second} - {r.id for r in first}
             assert new, f"{spec.name}: lists cursor, but page 2 of {total} hits brought nothing new"
     assert checked, f"{spec.name}: lists cursor, but no search reported more than one page"
+
+
+def test_example_id_is_the_first_of_a_sources_examples() -> None:
+    """A tool description quotes ``example_id``; a source listing several examples
+    ("a | b | c") gives its first, trimmed, and a source with one gives that one."""
+    assert sources.example_id("omics") == "sra:SRX079566"
+    assert sources.example_id("literature") == "pubmed:23066504"
+    zenodo = next(s for s in sources.SOURCES if s.name == "zenodo")
+    assert "|" not in zenodo.id_example  # control: a single example is returned whole
+    assert sources.example_id("zenodo") == zenodo.id_example.strip()

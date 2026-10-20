@@ -14,7 +14,9 @@ an account: ``/api/v1/datasets/list`` searches and ``/api/v1/datasets/view/{owne
 reads one dataset. Search matches every word, each as a prefix ("bee" also finds
 "beef"; one word matching nothing empties it), reads no OR or quotes, returns 20 rows a
 page whatever size is asked, and reports no total. A dataset that does not exist, or is
-private, answers 403 "Permission 'datasets.get' was denied".
+private, answers 403 "Permission 'datasets.get' was denied". A 403 with no body is
+Kaggle refusing the caller, not the request: GitHub's runners got one for every call on
+2026-10-18 while the same calls were answered elsewhere, so it reads as the host down.
 
 Discovery-only: the record names the dataset, its licence and landing page. Kaggle also
 serves the whole dataset as one archive to anonymous callers, which is not wired.
@@ -182,6 +184,7 @@ async def search(
         headers=_ACCEPT_JSON,
         expect=list,
         check=_check_list,
+        refused=_refuses_caller,
     )
     window = rows[offset - start : offset - start + min(size, MAX_SIZE)]
     total = start + len(rows) + (1 if len(rows) == PAGE else 0)
@@ -191,6 +194,11 @@ async def search(
 def _refused(resp: httpx.Response) -> bool:
     """Kaggle's answer for a dataset that does not exist or is private."""
     return resp.status_code == 403 and "datasets.get" in resp.text
+
+
+def _refuses_caller(resp: httpx.Response) -> bool:
+    """Kaggle's answer to a caller it will not serve: 403 with no body."""
+    return resp.status_code == 403 and not resp.text.strip()
 
 
 async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
@@ -206,6 +214,7 @@ async def resolve(client: httpx.AsyncClient, resource_id: str) -> DataResource:
         expect=dict,
         check=_check_dataset,
         empty_answer=_refused,
+        refused=_refuses_caller,
         no_content_returns=None,
     )
     if body is None:
