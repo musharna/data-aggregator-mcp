@@ -515,21 +515,41 @@ TOOLS: list[types.Tool] = [
 # A client lists each tool under its own prefix, and a model that copies a bare name out
 # of a description ("use resolve for the full record") calls a tool the client does not
 # have: in the round-2 head-to-head runs (2026-10-05 to 10-07) Claude Code refused 11 bare
-# `resolve` calls in 5 of 60 runs. So every description that names another tool says so
-# before naming one: the note opens the sentence holding the first such name, leaving the
-# description's lead sentence as it was.
+# `resolve` calls in 5 of 60 runs. So every description that names another tool, in its
+# text or a parameter's, says so before naming one: the note opens the sentence holding the
+# first such name, or closes the description when only a parameter names one. The match
+# can't tell the verb from the tool ("Fetch the full DataResource" opens resolve's), so a
+# description may get a note it did not need; a missed name is the costlier error.
 PREFIX_NOTE = (
     "Tool names in this text are this server's own; your client may list them with a "
     "prefix (in Claude Code, mcp__data-aggregator__resolve): call the name it lists. "
 )
-_TOOL_NAME = re.compile(r"\b(" + "|".join(re.escape(t.name) for t in TOOLS) + r")\b")
+# Case-insensitive: a name opening a sentence ("Resolve ids first") is still a name to copy.
+_TOOL_NAME = re.compile(r"\b(" + "|".join(re.escape(t.name) for t in TOOLS) + r")\b", re.IGNORECASE)
+
+
+def _schema_descriptions(node: object) -> list[str]:
+    """Every parameter description in a JSON schema: a model reads these for names too."""
+    if isinstance(node, dict):
+        own = [node["description"]] if isinstance(node.get("description"), str) else []
+        return own + [s for v in node.values() for s in _schema_descriptions(v)]
+    if isinstance(node, list):
+        return [s for v in node for s in _schema_descriptions(v)]
+    return []
+
+
+def _names_another(tool: types.Tool, text: str) -> re.Match[str] | None:
+    return next((m for m in _TOOL_NAME.finditer(text) if m.group(1).lower() != tool.name), None)
 
 
 def _with_prefix_note(tool: types.Tool) -> str:
     text = tool.description or ""
-    first = next((m for m in _TOOL_NAME.finditer(text) if m.group(1) != tool.name), None)
+    first = _names_another(tool, text)
     if first is None:
-        return text
+        if not any(_names_another(tool, s) for s in _schema_descriptions(tool.input_schema)):
+            return text
+        # Named only in a parameter: the note closes the description, read before them.
+        return text.rstrip() + " " + PREFIX_NOTE.rstrip()
     cut = text.rfind(". ", 0, first.start())
     cut = 0 if cut < 0 else cut + 2
     return text[:cut] + PREFIX_NOTE + text[cut:]

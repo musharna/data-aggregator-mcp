@@ -183,19 +183,61 @@ def test_a_description_says_tool_names_are_client_prefixed_before_naming_another
     tool must say, before the first such name, that the client prefixes names, and show
     the prefixed form of a real tool."""
     names = {t.name for t in tool_specs.TOOLS}
-    word = re.compile(r"\b(" + "|".join(sorted(names)) + r")\b")
     noted = 0
     for t in tool_specs.TOOLS:
-        first = next((m for m in word.finditer(t.description) if m.group(1) != t.name), None)
-        if first is None:
+        # Words, not the module's regex, so a gap in what it matches is not shared here.
+        first = next((at for at, w in _words(t.description) if w in names - {t.name}), None)
+        in_params = any(
+            w in names - {t.name}
+            for s in _schema_descriptions(t.input_schema)
+            for _, w in _words(s)
+        )
+        if first is None and not in_params:
             assert "mcp__" not in t.description, t.name  # no note where none is needed
             continue
         note = t.description.find("mcp__data-aggregator__")
-        assert 0 <= note < first.start(), (t.name, t.description[: first.end()])
+        assert note >= 0, t.name
+        if first is not None:
+            assert note < first, (t.name, t.description[: first + 12])
         shown = re.search(r"mcp__data-aggregator__([a-z_]+)", t.description).group(1)
         assert shown in names, shown
         noted += 1
     assert noted >= 4  # control: search, fetch, list_sources, operate and relate name others
+
+
+def _words(text: str) -> list[tuple[int, str]]:
+    return [(m.start(), m.group().lower()) for m in re.finditer(r"[A-Za-z_]+", text)]
+
+
+def _schema_descriptions(node: object) -> list[str]:
+    if isinstance(node, dict):
+        own = [node["description"]] if isinstance(node.get("description"), str) else []
+        return own + [s for v in node.values() for s in _schema_descriptions(v)]
+    if isinstance(node, list):
+        return [s for v in node for s in _schema_descriptions(v)]
+    return []
+
+
+def test_the_prefix_note_sees_a_capitalized_name_and_one_named_only_in_a_parameter():
+    """Review of #336: the note's matcher was case-sensitive and read only the top-level
+    description, so "Resolve ids first." and a name only in a parameter's description got
+    no note. Both must get one; a description naming no tool, or only a longer word
+    ("resolved"), stays as written."""
+    from mcp import types
+
+    obj = {"type": "object"}
+
+    def probe(description: str, param: str = "") -> str:
+        schema = {**obj, "properties": {"x": {"type": "string", "description": param}}}
+        tool = types.Tool(name="probe", description=description, input_schema=schema)
+        return tool_specs._with_prefix_note(tool)
+
+    capital = probe("Reads a record. Resolve ids first.")
+    assert capital == "Reads a record. " + tool_specs.PREFIX_NOTE + "Resolve ids first."
+    param_only = probe("Reads a record.", "the id, as resolve returns it")
+    assert param_only.startswith("Reads a record.") and "mcp__data-aggregator__" in param_only
+    assert probe("Reads a record that was resolved.") == "Reads a record that was resolved."
+    assert probe("Reads a record.", "an id") == "Reads a record."
 
 
 def _flagged(flag: str) -> set[str]:
