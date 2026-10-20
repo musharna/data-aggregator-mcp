@@ -49,13 +49,18 @@ SETS = {
     "r4": ("round4", "r4_runs", 3, "round 4 held out, Opus 5.5, dam 0.74.0, 2026-10-18"),
     "r5": ("round5", "r5_runs", 3, "round 5 held out, Opus 5.5, dam 0e3661f (unreleased)"),
     "r5_haiku": ("round5", "r5_haiku_runs", 3, "round 5 on Haiku 5.5, dam 0.75.4, 2026-10-20"),
+    "r5_sonnet": ("round5", "r5_sonnet_runs", 3, "round 5 on Sonnet 5.5, dam 0.75.4, 2026-10-20"),
 }
-# A set scored with another adjudication than its round's ``adjudication.json``: the
-# Haiku sweep's file is round 5's verdicts plus those on the Haiku runs' new entries.
-SET_ADJUDICATION = {"r5_haiku": "round5/adjudication_haiku_2026-10-20.json"}
-# Non-concurrent comparisons (PREREG_2026-10-20_model-tiers.md): an arm of one set against
-# an arm of another on the same tasks, both scored with the first set's adjudication.
-CROSS = (("r5_haiku", "dam", "r5", "web"), ("r5_haiku", "dam", "r5", "dam"))
+# Sets scored with another adjudication than their round's ``adjudication.json``: the
+# model-tier sweeps share one file, round 5's verdicts plus those on the new entries of
+# the Haiku and then the Sonnet runs (PREREG_2026-10-20_model-tiers.md).
+TIERS_ADJUDICATION = "round5/adjudication_tiers_2026-10-20.json"
+SET_ADJUDICATION = {"r5_haiku": TIERS_ADJUDICATION, "r5_sonnet": TIERS_ADJUDICATION}
+# Non-concurrent comparisons (the same PREREG): an arm of one set against an arm of
+# another on the same tasks, both scored with the first set's adjudication.
+CROSS = tuple(
+    (tier, "dam", "r5", arm) for tier in ("r5_haiku", "r5_sonnet") for arm in ("web", "dam")
+)
 ARMS = ("dam", "tu", "web", "bare")
 PAIRS = (("dam", "web"), ("dam", "tu"), ("tu", "web"), ("dam", "bare"), ("web", "bare"))
 BOOT = 10_000
