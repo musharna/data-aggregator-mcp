@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import re
 from pathlib import Path
 
@@ -209,13 +210,41 @@ def _words(text: str) -> list[tuple[int, str]]:
     return [(m.start(), m.group().lower()) for m in re.finditer(r"[A-Za-z_]+", text)]
 
 
-def _schema_descriptions(node: object) -> list[str]:
-    if isinstance(node, dict):
-        own = [node["description"]] if isinstance(node.get("description"), str) else []
-        return own + [s for v in node.values() for s in _schema_descriptions(v)]
-    if isinstance(node, list):
-        return [s for v in node for s in _schema_descriptions(v)]
-    return []
+def _schema_descriptions(schema: object) -> list[str]:
+    # The JSON decoder, not a walk, so a shape the module's walk skips is not skipped here.
+    found: list[str] = []
+
+    def collect(pairs: list[tuple[str, object]]) -> dict:
+        found.extend(v for k, v in pairs if k == "description" and isinstance(v, str))
+        return dict(pairs)
+
+    json.loads(json.dumps(schema), object_pairs_hook=collect)
+    return found
+
+
+def test_the_prefix_note_reads_every_parameter_description_at_any_depth():
+    """The module's schema walk must find what the decoder finds, in every real tool and
+    in a schema that nests descriptions in lists and objects, where no real tool does yet."""
+    nested = {
+        "type": "object",
+        "description": "top",
+        "properties": {
+            "a": {"anyOf": [{"type": "string", "description": "in a list"}, {"type": "null"}]},
+            "b": {"type": "array", "prefixItems": [{"description": "first item"}]},
+            "c": {"type": "object", "properties": {"d": {"description": "two objects down"}}},
+            "description": {"type": "string"},  # a parameter named description: no text
+        },
+    }
+    assert sorted(_schema_descriptions(nested)) == [
+        "first item",
+        "in a list",
+        "top",
+        "two objects down",
+    ]  # control: the decoder itself sees all four
+    for schema in [nested, *(t.input_schema for t in tool_specs.TOOLS)]:
+        assert sorted(tool_specs._schema_descriptions(schema)) == sorted(
+            _schema_descriptions(schema)
+        )
 
 
 def test_the_prefix_note_sees_a_capitalized_name_and_one_named_only_in_a_parameter():
