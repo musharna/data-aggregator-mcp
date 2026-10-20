@@ -1,0 +1,279 @@
+{
+ "U1": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "10.26275/73j6-8nej",
+     "10.26275/gfyl-lpxq",
+     "10.26275/jkbj-f3bn",
+     "10.26275/ngob-yc3c",
+     "10.26275/pmnr-f6br",
+     "10.26275/s3jn-eo59"
+    ]
+   },
+   {
+    "key": "A2",
+    "ids": [
+     "10.5281/zenodo.5560997"
+    ]
+   },
+   {
+    "key": "A3",
+    "ids": [
+     "10.7302/z29k48f3"
+    ]
+   },
+   {
+    "key": "A4",
+    "ids": [
+     "osf.io/852j4",
+     "osf.io/bz4na",
+     "osf.io/p8dqb",
+     "osf.io/q2yph",
+     "osf.io/temya"
+    ]
+   },
+   {
+    "key": "A5",
+    "ids": [
+     "10.5281/zenodo.20592601"
+    ]
+   },
+   {
+    "key": "A6",
+    "ids": [
+     "10.5282/ubm/data.487"
+    ]
+   },
+   {
+    "key": "A7",
+    "ids": [
+     "10.5281/zenodo.4270635"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "10.6084/m9.figshare.c.4681208"
+    ]
+   }
+  ],
+  "reject": [
+   "10.5281/zenodo.14207575",
+   "10.15154/y9my-8n64",
+   "https://search.kg.ebrains.eu/instances/a3e9cd95-d601-40ed-b5fa-e5a9fd01005a",
+   "10.25493/ta4q-34t",
+   "10.25493/30w7-0wk",
+   "ds004624",
+   "10.18112/openneuro.ds005802.v1.0.0",
+   "ds005802",
+   "10.18112/openneuro.ds005802",
+   "ieegatlas.loris.ca"
+  ],
+  "alias": {
+   "S14": [
+    "https://mni-open-ieegatlas.research.mcgill.ca"
+   ]
+  }
+ },
+ "U2": {
+  "add": [],
+  "optional": [],
+  "reject": [
+   "doi:10.7290/t7SaLlfxxe",
+   "PRJNA1158746"
+  ],
+  "alias": {}
+ },
+ "U4": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "10.5281/zenodo.22254871",
+     "10.5281/zenodo.22254872"
+    ]
+   }
+  ],
+  "optional": [],
+  "reject": [
+   "CCIN 12869",
+   "CCIN 13260",
+   "10.6084/m9.figshare.34003056",
+   "CCIN 13343",
+   "Polar Data Catalogue: Investigating the Sources, Abundance and Types of Microplastics in the Arctic, 2017",
+   "10.21963/13195",
+   "Polar Data Catalogue: Microplastics Contamination in Sediment, Water, Snow/Ice, Fish and Seals of the Canadian Arctic",
+   "ecds0233-1",
+   "CCIN 12871",
+   "CCIN 13058",
+   "10.3389/ftox.2026.1878370.s001",
+   "PDC: Investigating the Sources, Abundance and Types of Microplastics in the Arctic, 2017",
+   "PDC: Microplastics Contamination in Sediment, Water, Snow/Ice and Fish of the Canadian Arctic, 2019",
+   "Polar Data Catalogue: Investigating the Sources, Abundance and Types of Microplastics in the Arctic, 2018",
+   "Polar Data Catalogue: Microplastics Contamination in Sediment, Water, Snow/Ice and Fish of the Canadian Arctic, 2019",
+   "PDC: Microplastics Contamination in Sediment, Water, Snow/Ice, Fish and Seals of the Canadian Arctic",
+   "PDC: Investigating the Sources, Abundance and Types of Microplastics in the Arctic, 2018",
+   "PDC: Alert 2021 - Investigating the Impacts of Sea Ice Change on Contaminants in Arctic Air and Water"
+  ],
+  "alias": {}
+ },
+ "U5": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "https://osf.io/48bem",
+     "https://osf.io/hjzb3"
+    ]
+   },
+   {
+    "key": "A10",
+    "ids": [
+     "https://osf.io/e2ysx",
+     "https://osf.io/fzbjn",
+     "https://osf.io/vdepj"
+    ]
+   },
+   {
+    "key": "A11",
+    "ids": [
+     "https://osf.io/d5aj6"
+    ]
+   },
+   {
+    "key": "A12",
+    "ids": [
+     "https://osf.io/4rpba",
+     "https://osf.io/z2sge"
+    ]
+   },
+   {
+    "key": "A13",
+    "ids": [
+     "10.12795/11441/179526"
+    ]
+   },
+   {
+    "key": "A2",
+    "ids": [
+     "https://osf.io/4udjr"
+    ]
+   },
+   {
+    "key": "A3",
+    "ids": [
+     "https://osf.io/9z7yv",
+     "https://osf.io/ex4nm"
+    ]
+   },
+   {
+    "key": "A4",
+    "ids": [
+     "https://osf.io/j9f72"
+    ]
+   },
+   {
+    "key": "A5",
+    "ids": [
+     "https://osf.io/426s3"
+    ]
+   },
+   {
+    "key": "A6",
+    "ids": [
+     "https://osf.io/sygm5",
+     "https://osf.io/yd4z9"
+    ]
+   },
+   {
+    "key": "A7",
+    "ids": [
+     "https://osf.io/yasnb"
+    ]
+   },
+   {
+    "key": "A8",
+    "ids": [
+     "https://osf.io/ay6xk"
+    ]
+   },
+   {
+    "key": "A9",
+    "ids": [
+     "https://osf.io/dq8ku",
+     "https://osf.io/y486w"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "https://osf.io/2hzxa"
+    ]
+   },
+   {
+    "key": "B2",
+    "ids": [
+     "https://github.com/annlaurin/dyslexia_classifier",
+     "https://osf.io/zyxmd"
+    ]
+   },
+   {
+    "key": "B3",
+    "ids": [
+     "https://gitup.uni-potsdam.de/pmr2/2019-dp-yan-pan-kliegl"
+    ]
+   },
+   {
+    "key": "B4",
+    "ids": [
+     "10.17632/wgc93xrc89",
+     "10.17632/wgc93xrc89.1"
+    ]
+   }
+  ],
+  "reject": [
+   "10.21227/gj8t-a465",
+   "https://osf.io/c6xyz",
+   "10.6084/m9.figshare.4204899",
+   "10.25442/hku.33327309.v1",
+   "10.7910/DVN/3YCB56",
+   "10.25442/hku.33327309",
+   "10.25442/hku.26942245.v1",
+   "Beijing Sentence Corpus - children",
+   "10.25392/leicester.data.8310995.v1",
+   "https://gitup.uni-potsdam.de/pmr2/2009-jemr-feng",
+   "10.6084/m9.figshare.4167714",
+   "10.60641/ra7k-5t05",
+   "10.17011/jyx/dataset/108777",
+   "https://gitup.uni-potsdam.de/pmr2/2017-pbr-hohenstein-matuschek-kliegl",
+   "10.25442/hku.26942245",
+   "10.6084/m9.figshare.34021661",
+   "10.15496/publikation-4274",
+   "10.25392/leicester.data.8310995",
+   "https://osf.io/6a3j8",
+   "https://gitup.uni-potsdam.de/pmr2/2015-fpsyg-laubrock-kliegl",
+   "https://gitup.uni-potsdam.de/pmr2/2013-qjep-wotschack-kliegl"
+  ],
+  "alias": {
+   "S19": [
+    "https://osf.io/dzb8s",
+    "https://osf.io/zj69e",
+    "https://osf.io/zj69e",
+    "https://osf.io/dzb8s"
+   ],
+   "S9": [
+    "Children's Russian Sentence Corpus",
+    "Russian children's eye-movement reading corpus (Korneev, Lopukhina et al.)"
+   ],
+   "S2": [
+    "Benfatto et al. 2016 (PLoS ONE) Kronoberg reading eye-tracking data"
+   ]
+  }
+ }
+}

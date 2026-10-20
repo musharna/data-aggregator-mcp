@@ -223,15 +223,9 @@
   "recall": 1.0,
   "duplicates": 3,
   "relevant": 19,
-  "irrelevant": 0,
-  "pending": [
-   {
-    "id": "PRJNA1158746",
-    "same_as": [],
-    "title": "Spotted salamander microbiome (Ambystoma maculatum Bsal and probiotic exposure experiments)"
-   }
-  ],
-  "precision": 1.0,
+  "irrelevant": 1,
+  "pending": [],
+  "precision": 0.95,
   "archives_listed": [
    "NCBI BioProject",
    "NCBI BioProject/SRA"

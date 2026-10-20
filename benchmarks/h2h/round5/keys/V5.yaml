@@ -1,0 +1,228 @@
+task: V5
+prompt: >-
+  Find every public dataset, in any archive, of mass-spectrometry or NMR metabolite profiling of honey (metabolomics,
+  lipidomics, or volatile, phenolic or other multi-compound chemical fingerprinting) from any bee species, including
+  stingless bees. Raw or processed data both count, as do deposits that include honey alongside other sample types.
+  Data on bee tissues, pollen, propolis, nectar or mead alone, on animals fed honey, residue- or contaminant-only
+  assays (pesticides, PAHs, toxins), proteomics, DNA- or pollen-based origin tests, physicochemical, sensor or optical
+  spectroscopy (FTIR, NIR, Raman, GC-IMS) data, journal supplementary files, and papers without a data deposit do not
+  count.
+criteria: >-
+  Topic: BACKUP (MS or NMR metabolomics / lipidomics of honey). The primary topic (MS/NMR metabolomics or lipidomics of
+  human breast milk) was abandoned because it exceeded the 30-firm ceiling (see size_verdict and
+  scratch/primary_tally.md). Included: a public deposit holding LC-MS, GC-MS, direct-infusion MS or 1H NMR data (raw
+  files, peak tables, compound-identification reports or quantified-metabolite tables) acquired on honey samples from
+  Apis or stingless bees, in an untargeted design or as a multi-compound panel (phenolics, flavonoids, volatiles, NMR
+  quantification of tens of constituents). Headspace/SPME GC-MS volatile profiling counts. Deposits that mix honey
+  with other matrices (nectar, colony materials, food from the Hadza environment) count when honey files are present.
+  Author-deposited compound reports in PDF count when the deposit text names the MS technique. Borderline: deposits
+  whose files could not be read and whose deposit text does not name the analytical technique, and author-deposited
+  supplementary PDFs. Excluded: honey bee or animal tissues (including mice fed honey), pollen, propolis, nectar or mead
+  without honey; residue and contaminant assays (pesticides, PAHs, fipronil, neonicotinoids, alkaloid toxins,
+  polymer additives), including suspect screening against a pesticide inclusion list; single-compound studies
+  (p-coumaric acid, lindoside structure); proteomics; DNA, qPCR or pollen origin tests; physicochemical, mineral,
+  antioxidant or sensory data; FTIR, NIR, Raman, hyperspectral, fluorescence, microwave-sensor and GC-IMS (ion
+  mobility, not MS) data; HPLC chromatograms without a stated MS or NMR detector; publisher supplementary-material
+  items mirrored on Figshare (PLOS tables, Frontiers data sheets, Taylor & Francis, SciELO, Royal Society and Springer
+  Nature supplements) and article PDFs or accepted manuscripts deposited in Zenodo or institutional repositories;
+  restricted or deleted records. Unit = study. MW study IDs, project IDs and project DOIs, MetaboLights studies and
+  their Zenodo raw-data mirrors, MassIVE accessions and their DOIs, re-uploads of the same files under new MassIVE
+  accessions or new Zenodo concept records, Dryad deposits and their Zenodo code/supplement mirrors, Mendeley versions,
+  and per-sample companion Mendeley deposits of one paper are aliases. Separate deposits from different papers are
+  separate studies, even from the same lab.
+studies:
+  - key: S1
+    title: "Comparative Evaluation of Mass Spectrometry, Nuclear Magnetic Resonance Spectroscopy, and Multi-Platform Integration for Honey Authentication"
+    year: 2026
+    ids: ["PR003204", "ST004989", "ST004990", "10.21228/M8J56V"]
+    archives: [Metabolomics Workbench]
+    evidence: "MW mwTab: sample type Honey (food item), ST004989 flow-injection MS and ST004990 1H NMR for floral-origin and syrup-adulteration fingerprinting; study pages report raw data available (.d and .fid); DOI resolves to PR003204."
+  - key: S2
+    title: "The Metabolomic Profile of Honeydew Honey Distinguishes It From Blossom Honey"
+    year: 2026
+    ids: ["PR002998", "ST004728", "10.21228/M8526D"]
+    archives: [Metabolomics Workbench]
+    evidence: "MW mwTab: sample type Honey, reversed-phase LC-MS of spotted-lanternfly honeydew honey versus blossom honey; raw data available (.d, mzML)."
+  - key: S3
+    title: "The chemical profiles of Aroeira honey from Vale do Jequitinhonha and from Norte de Minas (Brazil) are largely similar"
+    year: 2025
+    ids: ["PR002756", "ST004344", "10.21228/M8DR9M"]
+    archives: [Metabolomics Workbench]
+    evidence: "MW mwTab: untargeted LC-MS of Myracrodruon urundeuva (aroeira) honey from two Brazilian regions, sample type Honey; raw data available (.d, mzXML); linked paper 10.1080/00218839.2024.2430850."
+  - key: S4
+    title: "Untargeted LC-MS-Based Metabolomic Profiling of Tamarix-Derived Honey for Identification of Bioactive Compounds"
+    year: 2025
+    ids: ["PR002502", "ST003997", "10.21228/M87C2M"]
+    archives: [Metabolomics Workbench]
+    evidence: "MW mwTab: Agilent Q-TOF LC-MS of Tamarix honey in both polarities, sample source Honey, metabolite tables (9+ named metabolites per mode) and mzML raw data; cited by the Frontiers Pharmacol 2025 Tamarix-honey paper."
+  - key: S5
+    title: "Determination of metabolite differences between loquat nectar and honey by UPLC-MS/MS"
+    year: 2025
+    ids: ["MTBLS12228", "10.5281/zenodo.15846597", "10.5281/zenodo.15846598"]
+    archives: [MetaboLights, Zenodo]
+    evidence: "MetaboLights API: organism parts nectar and honey of Eriobotrya japonica, positive and negative RP LC-MS assays with MAF tables; the Zenodo record of the same title holds the 12 mzML files (DHPHM honey and DHPFM nectar) and both are cited in PeerJ 10.7717/peerj.19988."
+  - key: S6
+    title: "GNPS-Honey_Metabolomic_analysis_GCMS (University of Botswana)"
+    year: 2026
+    ids: ["MSV000101830", "10.25345/c5k06xf5g"]
+    archives: [MassIVE]
+    evidence: "MassIVE/PROXI: GC-MS metabolite analysis of honey samples to classify floral and geographic origin; GNPS file cache lists 200 mzML files."
+  - key: S7
+    title: "Metabolomics-based authentication of acacia honey against C3 and C4 sugar-fed adulteration"
+    year: 2026
+    ids: ["MSV000100392", "10.25345/c5vt1h36c"]
+    archives: [MassIVE]
+    evidence: "MassIVE: untargeted Exactive Plus metabolomics of Robinia acacia honey and sugar-fed adulterated honeys, 664 .raw files plus csv result tables in the GNPS file cache."
+  - key: S8
+    title: "Stingless_bee_honeys_mead_Brazil"
+    year: 2025
+    ids: ["MSV000097988", "MSV000097989", "MSV000097990", "10.25345/c55d8ns9r", "10.25345/c51n7z06h", "10.25345/c5x05xr38"]
+    archives: [MassIVE]
+    evidence: "MassIVE: LC-MS/MS metabolomics (micrOTOF-Q II) of Brazilian stingless bee honeys and meads made from them; the three accessions share the same title, description and raw mzML files (e.g. 'Branco POS 2_F'), so they are aliases."
+  - key: S9
+    title: "GNPS - Headspace GC-MS of ecuadorian Amazonia honey"
+    year: 2024
+    ids: ["MSV000094511", "10.25345/c5cn6z97r"]
+    archives: [MassIVE]
+    evidence: "MassIVE: headspace GC-MS volatile profiles of honey from Melipona fuscopilosa, Tetragonisca angustula and Melipona fasciculata; 174 files (.qgd, .cdf, mzML, mzXML)."
+  - key: S10
+    title: "GNPS - Philippine forest honey from Palaui Island, Cagayan and Laiban, Tanay, Rizal"
+    year: 2023
+    ids: ["MSV000093476", "10.25345/c5zs2kq3s"]
+    archives: [MassIVE]
+    evidence: "MassIVE: full-scan and MS/MS metabolomics of Apis cerana, Apis breviligula and Tetragonula biroi forest honey, 58 mzXML files; cited as the data deposit of Sci Rep 10.1038/s41598-024-71385-4 (multi-omics and palynology of Philippine forest honey)."
+  - key: S11
+    title: "GNPS - Chemical diversity in a stingless bee-plants symbiosis"
+    year: 2019
+    ids: ["MSV000084208", "10.25345/c5vh3k"]
+    archives: [MassIVE]
+    evidence: "MassIVE: LC-ESI-MS/MS of Scaptotrigona depilis colony materials including honey, fermented pollen, larval food, cerumen and propolis; the GNPS file cache lists honey ('MEL') mzML/mzXML files among the 146 files."
+  - key: S12
+    title: "GNPS - Food/honey/plants of the Hadza - C18-LC-MS/MS Positive Polarity"
+    year: 2015
+    ids: ["MSV000079356"]
+    archives: [MassIVE]
+    evidence: "MassIVE: maXis LC-MS/MS of food, honey and plants from the Hadza environment; the GNPS file cache shows a ccms_peak/Honey folder with 56 of the 70 mzXML files."
+  - key: S13
+    title: "Ecological and evolutionary drivers of stingless bee honey variation at the global scale"
+    year: 2025
+    ids: ["10.5061/dryad.qnk98sfs7", "10.5281/zenodo.13889267", "10.5281/zenodo.13889268", "10.5281/zenodo.13889269", "10.5281/zenodo.13889270"]
+    archives: [Dryad, Zenodo]
+    evidence: "Dryad API: 1H-NMR quantification of 36 compounds (sugars, organic acids, amino acids, fermentation markers) in 240 Apis and stingless bee honeys, files Data_Global_EcoEvo_Honey.csv and Chemodiv_package_Compounds.csv; the two Zenodo records (R code; SI and figures) are linked IsSourceOf/IsDerivedFrom."
+  - key: S14
+    title: "Compositional profile of stingless bee honey from a West African country, Burkina Faso using H1-NMR spectroscopy"
+    year: 2024
+    ids: ["10.17632/y8djpwzx59", "10.17632/y8djpwzx59.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley API: 42 Apis mellifera adansonii and stingless bee honeys, files Data_CompHonBK.xlsx and per-sample NMR zip archives (p382573_210.zip etc.)."
+  - key: S15
+    title: "Metabolites in kelulut honey of the stingless bees, Heterotrigona itama and Tetrigona binghami from Kuantan, Pahang, Malaysia: LC-MS/MS-QTOF Dataset"
+    year: 2023
+    ids: ["10.17632/w9wtvf52vd", "10.17632/w9wtvf52vd.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley API: LC-MS/MS-QTOF negative-mode compound reports for three kelulut honey nests plus blank (KH1-3_CompoundReport.xls, 7-29 MB each); Data in Brief 10.1016/j.dib.2023.109409."
+  - key: S16
+    title: "Mass data of the paper: plant-derived biomarkers and physicochemical variations in the maturation process of Triadica cochinchinensis honey (UPLC-QTOF-MS metabolomics)"
+    year: 2022
+    ids: ["10.17632/wc7r6tv3xw", "10.17632/wc7r6tv3xw.1", "10.17632/wc7r6tv3xw.2", "10.17632/wc7r6tv3xw.3", "10.17632/wc7r6tv3xw.4"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley API: NP.1.csv lists 8632 metabolites and NP.6.csv 723 VIP>1 metabolites from UPLC-QTOF-MS of Triadica honey across maturation."
+  - key: S17
+    title: "LC-MS/MS-QTOF dataset of chlorophyll derivatives and chemical compounds detected in Green Honey (GH) and Tualang Honey (TH) from Malaysia"
+    year: 2023
+    ids: ["10.17632/s5gkf4yw7d", "10.17632/s5gkf4yw7d.1", "10.17632/ydrfcrdr4z", "10.17632/ydrfcrdr4z.1", "10.17632/ydrfcrdr4z.2", "10.17632/ydrfcrdr4z.3", "10.17632/ydrfcrdr4z.4", "10.17632/ydrfcrdr4z.5", "10.17632/ydrfcrdr4z.6", "10.17632/ydrfcrdr4z.7", "10.17632/ydrfcrdr4z.8", "10.17632/ydrfcrdr4z.9", "10.17632/ydrfcrdr4z.10", "10.17632/ydrfcrdr4z.11", "10.17632/p8xm4fx5ys", "10.17632/p8xm4fx5ys.1", "10.17632/7cj8phvkh2", "10.17632/7cj8phvkh2.1", "10.17632/cwn4mm3png", "10.17632/cwn4mm3png.1", "10.17632/hsg78hx8fx", "10.17632/hsg78hx8fx.1"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley API: untargeted and chlorophyll-targeted LC-MS/MS-QTOF compound reports for green honey and Tualang honey (PDF reports, compound list, methodology). Six deposits by the same authors (Ullah, Huyop) split the one data article (preprint 10.21203/rs.3.rs-3350623/v1) into parts."
+  - key: S18
+    title: "LC-MS/MS-QTOF dataset of chemical compounds detected in honey samples from Bali and Lombok, Indonesia"
+    year: 2023
+    ids: ["10.17632/8wtn82v7wg", "10.17632/8wtn82v7wg.1", "10.17632/8wtn82v7wg.2", "10.17632/8wtn82v7wg.3", "10.17632/473vwznkdj", "10.17632/473vwznkdj.1", "10.17632/473vwznkdj.2", "10.17632/3dwkxtbnyt", "10.17632/3dwkxtbnyt.1", "10.17632/3dwkxtbnyt.2", "10.17632/cdhspzm3v8", "10.17632/cdhspzm3v8.1", "10.17632/cdhspzm3v8.2"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley API: non-targeted LC-MS/MS-QTOF compound-discovery reports for wild honeys B1 (Lombok), B2 and B3 (Bali); the per-sample deposits duplicate the PDFs of 8wtn82v7wg, which is cited by Data in Brief 10.1016/j.dib.2024.110884."
+  - key: S19
+    title: "Flavonoids and phenolic acids identified in raw Lombok and Bali Apis cerana honey via LC-MS/MS-QTOF targeted analysis"
+    year: 2024
+    ids: ["10.17632/jxd6xvmtcg", "10.17632/jxd6xvmtcg.1", "10.17632/jxd6xvmtcg.2", "10.17632/mxddfpm8hs", "10.17632/mxddfpm8hs.1", "10.17632/mxddfpm8hs.2", "10.1371/journal.pone.0301213.t003", "10.1371/journal.pone.0301213.t005"]
+    archives: [Mendeley Data]
+    evidence: "Mendeley API: S1 and S2 Appendix PDFs listing flavonoids and phenolic acids found by targeted LC-MS/MS-QTOF in raw Lombok and Bali honey, the S1/S2 appendices of PLOS One 10.1371/journal.pone.0301213 (whose Tables 3 and 5 are mirrored on Figshare); a different paper from S18."
+  - key: S20
+    title: "1H NMR spectra of commercial honey from 400 and 700 MHz spectrometers and tables with data after processing and binning"
+    year: 2024
+    ids: ["10.5281/zenodo.10559697", "10.5281/zenodo.10559698", "10.5281/zenodo.10969320", "10.5281/zenodo.11341173", "10.5281/zenodo.11341174"]
+    archives: [Zenodo]
+    evidence: "Zenodo API: 400MHz.zip and 700MHz.zip of Bruker 1H NMR spectra of commercial honey and binning tables (xlsx), by Maulidiani; the 11341173 concept re-uploads the same four files as the 10559697 concept, so they are aliases."
+  - key: S21
+    title: "Liquid Chromatography-Mass Spectrometry analysis of raw (RGT) and dehydrated (DGT) stingless bee honey from Geniotrigona thoracica"
+    year: 2024
+    ids: ["10.6084/m9.figshare.24972558", "10.6084/m9.figshare.24972558.v1"]
+    archives: [Figshare]
+    evidence: "Figshare API: UHPLC-Vion IMS QTOF negative-mode results table (20220719-(DGT, RGT)-negative mode.xlsx) for raw and dehydrated stingless bee honey."
+  - key: S22
+    title: "Metabolomics of Saudi Acacia and Ziziphus Honey"
+    year: 2025
+    ids: ["10.6084/m9.figshare.29339258", "10.6084/m9.figshare.29339258.v1"]
+    archives: [Figshare]
+    evidence: "Figshare API: LC-ESI-QTOF-MS result files (PDF) for six Acacia and Ziziphus honeys (H-1 to H-5) and a Metabolomics Workbench mass-search result."
+  - key: S23
+    title: "Analysis of volatile components and characteristic markers in loquat honey by gas chromatography-mass spectrometry"
+    year: 2026
+    ids: ["10.57760/sciencedb.sepu.00035"]
+    archives: [Science Data Bank]
+    evidence: "DataCite and the SciDB landing page: HS-SPME-GC-MS volatile profiles of loquat honey from four Chinese provinces, CC BY 4.0, 137,830 bytes of open data (file names not listable without login)."
+  - key: S24
+    title: "Impact of wax foundation on honey"
+    year: 2026
+    ids: ["10.6084/m9.figshare.31144237", "10.6084/m9.figshare.31144237.v1"]
+    archives: [Figshare]
+    evidence: "Figshare API: six per-hive PDF reports (honey from three traditional hives with and without merged wax foundation); the first PDF opened is a SCIEX OS non-targeted X500 QTOF result table (precursor masses, formula finder, library confidence)."
+  - key: S25
+    title: "Supplementary Data: 1H NMR metabolomics and molecular networking of Malaysian stingless bee honey"
+    year: 2024
+    ids: ["10.5281/zenodo.11066037", "10.5281/zenodo.11066038"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (an author-deposited Supplementary Materials.pdf of 0.84 MB with no description; it was downloaded but its text could not be extracted, so the data content is unconfirmed). Zenodo record by Maulidiani, a separate paper from S20."
+near_misses:
+  - {ids: ["MTBLS10021", "ST004341", "PR002753"], why_excluded: "Mice given Alhagi honey (liver LC-MS) or honey with ethanol (serum LC-MS). The metabolomics is of host tissue, not honey."}
+  - {ids: ["MSV000092846", "MSV000092860", "MSV000093216"], why_excluded: "QuEChERS extracts of one honey QC sample run in full-scan/ddMS2 with an OPPIN pesticide inclusion list: a residue-screening method dataset, not honey metabolite profiling."}
+  - {ids: ["MSV000101829", "10.25345/c5pr7n78t"], why_excluded: "'GNPS-Honey_tMetabolomic_analysis_GCMS' has a DataCite DOI, but MassIVE PROXI returns 404 and the accession is absent from the public dataset list, so it is not public (an apparent duplicate of S6)."}
+  - {ids: ["MSV000082256"], why_excluded: "QTOF analysis of fipronil and its metabolites in NZ bees, honey and brood after wasp-bait exposure. Contaminant residue only."}
+  - {ids: ["MSV000097506", "MSV000097512", "MSV000088979", "MSV000085697", "MSV000083096"], why_excluded: "Honey proteomics (nanoLC-MS/MS of honey proteins, foreign amylases, bumblebee honey proteome). Proteomics, not metabolomics."}
+  - {ids: ["10.5281/zenodo.17954316", "10.5281/zenodo.17954317"], why_excluded: "'Untargeted metabolomic profiling ... Sierra Nevada honeys' (HPLC-ESI-TOF-MS mzML). It qualifies on topic, but the record is access_right=restricted with no public files."}
+  - {ids: ["10.5281/zenodo.18832198", "10.5281/zenodo.18832199"], why_excluded: "Honey as a matrix for polymer additives and NIAS. Contaminant topic, and the record is restricted with no files."}
+  - {ids: ["10.17632/jxj2r45t2x", "10.1016/j.dib.2024.110532"], why_excluded: "GC-IMS volatile fingerprints of canola, acacia and honeydew honey. Ion-mobility spectrometry, not mass spectrometry."}
+  - {ids: ["10.17632/kn72vrxxy7", "10.17632/kn72vrxxy7.1"], why_excluded: "GC-MS/QqQ raw files of honey from Central Italy. Its Data in Brief paper (10.1016/j.dib.2022.108136) shows they are PAH determinations: a contaminant assay."}
+  - {ids: ["10.17632/v8gvnjkf73", "10.17632/v8gvnjkf73.1"], why_excluded: "Chromatogram PDFs for phytocompounds and sugars in commercial honey batches. No MS or NMR detector is stated, so they are treated as routine chromatographic QC."}
+  - {ids: ["10.17632/5cdpbpbkcz", "10.17632/5cdpbpbkcz.1"], why_excluded: "NMR spectra used to elucidate one new glycoside (lindoside) from linden honey. Single-compound structure work, not profiling."}
+  - {ids: ["10.6084/m9.figshare.30830777"], why_excluded: "HPLC-HRMS quantification of a single compound (p-coumaric acid) in bee products and syrups."}
+  - {ids: ["10.17632/tt6pp6pbpk", "10.17632/fvdjt6nrzw", "10.17632/hnxg4fj3gy", "10.17632/sf4z9gyzpd", "10.17632/hs78yxb93j", "10.5061/dryad.tdz08kqd5", "10.21950/MUXK2G", "10.6084/m9.figshare.5980105", "10.6084/m9.figshare.16880554", "10.6084/m9.figshare.19422323", "10.6084/m9.figshare.14278849"], why_excluded: "Honey element, residue or toxin assays: elemental chemometrics, insecticides, glyphosate/AMPA, potentially toxic elements, radioactivity, neonicotinoids, atropine/scopolamine, pyrrolizidine alkaloids, sulphonamides and pesticide multiresidues."}
+  - {ids: ["10.17632/zn9xpyth3b", "10.17632/6kxjzpkdvd", "10.17632/7fd2vdtx48", "10.17632/86v98j68jm", "10.17632/j4dmwtw5by", "10.17632/dhxnzx5k2r", "10.17632/25p4w33kwr", "10.5281/zenodo.20418835", "10.5281/zenodo.15877062", "10.5281/zenodo.18819490", "10.5281/zenodo.20072145", "10.5281/zenodo.20629558", "10.5281/zenodo.22027080", "10.5281/zenodo.16386575", "10.57760/sciencedb.36018", "10.57760/sciencedb.17709"], why_excluded: "Honey physicochemical, mineral, nutrient, antioxidant, antibacterial, sensory or multi-sensor datasets (moisture, pH, colour, HMF, TPC, amino acids, minerals, vitamins). The checked files have no MS or NMR metabolite data."}
+  - {ids: ["10.5281/zenodo.20642834", "10.5281/zenodo.20642835"], why_excluded: "Metadata-only record for Watson honey spectral data. The deposit states the raw and processed spectra are kept confidential for 24 months."}
+  - {ids: ["kaggle:alfaturk/ftir-honey-dataset", "kaggle:ramakrishna1819/honey-adulteration-hyperspectral-dataset", "kaggle:peyushgedela/adulterated-honey-dataset"], why_excluded: "Kaggle honey datasets: FTIR spectra, hyperspectral images and an adulteration/purity table. Not MS or NMR."}
+  - {ids: ["10.5281/zenodo.15231440", "10.5281/zenodo.15648107", "10.25430/researchdata.cab.unipd.it.00001770", "10.57996/cran.ceres-2729", "10.17608/k6.auckland.16441686", "10.17608/k6.auckland.19134698", "10.58032/agh/ewkwun"], why_excluded: "FTIR-ATR, NIR, Raman, hyperspectral-imaging and microwave-sensor honey datasets. These are not MS or NMR."}
+  - {ids: ["10.57996/cran.ceres-2784", "10.57996/cran.ceres-2728", "10.5281/zenodo.14914452", "10.5281/zenodo.19183388", "10.5281/zenodo.18446951", "10.5281/zenodo.10017808", "10.5281/zenodo.10454308"], why_excluded: "Honey DNA, eDNA, qPCR, MAG or pollen-image/melissopalynology datasets. No metabolite data."}
+  - {ids: ["10.5061/dryad.83bk3j9w3", "10.6084/m9.figshare.27050500", "10.5281/zenodo.18400536", "10.17632/r7ptfzsm97", "MSV000097590"], why_excluded: "Metabolomics or phytochemical profiles of honey bees, larvae and pollen (and bee tissue omics), not of honey."}
+  - {ids: ["10.18150/68vkig"], why_excluded: "Key odorants in mead. A fermented beverage, not honey."}
+  - {ids: ["10.6084/m9.figshare.32086956", "10.57760/sciencedb.45504", "10.57760/sciencedb.nprd.00017"], why_excluded: "Honey-processed herbal drugs (Astragali / Hedysari Radix) and serum studies of them. Not honey itself."}
+  - {ids: ["10.1371/journal.pone.0172099.t001", "10.3389/fchem.2022.924881.s001", "10.3389/fnut.2022.941463.s001", "10.3389/fnut.2025.1524642.s001", "10.3389/fnut.2025.1641551.s001", "10.3389/fsufs.2026.1929136.s001", "10.3389/fimmu.2021.673903.s001", "10.3389/fmicb.2019.00263.s002", "10.6084/m9.figshare.23394586", "10.6084/m9.figshare.14578909", "10.6084/m9.figshare.13490248", "10.6084/m9.figshare.1411215", "10.6084/m9.figshare.6318218", "10.6084/m9.figshare.21835513", "10.6084/m9.figshare.10025651", "10.6084/m9.figshare.20729455", "10.6084/m9.figshare.6503348", "10.6084/m9.figshare.c.5221495", "10.6084/m9.figshare.c.5760612", "10.6084/m9.figshare.c.3923350"], why_excluded: "Publisher supplementary-material items for honey-chemistry papers mirrored on Figshare (PLOS, Frontiers, Taylor & Francis, SciELO, Royal Society Open Science, Springer Nature), excluded by the supplement rule. Some do tabulate compounds: Thai honey VOCs, the Ikaria heather honey UHPLC-HRMS supplement, buckwheat-honey GC/MS presence table, malicia honey phenolics. The SciELO 6318218 table files return NoSuchKey."}
+  - {ids: ["10.57935/agr.26353132.v1", "10.5281/zenodo.1100761", "10.5281/zenodo.1100770", "10.5281/zenodo.1110565", "10.5281/zenodo.1125026", "10.21474/IJAR01/21288", "10.25405/ncl.34383207", "10.25673/109633"], why_excluded: "Article PDFs, accepted manuscripts or theses on honey MS/NMR (Leptospermum REIMS, Ecuadorian honey NMR, Tualang honey, stingless-bee honey volatiles, Chenopodiaceae honey SPME-GC-MS, qNMR of methylglyoxal, Sidr honey). Publications, not data deposits."}
+  - {ids: ["10.5281/zenodo.21789071", "10.5281/zenodo.21792988", "10.5281/zenodo.21818940", "10.25826/20250828-100752-0", "10.6084/m9.figshare.32194197"], why_excluded: "Catalogues and systematic reviews of honey and food-authentication datasets or methods. No new measurements."}
+  - {ids: ["MTBLS771", "MTBLS772", "MTBLS752", "MTBLS754"], why_excluded: "Returned by the MetaboLights 'honey' search, but these are untargeted contaminant-detection studies on tea (Camellia sinensis), not honey."}
+  - {ids: ["osf.io/ywj9e"], why_excluded: "OSF project on urban stingless bee nest landscapes and honey quality. Its linked article is about microplastics in Melipona honey; no MS/NMR metabolite deposit is described."}
+queries:
+  - "PRIMARY topic (human breast milk), run before the switch: Metabolomics Workbench REST study/study_id/ST/summary (4646 studies) title grep milk|lactat|breastfe|colostr|HMO|oligosacchar: 37 hits; study/study_id/ST/source (5043 rows) sample source ~ milk: 10 studies; metstat ;;;Human;Milk / Breast milk: 2 / 4 rows; maternal/infant title grep among human studies: 66 (one more milk study, ST001322)."
+  - "PRIMARY: MetaboLights via EBI Search (ebisearch/ws/rest/metabolights): milk 124; breastmilk 3; colostrum 7; lactation 30; breastfeeding 14; \"human milk\" 30; \"breast milk\" 14; \"mother's milk\" 0; lipidomics AND infant 7. 30 candidate studies were opened with the MetaboLights study API."
+  - "PRIMARY: MassIVE ProteoSAFe/datasets_json.jsp (20409 public datasets) title/description/keyword grep milk|colostr|lactation|breastfe|HMO: 117 hits, about 15 human-milk GNPS metabolomics datasets. DataCite dataset query (human milk OR breast milk OR breastmilk OR colostrum) AND (metabolom* OR lipidom* OR metabolite* OR lipid* OR NMR OR mass spectrometry): 219. The tally (about 33-36 likely firm) is in scratch/primary_tally.md."
+  - "BACKUP (honey): Metabolomics Workbench all-study title grep hone(y|ies)|propolis|royal jelly|nectar|bee: 21 hits; sample source 'Honey': 3 (ST003997, ST004989, ST004990). mwTab, study pages (raw-data flag) and DataCite titles.title:PRxxxxxx (DOIs) were read for the 6 honey candidates."
+  - "BACKUP: MetaboLights EBI Search: honey 19; manuka 232 (stemming noise from 'manuscript', title-screened); miel 5; nectar 1; stingless 1; \"bee product\" 1; apis 13. MetaboLights study and files API were read for MTBLS12228, MTBLS10021, MTBLS771/772/752/754."
+  - "BACKUP: MassIVE datasets_json grep \\bhoney: 54 datasets; grep miel|mel|stingless|melipon|manuka|apis cerana|tetragon|nectar|propolis|royal jelly|bee bread: 23 datasets. PROXI v0.1 datasets/{acc} was checked for 13 accessions, and GNPS2 datasetcache filename tables were read for 12 accessions."
+  - "BACKUP: DataCite api.datacite.org/dois, resource-type dataset, (honey OR honeys OR miel OR 'mel de') AND (metabolom* OR metabolite* OR NMR OR 'mass spectrometry' OR LC-MS OR GC-MS OR UHPLC OR HPLC OR fingerprint* OR volatil* OR lipidom* OR phenolic* OR polyphenol* OR flavonoid* OR chemometric* OR authentic* OR adulterat*): 778 records, 222 title groups after removing 46 ICPSR hits, all screened. No type filter, (stingless OR meliponini OR melipona OR trigona OR tetragonula OR tetragonisca OR kelulut OR manuka OR 'honeydew honey' OR 'pot-honey') AND (NMR OR metabolom* OR mass spectrometry OR LC-MS OR GC-MS OR volatil* OR phenolic* OR chemical OR compounds): 499. titles.title:(honey OR honeys) AND Dataset AND descriptions.description:(NMR OR mass spectrometry OR LC-MS OR GC-MS OR metabolom* OR volatile*): 115. Science Data Bank honey / Chinese-language terms: 11."
+  - "BACKUP: Zenodo api/records type=dataset: honey AND (metabolomics OR metabolomic OR metabolite(s) OR NMR OR mass spectrometry OR LC-MS OR GC-MS OR volatile(s) OR lipidomics OR fingerprinting OR phenolic): 71; title:honey OR title:honeys OR description:'honey samples' OR keywords:honey: 375 (all titles screened). Record API with file lists read for 22 records; 2 small xlsx files opened."
+  - "BACKUP: Figshare api.figshare.com/v2/articles/search: honey metabolomics 89; honey NMR 37; honey mass spectrometry 268; honey volatile compounds 71; honey LC-MS 90; honey GC-MS 75; stingless bee honey 150; honey phenolic profile 27; honey authentication 74; honey untargeted 28. That gives 217 honey-titled non-figure items (73 datasets, 81 journal contributions), title-screened; article/file APIs read for 19 items, and 9 supplement files downloaded and text-checked."
+  - "BACKUP: Mendeley Data api/research-data/search?query=: honey 121; honeys 4; miel 1; stingless 15; kelulut 3; meliponine 0; honey metabolomics 714 (first 550 screened); honey NMR 780 (first 550); honey volatile 468. public-api/datasets/{id} file lists were read for 21 deposits."
+  - "BACKUP: Dryad api/v2/search: honey metabolomics 0; honey NMR 1; honey mass spectrometry 3; honey volatile 5; stingless bee honey 4; honey phenolic 1. Dataset and version-file APIs were read for dryad.qnk98sfs7."
+  - "BACKUP: Dataverse api/search type=dataset honey AND (metabolomics OR NMR OR mass spectrometry OR volatile OR LC-MS OR GC-MS OR phenolic): Harvard 3, Recherche Data Gouv 0, Borealis 0, DataverseNL 0. OSF api/v2/nodes title icontains honey: 90 (ywj9e folders listed)."
+  - "BACKUP: Europe PMC REST search (TITLE:honey OR TITLE:honeys OR ABSTRACT:'honey samples') AND (metabolom* OR NMR OR mass spectrometry OR LC-MS OR GC-MS OR volatil* OR lipidom* OR 'chemical profil*' OR fingerprint*) AND (MetaboLights OR MTBLS* OR Metabolomics Workbench OR MassIVE OR GNPS OR zenodo OR figshare OR dryad OR mendeley data OR dataverse OR science data bank OR DOI prefixes): 164. After dropping bee-biology titles, 69 full texts were parsed for accessions and DOIs; new leads were MSV000093476, ST003997, MTBLS12228 with its Zenodo mirror, 8wtn82v7wg, w9wtvf52vd, kn72vrxxy7, 5cdpbpbkcz and figshare 32086956, plus several software DOIs."
+  - "BACKUP: Europe PMC (TITLE:honey OR TITLE:honeys OR TITLE:'mel de' OR TITLE:miel) AND (metabolom* OR NMR OR LC-MS OR GC-MS OR volatil* OR mass spectrometry OR lipidom* OR UHPLC OR HRMS OR QTOF OR Orbitrap OR fingerprint*) AND OPEN_ACCESS:y AND PUB_YEAR:[2015 TO 2026] AND HAS_FT:y: 1323, of which 1176 were new. After dropping bee-biology titles, 834 full-text XMLs were parsed for repository accessions and DOIs. Only a Zenodo NGS-method record, a gallnut-honey nutrient record (NASDC), a hyperspectral honey figshare item and a viral graph tool turned up; no new qualifying deposit."
+  - "BACKUP: Kaggle public API api/v1/datasets/list?search=: honey 20; honey adulteration 2; honey spectra 2. Only production statistics, bee images, FTIR, hyperspectral and synthetic purity tables; no MS or NMR."
+  - "doi.org resolution was checked for 26 keyed DOIs (all 302 to the archive landing page)."
+size_verdict: "switched to BACKUP. The primary topic (MS/NMR metabolomics or lipidomics of human breast milk) had about 33-36 likely-firm studies before generalist repositories were fully screened (5 MW, 9 MetaboLights, about 14 MassIVE/GNPS and 5-8 Mendeley/Zenodo/SciDB/Recherche Data Gouv/SciELO; scratch/primary_tally.md), above the 30-firm ceiling. Backup (honey): 25 studies after alias grouping (24 firm, 1 borderline) in 8 archives: Metabolomics Workbench 4, MetaboLights 1 (shared with Zenodo), MassIVE 7, Dryad 1 (with Zenodo mirrors), Mendeley Data 6, Zenodo 2 own (S20, S25) plus 2 mirrors, Figshare 3, Science Data Bank 1. This is within the 5-30 firm gate across at least 3 archives."

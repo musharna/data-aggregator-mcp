@@ -1,0 +1,160 @@
+task: V6
+prompt: >-
+  Find every public dataset, in any archive, that holds methanesulfonic acid (MSA, methanesulfonate) measurements
+  from ice cores or firn cores drilled in the Northern Hemisphere (Greenland ice sheet and ice caps, the Canadian,
+  Alaskan and Eurasian Arctic, and Northern Hemisphere mountain glaciers). Datasets of multi-species ice-core chemistry
+  count if they include an MSA column. Snow-pit or surface-snow sampling, atmospheric aerosol MSA, Antarctic and other
+  Southern Hemisphere cores, records that only use MSA to date layers without reporting it, and papers without
+  deposited data do not count.
+criteria: >-
+  Topic: BACKUP (ice-core records of MSA), narrowed to the Northern Hemisphere because both the primary and the
+  full backup topic exceeded the 30-study size gate (see size_verdict). Included: a public archive deposit (NOAA NCEI
+  Paleoclimatology, PANGAEA, NSF Arctic Data Center, or any other repository) whose data files or parameter list hold
+  MSA/methanesulfonate concentrations (or fluxes) measured on an ice core or firn core drilled north of the equator.
+  Multi-species chemistry tables count if MSA is a reported column, confirmed from the NOAA variable list or file
+  header, the PANGAEA parameter list, or the Arctic Data Center EML attribute list or file header. Unit = study: the
+  same data deposited in NOAA and PANGAEA (GISP2 MSA, GRIP ions), old and new DOIs of the same Arctic Data Center
+  package, and several per-core packages from one project and one PI submission (West Greenland Disko/Nuussuaq/ice-sheet
+  cores) are aliases of one study. Flagged borderline: datasets PANGAEA lists as validated but unpublished (no DOI
+  registered), and an MSA column that sits inside a dating file of a firn-density study. Excluded (near misses): snow
+  pits and surface snow, atmospheric aerosol MSA, sibling deposits from the same project that lack MSA, records that
+  only cite MSA as a dating marker, Antarctic/Southern Hemisphere cores (including Quelccaya, Peru, 13.9 S), and
+  deposits whose MSA content could not be confirmed.
+studies:
+  - key: S1
+    title: "GISP2 Ice Core 11,000 Year Methanesulfonic Acid (MSA) Data"
+    year: 1997
+    ids: ["10.25921/50sv-7k61", "noaa-icecore-17804", "https://www.ncei.noaa.gov/access/paleo-search/study/17804", "10.1594/PANGAEA.56095", "10.1594/PANGAEA.56096"]
+    archives: [NOAA NCEI, PANGAEA]
+    evidence: "NOAA study 17804 files msacored.txt/msacoref.txt hold MSA (ion chromatography) in GISP2 D and F cores (Saltzman et al. 1997 JGR 10.1029/97JC01377), and PANGAEA 56095/56096 are the same D- and F-core MSA tables from the GISP2/GRIP CD-ROM (parameter 'Methanesulfonic acid'); all DOIs resolve."
+  - key: S2
+    title: "Greenland Ice Cores 500 Year Methanesulfonic Acid Data"
+    year: 2019
+    ids: ["10.25921/hhps-mt78", "noaa-icecore-26691", "https://www.ncei.noaa.gov/access/paleo-search/study/26691"]
+    archives: [NOAA NCEI]
+    evidence: "NOAA study 26691 holds raw MSA files for D4 and NGT-B16/B18/B20/B21/B26 (osman2019*msa.txt, variable methanesulfonate) behind Osman et al. 2019 Nature 10.1038/s41586-019-1181-8; DOI resolves."
+  - key: S3
+    title: "GRIP Ice Core 386 KYr Ion Concentrations Data"
+    year: 1997
+    ids: ["10.25921/s655-jh52", "noaa-icecore-17843", "https://www.ncei.noaa.gov/access/paleo-search/study/17843", "10.1594/PANGAEA.55104"]
+    archives: [NOAA NCEI, PANGAEA]
+    evidence: "NOAA gripion.txt header lists an MSA column among F, acetate, formate, Cl, NO3, SO4 for the GRIP core (De Angelis, Legrand et al. 1997), and PANGAEA 55104 'GRIP Ion Concentrations' (de Angelis, same CD-ROM source) has parameters 'Methanesulfonic acid' and its standard deviation."
+  - key: S4
+    title: "Penny Ice Cap - Conductivity, Isotope, and Chemistry Data"
+    year: 2003
+    ids: ["10.25921/ve8y-c636", "noaa-icecore-2474", "https://www.ncei.noaa.gov/access/paleo-search/study/2474"]
+    archives: [NOAA NCEI]
+    evidence: "NOAA study 2474 (Baffin Island P95 cores, Fisher et al. 1998; Grumet et al. 1998) includes penny95/chem/negion_952.txt whose header is SAMPLE, TOP, Bot, MSA, Cl, NO3, SO4 (variable methanesulfonic acid); DOI resolves."
+  - key: S5
+    title: "Ion concentrations between 0-12 m and 12-120 m of ice core ngt23C94.2 (North Greenland Traverse B20)"
+    year: 2005
+    ids: ["PANGAEA.484983", "https://doi.pangaea.de/10.1594/PANGAEA.484983", "10.1594/PANGAEA.484983", "PANGAEA.484984", "https://doi.pangaea.de/10.1594/PANGAEA.484984", "10.1594/PANGAEA.484984"]
+    archives: [PANGAEA]
+    evidence: "confidence: borderline (PANGAEA marks both tables 'validated'/'unpublished dataset' and their DOIs return 404 at doi.org, although the landing pages and tab-delimited download are public); parameters include 'Methanesulfonic acid' with formate, Cl, NO3, SO4 for the NGT B20 core (Mieding 2005, BzPM 513, 10.2312/BzPM_0513_2005)."
+  - key: S6
+    title: "NorthGRIP ice-core record of major ions measured using ion chromatography covering the last two millennia and additional short Holocene sections"
+    year: 2022
+    ids: ["10.1594/PANGAEA.944172"]
+    archives: [PANGAEA]
+    evidence: "PANGAEA parameter list: Li, Na, NH4, K, Mg, Ca, F, 'Methanesulfonic acid', Cl, NO3, SO4 by depth for NGRIP (Siggaard-Andersen, Hansson, Steffensen; refs Jonsell/Hansson MSA comparison 10.1029/2006JD007451); DOI resolves."
+  - key: S7
+    title: "Anion concentrations of the EGRIP ice core"
+    year: 2025
+    ids: ["10.1594/PANGAEA.966041"]
+    archives: [PANGAEA]
+    evidence: "PANGAEA parameter list: fluoride, 'Methanesulfonic acid', chloride, bromide, sulfate, nitrate per sample for the East Greenland EGRIP core (Hörhold, Twarloh, Behrens et al.); the companion cation table 966039 has no MSA and is not an alias; DOI resolves."
+  - key: S8
+    title: "Ice core methanesulfonic acid from the Begguya (Mount Hunter) plateau, Denali National Park, Alaska, 2013"
+    year: 2024
+    ids: ["10.18739/A2Q814T9K", "10.18739/A23N20G53"]
+    archives: [NSF Arctic Data Center]
+    evidence: "Arctic Data Center EML (Chalif, Osterberg, Winski, Kreutz) lists DEN13A/DEN13B_MSA csv files with 'MSA (ppb)' plus 1-, 3- and 5-year averages; A23N20G53 is the earlier DOI of the same package with the identical abstract; both resolve."
+  - key: S9
+    title: "Age-depth data and chemistry from a shallow firn core collected in Southwest Greenland, 2018"
+    year: 2021
+    ids: ["10.18739/A2VT1GR07"]
+    archives: [NSF Arctic Data Center]
+    evidence: "Arctic Data Center EML (Rennermalm, Osterberg et al.) for a 16 m firn core lists Core_data.csv with attribute 'MSA (ng/g)' alongside isotopes and ions; DOI resolves."
+  - key: S10
+    title: "Methanesulfonate in the south central Greenland 20D ice core, 1767-1984"
+    year: 2017
+    ids: ["10.18739/A20Z70W9G", "10.18739/A2TZ7X"]
+    archives: [NSF Arctic Data Center]
+    evidence: "Arctic Data Center EML (Saltzman) lists MSA_data.txt with attribute MSA_ppb (n = 1134 samples, 1767-1984); A2TZ7X is the older DOI for the same title in DataCite; both resolve."
+  - key: S11
+    title: "Methanesulfonic acid measurements from a Greenland ice core (1850-2006)"
+    year: 2023
+    ids: ["10.18739/A2WW7717K"]
+    archives: [NSF Arctic Data Center]
+    evidence: "Arctic Data Center EML (Jongebloed, Alexander, Cole-Dai) lists Supplementary_data_1_ice_core_measurements_MSA.csv with 'Methanesulfonic acid (µg kg-1)' for Summit cores, cited in the paper's data statement (PMC10666112); its sulfur-isotope siblings A26T0GX7K and A2N873162 lack MSA and are near misses."
+  - key: S12
+    title: "Firn core and core major ion and methanesulfonic acid concentrations, Disko Island Ice Cap, Nuussuaq Ice Cap and Greenland Ice Sheet (west, central, east), 2014-2015"
+    year: 2017
+    ids: ["10.18739/A2FQ9Q575", "10.18739/A2Z67K", "10.18739/A29Z90C4W", "10.18739/A2310F", "10.18739/A2BZ61844", "10.18739/A22096", "10.18739/A2MG7FW3Q", "10.18739/A2SH5C", "10.18739/A23J3918S", "10.18739/A29H51", "10.18739/A2V11VM02", "10.18739/A2K09V", "10.18739/A2G15TC0M"]
+    archives: [NSF Arctic Data Center]
+    evidence: "Six per-site core packages from one NSF project (Evans; parent award record A2G15TC0M) share one abstract on major ion and MSA measured at 3-5 cm in hand-augured firn cores (2014) and long cores (2015), each with a csv (DiskoFirn2014, DiskoCore2015, iceWestFirnCore2014, NuussuaqFirn2014, iceEastFirn2014, iceCentralCore2015) whose attribute list includes MSA; the six older DataCite DOIs carry the same titles; all resolve."
+  - key: S13
+    title: "Ice core chemistry data from each end of the traverse"
+    year: 2014
+    ids: ["10.18739/A2TX35676"]
+    archives: [NSF Arctic Data Center]
+    evidence: "Arctic Data Center package (Hawley, Greenland traverse cores 2010-2012) has three xlsx files; the header of '2Barrel all data for upload.xlsx' (240 kB, read and deleted) includes 'MSA (µg/l)' with Na, Cl, NO3, SO4, trace elements and ages."
+  - key: S14
+    title: "Tunu, Greenland 2013 ice core chemistry"
+    year: 2016
+    ids: ["10.18739/A2F18SF79"]
+    archives: [NSF Arctic Data Center]
+    evidence: "Arctic Data Center EML (McConnell) for continuous chemistry of the NE Greenland Tunu2013 cores lists Tunu13_database_120216.csv with attribute msa_ng_g ('methanesulfonic acid (MSA) concentration in ice core sample'); DOI resolves."
+  - key: S15
+    title: "In-situ snow accumulation, melt, and firn density records using ground penetrating radar and firn cores, western Greenland, 1955-2017"
+    year: 2021
+    ids: ["10.18739/A2X63B64H"]
+    archives: [NSF Arctic Data Center]
+    evidence: "confidence: borderline (MSA appears only in the GTC01 firn-core dating file of a surface-mass-balance study); the EML entity GTC01_dating_fileCorrected.csv has columns Top, Bottom, Sodium, MSA ('Total amount of Methanesulfonic acid (ppb)'); DOI resolves."
+near_misses:
+  - {ids: ["10.1594/PANGAEA.56077", "10.25921/2beh-xh26", "noaa-icecore-17803"], why_excluded: "GISP2 site atmospheric aerosol MSA (ATM sampling 1993-94) plus surface-snow peroxide, not ice-core MSA."}
+  - {ids: ["10.18739/A2R785P7V", "10.18739/A2GQ6R28W", "10.18739/A2ZS2KD4W", "10.18739/A27659G1S", "10.18739/A2W08WH0R", "10.18739/A2Q814S6P", "10.18739/A2KH0F01G"], why_excluded: "Snow-pit major ion and MSA packages from the same West Greenland project as S12: snow pits, not cores."}
+  - {ids: ["10.5065/D6154F6J", "10.5065/D63X84RQ"], why_excluded: "NCAR EOL Greenland 1987-1988 snow-pit chemistry, not cores."}
+  - {ids: ["10.18739/A2HX15Q7C"], why_excluded: "Denali ice core accumulation only; MSA and Mg peaks are used to define seasons but MSA values are not reported."}
+  - {ids: ["10.18739/A26T0GX7K", "10.18739/A2N873162"], why_excluded: "Jongebloed sulfur-isotope sibling deposits of S11; attribute lists have sulfate, Na and d34S but no MSA."}
+  - {ids: ["10.1594/PANGAEA.966039", "10.1594/PANGAEA.945291", "10.1594/PANGAEA.940553"], why_excluded: "EGRIP cations, EGRIP 10-yr aerosol averages and NEEM-2011-S1 aerosol record: parameter lists contain no MSA."}
+  - {ids: ["10.17592/001.2021052501"], why_excluded: "NIPR ADS SIGMA-D (NW Greenland) isotope/ion/dust data: DataCite description covers dust only and the ADS landing page is a JavaScript app with no readable file list, so MSA could not be confirmed."}
+  - {ids: ["10.17592/001.2024080801"], why_excluded: "EGRIP 2017 snow-pit samples (metals, Ca, SO4, F, particles), no MSA."}
+  - {ids: ["10.17632/gbw7d9sjgh"], why_excluded: "SE-Dome Greenland ice core levoglucosan and dehydroabietic acid only (Mendeley 'Research data.doc')."}
+  - {ids: ["10.5061/dryad.n02v6wx66"], why_excluded: "Belukha (Siberia) non-target organic aerosol screening; abstract and metadata give no MSA (Dryad files need a token, README unread)."}
+  - {ids: ["10.18739/A29C6S29S", "10.18739/A28C9R59J", "10.18739/A2SX64C1Z", "10.18739/A2BC3T01M", "10.5443/10549", "10.5443/10550", "10.5065/D6TM787P", "10.1594/PANGAEA.981399"], why_excluded: "Arctic atmospheric aerosol or gas-phase MSA (Utqiagvik, Arctic-SOLAS, OASIS, MOSAiC), not ice cores."}
+  - {ids: ["10.25921/72ga-6k73", "10.25921/jgx6-2320"], why_excluded: "Taylor Dome deuterium and Bruce Plateau accumulation: MSA only mentioned in text or as a dating aid (and both Antarctic)."}
+  - {ids: ["10.25921/cf00-mh63", "10.25921/639j-1658", "10.25921/611g-qd84", "10.25921/wc47-sg79", "10.25921/8600-a242", "10.25921/1dpn-w303", "10.25921/sj3q-z659"], why_excluded: "Southern Hemisphere (Antarctic) NOAA records with MSA columns: Dominion Range/Newall Glacier, Dronning Maud Land, EPICA Dome C, Siple Dome, Mt Erebus Saddle core and snowpit, WAIS Divide."}
+  - {ids: ["10.1594/PANGAEA.400910", "10.1594/PANGAEA.407362", "10.1594/PANGAEA.686056", "10.1594/PANGAEA.686057", "10.1594/PANGAEA.686058", "10.1594/PANGAEA.686059", "10.1594/PANGAEA.855383", "10.1594/PANGAEA.855382", "10.1594/PANGAEA.889018", "10.1594/PANGAEA.896623", "10.1594/PANGAEA.960067", "10.1594/PANGAEA.961101", "10.1594/PANGAEA.961108"], why_excluded: "Southern Hemisphere PANGAEA cores with an MSA parameter: Berkner Island, DML B31/B32/B33 firn cores (Fundel; Göktas), Weller et al. DML firn means, Fimbul Ice Shelf, TA192A Adélie Land, Sherman Island, OH-9 Antarctic Peninsula."}
+  - {ids: ["10.1594/PANGAEA.996557"], why_excluded: "Quelccaya 2022 ice core major ions with MSA: Peru, 13.9 S, Southern Hemisphere."}
+  - {ids: ["10.15784/609201", "10.15784/609131", "10.15784/609266"], why_excluded: "USAP-DC Siple Dome MSA (Saltzman) and RIDS glaciochemistry with MSA: Antarctic."}
+  - {ids: ["10.26179/5c639f7d21621", "10.5285/64133f48-b358-418a-ad24-4718668cb2fe", "10.5285/1f44795b-e596-433c-b69f-caf674880daa", "10.5285/9ce1fd9f-cfaf-44fa-aa5d-45c24c0a76cc", "10.5285/db075c2a-0b32-4ea9-a6f6-41e3bc922c24"], why_excluded: "Antarctic MSA ice/firn cores in AADC and UK Polar Data Centre: Mount Brown South, Gomez, Ferrigno F10, Jurassic/Sherman/Sky-Blu fluxes, Brunt Ice Shelf S2."}
+  - {ids: ["10.5281/zenodo.17433639", "10.5281/zenodo.17433638", "10.5281/zenodo.7798252", "10.5281/zenodo.7798251", "10.5281/zenodo.7848435", "10.5281/zenodo.7848434"], why_excluded: "Zenodo Antarctic ice cores with MSA: TALDICE 1470-1531 m, Derwael Ice Rise IC12, Hammarryggen/Lokeryggen FK17 and TIR18."}
+  - {ids: ["10.5281/zenodo.18273151", "10.1594/PANGAEA.704665", "10.1594/PANGAEA.787873", "10.1594/PANGAEA.929966", "10.1594/PANGAEA.993535"], why_excluded: "Antarctic snow trench and snow pits with MSA (Dome C trench, DML pits, Neumayer pits, Kohnen-Plateau traverse, Upper Priestley pit)."}
+  - {ids: ["10.5285/96dc0dd7-b5db-4444-97af-8ddfab1e7f78", "10.3389/feart.2022.896470.s001"], why_excluded: "Bouvet Island (sub-Antarctic) ice core anions and a northern Victoria Land firn-core journal supplement: Southern Hemisphere."}
+  - {ids: ["10.5281/zenodo.14252245", "10.5281/zenodo.18795071", "10.5281/zenodo.12549687", "10.5281/zenodo.17673322", "10.5281/zenodo.16632022"], why_excluded: "Northern Hemisphere ice-core chemistry on Zenodo without MSA: Trambau (Nepal) major ions (Na, Cl, NH4, K, Mg, Ca, NO3, SO4), southern Tibetan Plateau BK/NK ion fluxes, Elbrus NH4, Col du Dome CDD16 nitrate, Weisseespitze trace elements and levoglucosan."}
+  - {ids: ["10.5281/zenodo.10403150"], why_excluded: "BPCRC standardized ice-core compilation (Elbrus, Prince of Wales, Puruogangri, Bona-Churchill, Dunde, Dasuopu, Guliya, Windy Dome and others): no MSA string in any NH workbook."}
+  - {ids: ["10.15784/609399", "10.15784/609520"], why_excluded: "USAP Dry Valleys (no chemistry file listed) and NORUS traverse cores (Na and Mg only)."}
+queries:
+  - "PRIMARY topic sizing (black carbon), before the switch: NOAA paleo-search study/search.json searchText (dataTypeId=7, ice cores): 'black carbon' 12; soot 6; refractory 4; rBC 4; BC 6; 'elemental carbon' 3; charcoal 1; all data types: 'black carbon' 20, carbonaceous 32, SP2 13, 'biomass burning' 52. Arctic Data Center Solr: text:'black carbon' 32, soot 16, 'refractory black carbon' 4, rBC 3482 (fuzzy), combined BC-attribute AND ice-core query 18, all 298 ice-core metadata records attribute-screened. USAP-DC search free_text: 'black carbon' 8 datasets, rBC 7, refractory 1, 'biomass burning' 12, SP2 43, McConnell 40, 'continuous ice core analytical' 7, fire 11. PANGAEA search.php: '\"black carbon\" ice core' 43 and five variants; 21 BC ice/firn datasets."
+  - "NOAA NCEI paleo-search study/search.json?dataTypeId=7&limit=5000: 418 ice-core studies (complete; spot checks for Law Dome, James Ross, Lomonosovfonna, Talos Dome, Dome C found nothing missing), every variable cvWhat/cvShortName and file name scanned for methanesulf/MSA/MS-: 12 studies; full study JSON text scan added 2 mentions-only. searchText: methanesulfonic 10; methanesulfonate 5; MSA 4; methanesulphonic 1; dimethylsulfide 4; 'sea ice proxy' 22."
+  - "PANGAEA Elasticsearch ws.pangaea.de/es/pangaea/panmd/_search query_string: methanesulf* 147; methanesulph* 2; MSA 180; 'methane sulf*' 0; MS- 10607 (noise); ('MS-' OR 'MS^-' OR CH3SO3) AND ice terms 252. 431 unique, 282 ice/snow-related, metadata XML fetched for all 282 and parameter names checked: 70 with an MSA parameter. search.php: methanesulfonate 15; methanesulfonic 155; 'methane sulfonic acid' 31; 'MSA ice core' 49; 'MSA firn core' 32; 'MSA ice' 99; 'MSA snow' 78; 'firn core ions' 108; 'ice core major ions' 992; 'ice core ion chromatography' 2243; 'sea ice proxy ice core' 2167."
+  - "NSF Arctic Data Center Solr (formatType:METADATA, not obsoleted): methanesulfonate/methanesulfonic/'methane sulfonate'/MSA in text or attributeName 36; all 298 ice-core/firn records re-screened for MSA attributes: 18; EML fetched for 17 candidates; data objects read for A2TX35676 (xlsx header)."
+  - "USAP-DC search?free_text=: methanesulfonic 1; methanesulfonate 5; MSA 9; 'methane sulfonic' 1; methanesulphonate 0; 'major ions ice core' 0; 'sea ice ice core proxy' 0 (all hits Antarctic)."
+  - "DataCite api.datacite.org/dois query: (MSA spellings) AND (ice core/firn/glacier/snow pit/ice cap) 118; (MSA OR 'MS-' OR CH3SO3) AND ice core 233; (MSA spellings) AND (Greenland/Svalbard/Alaska/Arctic/Alps/Himalaya/Tibet/Caucasus/... place list) AND ice 76; SE-Dome/Iizuka 316; publisher NIPR 2; prefix:10.17592 AND ice AND ion/chemistry 37. 320+ records screened; 16 candidate records read."
+  - "Zenodo api/records q (size 25): '(MSA spellings) AND (ice core terms)' 4; '(MSA) AND (Greenland/Svalbard/Alaska/Alps/Arctic/Himalaya/Tibet) AND (ice OR glacier)' 4; methanesulfonic 34; methanesulfonate 115; '\"MSA\" ice' 18810 (top 1000); 'ice core major ions' 302975 (top 1000); 'ice core ion chromatography' 170253 (top 1000); 'Svalbard ice core' 145677 (top 1000); 'Greenland ice core chemistry' 222312 (top 998); a broader batch was stopped by its time limit, then rerun as quoted queries (top 100): '\"ice core\" AND (Alaska/Yukon/Logan/Eclipse)' 22; (Alps/Colle Gnifetti/Col du Dome) 22; (Tibet/Himalaya/Everest) 14; '\"firn core\" AND chemistry' 0; (Canadian/Agassiz/Devon/Penny) 18; (Caucasus/Elbrus/Altai/Belukha) 14; (Svalbard/Lomonosovfonna/Holtedahlfonna/Austfonna/Severnaya Zemlya) 5. About 3,700 records regex-screened, and 6 NH glaciochemistry records read, including the 9 small xlsx files of the BPCRC compilation (shared strings scanned, then deleted). No Northern Hemisphere MSA ice-core deposit found."
+  - "Figshare POST api.figshare.com/v2/articles/search: ':title: methanesulfonic' 172; ':description: \"MSA\" AND :description: \"ice core\"' 15; ':description: \"methane sulfonic\"' 153; ':description: \"methanesulphonic\"' 56; ':description: methanesulfonic' 200 (dataset type 200); ':description: methanesulfonate' 200/200; ':keyword: \"ice core\"' 25 datasets / 102 all. Only Southern Hemisphere or non-MSA items."
+  - "Dryad api/v2/search: methanesulfonic 8; methanesulfonate 8; 'MSA ice core' 0; 'ice core ions' 0; 'ice core chemistry' 5; 'firn core' 2 (3 records and file lists fetched; none with MSA)."
+  - "Norwegian Polar Institute api.npolar.no/dataset: methanesulfonic 0; MSA 1 (seals); 'ice core' 260 (sea-ice dominated, titles screened); Lomonosovfonna 0; Holtedahlfonna 1; glaciochemistry 0; 'firn core' 60. No Svalbard glaciochemistry deposit."
+  - "Mendeley Data public-api: dataset gbw7d9sjgh record and file list. NIPR ADS: landing page and api/v1 probes for A20210525-001 (no file list returned)."
+  - "Europe PMC search: (MSA spellings) AND (ice core/firn core) 105; same AND Northern Hemisphere place list 71; 66 OA full texts fetched (fullTextXML) and regex-scanned for repository ids; leads checked: PANGAEA 940553/945291, Zenodo 3403111/4509372/5500717, NOAA 21970/40380 (none with MSA); PMC10666112 data statement confirmed S11."
+  - "doi.org resolution of all 33 keyed NH ids (1 s apart): all 302 except PANGAEA 484983/484984 (404; unpublished datasets, landing pages 200)."
+size_verdict: >-
+  switched and narrowed: the PRIMARY topic (ice-core black carbon) already had at least 32 distinct firm studies before
+  Zenodo/Figshare were searched (NOAA 8, Arctic Data Center 13, USAP-DC 4, PANGAEA at least 7 more distinct), so it
+  fails the 5-30 gate. The BACKUP topic in full (all ice-core MSA) also exceeded it, with about 41 firm studies (NOAA 10,
+  PANGAEA 12, Arctic Data Center 7, USAP-DC 3, AADC 1, UK Polar Data Centre 5 or more, Zenodo 3). The brief has no rule
+  for a backup that also fails, so the backup prompt was narrowed to Northern Hemisphere ice and firn cores, with the
+  Southern Hemisphere records kept as near misses. Result: 15 studies (13 firm, 2 borderline) across 3 archives (NOAA
+  NCEI 4, two of them also in PANGAEA; PANGAEA 5 including the 2 NOAA aliases, 3 PANGAEA-only; NSF Arctic Data Center
+  8). This is within 5-30 with at least 3 archives.

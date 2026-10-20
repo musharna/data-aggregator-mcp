@@ -22,18 +22,25 @@ mcp-name: io.github.musharna/data-aggregator-mcp
 
 ## Does it help?
 
-Not shown yet: there has been one small held-out round (5 tasks, 2 runs each,
-Claude Sonnet 5.5), and on it this server is not separated from web search. Its
-mean recall was higher than web search's on 4 of 5 tasks (sign test p = 0.38):
+Not shown for finding more datasets. In three held-out rounds, an agent using this
+server was not separated from the same agent using web search on how many matching
+datasets it found. The two
+latest rounds (2026-10-19, Claude Opus 5.5, rules written before the runs, 3 runs per
+task) were scored by mean recall against independently built answer keys:
 
-| Tools given to the agent | Mean recall |
-| --- | :---: |
-| this server | 0.49 |
-| web search | 0.35 |
-| ToolUniverse | 0.26 |
+| Tools given to the agent | Round 4 (5 tasks) | Round 5 (10 tasks) |
+| --- | :---: | :---: |
+| this server | 0.66 | 0.72 |
+| web search | 0.66 | 0.58 |
+| ToolUniverse | 0.59 | 0.63 |
+| no tools (memory only) | 0.02 | 0.09 |
 
-It made fewer tool calls than web search (7.7 fewer per run, 95% CI 1.8 to 13.1)
-and ToolUniverse; cost and wall time against web search are not separated.
+In round 5 this server was higher on 6 of 10 tasks, where the pre-set rule needed 8.
+Web search hit the 15-minute limit in 11 of 30 runs, and a run that times out scores
+0. In runs that finished, web search found more (0.90). What this server does
+reliably: answers in about a third of the time (203 s against 599 s, median, round 5),
+with fewer tool calls and fewer wrong entries (precision 0.95 against 0.62). It cost
+more per run than web search ($2.08 against $1.51, API-equivalent).
 Method and controls:
 [benchmarks/h2h](https://github.com/musharna/data-aggregator-mcp/blob/main/benchmarks/h2h/README.md).
 

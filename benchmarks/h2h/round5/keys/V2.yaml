@@ -1,0 +1,242 @@
+task: V2
+prompt: >-
+  Find every public dataset, in any archive, that holds chromatin accessibility or chromatin-binding sequencing data
+  (ATAC-seq including single-cell ATAC, DNase-seq, ChIP-seq of histone marks, RNA polymerase or transcription factors,
+  CUT&RUN or CUT&Tag) generated from a cnidarian: corals, sea anemones, Hydra and other hydrozoans, or jellyfish. Raw
+  reads or processed outputs such as peak files both count. Other assays alone (RNA-seq, DNA methylation, Hi-C/Micro-C,
+  SELEX, histone proteomics), other animals, reanalyses that deposit no new chromatin data, and registered projects with
+  no public data do not count.
+criteria: >-
+  Topic: PRIMARY (cnidarian chromatin accessibility / chromatin-binding sequencing). Included: a public deposit (SRA/ENA/
+  DDBJ reads, GEO series, Zenodo, Figshare, Dryad, etc.) holding ATAC-seq (bulk, sorted-cell, single-cell or multiome),
+  DNase-seq, ChIP-seq (histone marks, Pol II, transcription factors, signalling effectors such as pSMAD1/5 or SMAD3),
+  CUT&RUN or CUT&Tag reads, or processed outputs of them (peak BED/xls, consensus peaks), generated from any cnidarian
+  (Anthozoa, Hydrozoa including siphonophores, Scyphozoa, Cubozoa). Assay and species were confirmed from SRA experiment
+  titles and library strategy (run-level), GEO series records, or the deposit's own description; deposits whose library
+  strategy is mislabelled (e.g. CUT&Tag filed as OTHER) were judged from experiment titles. Multi-species deposits count
+  when their cnidarian samples include qualifying chromatin libraries (counted once, as one study). A genome project
+  that includes even a single cnidarian ATAC-seq run counts. Excluded: cnidarian deposits holding only RNA-seq, CAGE,
+  bisulfite/EM-seq/nanopore methylation, Hi-C, Omni-C or Micro-C (including an Omni-C run mislabelled
+  DNase-Hypersensitivity), SELEX or protein-binding microarrays; histone proteomics; code-only or derived-prediction
+  deposits that re-use already-public chromatin data; BioProjects with no public reads or files; DOIs that do not
+  resolve; non-cnidarians (the 'coral grouper' and 'coral trout' fish, sponges, ctenophores and placozoans in
+  multi-species series were not counted). Unit = study: a GEO series (and its SuperSeries/SubSeries for chromatin data),
+  its BioProject(s) and SRA study, and Zenodo/Figshare/Dryad deposits of the same paper's chromatin data (peak files,
+  analysis archives, Zenodo mirrors of Dryad) are aliases of one study. RNA-only sibling series of the same paper are not
+  listed as aliases. Separate deposits from different papers are separate studies.
+studies:
+  - key: S1
+    title: "Evolutionary conservation of the eumetazoan gene regulatory landscape"
+    year: 2013
+    ids: ["GSE46488", "PRJNA200689", "SRP021895"]
+    archives: [GEO, SRA]
+    evidence: "GEO (public 2013-12-02) and SRA runinfo: 46 ChIP-Seq runs of Nematostella vectensis (H3K4me3, H3K27ac and other histone marks, Pol II, p300 and inputs at gastrula, planula and adult female; Schwaiger et al. 2014 Genome Res, PMC3975063)."
+  - key: S2
+    title: "Cnidarian cell type diversity revealed by whole-organism single-cell RNA-seq analysis"
+    year: 2018
+    ids: ["GSE95723", "PRJNA378226", "SRP101436"]
+    archives: [GEO, SRA]
+    evidence: "SRA experiment titles: 6 bulk ATAC-seq runs of Nematostella adults and FACS-sorted ELAV::mOrange-positive and -negative cells alongside MARS-seq scRNA-seq; GEO lists 'Genome binding/occupancy profiling' (Sebe-Pedros et al. 2018 Cell)."
+  - key: S3
+    title: "Chromatin dynamics in the non-symbiotic organism Nematostella vectensis (Chromatin dynamics enable transcriptional rhythms in the cnidarian Nematostella vectensis)"
+    year: 2019
+    ids: ["PRJNA471067", "SRP145481"]
+    archives: [SRA]
+    evidence: "SRA: 22 ATAC-seq runs of N. vectensis under light:dark and constant-dark regimes; the paper (PMC6834241, PLoS Genet 2019) cites PRJNA471067."
+  - key: S4
+    title: "The role of chromatin dynamics under global warming response in the symbiotic coral model Aiptasia"
+    year: 2019
+    ids: ["PRJNA518019", "SRP184142", "10.6084/m9.figshare.8331779", "10.6084/m9.figshare.8331779.v1"]
+    archives: [SRA, Figshare]
+    evidence: "SRA: 42 ATAC-seq runs 'ATAC-Seq of Exaiptasia pallida: adult' (apo- and symbiotic, heat-stress time course); Figshare 'Aiptasia_pallida_heatStress_peaks' holds MACS2 peak BED files (control/mild-stress, apo/sym, days 0-28). Both cited in PMC6677750 (Weizman & Levy 2019 Commun Biol)."
+  - key: S5
+    title: "Different heat-stress response of field and laboratory cultured Nematostella vectensis (Chromatin dynamics and gene expression response to heat exposure in field-conditioned versus laboratory-cultured Nematostella vectensis)"
+    year: 2021
+    ids: ["PRJNA598421", "SRP239374", "PRJNA598420", "10.6084/m9.figshare.14909490", "10.6084/m9.figshare.14909490.v1", "10.6084/m9.figshare.12111018", "10.6084/m9.figshare.12111018.v1"]
+    archives: [SRA, Figshare]
+    evidence: "SRA: 32 ATAC-seq runs of adult N. vectensis (field vs lab, pre-stress and 24 h recovery); Figshare 12111018 holds MACS2 *_peaks.xls files (prestress/re24h GSF/GSL samples) and 14909490 holds one more peaks.xls; paper PMC8303994 cites PRJNA598421 and figshare 14909490. PRJNA598420 is the companion umbrella BioProject found by ENA text search."
+  - key: S6
+    title: "Stem cell differentiation trajectories in Hydra resolved at single cell resolution"
+    year: 2018
+    ids: ["GSE121617", "PRJNA497876", "SRP166331"]
+    archives: [GEO, SRA]
+    evidence: "SRA experiment titles: 3 ATAC-seq runs 'ATACseq reads generated for whole homeostatic Hydra' plus Drop-seq/RNA-seq; GEO type includes genome binding/occupancy profiling (Siebert et al. 2019 Science)."
+  - key: S7
+    title: "Integrative analysis of Hydra head regeneration reveals activation of distal enhancer-like elements"
+    year: 2019
+    ids: ["GSE127280", "GSE127277", "GSE127278", "PRJNA524651", "PRJNA524657", "PRJNA524656", "SRP187045", "SRP187046"]
+    archives: [GEO, SRA]
+    evidence: "SRA: 24 ATAC-seq runs (body-map regions and head-regeneration time course) under GSE127277 and 37 ChIP-Seq runs (H3K4me2, H3K4me3, H3K27ac, regeneration time course) under GSE127278, both SubSeries of GSE127280; data statement of Murad et al. 2021 GBE (PMC8651858) names these accessions. RNA-seq SubSeries GSE127279 not listed."
+  - key: S8
+    title: "Oral Regeneration Is the Default Pathway Triggered by Injury in Hydra (Generic injuries are sufficient to induce ectopic Wnt organizers in Hydra)"
+    year: 2020
+    ids: ["GSE152994", "PRJNA641135", "SRP268329", "10.25338/B8S612", "zenodo:3998321"]
+    archives: [GEO, SRA, Dryad, Zenodo]
+    evidence: "SRA: 71 ATAC-seq runs of head/foot regeneration time courses with and without iCRT14; Dryad 10.25338/B8S612 (mirrored as Zenodo record 3998321) is the paper's 3.8 GB analysis repository, describes chromatin accessibility profiling and links GSE152994 (Cazet et al. 2021 eLife). Dryad file contents were not readable (download requires authentication)."
+  - key: S9
+    title: "Sequencing, assembly, and annotation of Hydra oligactis and strain AEP Hydra vulgaris genomes (A chromosome-scale epigenetic map of the Hydra genome)"
+    year: 2022
+    ids: ["PRJNA816482", "SRP364758"]
+    archives: [SRA]
+    evidence: "SRA experiment titles: 3 ATAC-seq runs and 12 runs filed as OTHER that are H3K4me1, H3K4me3, H3K27me3 and IgG CUT&Tag of whole adult Hydra vulgaris AEP; cited in Cazet et al. 2023 Genome Res (PMC10069465), which describes ATAC-seq and CUT&Tag CRE annotation."
+  - key: S10
+    title: "Edwardsiid Genomes (Topological structures and syntenic conservation in sea anemone genomes)"
+    year: 2023
+    ids: ["PRJNA667495", "SRP286434", "SRX19856712", "SRR24055088"]
+    archives: [SRA]
+    evidence: "SRA: one ATAC-seq run 'Nematostella vectensis ATAC-Seq sample 1 run 1' (SRR24055088) added to the genome BioProject alongside Hi-C/Chicago libraries; Zimmermann et al. 2023 Nat Commun (PMC10719294) uses N. vectensis ATAC-seq peaks and lists PRJNA667495 as its data accession."
+  - key: S11
+    title: "Nanomia septata genome"
+    year: 2025
+    ids: ["PRJNA971210", "SRP436875", "SRX20278314", "SRR24493085"]
+    archives: [SRA]
+    evidence: "SRA experiment titles: one 'ATAC-seq of Nanomia sp.: whole tissue' run SRR24493085 (siphonophore, Hydrozoa) together with PacBio, Omni-C, Micro-C and Iso-seq libraries; ATAC run public (runinfo, released 2025)."
+  - key: S12
+    title: "Chromatin loops are an ancestral hallmark of the animal regulatory genome"
+    year: 2025
+    ids: ["GSE260572", "GSE260569", "PRJNA1082243", "PRJNA1082247", "SRP492555"]
+    archives: [GEO, SRA]
+    evidence: "GEO ChIP-seq SubSeries GSE260569 (of SuperSeries GSE260572, public 2025-03-11): 4 N. vectensis ChIP-Seq experiments (Nvec_ChIP_H3K4me1, H3K4me2, H3K4me3 and input; 8 runs) among sponge, ctenophore, placozoan and protist samples; Kim et al. 2025 Nature (PMC12221973) data statement cites GSE260572. The Micro-C SubSeries is not a qualifying assay."
+  - key: S13
+    title: "Decoding cnidarian cell type gene regulation"
+    year: 2025
+    ids: ["GSE294388", "PRJNA1249376", "SRP577940"]
+    archives: [GEO, SRA]
+    evidence: "SRA/ENA: 25 ATAC-seq runs (10x scATAC-seq of adult, ELAV-sorted and gastrula N. vectensis, fresh and fixed, plus a multiome ATAC library), GEO public 2025-11-17; BioProject description reports ~60,000 cells."
+  - key: S14
+    title: "A Molecular, Spatial, and Regulatory Atlas of the Hydra vulgaris Nervous System (Differentiation trajectories of the Hydra nervous system reveal transcriptional regulators of neuronal fate)"
+    year: 2025
+    ids: ["PRJNA1261600", "SRP584403", "10.25338/B83S8C", "zenodo:7796431"]
+    archives: [SRA, Dryad, Zenodo]
+    evidence: "SRA: 6 ATAC-seq runs of FACS-sorted Hydra neurons (nGreen and PN lines) with scRNA-seq; Dryad 10.25338/B83S8C (same bioRxiv DOI 10.1101/2023.03.15.531610, mirrored as Zenodo 7796431) lists ATACseq_analysis.zip (11 GB) with Seurat and trajectory archives."
+  - key: S15
+    title: "Gene body methylation suppresses intragenic transcription and permits epigenetic inheritance in a cnidarian"
+    year: 2026
+    ids: ["GSE307384", "PRJNA1320626", "SRP617739"]
+    archives: [GEO, SRA]
+    evidence: "SRA experiment titles: 9 ATAC-seq runs (Nvec 24 hpf DMSO vs GSK DNMT1-inhibitor embryos, F1 GSK and morphants) alongside EM-seq, CAGE and nanopore methylation; GEO public 2026-04-10, runs released 2026-07."
+  - key: S16
+    title: "Epigenomic and transcriptomic profiling of cnidocyte subtypes in the sea anemone Nematostella vectensis [Cut & Tag]"
+    year: 2025
+    ids: ["GSE309459", "PRJNA1333423", "SRP625517"]
+    archives: [GEO, SRA]
+    evidence: "SRA: 18 ChIP-Seq-filed runs titled 'CUT&Tag profiling of H3K27ac' in FACS-sorted Ncol3+/- and Nep3+/- N. vectensis cells; GEO public 2025-10-05 (paper 'Epigenomic and transcriptomic analyses reveal cnidocyte specialization in a sea anemone', 2026)."
+  - key: S17
+    title: "ATAC-seq chromatin accessibility profiling in Hydra viridissima (Hydra viridissima genome sequencing)"
+    year: 2026
+    ids: ["GSE329226", "PRJNA1446962", "SRP689000"]
+    archives: [GEO, SRA]
+    evidence: "SRA: 4 ATAC-seq runs of symbiotic and aposymbiotic H. viridissima clones (2 replicates each); GEO GSE329226 public 2026-07-01. Sibling GEO series of the same BioProject (GSE329225 RNA-seq, GSE329227 CAGE, GSE329152 ONT methylation) are not chromatin assays and are not listed."
+  - key: S18
+    title: "Diversity and evolution of chromatin regulatory states across eukaryotes [ChIP-Seq]"
+    year: 2026
+    ids: ["GSE329959", "PRJNA1462273", "SRP697643"]
+    archives: [GEO, SRA]
+    evidence: "SRA: 50 N. vectensis ChIP-Seq runs (H3K4me1/2/3, H3K27ac, H3K27me3, H3K36me3, H3K9me1/3, H3K9ac, H3K79me1/2/3, H4K16ac, H3 and inputs) within a combinatorial-indexing ChIP-seq series covering 12 eukaryotes; GEO public 2026-05-10 with 123 processed files."
+  - key: S19
+    title: "SMAD3 ChIP-seq and RNA-seq in Exaiptasia diaphana"
+    year: 2026
+    ids: ["PRJNA1544129", "SRP745656"]
+    archives: [SRA, ENA]
+    evidence: "SRA: 54 ChIP-Seq runs (SMAD3, input and no-antibody mock, heat-stressed symbiotic and aposymbiotic Aiptasia, released 2026-10-14) plus RNA-seq; ENA project XML resolves (Oregon State University); the BioProject is not yet indexed in NCBI BioProject search."
+  - key: S20
+    title: "Genome-wide maps RNA Polymerase II and Histone H3 of Hydra vulgaris"
+    year: 2020
+    ids: ["GSE63414", "PRJNA267694", "SRP049999"]
+    archives: [GEO, SRA]
+    evidence: "SRA: 6 ChIP-Seq runs (RNA Polymerase II, histone H3 and inputs, two replicates) of Hydra vulgaris; GEO public 2020-01-01."
+  - key: S21
+    title: "Aiptasia whole-genome bisulfite sequencing (DNA methylation) on cnidarian-dinoflagellate symbiosis"
+    year: 2018
+    ids: ["PRJNA415358", "SRP120942"]
+    archives: [SRA]
+    evidence: "SRA: 6 ChIP-Seq runs (H3K36me3 and input, 3 replicates each, symbiotic Aiptasia CC7) besides WGBS and RNA-seq; BioProject description lists ChIP-Seq; cited by 'DNA methylation regulates transcriptional homeostasis of algal endosymbiosis in the coral model Aiptasia' (PMC6093633)."
+  - key: S22
+    title: "Hydra vulgaris strain:Ind-Pune Epigenomics (Epigenomic landscape of enhancer elements during Hydra head organizer formation)"
+    year: 2019
+    ids: ["PRJNA532677", "SRP192505", "10.6084/m9.figshare.c.5173119", "10.6084/m9.figshare.c.5173119.v1", "10.6084/m9.figshare.13083264", "10.6084/m9.figshare.13083267", "10.6084/m9.figshare.13083270", "10.6084/m9.figshare.13083261"]
+    archives: [SRA, Figshare]
+    evidence: "SRA: 9 ChIP-Seq runs (H3K4me3, H3K27ac, H3K9ac, pan-H3 and inputs, control vs alsterpaullone); Reddy et al. 2020 Epigenetics Chromatin (PMC7552563) cites SRR8893489 of this project. Its BMC supplement on Figshare includes ChIP-seq peak tables (Additional files 2-5: H3K4me3/H3K27ac/H3K9ac peak annotations and H3K27ac BED tables), listed as aliases."
+  - key: S23
+    title: "An ancestral Wnt-Brachyury feedback loop and vertebrate-specific recruitment of mesoderm-determining target genes revealed by comparative Brachyury target screens"
+    year: 2022
+    ids: ["GSE182573", "GSE198320", "PRJNA756953", "SRP333687"]
+    archives: [GEO, SRA]
+    evidence: "SRA: 3 N. vectensis ChIP-Seq runs (anti-Brachyury AB ChIP and input) plus RNA-seq; GEO GSE182573 (public 2022-11-30) and the same-titled GSE198320 (public 2022-08-01) both map to PRJNA756953."
+  - key: S24
+    title: "Identification of downstream target genes of the class IV POU homedomain transcription factor in the cnidarian Nematostella vectensis"
+    year: 2022
+    ids: ["PRJNA767103", "SRP339175"]
+    archives: [SRA]
+    evidence: "SRA: 6 ChIP-Seq runs ('Nematostella adult POU-IV ChIP-seq' ChIP and input, 3 replicates, 61 GB), released 2022-02; cited by 'Cnidarian hair cell development illuminates an ancient role for the class IV POU transcription factor' (PMC8846589)."
+  - key: S25
+    title: "BMP signaling targets in Nematostella (Analysis of SMAD1/5 target genes in a sea anemone reveals ZSWIM4-6 as a novel BMP signaling modulator)"
+    year: 2022
+    ids: ["PRJNA820593", "SRP366231"]
+    archives: [SRA]
+    evidence: "SRA: 16 ChIP-Seq runs (anti-pSMAD1/5 ChIP and inputs, 4-day N. vectensis planulae); BioProject description says ChIP-seq of genes bound by pSMAD1/5; cited in the paper of that title (PMC10849676)."
+  - key: S26
+    title: "Histone modifications conjointly with DNA methylation regulate the Symbiodiniaceae-cnidarian associations"
+    year: 2022
+    ids: ["PRJNA826667", "SRP370151", "PRJNA826310"]
+    archives: [SRA]
+    evidence: "SRA: 24 ChIP-Seq runs of Exaiptasia (H3K27me3, H3K36me3, H3K4me3, H3K27ac, H3K9ac treatments and inputs, symbiotic vs aposymbiotic); paper PMC9717517 cites PRJNA826667. PRJNA826310 is a same-titled BioProject with no reads, kept as alias."
+  - key: S27
+    title: "H4K20me1 plays a dual role in transcriptional regulation during regeneration and axis patterning of Hydra"
+    year: 2023
+    ids: ["GSE205918", "GSE205699", "GSE205908", "PRJNA848229", "PRJNA847206", "PRJNA848216", "SRP379166", "SRP379732"]
+    archives: [GEO, SRA]
+    evidence: "SRA: 6 (ALP) + 15 (regeneration time course) ChIP-Seq runs of H4K20me1 and inputs in Hydra vulgaris under ChIP SubSeries GSE205699 and GSE205908 of SuperSeries GSE205918 (public 2023-03-09); data statement of PMC10031314 cites GSE205918."
+  - key: S28
+    title: "Chromatin immunoprecipitation in the cnidarian model system Exaiptasia diaphana"
+    year: 2023
+    ids: ["PRJNA931730", "SRP421041"]
+    archives: [SRA]
+    evidence: "SRA: 2 ChIP-Seq runs ('ChIP-seq of symbiotic Aiptasia: H3K4me3' and input, 6.6 GB); BioProject describes an optimised E. diaphana ChIP protocol validated with H3K4me3 (paper 'Chromatin Immunoprecipitation in the Cnidarian Model System Exaiptasia diaphana', 2023)."
+  - key: S29
+    title: "Chromatin accessibility and heat stress gene expression in the reef-building coral, Acropora millepora"
+    year: 2026
+    ids: ["10.5281/zenodo.23004114", "10.5281/zenodo.23004113"]
+    archives: [Zenodo]
+    evidence: "Zenodo API: dataset (UC Davis; Guerrero, Erickson, Pollard et al.) with one 79 MB zip; the description says it includes ATAC-seq peak and consensus-peak files plus RNA-seq counts, and that raw reads and ATAC BAMs are in BioProject PRJNA1390403, which is not yet public in SRA/ENA. The zip was not downloaded because it is over 50 MB (preprint 10.1101/2025.08.24.672008)."
+near_misses:
+  - {ids: ["PRJNA1515428"], why_excluded: "P. damicornis chromatin-state ChIP-seq (H3K4me3, H3K27ac, H3K27me3, H3K9me3; preprint 10.64898/2026.09.10.745915). The BioProject is public, but SRA and ENA have no runs for it yet."}
+  - {ids: ["PRJNA1390403", "10.6084/m9.figshare.33197823", "10.6084/m9.figshare.33197823.v1"], why_excluded: "Raw-read BioProject and an unpublished Figshare item for the Acropora millepora ATAC study (S29). The BioProject has no public runs, and the Figshare DOI returns 404 at doi.org, DataCite and the Figshare API. Only the Zenodo deposit is keyed."}
+  - {ids: ["PRJNA664900"], why_excluded: "Aiptasia H3K9ac ChIP BioProject: description only, no SRA/ENA runs."}
+  - {ids: ["PRJDB36774", "PRJCA040171", "CRA026151", "DRP018177"], why_excluded: "Aurelia aurita 'PlURI-Cut & TAG' development project; the deposited Aurelia/coral data (DDBJ mirror and NGDC CRA026151) are HEATag-multiplexed scRNA-seq libraries only, no CUT&Tag reads."}
+  - {ids: ["PRJNA1082251", "GSE260571"], why_excluded: "Micro-C SubSeries of the chromatin-loops study (S12); 3D contact data, not accessibility or binding."}
+  - {ids: ["PRJDB18894", "DRP013593", "DRR608907"], why_excluded: "Acropora digitifera genome project; the only 'DNase-Hypersensitivity' run is the Omni-C library (library name adi_omni-c), not DNase-seq."}
+  - {ids: ["PRJNA838992", "PRJDB18893", "PRJNA1284069", "PRJNA1085048", "PRJNA1270949", "PRJNA1329265", "PRJNA658826", "PRJNA817838", "PRJNA903949"], why_excluded: "Cnidarian genome projects whose only chromatin-type libraries are Hi-C/Omni-C/TCC (Anthopleura sola, Acropora tenuis, Aurelia coerulea, Hydra T2T, Oculina, Podocoryna, Chrysaora, Actinoscyphia, Desmophyllum)."}
+  - {ids: ["PRJNA1447980", "10.5281/zenodo.19388751", "10.5281/zenodo.19388750"], why_excluded: "Hydra vulgaris AEP T2T Micro-C/Dip-C study (preprint PPR1214912); it re-maps the public Cazet et al. ATAC/CUT&Tag reads (S9). The Zenodo files are ABC enhancer-gene predictions and phyloP regions, and the BioProject has no SRA runs."}
+  - {ids: ["PRJNA1439443"], why_excluded: "Nematostella Hox/Pbx SELEX-seq (in vitro DNA binding), not chromatin from animals."}
+  - {ids: ["GSE157085", "PRJNA660048"], why_excluded: "CGG-binding hAT proteins across eukaryotes: Nematostella entries are protein-binding-microarray 8-mer samples, not ChIP or accessibility data."}
+  - {ids: ["GSE223913", "PRJNA929029"], why_excluded: "Pol II pausing across eukaryotes: the Nematostella samples are nascent-RNA libraries (strategy OTHER), not chromatin binding or accessibility."}
+  - {ids: ["GSE124016", "PRJNA510589"], why_excluded: "Sponge methylome series: the Nematostella samples are bisulfite and hmC methylation only. The binding-profiling samples are from the sponge."}
+  - {ids: ["GSE135498", "PRJNA559095"], why_excluded: "Short capped RNA (transcription start) sequencing including Nematostella; RNA assay."}
+  - {ids: ["10.5281/zenodo.10513643", "10.5281/zenodo.5823397"], why_excluded: "Code-only release (Macias-Munoz et al.) with shell scripts that reanalyse public Hydra ATAC-seq data."}
+  - {ids: ["10.6084/m9.figshare.3436460", "10.6084/m9.figshare.3436460.v1"], why_excluded: "Hydractinia histone paper: BAM files of RNA-seq reads mapped to histone genes, not chromatin profiling."}
+  - {ids: ["10.5281/zenodo.5121858", "10.5281/zenodo.5109534", "10.5281/zenodo.5109535", "10.5281/zenodo.5113311", "10.5281/zenodo.5119084"], why_excluded: "Pocillopora acuta chromatin-structure supplement: histone alignments, gel images and nuclei counts, with no sequencing data."}
+  - {ids: ["10.34703/gzx1-9v95/he7qsv", "10.34703/gzx1-9v95/mm9sha", "10.25345/c5sb3xb0w"], why_excluded: "Acropora cervicornis histone PTM / proteoform mass spectrometry (FIU, MassIVE), not sequencing."}
+  - {ids: ["10.6084/m9.figshare.28620101", "PRJNA1231128"], why_excluded: "Hydra oligactis foot-regeneration study (PMC12748876): RNA-seq source data only, no chromatin assays in the paper."}
+  - {ids: ["PRJNA437307"], why_excluded: "Hydra regeneration RNA-seq time course cited (SRR6815024) by the Pune enhancer paper (S22); RNA only."}
+  - {ids: ["PRJNA970726"], why_excluded: "Hydractinia maternal-to-zygotic transition: RNA-seq only."}
+  - {ids: ["10.1101/2024.08.20.608462"], why_excluded: "Hydra microbiota preprint reports single-nucleus ATAC-seq, but no public deposit was found (SRA/ENA Hydra single-cell genomic runs, DataCite, Zenodo, Figshare)."}
+  - {ids: ["10.64898/2026.08.01.742136"], why_excluded: "Physalia utriculus multi-omics preprint reports chromatin accessibility profiles. SRA/ENA Physalia records (238 experiments) hold only WGS, Hi-C and RNA-seq, and no other deposit was found."}
+  - {ids: ["PRJNA847955", "PRJNA511422"], why_excluded: "Coral projects with strategy OTHER (Montipora capitata RNA-seq; Acropora palmata 16S) surfaced by text search; not chromatin assays."}
+  - {ids: ["10.21985/n2-ravb-2419"], why_excluded: "Northwestern 'Investigating the role of chromatin remodeling on transcriptional plasticity in corals' (resource type Other); its DataCite record (2024) has no description, format or size metadata, and the landing page did not render any content, so no chromatin data could be confirmed."}
+  - {ids: ["CRX032408"], why_excluded: "NGDC GSA Nematostella 'EpiGenomics' records are methylomes (sea anemone gastrula/sperm/oocyte methylome), not chromatin accessibility or binding."}
+queries:
+  - "NCBI SRA esearch + runinfo/esummary: 'txid6073[Organism:exp] AND \"ATAC-seq\"[Strategy]' 249 runs; '... AND \"ChIP-Seq\"[Strategy]' 279; '... AND \"DNase-Hypersensitivity\"[Strategy]' 1; '... AND (CUT&RUN OR CUT&Tag OR CUTandRUN OR CUTandTag OR \"CUT and RUN\" OR \"CUT and Tag\" ...)' 30; '... AND (ATAC OR chromatin OR ChIP OR DNase OR histone OR H3K27ac OR H3K4me3 OR H3K27me3 OR Tn5 OR accessibility)' 2413; union 2634 runs grouped by BioProject (about 120 projects screened). '... AND \"OTHER\"[Strategy]' 6690 experiments, all titles scanned for CUT/tag/ChIP/ATAC/histone/H3K terms (only the Hydra CUT&Tag of PRJNA816482 qualified; the rest were TagSeq, RAD and Omni-C)."
+  - "NCBI SRA targeted: 'Physalia[Organism]' 238 (no ATAC); 'Physalia[Organism] AND (ATAC OR chromatin)' 0; 'txid6083[Organism:exp] AND (snATAC OR scATAC OR multiome OR germfree ...)' 11 (RNA-seq only); 'Pocillopora damicornis[Organism] AND ChIP' 0; 'Acropora millepora[Organism] AND ATAC' 0; per-BioProject experiment listings for 40 candidate projects."
+  - "NCBI BioProject: 'txid6073[Organism:exp] AND (ATAC OR chromatin OR ChIP OR CUT&Tag OR CUT&RUN OR histone OR accessibility OR epigenomic(s) OR epigenome OR enhancer(s) OR DNase OR Epigenomics[Project Data Type])' 59 projects, all screened; efetch of 6 records with no SRA runs."
+  - "NCBI GEO (gds): 'txid6073[Organism:exp] AND gse[Entry Type]' 182 series, all screened by type and title; per-BioProject GSE lookup for 29 projects; GEO acc.cgi text for 18 series (relations, status) and sample lists of 3 multi-species series."
+  - "ENA portal API read_run 'tax_tree(6073) AND library_strategy=' ATAC-seq (12 studies), ChIP-Seq (15), DNase-Hypersensitivity (1), MNase-Seq 0, FAIRE-seq 0, ChIA-PET 0; 'tax_tree(6073) AND library_source=\"GENOMIC SINGLE CELL\"' (Nematostella scATAC only); study search on title/description *ATAC* 10, *chromatin* 16, ChIP/CUT&Tag/histone 15. No ENA-only (PRJEB) qualifying study."
+  - "NGDC GSA search (center NGDC): Cnidaria 12, Acropora 42, jellyfish 7, coral 1329, Nematostella 8 (methylomes), Aurelia 6, Pocillopora 427, Galaxea 216, Montipora 10, Porites 58, Physalia 0, Stylophora/Hydra/Rhopilema 0; strategy facets showed no ATAC/ChIP for cnidarians; 'Other' records were amplicons. NGDC BioProject PRJCA040171 page read."
+  - "CNGBdb search API (db.cngb.org/search/ajax/project): 'Acropora ATAC-seq' 240, 'coral ATAC-seq' 0, 'coral chromatin accessibility' 1, 'jellyfish ATAC-seq' 69, 'Hydra ATAC-seq' 87, 'Nematostella ATAC-seq' 66, 'sea anemone ATAC-seq' 91, 'ATAC coral' 1 (autocorrected to ATCC). Top results were NCBI BioProject mirrors or off-topic CNGB projects. The API errors out intermittently and its paging repeats page 1, so CNGB coverage is partial."
+  - "Europe PMC: (ATAC/ChIP/CUT&Tag/CUT&RUN/DNase-seq/chromatin accessibility/scATAC) AND cnidarian taxa, full-text 1617; TITLE_ABS for both blocks 52; TITLE_ABS taxa + methods + repository terms 83; union 122 papers; 81 OA full texts (fullTextXML) regex-scanned for GSE/PRJNA/SRP/PRJEB/CNP/CRA/Zenodo/Figshare/Dryad ids; preprint abstracts fetched for 8 PPR records (one full text available: PPR1214912); title searches for published versions of 4 preprints (none published)."
+  - "DataCite REST: (titles OR descriptions) cnidarian taxa AND (ATAC/scATAC/snATAC/ChIP-seq/CUT&Tag/CUT&RUN/DNase-seq/chromatin accessibility/H3K27ac/H3K4me3/H3K27me3) 54; titles taxa AND (chromatin OR epigenomic OR epigenome OR enhancer(s) OR histone OR regulatory OR peaks) 113; 146 unique DOIs screened."
+  - "Zenodo API: (ATAC OR ATAC-seq OR scATAC OR ChIP-seq OR 'CUT and Tag' OR CUTandTag OR 'chromatin accessibility') AND cnidarian taxa 22; title:(taxa) AND (chromatin OR ATAC OR enhancer(s) OR histone OR epigenomic OR peaks) 29; plus record fetches of 7 candidates."
+  - "Figshare API POST /articles/search: ':title: ATAC AND taxa' 0; ':description: ATAC-seq AND taxa' 162; ':description: ChIP-seq AND taxa' 179; ':description: chromatin AND (Nematostella/Hydra/Aiptasia/Exaiptasia/Acropora/Clytia/Hydractinia)' 21; 185 unique items title-screened; 18 article records fetched."
+  - "Dryad API v2: datasets doi:10.25338/B8S612 and doi:10.25338/B83S8C metadata and file listings (file download returned HTTP 401)."
+  - "doi.org resolution checks: 10.6084/m9.figshare.7993853 (302 to figshare but API 'Entity not found'), 10.6084/m9.figshare.33197823.v1 (404), 10.21985/n2-ravb-2419, 10.25338/b8s612, 10.25338/b83s8c (302)."
+size_verdict: "ok: 29 distinct studies (all firm, 0 borderline), within the 5-30 range, so the backup topic was not used. Studies per archive (a study is counted for every archive holding one of its ids): SRA 28, GEO 14, Figshare 3, Zenodo 3 (S29 is Zenodo-only; S8 and S14 are Zenodo mirrors of Dryad), Dryad 2, ENA 1 listed explicitly (every SRA study is also mirrored in ENA). That is at least 3 archives with firm studies. The topic is near the 30-study ceiling: three more registered-but-empty projects (P. damicornis ChIP, Aiptasia H3K9ac, A. millepora raw reads) would push it over once released."

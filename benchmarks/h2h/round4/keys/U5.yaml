@@ -11,10 +11,8 @@ criteria: >-
   eye-movement measures) recorded while children or adolescents (any age under 18, typically developing or with
   dyslexia, deafness etc.) read connected text, in any language and any archive. Mixed child + adult corpora count.
   Participant age, task and data contents were confirmed from the deposit metadata and file listing or, if the deposit
-  is silent, from the linked paper (Europe PMC full text). Flagged confidence: borderline: OSF projects whose file
-  listing could not be read because OSF and its API were offline for maintenance during the build (2026-10-16 to
-  2026-10-19 EDT), where only the DataCite record or the paper's data statement says the data are there; OSF links given
-  in papers as view-only links or as GUIDs without a DOI; deposits holding only subject-level summaries of eye
+  is silent, from the linked paper (Europe PMC full text). Flagged confidence: borderline: (after the 2026-10-18 OSF
+  re-check, see revised) deposits holding only subject-level summaries of eye
   measures; reading of subtitles or maths word problems; deposits whose host could not be reached; data held only on
   GitHub. Excluded: adult-only samples (including dyslexic adults and university students); non-reading tasks
   (free viewing, visual search, map reading, video games, RAN, op-art); finger tracking; records whose files are
@@ -82,7 +80,7 @@ studies:
     year: 2019
     ids: ["10.17605/osf.io/frgw8", "osf.io/frgw8"]
     archives: [OSF]
-    evidence: "DataCite (OSF, findable) plus paper data statement (npj Sci Learn 10.1038/s41539-020-00073-5, PMC7522290): the reported data and gaze videos of 120 first and second graders reading storybooks are in OSF 10.17605/OSF.IO/FRGW8."
+    evidence: "confidence: borderline (only subject-level averages of fixation measures; re-check 2026-10-18). OSF API v2 file listing (re-check 2026-10-18): public project with Data/Experiment1.csv and ControlExperiment.csv (one row per child: Avg_text_fix_time, Avg_extraneous_fix_count...), SPSS files and three example gaze videos of first and second graders reading storybooks (npj Sci Learn 10.1038/s41539-020-00073-5, PMC7522290)."
   - key: S11
     title: "Where do children look when watching videos with same-language subtitles?"
     year: 2024
@@ -94,109 +92,85 @@ studies:
     year: 2021
     ids: ["10.17605/osf.io/6gnxe", "osf.io/6gnxe"]
     archives: [OSF]
-    evidence: "confidence: borderline (OSF offline; data files not confirmed). DataCite (OSF): boundary-paradigm sentence reading by Russian 8- and 10-year-olds and adults (JECP 10.1016/j.jecp.2022.105571)."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project with Analysis/Submission/data_paper.csv (2.6 MB) and revision tables of boundary-paradigm sentence reading by Russian 8- and 10-year-olds and adults (JECP 10.1016/j.jecp.2022.105571)."
   - key: S13
     title: "Children's Processing of Irony During Reading in English: An Eye-Tracking Study"
     year: 2022
     ids: ["10.17605/osf.io/xu384", "osf.io/xu384"]
     archives: [OSF]
-    evidence: "confidence: borderline (OSF offline; data files not confirmed). DataCite (OSF): eye tracking of children reading ironic and literal passages in English (JECP 10.1016/j.jecp.2025.106202)."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project with per-child fixation reports (Data Cleaning Codes/datafiles/ChildP*2023FIX.xls, 35 files), child final-analysis files and ChildLMMDATA2023.sav: eye tracking of children reading ironic and literal passages in English (JECP 10.1016/j.jecp.2025.106202)."
   - key: S14
     title: "Eye Movements Show Comparable Reading Patterns in Born Deaf and Hearing Children"
     year: 2024
     ids: ["10.17605/osf.io/x6wmf", "osf.io/x6wmf"]
     archives: [OSF]
-    evidence: "confidence: borderline (title-only DataCite record, OSF offline; data files not confirmed). DataCite (OSF): eye movements of deaf and hearing children during reading (Rusanowska et al.)."
+    evidence: "confidence: borderline (only subject-level summaries of eye measures; re-check 2026-10-18). OSF API v2 file listing (re-check 2026-10-18): public project holding one file, Tekst_Preludium.csv (34 KB), a pivot table of fixation count, dwell time and first-fixation duration per participant and word class while deaf and hearing children read a text (Rusanowska et al.)."
   - key: S15
     title: "Subskills Underlying Children's Eye Movements During Passage Reading"
     year: 2025
     ids: ["10.17605/osf.io/kcn3f", "osf.io/kcn3f"]
     archives: [OSF]
-    evidence: "confidence: borderline (OSF offline; data files not confirmed). DataCite (OSF): children's eye movements during passage reading, supplement to preprint 10.31234/osf.io/e3fdb_v1 (Jeppsen, McMurray et al.)."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project with data/Child Data/data for processing/fixationsneedlabel.csv (11.6 MB), trials.csv and interest-area labels of children reading passages, plus adult data (Jeppsen, McMurray et al.; preprint 10.31234/osf.io/e3fdb_v1)."
   - key: S16
     title: "Spatial parameters of eye-movement control during reading in Russian-speaking children"
     year: 2024
     ids: ["10.17605/osf.io/5h9mw", "osf.io/5h9mw"]
     archives: [OSF]
-    evidence: "confidence: borderline (OSF offline; data files not confirmed). DataCite (OSF): landing positions and saccade parameters of Russian-speaking children reading sentences (Parshina, Lopukhina et al., JECP 10.1016/j.jecp.2026.106564; preprint 10.31234/osf.io/6e7ph_v1)."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project with interest-area reports (IA_Year1_Moscow (1).xlsx, 39 MB; word_prog6.xlsx) of Russian-speaking children reading sentences (Parshina, Lopukhina et al., JECP 10.1016/j.jecp.2026.106564)."
   - key: S17
     title: "The trajectory of eye movements in Chinese developing readers during silent and oral sentence reading"
     year: 2024
     ids: ["10.17605/osf.io/cgske", "osf.io/cgske"]
     archives: [OSF]
-    evidence: "confidence: borderline (title-only DataCite record, OSF offline; data files not confirmed). DataCite (OSF): eye movements of Chinese developing readers in silent and oral sentence reading."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project with data/target words.csv, Global data.csv and two-character.csv (eye-movement measures) and R scripts: Chinese developing readers in silent and oral sentence reading."
   - key: S18
     title: "All good readers are the same, but every low-skilled reader is different: an eye-tracking study using PISA data"
     year: 2018
     ids: ["10.17605/osf.io/xjd5r", "osf.io/xjd5r", "osf.io/6x9qr", "osf.io/rve6d", "osf.io/wzbuk", "osf.io/x3pdh"]
     archives: [OSF]
-    evidence: "confidence: borderline (OSF offline; data files not confirmed; components have no DOIs). DataCite (OSF): eye tracking of 15-year-old pupils reading PISA reading units; components 6x9qr, rve6d, wzbuk, x3pdh."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project whose Data component 6x9qr holds PISA eye tracking raw data.7z (370 MB) and AOI, fixation, regression and saccade tables of 15-year-old pupils reading PISA units; components 6x9qr, rve6d, wzbuk, x3pdh have no DOIs."
   - key: S19
     title: "Development of orthographic, phonological and semantic parafoveal processing in Chinese reading"
     year: 2026
     ids: ["osf.io/zj3un"]
     archives: [OSF]
-    evidence: "confidence: borderline (OSF GUID without DOI, unreadable while OSF was offline). Paper data statement (QJEP 10.1177/17470218251372482, PMC12982572) places the eye-movement data of Chinese grade 2-5 children and adults reading sentences at osf.io/zj3un."
-  - key: S20
-    title: "Children's Processing of Written Ironic Praise and Ironic Criticism: Evidence from Eye-Tracking Analyses"
-    year: 2026
-    ids: ["osf.io/28qyf"]
-    archives: [OSF]
-    evidence: "confidence: borderline (OSF GUID without DOI, unreadable while OSF was offline). Paper data statement (Behav Sci 10.3390/bs16071101, PMC13405963): eye-tracking data of Chinese children aged 7-11 reading ironic texts at osf.io/28qyf."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project with first-fixation, gaze and single-fixation duration tables per experiment (launch_site/EXP.1-3 FFD/GD/SFD.csv) of Chinese grade 2-5 children and adults reading sentences (QJEP 10.1177/17470218251372482, PMC12982572)."
   - key: S21
     title: "Deaf Child Signers' Reading Behaviors Are Predicted by Their Bilingual (Signed and Spoken) Vocabularies: Evidence from Eye-Tracking"
     year: 2026
     ids: ["osf.io/g85sh"]
     archives: [OSF]
-    evidence: "confidence: borderline (OSF GUID without DOI, unreadable while OSF was offline). Paper data statement (JEMR 10.3390/jemr19040083, PMC13514359): sentence-reading eye-tracking data of deaf child signers aged 9.5-11.7 at osf.io/g85sh."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project (titled 'ASL-English Vocabulary Knowledge PILOT') with data.csv (673 KB): word-level first-pass time, fixation count, regressions and total time of deaf child signers reading sentences, the data the paper cites (JEMR 10.3390/jemr19040083, PMC13514359)."
   - key: S22
     title: "The Effect of Relevance on Children's Multiple Text Reading: Evidence From Eye Movements"
     year: 2026
     ids: ["osf.io/y5vh4"]
     archives: [OSF]
-    evidence: "confidence: borderline (OSF GUID without DOI, unreadable while OSF was offline). Paper data statement (Scand J Psychol 10.1111/sjop.70099, PMC13546093): eye-movement data of Finnish grade 5-6 pupils reading multiple texts at osf.io/y5vh4."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project with MultipleTextReading_reading_data.txt and .rda files of Finnish grade 5-6 pupils' eye movements while reading multiple texts (Scand J Psychol 10.1111/sjop.70099, PMC13546093)."
   - key: S23
     title: "Online inference making and comprehension monitoring in children during reading: Evidence from eye movements"
     year: 2021
     ids: ["osf.io/ngjra"]
     archives: [OSF]
-    evidence: "confidence: borderline (OSF GUID without DOI, unreadable while OSF was offline). Paper data statement (QJEP 10.1177/1747021821999007, PMC8189006): eye-movement data of children aged 8-13 reading passages at osf.io/ngjra."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project with Local_ and Global_Inferences_July2020.csv: trial-level gaze, go-past, total-time and regression measures of children aged 8-13 reading passages (QJEP 10.1177/1747021821999007, PMC8189006)."
   - key: S24
     title: "The Influence of Text Genre on Eye Movement Patterns During Reading"
     year: 2025
     ids: ["osf.io/9p3xh"]
     archives: [OSF]
-    evidence: "confidence: borderline (OSF GUID without DOI, unreadable while OSF was offline). Paper data statement (JEMR 10.3390/jemr18060060, PMC12641876): eye-movement data of Russian adolescents aged 12-17 reading texts of different genres at osf.io/9p3xh."
-  - key: S25
-    title: "Parafoveal pre-processing in children reading English: The importance of external letters"
-    year: 2021
-    ids: ["osf.io/gbsmf"]
-    archives: [OSF]
-    evidence: "confidence: borderline (paper gives an OSF view-only link; public status unconfirmed, OSF offline). Boundary-paradigm sentence reading by English children aged 8-9 and adults (Psychon Bull Rev 10.3758/s13423-020-01806-8, PMC7870634)."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project with fixation, interest-area, saccade and trial reports (fix_merged.xlsx, ia_merged.xlsx, sac_merged.xlsx) of Russian adolescents aged 12-17 reading texts of different genres (JEMR 10.3390/jemr18060060, PMC12641876)."
   - key: S26
     title: "Lexicality effects on orthographic learning in beginning and advanced readers of Dutch: An eye-tracking study"
     year: 2022
     ids: ["osf.io/26nvz", "10.25384/sage.c.5639987", "10.25384/sage.c.5639987.v1"]
     archives: [OSF, SAGE Figshare]
-    evidence: "confidence: borderline (paper gives an OSF view-only link, OSF offline; the SAGE collection holds supplemental PDFs 10.25384/sage.16698902/16698905/16698908, not data). Eye tracking of Dutch grade 2 and 5 children reading sentences with novel words (QJEP 10.1177/17470218211047420, PMC9016678)."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project (the paper had given a view-only link) with Data and analysis scripts/rdat.Rda and OLeyemovements.Rmd: eye tracking of Dutch grade 2 and 5 children reading sentences with novel words (QJEP 10.1177/17470218211047420, PMC9016678); the SAGE collection holds supplemental PDFs, not data."
   - key: S27
     title: "Acquisition of orthographic forms via spoken complex word training"
     year: 2023
     ids: ["osf.io/d9528"]
     archives: [OSF]
-    evidence: "confidence: borderline (paper gives an OSF view-only link; public status unconfirmed, OSF offline). Eye tracking of Australian grade 3-5 children reading sentences containing trained words (Psychon Bull Rev 10.3758/s13423-022-02185-y, PMC10104914)."
-  - key: S28
-    title: "Parafoveal Processing and Transposed-Letter Effects in Developmental Dyslexic Reading"
-    year: 2025
-    ids: ["osf.io/j2tke"]
-    archives: [OSF]
-    evidence: "confidence: borderline (paper gives an OSF view-only link; public status unconfirmed, OSF offline). Sentence-reading eye tracking of children with dyslexia (Dyslexia 10.1002/dys.1791, PMC11615263)."
-  - key: S29
-    title: "The role of phonology in lexical access in teenagers with a history of dyslexia"
-    year: 2020
-    ids: ["osf.io/s8j2n"]
-    archives: [OSF]
-    evidence: "confidence: borderline (paper gives an OSF view-only link; public status unconfirmed, OSF offline). Sentence-reading eye tracking of teenagers with and without a history of dyslexia (PLoS ONE 10.1371/journal.pone.0229934, PMC7077824)."
+    evidence: "OSF API v2 file listing (re-check 2026-10-18): public project (the paper had given a view-only link) with Data/Eye-Tracking Data/firstPass.csv and targets.csv of Australian grade 3-5 children reading sentences containing trained words (Psychon Bull Rev 10.3758/s13423-022-02185-y, PMC10104914)."
   - key: S30
     title: "Supporting data for 'Monitoring and Regulation in Reading Comprehension among Chinese children: Exploring the Role of Comprehension Monitoring, Lexical Ambiguity...'"
     year: 2022
@@ -221,6 +195,12 @@ studies:
     ids: ["github.com/Sorooshi/DD"]
     archives: [GitHub]
     evidence: "confidence: borderline (data held only on GitHub, no archive DOI). GitHub tree: DD-V1/datasets/Fixation_report.xlsx, IA_report.xlsx and DD-V2/Datasets/Data_binary.csv of Russian school pupils reading sentences (PLoS ONE 10.1371/journal.pone.0292047, PMC10664902)."
+  - key: S34
+    title: "No evidence that same-language subtitles improve children's reading fluency"
+    year: 2025
+    ids: ["10.17605/osf.io/xp5ac", "osf.io/xp5ac"]
+    archives: [OSF]
+    evidence: "confidence: borderline (text read is subtitles during video viewing, as S11; re-check 2026-10-18). OSF API v2 file listing: public project with Data/eyetracking1-4_reading_dataset.csv (15-41 MB): interest-area dwell time and fixation counts on the subtitle region of children in years 2-3 watching subtitled videos, an intervention study from S11's group; the key had excluded it as having no eye tracking."
 near_misses:
   - {ids: ["10.5281/zenodo.7040"], why_excluded: "Data DOI given by the e-readers dyslexia paper (PMC3776763, high-school students); DOI does not resolve (DataCite/Zenodo 404)."}
   - {ids: ["10.5281/zenodo.17292682"], why_excluded: "Rus_dyslex_classification (annlaurin): code only, no eye-movement data."}
@@ -253,13 +233,16 @@ near_misses:
   - {ids: ["10.57760/sciencedb.04828"], why_excluded: "ScienceDB: free viewing by children aged 1-6, not reading."}
   - {ids: ["10.7488/ds/2450"], why_excluded: "Edinburgh DataShare: static visual stimuli, not reading."}
   - {ids: ["10.17605/osf.io/hnytf"], why_excluded: "OSF: map reading, not text."}
-  - {ids: ["10.17605/osf.io/xp5ac"], why_excluded: "OSF: subtitle reading-fluency intervention with no eye tracking described."}
   - {ids: ["10.13016/m2tfho-1skd"], why_excluded: "UMD repository: conference paper, not data."}
   - {ids: ["10.15496/publikation-4274"], why_excluded: "Tuebingen: dissertation text, not data."}
   - {ids: ["10.5255/ukda-sn-854772"], why_excluded: "UK Data Service: sleep/memory study with no eye tracking."}
   - {ids: ["10.3390/s21020406", "10.3390/brainsci11050539"], why_excluded: "Serbian children reading eye-tracking papers (Jakovljevic et al. 2021): data available on request only."}
   - {ids: ["10.1371/journal.pone.0170986"], why_excluded: "Graz children's reading eye-tracking paper: data restricted."}
   - {ids: ["PMC11502842", "PMC12193705"], why_excluded: "Finger tracking during reading, not eye tracking."}
+  - {ids: ["osf.io/28qyf"], why_excluded: "OSF re-check 2026-10-18: HTTP 401, not public (the paper's data statement names it; Behav Sci 10.3390/bs16071101, Chinese children reading ironic texts)."}
+  - {ids: ["osf.io/gbsmf"], why_excluded: "OSF re-check 2026-10-18: HTTP 401, not public (view-only link in the paper; English children's parafoveal processing, PMC7870634)."}
+  - {ids: ["osf.io/j2tke"], why_excluded: "OSF re-check 2026-10-18: HTTP 401, not public (view-only link in the paper; dyslexic children's parafoveal processing, PMC11615263)."}
+  - {ids: ["osf.io/s8j2n"], why_excluded: "OSF re-check 2026-10-18: HTTP 401, not public (view-only link in the paper; teenagers with a history of dyslexia, PMC7077824)."}
 queries:
   - "DataCite https://api.datacite.org/dois?query=<q>&page[size]=1000 (cursor-paged, title/description regex-screened): A eye terms AND child terms AND reading, types Dataset/Collection/Other/Software 69; B fixation/saccade/gaze AND child AND reading/sentence/text 126; C eye AND dyslexia 29; D eye terms AND reading, all non-article types 1406; E titles eye*/fixation*/saccad*/gaze AND read*/sentence*/text* 1534; F titles corpus/database/dataset AND eye terms 1095; G parafoveal/boundary/'perceptual span'/'gaze duration'/skipping/regressions AND reading 1461; H eye terms AND child terms, Dataset/Collection/Other/Text 1630."
   - "DataCite client.uid:cos.osf AND eye terms: 4433 (regex screen 147 hits, then manual review); prefix 10.23668 (PsychArchives) AND eye terms 125; prefix 10.17910 AND eye AND reading 0; prefix 10.17632 (Mendeley) 80; 'developmental reading' 1; 'Chinese children' 14; Finnish 2; German/Kinder 10; adolescents/secondary Dataset 3; dyslexia overlay 4; prefix 10.6075 (Rayner collection) 17; Jakovljevic creators 953 (all noise)."
@@ -272,4 +255,14 @@ queries:
   - "GitHub: pymovements dataset definitions (40 yaml; only etdd70 is a child set); Sorooshi/DD repository tree; annlaurin Rus_dyslex_classification."
   - "WebSearch (lead finding only, results verified in the archives): 3 queries on developmental / child eye-tracking reading corpora."
   - "Not checkable: OSF API and SHARE (maintenance 2026-10-16 09:00 to 2026-10-19 09:00 EDT, so OSF records rely on DataCite metadata and paper data statements); Databrary API (403); PsychArchives native API (404; covered via DataCite prefix 10.23668); SAGE figshare (403); UVaDOC (timeout); handle resolver for hdl:10904/10244 (500)."
+  - "OSF re-check 2026-10-18 18:10 EDT, after the maintenance window (benchmarks/h2h/round4/osf_recheck.py, output osf_recheck_U5_2026-10-18.json): OSF API v2 /nodes/<guid>/, its components and the full file tree of every storage provider for every OSF GUID in this key; 4 GUIDs answered 401 (not public), the preprint and registration GUIDs answered 404 as nodes; small data files were opened with a 1.5 KB range request to see their columns."
 size_verdict: "ok: primary topic kept. 33 studies: 10 firm across 6 archives (Zenodo 1, Figshare 2, Harvard Dataverse 1, DataverseNL 2, ScienceDB 1, OSF 3) and 23 borderline (OSF 19, of which 1 also has a SAGE Figshare alias; HKU DataHub 1; UK Data Service ReShare 1; UVaDOC 1; GitHub 1), within the 5-30 firm range with at least 3 archives, so the backup topic was not used. Most borderline flags come from the OSF outage during the build, not from doubts about topic."
+revised: >-
+  2026-10-18, before any round-4 run: OSF answered again, so every OSF study was re-read from its file listing. One
+  rule: a public OSF project holding trial-level or finer eye-movement data of under-18 readers is firm; one holding
+  only subject-level summaries stays borderline; a project OSF answers 401 for is not public and moves to near misses.
+  13 borderline studies became firm (S12, S13, S15, S16, S17, S18, S19, S21, S22, S23, S24, S26, S27), S10 went from
+  firm to borderline (subject-level averages only), S20, S25, S28 and S29 left the key (401), and xp5ac moved from
+  near misses to a new borderline study S34 (it does hold eye tracking of children reading subtitles). Result: 22 firm
+  studies (was 10) and 8 borderline (was 23). Re-check done by the benchmark operator with the OSF API alone (no
+  server under test).

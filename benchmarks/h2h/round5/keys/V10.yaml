@@ -1,0 +1,135 @@
+task: V10
+prompt: >-
+  Find every public dataset, in any archive, that holds ancient or historical DNA sequenced from the dental calculus
+  (calcified dental plaque) of non-human animals: archaeological, palaeontological, or museum and skeletal-collection
+  specimens of wild, captive or domestic animals. Raw sequencing reads and derived sequence data both count, including
+  oral metagenomes, microbial profiles or genomes, and host mitogenomes recovered from the calculus. Calculus from living
+  animals, calculus from humans or archaic hominins only, proteomic, isotopic or microfossil-only calculus studies, DNA
+  from other dental tissues (dentine, enamel, pulp), code-only repositories, and papers without deposited data do not count.
+criteria: >-
+  Topic: PRIMARY (ancient DNA from the dental calculus of non-human animals). Included: a public deposit whose records or
+  files hold DNA sequenced from dental calculus taken from dead non-human animal specimens: archaeological or Pleistocene
+  remains, or historical museum and skeletal-collection specimens, including recently deceased wild animals curated as
+  skeletons (Gombe chimpanzees). Shotgun metagenomes, amplicon or capture data, and host-genome or mitogenome capture from
+  calculus all count. Mixed deposits count if at least one non-human calculus sample is included, for example primate
+  calculus alongside human and Neanderthal calculus. Derived sequence products (mitogenome alignments, OTU tables in a
+  study's own data and code archive) count as aliases of the study's read deposit. A derived-only deposit counts as
+  borderline when the calculus-derived part could not be isolated. Host species and calculus material were confirmed from
+  ENA/SRA sample records (host, sample title or tissue attributes) or, if silent, from the linked paper (Europe PMC full
+  text). Excluded: calculus or plaque from living animals (veterinary dog plaque); human-only and Neanderthal/hominin-only
+  calculus; proteomic (MassIVE), isotopic, microfossil or calculus-scoring studies without DNA; aDNA from dentine, bone or
+  antler only; third-party re-assemblies or MAG collections built from reads keyed here (no new sequencing); meta-analyses
+  that only reuse public reads; community catalogues (AncientMetagenomeDir); and preprints with no located deposit. Unit =
+  study: an ENA/SRA BioProject and its ERP/SRP study accession, sibling BioProjects of the same paper, the paper's
+  Zenodo data and code archive (all versions and the concept DOI), and Dryad deposits with their Zenodo mirrors are
+  aliases. A BioProject of extra sequencing of the same specimens for a different paper is a separate study.
+studies:
+  - key: S1
+    title: "Dental calculus as a tool to study the evolution of the mammalian oral microbiome"
+    year: 2020
+    ids: ["PRJEB33363", "ERP116150"]
+    archives: [ENA]
+    evidence: "ENA run report: 80 WGS runs (24 Ursus arctos, 24 Rangifer tarandus, 24 Gorilla beringei beringei/graueri, plus 8 blanks), with samples titled brown_bear/reindeer/gorilla_dental_calculus and host body site 'tooth' from museum specimens (Brealey et al. 2020 MBE, PMC7530607, which names PRJEB33363)."
+  - key: S2
+    title: "The oral microbiota of wild bears in Sweden reflects the history of antibiotic use by humans"
+    year: 2021
+    ids: ["PRJEB42014", "ERP125873"]
+    archives: [ENA]
+    evidence: "ENA: 472 WGS runs, 316 on samples with host Ursus arctos and body site 'tooth' (oral metagenome), plus controls. The study describes shotgun sequencing of dental calculus from Swedish brown-bear museum specimens collected over ~200 years (Brealey et al. 2021 Curr Biol; AncientMetagenomeDir lists 79 calculus samples)."
+  - key: S3
+    title: "Pan troglodytes schweinfurthii oral metagenomes Raw sequence reads (Oral microbiome diversity in chimpanzees from Gombe National Park)"
+    year: 2019
+    ids: ["PRJNA531027", "SRP192592"]
+    archives: [SRA]
+    evidence: "SRA/ENA: 19 runs (Chimp_02C ... Chimp_29C) with host Pan troglodytes schweinfurthii; the BioProject describes dental calculus recovered from the skeletal material of Gombe chimpanzees (Ozga et al. 2019 Sci Rep, PMC6874655, which names PRJNA531027)."
+  - key: S4
+    title: "Metagenomic analysis of dental calculus of ancient baboons"
+    year: 2019
+    ids: ["PRJEB34875", "ERP117845"]
+    archives: [ENA]
+    evidence: "ENA: 16 WGS runs on 'Baboon ancient dental calculus metagenome' samples from six Late Period (9th-6th c. BC) Egyptian captive baboons and two early-20th-century zoo baboons (Ottoni et al. 2019 Sci Rep, PMC6927955, which names PRJEB34875)."
+  - key: S5
+    title: "The evolution and changing ecology of the African hominid oral microbiome"
+    year: 2021
+    ids: ["PRJEB34569", "ERP117493", "10.5281/zenodo.3740492", "10.5281/zenodo.3740493", "10.5281/zenodo.4648012", "10.5281/zenodo.4704319", "10.5281/zenodo.4775267"]
+    archives: [ENA, Zenodo]
+    evidence: "ENA: 218 runs, including calculus from museum skeletons of chimpanzees (P. t. ellioti, schweinfurthii, verus: 36 runs), gorillas (48 runs) and Alouatta palliata (8 runs), alongside human and Neanderthal calculus (Fellows Yates et al. 2021 PNAS, PMC8157933). The Zenodo concept 3740492 (four versions, 502 MB data and code archive) is the paper's supplementary data repository."
+  - key: S6
+    title: "Ecology, not host phylogeny, shapes the oral microbiome in closely related species (gorilla dental calculus)"
+    year: 2022
+    ids: ["PRJEB49638", "ERP134154", "10.5281/zenodo.6861584", "10.5281/zenodo.6861585", "10.5281/zenodo.6961995", "10.5281/zenodo.7361823"]
+    archives: [ENA, Zenodo]
+    evidence: "ENA: 96 WGS runs titled '<subspecies> dental calculus' from mountain, Grauer's and western lowland gorilla museum specimens (Moraitou et al. 2022 MBE, PMC9778846). The Zenodo concept 6861584 (3 versions) holds the workflow plus outputs; the 44 MB version 7361823 was unzipped and contains a kraken OTU table, diet-read tables and functional profiles."
+  - key: S7
+    title: "Host traits impact the outcome of metagenomic library preparation from dental calculus samples across diverse mammals"
+    year: 2025
+    ids: ["PRJEB91453", "ERP174400", "PRJEB91354", "ERP174333"]
+    archives: [ENA]
+    evidence: "ENA PRJEB91453: 461 WGS runs titled 'Dental calculus metagenome from <species> specimen', from museum specimens of ~30 mammals (badger, roe deer, sheep, wild boar, elephant, rhinos, orca, dugong, baboon, colobus and others) (Moraitou et al. 2025 Mol Ecol Resour, PMC12550474, which names PRJEB91453). Sibling PRJEB91354 ('mammal_calculus_shallow', same title) is public but has 0 runs, so it is listed as an alias."
+  - key: S8
+    title: "Reconstruction of historic primate metagenomes to access natural products"
+    year: 2025
+    ids: ["PRJEB84391", "ERP167865"]
+    archives: [ENA]
+    evidence: "ENA: 8 WGS runs of additional deep sequencing of 'Dental calculus from Gorilla/Chimpanzee skeleton' samples (SAMEA59715xx, the same specimens as PRJEB34569), public 2025-03-31. No paper in Europe PMC cites the accession; it is probably the primate data of the Warinner/Stallforth natural-product work (JACS 2025 actifensins, PMC12766674). It is kept separate from S5 because it is new sequencing for a different output."
+  - key: S9
+    title: "Archaeological mitogenomes illuminate the historical ecology of sea otters (Enhydra lutris) and the viability of reintroduction"
+    year: 2020
+    ids: ["PRJNA550086", "SRP286433", "10.5061/dryad.djh9w0vxz", "zenodo:4386268"]
+    archives: [SRA, Dryad, Zenodo]
+    evidence: "SRA/ENA BioSample attributes: of the targeted-capture runs, the 'Historic specimen' samples (e.g. SAMN16375476-95) have tissue 'Dental calculus' and the archaeological ones 'Tooth dentine'. Dryad (Zenodo mirror 4386268) holds the two mitogenome alignments, and its abstract states the historical sea otter mitogenomes came from dental calculus (Wellman et al. 2020 Proc B, PMC7739945)."
+  - key: S10
+    title: "Pan troglodytes schweinfurthii Raw sequence reads (Urine as a high-quality source of host genomic DNA from wild populations)"
+    year: 2019
+    ids: ["PRJNA508503"]
+    archives: [SRA]
+    evidence: "SRA/ENA: 38 runs. They include shotgun, whole-genome-capture and exome-capture libraries from Gombe chimpanzees 7057 and 7433 (e.g. SRR8552505 7057_calculus_exome1, SRR8552527 7433_calculus_shotgun), alongside dentin, faeces and urine. The abstract of Ozga et al. 2021 Mol Ecol Resour (PMID 32985084) tests dental calculus and dentin from Gombe chimpanzees for host genomic data."
+  - key: S11
+    title: "Neanderthal behaviour, diet, and disease inferred from ancient DNA in dental calculus"
+    year: 2020
+    ids: ["PRJNA685265", "SRP298251"]
+    archives: [SRA]
+    evidence: "confidence: borderline (the only non-human-animal sample is a single comparative chimpanzee, and its specimen age could not be read because the Nature paper is not open access). SRA: 23 oral-metagenome runs of Neanderthal and human calculus plus SRR13263122 (sample Chimp_12873, host Pan troglodytes) (Weyrich et al. 2017 Nature; data deposited 2020)."
+  - key: S12
+    title: "Alignments of reindeer/caribou mitogenome sequences (Ancient reindeer mitogenomes reveal island-hopping colonisation of the Arctic archipelagos)"
+    year: 2024
+    ids: ["10.5061/dryad.tx95x6b53", "zenodo:10659483"]
+    archives: [Dryad, Zenodo]
+    evidence: "confidence: borderline (the deposit is only two mitogenome alignments, with calculus-derived sequences mixed among bone, antler and modern ones, and no raw reads were found for the calculus samples). Dryad lists Alignment_166_HaplotypeNetwork.fasta and Alignment_83_Phylogeny.fasta (Zenodo mirror 10659483). Hold et al. 2024 Sci Rep (PMC10876933) states that seven historical Swedish and one Norwegian reindeer were sampled as dental calculus, DNA-extracted and sequenced for mitogenomes."
+near_misses:
+  - {ids: ["PRJEB104944", "ERP186169"], why_excluded: "'MAGs from a global oral microbiome dataset sampled across evolutionary timescales': metagenome-assembled genomes only (0 read runs), re-assembled from public human, primate and mammal calculus reads (including PRJEB33363 and PRJEB42014). No new sequencing."}
+  - {ids: ["PRJEB127169"], why_excluded: "Project that the ENA gorilla calculus samples SAMEA5971542/5971564/5971568 (from S5/S8) now link to. The ENA portal returns no study record, the browser XML gives 404 and NCBI BioProject has 0 hits, so it is not yet public."}
+  - {ids: ["PRJEB103133"], why_excluded: "TPA metagenomic assembly and MAGs derived from the PRJEB42014 brown-bear reads by a third party (0 runs). No new sequencing."}
+  - {ids: ["10.1101/2025.08.02.668267"], why_excluded: "Kellner et al. 2025 bioRxiv preprint on Pleistocene reindeer dental calculus metagenomes (19 ancient, 27 modern/historical reindeer). No public deposit was found: no ENA/SRA project or sample with reindeer host or reindeer calculus title beyond PRJEB33363. The bioRxiv data statement could not be read (HTTP 429)."}
+  - {ids: ["10.64898/2026.06.19.733412"], why_excluded: "Moraitou et al. 2026 bioRxiv preprint, >450 museum calculus samples from 34 mammal species. No separate deposit was found; its shallow data are already keyed as S7 (PRJEB91453). The bioRxiv data statement could not be read (HTTP 429)."}
+  - {ids: ["PRJNA882120"], why_excluded: "Teotihuacan spider monkey (Ateles geoffroyi; PNAS 2022, PMC9704712): the DNA came from dentine (BioSample env_medium 'Dentin'). The dental calculus was only used for microremains."}
+  - {ids: ["PRJEB55583", "PRJEB112518", "10.5281/zenodo.7244131", "10.17617/3.cocl7r"], why_excluded: "Neanderthal and human calculus only (Klapper et al. 2023 Paleolithic natural products, reads, MAGs and Edmond data; ds- vs ss-library comparison 2026). The ENA run hosts are Homo sapiens neanderthalensis / Homo sapiens with no non-human animal."}
+  - {ids: ["10.25345/c59s1kw3r", "MSV000092566"], why_excluded: "MassIVE 'Ancient Bison Dental Calculus Pilot Study': palaeoproteomics (mass spectrometry), not DNA."}
+  - {ids: ["PRJNA1141513", "PRJNA1344925"], why_excluded: "Dog supragingival plaque and calculus metagenomes / 16S data from living dogs. Modern veterinary samples, not ancient or historical."}
+  - {ids: ["PRJEB60484"], why_excluded: "Overhunting of Svalbard reindeer (ancient and historical Svalbard reindeer reads). Per Hold et al. 2024 the Svalbard samples are antler and subfossil bone, and the sample records name no calculus material."}
+  - {ids: ["10.5281/zenodo.19630540"], why_excluded: "AncientMetagenomeDir v26.03 (community catalogue of ancient metagenome samples). Metadata only, no sequence data. Its host-associated table was used to cross-check this key: the non-human calculus projects it lists are S1-S6 and S11."}
+  - {ids: ["10.5281/zenodo.19435472", "10.5281/zenodo.19435471"], why_excluded: "SMILE ancient oral microbiome database: an LLM-extracted literature compilation of human and hominin oral microbiome records. No animal calculus sequence data."}
+  - {ids: ["10.1038/s41522-024-00642-1", "10.1093/gbe/evag136", "10.1016/j.quaint.2021.06.012"], why_excluded: "Streptococcus primate tropism (2025), Tannerella/Porphyromonas pangenomics (2026), and 'Dental calculus as a proxy for animal microbiomes' (2023). Their data statements say all analysed data come from prior publications; there are no new deposits."}
+  - {ids: ["10.1002/ece3.74105"], why_excluded: "Dental calculus formation linked to diet and phylogeny in mammals (2026): a calculus-scoring survey of museum specimens with supporting-information tables only, no DNA."}
+  - {ids: ["10.5061/dryad.v80vs77", "10.17632/tw8h97yxjc"], why_excluded: "Gomphotherium (Miocene) and Mammut/Mammuthus mesowear, microwear and calculus microfossil datasets. These are dental-wear and microremain data with no DNA."}
+queries:
+  - "Europe PMC search ('dental calculus' OR 'dental plaque' OR tartar) AND (ancient OR museum OR historical OR archaeological OR palaeo*/paleo*) AND (DNA OR metagenom* OR microbiome) AND (animal/primate/bear/dog/horse/mammal/reindeer/cattle/sheep/pig terms): 1167 (top 200 title-screened)"
+  - "Europe PMC full text 'dental calculus' AND (DNA OR metagenom*) AND: dog/canid/wolf 159; horse/cattle/sheep/goat/pig/camelid 315; bear 91; chimpanzee/gorilla/baboon/primate/monkey 140; reindeer/deer/mammoth/rhinoceros/seal/whale 207; museum 194. All titles screened for animal terms."
+  - "Europe PMC TITLE_ABS (calculus/dental plaque/oral microbiome) AND (animal taxa terms) AND (ancient/museum/historical/archaeological/Pleistocene/Holocene/aDNA/palaeo terms): 98, all screened"
+  - "Europe PMC 'dental calculus' AND ('ancient DNA' OR aDNA OR metagenom* OR shotgun) AND: dog 0 new; horse 0 new; cave bear/mammoth/bison/aurochs/rhino 0 new; livestock 0 new; seal/walrus/otter/whale 0 new; orangutan/gibbon/macaque/howler/lemur 0 new (~200 hits each, screened)"
+  - "Europe PMC 'dental calculus' AND (mitogenome OR 'mitochondrial genome' OR 'host DNA') AND animal terms: 23 new, none qualifying; METHODS:'dental calculus' AND METHODS:(sequencing OR 'DNA extraction' OR libraries) NOT TITLE:human: 132"
+  - "Europe PMC author searches: Guschanski/Brealey/Moraitou 23; Ottoni/Ozga/Fellows Yates/Velsko/Warinner AND animal calculus 52; Kellner/Martin MD 5; Weyrich AND animal 8. Accession searches PRJEB84391, PRJEB104944, PRJEB42014, PRJEB91354: 0 papers."
+  - "Europe PMC fullTextXML read for PMC7530607, PMC6927955, PMC6874655, PMC8157933, PMC9778846, PMC11748738, PMC12550474, PMC13400996, PMC7614904, PMC13298647, PMC13593575, PMC9065982, PMC9704712, PMC12766674, PMC13632552 and PMC10876933 to extract data-availability accessions (PMC7746602 full text returned HTTP 500; abstract used)"
+  - "ENA portal study search study_title/description '*calculus*': 103 projects, all screened; '*calcified*', '*tartar*', '*reindeer*', '*Rangifer*' AND ancient, '*Pleistocene*' AND '*oral*', '*calculus*' AND (mammal/wild/zoo/primate), and centre-name searches (University of Edinburgh, Uppsala University, NTNU University Museum)"
+  - "ENA sample search description/sample_title/isolation_source '*calculus*': 8237 samples; host_body_site calculus/dental/tooth/teeth/plaque and tissue_type calculus: 4356; sample_alias '*calc*'/'*Calc*'/'*_DC*', sample_title '*calc*'/'*tartar*': 24571 samples, which surfaced PRJNA508503 (S10) and the non-public PRJEB127169; the other animal-host hits were false positives (DCHS1 editing, SIV colon, equine dorsal colon, jackal WGS). Tallied by project and host; non-human hosts were checked."
+  - "ENA sample search host_tax_id = 9870 (reindeer), 9644 (brown bear), 9615 (dog), 9612 (wolf), 9796 (horse), 9598 (chimpanzee), 9593 (gorilla); projects tallied and unfamiliar ones opened"
+  - "NCBI BioProject esearch 'dental calculus': 81; calculus AND (ancient OR museum OR historic OR archaeological): 54; 'dental plaque' AND (ancient OR museum OR archaeological): 10. The 86 unique projects were summarized and screened."
+  - "NCBI BioSample esearch calculus AND (metagenome OR 'oral metagenome')[Organism]: 1023, fetched and tallied by BioProject and host. NCBI SRA esearch calculus[All Fields]: 4798 runs, summarized by BioProject and organism; unfamiliar projects were opened."
+  - "DataCite ('dental calculus' OR 'calcified plaque' OR 'dental plaque') AND (ancient OR museum OR historical OR historic OR archaeological OR palaeo*/paleo* OR Pleistocene OR Holocene): 287, all screened; the same with animal terms: 236 (noisy, screened)"
+  - "Zenodo records API: 'dental calculus' AND animal taxa/museum terms: 11; calculus AND 'oral microbiome' AND (museum OR ancient OR historical): 6; doi:10.5061/dryad.tx95x6b53: 1 (mirror). Version listings fetched for concepts 6861584 and 3740492."
+  - "Figshare articles search: 'dental calculus' 364, 'calculus microbiome' 53, 'calculus metagenome' 12, 'oral microbiome museum' 0, each screened for animal terms (only journal supplements and modern veterinary items)"
+  - "Dryad search: 'dental calculus' 3; 'calculus microbiome' 1; 'oral microbiome museum' 0. Mendeley Data search API returned unrelated results for these queries (not usable)."
+  - "AncientMetagenomeDir v26.03.0 (Zenodo 10.5281/zenodo.19630540, 26 MB, deleted after use): ancientmetagenome-hostassociated and ancientsinglegenome-hostassociated sample tables filtered for material 'dental calculus' with sample_host other than Homo sapiens. The projects found were Brealey2020, Brealey2021, FellowsYates2021, Moraitou2022, Ottoni2019, Ozga2019 and Weyrich2017, all keyed."
+  - "bioRxiv API details for 10.1101/2025.08.02.668267, 10.64898/2026.06.19.733412 and 10.1101/2025.03.19.643754 (metadata only; the JATS XML and full-text pages returned HTTP 429 on every attempt)"
+  - "ENA run filereports (run, sample, host, title, strategy, first_public) were fetched for every keyed project, and BioSample XML for the sea otter, spider monkey and Gombe host-DNA samples. doi.org resolution returned 302 for every keyed Dryad and Zenodo DOI. Zenodo 4386268 is the Zenodo landing record of the Dryad sea otter DOI."
+size_verdict: "ok: 12 studies after alias grouping (10 firm, 2 borderline) across 4 archives (ENA 7 [S1, S2, S4-S8], SRA 4 [S3, S9, S10, S11], Zenodo 4 [S5, S6 data archives; S9, S12 Dryad mirrors], Dryad 2 [S9, S12]). The 10 firm studies fall within 5-30 and span ENA, SRA, Zenodo and Dryad, so the backup topic (coprolites) was not used."

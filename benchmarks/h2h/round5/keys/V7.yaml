@@ -1,0 +1,155 @@
+task: V7
+prompt: >-
+  Find every public dataset, in any archive, that holds aerial, drone (UAV) or satellite images of whales with
+  annotations marking the individual whales (points, bounding boxes, masks or labelled image chips), or the per-whale
+  annotation layers drawn on such images, made to train, test or carry out detection or counting of whales. "Whales"
+  means any baleen or toothed whale, including beluga, narwhal, sperm, pilot and killer whales. These do not count:
+  dolphin- or porpoise-only sets; photo-identification or re-identification sets; photogrammetry or body-condition
+  measurements; raw imagery without annotations; observer sighting or group-count tables; acoustic detections; and
+  code-only repositories.
+criteria: >-
+  Topic: PRIMARY (annotated aerial/drone/satellite imagery of whales for detection or counting). Included: a public
+  deposit holding (a) overhead imagery (crewed aircraft, UAV/drone, or very-high-resolution optical/SAR satellite) of
+  whales together with per-animal annotations (points, boxes, polygons/masks, or class-labelled image chips), or (b) the
+  per-whale annotation layer alone (e.g. geolocated points with image catalogue IDs) where the commercial satellite
+  imagery cannot be redistributed. The deposit's stated purpose must be detection, counting, or training/validation of
+  detectors. Mixed whale + dolphin/seal sets count if whales are annotated. Flagged confidence: borderline when the
+  imagery is synthetic, the files are still under embargo, the contents could not be inspected, the annotations sit
+  inside a code release, or the annotations were made mainly for another purpose (behaviour, re-identification) but are
+  still per-whale detection masks/boxes on drone imagery. Excluded: dolphin/porpoise-only sets; photo-ID/re-ID sets with
+  pre-cropped animals; photogrammetry/morphometrics/body-condition tables; raw unannotated aerial or drone imagery and
+  video; aerial-observer sighting, count or detection-probability tables; telemetry; acoustic detection data; code-only
+  repositories; figure/table extracts of articles (Plazi/Zenodo) and article copies; posters and presentations. Unit = study:
+  copies, versions, concept/version DOIs, Dryad-to-Zenodo mirrors, a Roboflow export re-deposited on Zenodo, and
+  multiple deposits from the same dataset paper are aliases of one study.
+studies:
+  - key: S1
+    title: "Whales from Space Database (annotation shapefiles) and Whales from Space Database: Image chips"
+    year: 2021
+    ids: ["10.5285/c1afe32c-493c-4dc7-af9f-649593b97b2c", "10.5285/90fab89e-5d07-4d5c-b619-60799a4d09f8", "GB/NERC/BAS/PDC/01482", "GB/NERC/BAS/PDC/01592"]
+    archives: [UK Polar Data Centre]
+    evidence: "DataCite and the PDC/RAMADDA pages: 633 annotated whale objects plus 120 confounders as point/box shapefiles ('Point-Box_Shapefiles' folder) with PNG image chips in the sister record, from WorldView/GeoEye/QuickBird imagery, made for training ML whale detectors. Both are cited by the dataset paper (Cubaynes & Fretwell 2022 Sci Data, PMC9142526), so they are one study."
+  - key: S2
+    title: "Annotated dataset of grey whales detected in Very High Resolution (VHR) satellite imagery of Baja California Sur lagoons in 2009, 2013 and 2015"
+    year: 2024
+    ids: ["10.5285/2d8a4b45-e21f-47d4-8279-b4362489301e", "GB/NERC/BAS/PDC/01827"]
+    archives: [UK Polar Data Centre]
+    evidence: "RAMADDA file list: point shapefiles Whales_SanIgnacio_2009, Whales_OjoLiebre_2013 and _2015, plus a README. Each point is a manually detected grey whale in WorldView-2/GeoEye-1 imagery, with certainty and feature attributes; the stated purpose is training ML whale detection."
+  - key: S3
+    title: "Annotated dataset of beluga whales detected in Very High Resolution (VHR) satellite imagery of the southern Kara Sea (Russia) in July 2016"
+    year: 2024
+    ids: ["10.5285/ae34b490-4838-4740-a78e-924d23dc5540", "GB/NERC/BAS/PDC/01829"]
+    archives: [UK Polar Data Centre]
+    evidence: "RAMADDA file list: point shapefiles belugas_4July_YugorPeninsula and belugas_9July_BaydaratskayaBay (1 MB dbf) plus a README. These are manually detected belugas in WorldView-2/3 imagery, made to support training of automatic whale detection."
+  - key: S4
+    title: "Point annotation dataset of stranded whale and dolphin species identified in very high-resolution optical and SAR satellite imagery along offshore islands of New Zealand and Tasmania between 2018-2023"
+    year: 2025
+    ids: ["10.5285/b26c3a3d-73c8-4500-9a23-696011c20a45", "GB/NERC/BAS/PDC/02083"]
+    archives: [UK Polar Data Centre]
+    evidence: "DataCite/PDC page: point annotations of stranded sperm whales and pilot whales in VHR optical and SAR satellite imagery, made to test satellite detection of strandings (linked code: GitHub strandings_from_space). The landing page resolves; RAMADDA did not expose a file list."
+  - key: S5
+    title: "Happy Humpbacks: A machine learning-ready drone dataset for whale detection model development"
+    year: 2026
+    ids: ["10.5285/7a952870-9880-415d-a8ab-194fedf01a26", "GB/NERC/BAS/PDC/02202"]
+    archives: [UK Polar Data Centre]
+    evidence: "DataCite/PDC page: 5,281 DJI Phantom 4 Pro drone images from Palmer Station (2020) with 10,401 humpback whale bounding boxes in LabelMe and COCO formats and train/val/test splits, for object detection. The landing page resolves; RAMADDA did not expose a file list."
+  - key: S6
+    title: "Locations of features of interest from a multi-season (2018-2022) baleen whale-focused survey of Wilhelmina Bay, Western Antarctic Peninsula, using WorldView-03 satellite imagery"
+    year: 2025
+    ids: ["10.5285/ab19aaba-12d6-44a7-89a3-7b45af0343ed", "GB/NERC/BAS/PDC/02045"]
+    archives: [UK Polar Data Centre]
+    evidence: "DataCite/PDC page: 819 whale features of interest annotated and classified by seven observers over ~1,900 km2 of WorldView-3 imagery, explicitly meant as training data for automated detection. It is the deposit named in the data descriptor (Sci Data 2025, PMC12864722)."
+  - key: S7
+    title: "Dataset for the study \"Localization and tracking of beluga whales in aerial video using deep learning\""
+    year: 2025
+    ids: ["10.5281/zenodo.15679220", "10.5281/zenodo.15679219", "roboflow:object-detection/beluga_1080", "https://universe.roboflow.com/object-detection/beluga_1080"]
+    archives: [Zenodo, Roboflow Universe]
+    evidence: "Zenodo files are detection_data.zip (22 MB) and tracking_data.zip (534 MB). I listed detection_data.zip: train/valid/test aerial video frames with YOLO label txt files for 'Beluga' and 'Beluga Calf' (Alsaidi et al. 2024 Front Mar Sci). The bundled README says it is the Roboflow export 'Beluga_1080'. The Roboflow alias comes from that README only, because universe.roboflow.com returned a Cloudflare challenge (403)."
+  - key: S8
+    title: "Data from: Drones and convolutional neural networks facilitate automated and accurate cetacean species identification and photogrammetry"
+    year: 2019
+    ids: ["10.5061/dryad.7482v2n", "10.5281/zenodo.4933008", "10.5281/zenodo.4933007"]
+    archives: [Dryad, Zenodo]
+    evidence: "Dryad file API and the Zenodo mirror both list train_subset_1/2.zip, val.zip and test.zip (2.3 GB in total) of drone images of humpback, minke and blue whales with VIA region (mask) labels, used to train a Mask R-CNN whale detector/segmenter (Gray et al. 2019 MEE 10.1111/2041-210x.13246)."
+  - key: S9
+    title: "A beluga whale distribution dataset for the Canadian sub-Arctic derived from 2021–2022 WorldView imagery"
+    year: 2026
+    ids: ["10.57760/sciencedb.j00001.01659", "scidb:093922e8ee574ad1a9cbd78b112bc4a6"]
+    archives: [Science Data Bank]
+    evidence: "DataCite (20 files, 98 KB, CC BY) and doi.org resolve to scidb.cn: geolocations of 721 certain belugas, 477 uncertain belugas and 551 harp seals annotated in WorldView-2/3 imagery of Cumberland Sound and the Churchill estuary, made for object-detection training and evaluation (YOLOv8; matches arXiv 2505.12066). The file API needs login, so the file list was not seen."
+  - key: S10
+    title: "Synthetic Satellite Images of Southern Right Whales and Beluga Whales"
+    year: 2026
+    ids: ["10.5281/zenodo.18776518", "10.5281/zenodo.18776517"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (the imagery is synthetic, generated from real WorldView/GeoEye chips). I listed Synthetic_Beluga_Data.zip (19 MB): 432 PNG chips with YOLO txt labels plus train/valid COCO json. Sythentic_SRW_Data.zip (18 MB) holds the right-whale set. Released with Duporge et al. 2025 'Enhancing Satellite-Based Detection of Marine Fauna Using Synthetic Data'."
+  - key: S11
+    title: "A cetacean detection dataset for convolutional neural networks YOLOv8"
+    year: 2026
+    ids: ["10.6084/m9.figshare.33193551", "10.6084/m9.figshare.33193551.v1", "10.6084/m9.figshare.33193551.v2", "10.6084/m9.figshare.33193551.v3"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (files are under embargo until 2026-10-31, so none are listed yet). The Figshare API describes YOLO-format box labels (806 MB) on frames from long-endurance UAV transect video (244 m altitude, Pelagos Sanctuary) for fin, sperm, Cuvier's beaked and pilot whales plus Risso's and striped dolphins."
+  - key: S12
+    title: "Summer Beluga Detection Manuscript"
+    year: 2024
+    ids: ["10.6084/m9.figshare.25966288", "10.6084/m9.figshare.25966288.v1"]
+    archives: [Figshare]
+    evidence: "confidence: borderline (the single 'algorithm files.zip' (0.9 MB) could not be downloaded, as Figshare returned HTTP 500/202, so whether it holds whale annotations or only OBIA rule sets is unknown). It is the deposit named in the data statement of the PLoS ONE 2024 paper on OBIA detection and enumeration of belugas in WorldView-3 imagery (PMC11560058)."
+  - key: S13
+    title: "lynch-lab/Borowicz_etal_Spacewhale: Aerial-trained deep learning networks for surveying cetaceans from satellite imagery"
+    year: 2019
+    ids: ["10.5281/zenodo.3356970", "10.5281/zenodo.3356969"]
+    archives: [Zenodo]
+    evidence: "confidence: borderline (a software release, but it bundles the training imagery). The Zenodo zip (99 MB) is the GitHub release, which contains 31cmAerialImagery.zip: I listed 194 PNG aerial image chips of minke whales downsampled to satellite resolution, used to train whale/water CNN classifiers (Borowicz et al. 2019 PLoS ONE, PMC6772036)."
+  - key: S14
+    title: "Project CETI Sperm Whale Birth Videos with Segmentations and Annotations"
+    year: 2025
+    ids: ["10.7910/DVN/SWIHAN", "doi:10.7910/DVN/SWIHAN"]
+    archives: [Harvard Dataverse]
+    evidence: "confidence: borderline (made for a behavioural study of a birth, not for detection or counting). The Dataverse API lists 120 files: drone videos, per-video _segmentations.hdf5, and boxes-/masks-orientation overlay videos. These hold ML-generated, manually verified per-whale segmentation masks for 11 sperm whales (Science 10.1126/science.ady9280)."
+  - key: S15
+    title: "Whale identification (drone photos with whale masks, Whale_ReId)"
+    year: 2023
+    ids: ["kaggle:opamusora/whale-identification", "https://www.kaggle.com/datasets/opamusora/whale-identification"]
+    archives: [Kaggle]
+    evidence: "confidence: borderline (made for re-identification; each image has a whale segmentation mask). The Kaggle API shows 990 MB in per-individual folders (Whale_ReId_test_mm/...) of drone photos plus whale masks, from a 2022 Russian Ministry of Natural Resources hackathon. The licence is listed as Unknown."
+near_misses:
+  - {ids: ["10.6084/m9.figshare.33315108", "10.6084/m9.figshare.33315108.v1"], why_excluded: "Sibling of S11 holding only graphical outputs and performance metrics (figures) of the YOLOv8 analysis, not the labelled images."}
+  - {ids: ["10.15784/601318"], why_excluded: "USAP-DC: 147.8 GB of raw UAV stills and video of humpback/minke whales (LMG1802), the source imagery of S8, with no annotations described."}
+  - {ids: ["10.26179/5d26ba94f294f", "AAS_2941_SORP_2012_Blue_whale"], why_excluded: "AADC: ~41K raw downward aerial survey JPEGs from the 2012 pygmy blue whale survey, unannotated."}
+  - {ids: ["10.34992/sgs5-yw58"], why_excluded: "CanWIN 'Churchill Beluga Boat Drone Imagery': the description reports YOLOv4 beluga detection, but the resources are only raw drone MP4 videos and field photos, with no labels."}
+  - {ids: ["10.4225/08/587ebb919bc24", "csiro:21056v1"], why_excluded: "CSIRO Hodgson et al. 2017: focal-follow and UAV-vs-land detection CSV tables, whale track shapefile and R code; no imagery or per-image annotations."}
+  - {ids: ["gov.noaa.nodc:0204167", "gov.noaa.nmfs.inport:57143"], why_excluded: "NOAA ACEs 2015: two CSV tables comparing observer, manned-aircraft photo and UAV photo cetacean detections; no imagery."}
+  - {ids: ["gov.noaa.nmfs.inport:25718"], why_excluded: "NOAA Cook Inlet beluga aerial-video group count and calf analysis: count tables, not released annotated imagery."}
+  - {ids: ["github.com/EGuirado/CNN-Whales-from-Space"], why_excluded: "Data statement of Guirado et al. 2019 (PMC6776647); the GitHub repo holds only a README and two figures, and the training images are not public."}
+  - {ids: ["10.5281/zenodo.4726662", "10.5281/zenodo.4726661", "10.5281/zenodo.4775125", "10.5281/zenodo.4775124", "10.5281/zenodo.7013418", "10.5281/zenodo.7013417"], why_excluded: "Annotated drone images and videos of dolphins only (Israel/Italy dolphin detection and tracking; Bigal et al. species-ID images), with no whales."}
+  - {ids: ["10.5061/dryad.qbzkh18mq", "10.5281/zenodo.7351794", "10.5281/zenodo.7278452"], why_excluded: "UAV-based availability and group-size error for coastal dolphin aerial surveys: dolphins only, tables and code."}
+  - {ids: ["lila:beluga-id-2022", "kaggle:ashfaqsyed/beluga-dataset", "kaggle:abdulsalam110/beluga-whales"], why_excluded: "Cook Inlet beluga photo-ID set (5,902 pre-cropped boat and drone images, full-image boxes, individual IDs), made for re-identification, not detection or counting. The abdulsalam110 copy has no description."}
+  - {ids: ["kaggle:andradaolteanu/happywhale-2022", "kaggle:bryanb/happy-whale-and-dolphin-resized", "kaggle:martinpiotte/humpback-whale-identification-fluke-location", "kaggle:yusukesueyoshi/happy-whale-and-dolphin-anotated-in-yolov5-format"], why_excluded: "Kaggle derivatives of the Happywhale and Humpback Whale Identification photo-ID competitions (boat-based fin/fluke photos, crops, fin boxes), made for individual identification, not aerial detection or counting."}
+  - {ids: ["10.5281/zenodo.17678112", "10.5281/zenodo.17678111"], why_excluded: "Raw DJI drone footage of narwhals (MP4/SRT/LRF) for behaviour studies, unannotated."}
+  - {ids: ["10.21966/fv0q-q364", "10.21966/k6t6-bp93", "10.17632/z9kjx85fww", "10.6084/m9.figshare.11595246", "10.6084/m9.figshare.14681326.v1"], why_excluded: "Drone observation records or footage of bowhead, killer, pilot and blue whales for morphometrics, behaviour and social analysis; no detection annotations."}
+  - {ids: ["10.17632/dyn2hg5dvt", "10.17632/5nhx7tgrxc", "10.17632/c5bsfc2648", "10.17632/tjwpmsx4c9", "10.5061/dryad.m0087p4", "10.5061/dryad.kh189328g", "10.6084/m9.figshare.21528801", "10.6084/m9.figshare.22584451", "10.7924/r4sj1jj6s", "10.5281/zenodo.21644210", "10.5281/zenodo.5949551", "10.5281/zenodo.23325208", "10.5281/zenodo.16934276"], why_excluded: "Drone photogrammetry, morphometric or body-condition measurement tables, not detection or counting annotations."}
+  - {ids: ["10.5281/zenodo.20720500"], why_excluded: "Blue whale behavioural ecology: tag TDR data and satellite oceanography RData plus R scripts; no imagery of whales."}
+  - {ids: ["10.5061/dryad.34tmpg4wh", "10.5281/zenodo.4937515", "10.82144/f863df46", "10.82144/893fb415"], why_excluded: "Aerial observer survey or sighting records (sea ducks with incidental whales; multi-target protocol; digital video survey sightings; right whale aerial surveys), with no annotated imagery."}
+  - {ids: ["10.5281/zenodo.13821106", "10.5281/zenodo.13821600", "10.5281/zenodo.13821066", "10.5281/zenodo.20399531"], why_excluded: "Plazi/Zenodo figure and table extracts of articles (Whales from space four mysticetes, narwhal image vs observer surveys, Kara Sea beluga survey), not data deposits."}
+  - {ids: ["10.17863/cam.64145", "10.17863/cam.85620", "10.17863/cam.86708"], why_excluded: "Cambridge Apollo copies of a review article and of the Whales from Space author correction, not datasets."}
+  - {ids: ["10.5281/zenodo.18016793", "10.5281/zenodo.23117124", "10.5281/zenodo.20547057"], why_excluded: "Code-only releases (CETI birth analysis suite, Whaleidator UAV review software, strandings_from_space code)."}
+  - {ids: ["kaggle:diegoasuarezg/whale-detection-challenge-255x255-png-dataset", "10.5061/dryad.x0k6djj2d"], why_excluded: "Acoustic whale-call detection data (spectrogram images of right whale up-calls; annotated baleen whale calls), not overhead imagery."}
+  - {ids: ["10.17632/4tp83br92z"], why_excluded: "Underwater video frames of marine species, not aerial or satellite imagery."}
+  - {ids: ["10.5285/451a6a5d-a17b-4d71-aad0-188739403d8c"], why_excluded: "Map of areas suitable for VHR satellite monitoring of cetaceans; no whale annotations."}
+queries:
+  - "DataCite https://api.datacite.org/dois?query=: '(whale* OR cetacean*) AND (satellite) AND (detect* OR count* OR annotat*)' 187; '(whale* OR cetacean*) AND (drone OR UAV OR UAS OR RPAS) AND (detect* OR count* OR annotat* OR \"deep learning\" OR \"machine learning\")' 64; '(whale* OR cetacean*) AND (aerial) AND (images OR imagery OR photographs) AND (detect* OR count* OR annotat* OR \"deep learning\")' 68; species list (beluga/narwhal/right/humpback/gray/sperm/killer/blue/fin/minke/bowhead) AND (drone/UAV/UAS/satellite/aerial/WorldView) AND (image*/photo*/video*) 323; '(whale* OR cetacean*) AND (\"object detection\" OR YOLO OR \"bounding box*\" OR \"training data\" OR \"computer vision\" OR segmentation)' 260; '(whale* OR cetacean* OR \"marine mammal*\") AND (\"remote sensing\" OR VHR OR WorldView OR GeoEye OR Pleiades)' 200; whale/cetacean AND drone/aerial/satellite restricted to Mendeley/OSF/Dataverse/Borealis/IEEE DataPort/Stanford/Duke prefixes 30; title dolphin/marine mammal/megafauna AND aerial AND detect/annotat/count 64; whale AND thermal/infrared AND drone AND detect 29; southern right/gray whale AND satellite/drone AND detect 187; whale AND (roboflow OR COCO OR labelme OR labelled/annotated images) 140; '\"whales from space\" OR \"whale detection\" OR \"whale counting\"' 79; narwhal/bowhead/killer/pilot/sperm whale AND drone/aerial/satellite AND detect 83."
+  - "Zenodo https://zenodo.org/api/records?q= (anonymous page size 25, paged): '(whale OR ... OR orca) AND (drone OR UAV OR UAS OR aerial OR satellite) AND (detection OR counting OR annotated OR annotations OR \"deep learning\" OR YOLO)' 129; 'resource_type.type:dataset AND title:(whale ... sperm whale) AND (drone OR UAV OR UAS OR aerial OR satellite OR imagery OR images)' 55; 'resource_type.type:image AND whale AND drone AND annotated' 0; '(whale OR whales OR cetacean) AND (\"bounding box\" OR YOLO OR COCO OR \"object detection\" OR \"training dataset\")' 31."
+  - "Figshare POST https://api.figshare.com/v2/articles/search: field-scoped queries (':title: whale drone/satellite/aerial/UAV', ':title: cetacean detection', ':title: beluga drone', ':title: whale detection', ':title: whales images') each returned up to 1000 date-sorted, OR-matched hits with almost no relevant records; Figshare was therefore covered mainly via DataCite (prefix 10.6084)."
+  - "Dryad https://datadryad.org/api/v2/search?q=: 'whale drone' 3; 'whale satellite imagery' 0; 'whale aerial images' 0; 'cetacean drone' 6; 'beluga aerial' 2; 'whale detection deep learning' 3; 'narwhal aerial' 0; 'whale UAV' 1; 'right whale aerial' 4."
+  - "Kaggle https://www.kaggle.com/api/v1/datasets/list?search= (up to 5 pages): whale 100; whales 67; cetacean 3; beluga 36; narwhal 0; orca 100; 'right whale' 8; 'whale satellite' 0; 'whale drone' 3; 'whale aerial' 2; 'whale detection' 10; 'marine mammal' 11 (296 unique, screened); datasets/view checked for opamusora/whale-identification, ashfaqsyed/beluga-dataset, abdulsalam110/beluga-whales, brjapon/whales-and-dolphins, akhileshdkapse/ip-whale-dateset; competitions/list?search=whale/beluga/cetacean (response not parseable)."
+  - "Europe PMC search: 'TITLE_ABS:(whale OR whales OR cetacean OR cetaceans OR beluga OR narwhal OR \"marine mammals\") AND TITLE_ABS:(satellite OR drone OR drones OR UAV OR UAS OR aerial OR \"unoccupied aircraft\" OR \"unmanned aerial\") AND TITLE_ABS:(detection OR detect OR counting OR count OR \"deep learning\" OR \"machine learning\" OR \"neural network\" OR automated OR annotated)' 108; full-text data-availability checks: PMC11560058, PMC12864722, PMC8336832, PMC9142526, PMC9923222, PMC6772036, PMC6776647, PMC6797088, PMC3922973, PMC3952195, PMC12356183, PMC12198396."
+  - "arXiv export API id_list=2505.12066,2510.14709 (beluga point-label detection; 'Where are the Whales' human-in-the-loop): no data deposit named beyond github.com/microsoft/whales code."
+  - "UK PDC: data.bas.ac.uk full-record pages and ramadda.data.bas.ac.uk entry/show?output=json for the 7 PDC records (file lists returned for 01482 folder, 01827, 01829; others are 'Server Side Files' with no listing)."
+  - "NSF Arctic Data Center solr: title:(*whale* OR *beluga* OR *narwhal* OR *cetacean*) AND abstract:(drone OR UAV OR UAS OR satellite OR aerial OR imagery) 1 (BOWFEST CTD)."
+  - "USAP-DC https://www.usap-dc.org/search?free_text=: whale ~40 datasets (none annotated aerial); 'whale drone' / 'whale UAV' / 'whale aerial' / 'whale satellite' 0; dataset 601318 page read."
+  - "PANGAEA advanced/search.php?q='whale (aerial OR drone OR UAV OR satellite) image' 32 (none relevant)."
+  - "Mendeley Data api/research-data/search?query=: 'whale drone', 'whale satellite' (error), 'whale aerial', 'cetacean detection', 'beluga', 'whale UAV', 'whale images' (10 records each, none relevant); covered via DataCite prefix 10.17632."
+  - "NOAA NCEI geoportal opensearch: 'whale aerial imagery' 8210; 'beluga aerial video' 3874; 'whale unmanned aircraft' 3224; 'right whale aerial photographs' 5707 (top 50 screened; only survey/count tables and ACEs CSVs)."
+  - "Other: LILA BC datasets page (Beluga ID 2022, NOAA Arctic Seals, Whale Shark ID; no whale detection set); CanWIN CKAN package_show churchill-beluga-boat-drone-imagery; AADC eds/api/metadata AAS_2941_SORP_2012_Blue_whale; CSIRO DAP collections/csiro:21056v1/data; Harvard Dataverse datasets/:persistentId SWIHAN; GitHub API trees for EGuirado/CNN-Whales-from-Space and lynch-lab/Borowicz_etal_Spacewhale; Science Data Bank API (file listing requires login); universe.roboflow.com (Cloudflare 403)."
+size_verdict: "ok: 15 distinct studies (9 firm, 6 borderline) across 8 archives. Firm studies per archive: UK Polar Data Centre 6, Zenodo 2 (S7; S8 mirror), Dryad 1, Science Data Bank 1, plus Roboflow Universe as an unverified alias of S7. Borderline: Zenodo 2, Figshare 2, Harvard Dataverse 1, Kaggle 1. The 9 firm studies across 4 archives meet the 5-30 range with at least 3 archives, so the backup topic (pinnipeds) was not used."

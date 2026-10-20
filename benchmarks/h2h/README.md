@@ -9,7 +9,13 @@ What separates the arms is tool calls: this server made 7.7 fewer per run than
 web search (95% CI 1.8 to 13.1) and 24.9 fewer than ToolUniverse (12.8 to 47.1),
 while cost and wall time against web search are not separated. The main
 limitation is size: 5 held-out tasks, with every earlier round used to tune the
-server. Round 4, a fresh held-out round, has not run yet.
+server. Two pre-registered held-out rounds on Opus 5.5 followed (2026-10-19; keys and
+adjudication by agents without this server), and neither separated this server from web
+search on recall. Round 4 (5 tasks): 0.66 against 0.66. Round 5 (10 tasks): 0.72
+against 0.58, higher on 6 of 10 tasks where the rule needed 8. Web search timed out
+in 11 of 30 round-5 runs; counting only finished runs, it found more (0.90). This
+server's runs were 3 to 4 times faster, with fewer calls and higher precision. See
+[Re-run 2026-10-18](#re-run-2026-10-18).
 
 ## Arms
 
@@ -57,9 +63,90 @@ draws, seed 0). Medians are over runs. Mean recall is the mean over tasks of eac
 task's mean over runs. [`summary.tsv`](summary.tsv) has every run set by arm, with
 the baseline rows; [`comparisons.tsv`](comparisons.tsv) has every paired test.
 
+## Re-run 2026-10-18
+
+Rules for rounds 4 and 5 were committed before either ran:
+[`PREREG_2026-10-18.md`](PREREG_2026-10-18.md). Every $ figure is the API-equivalent
+price Claude Code reports. The runs used a subscription with overage off, so the
+binding budget was seven-day utilization, reported alongside.
+
+**Where the tokens go** ([`diagnose.py`](diagnose.py), 80 round-2/3 runs per arm,
+medians): dam spends $0.54 a run against web's $0.43 and tu's $0.57. About 80% of dam's
+cost is cache writes (108k tokens against web's 48k), and about half of those are
+search output: roughly 1k characters per hit, with the model asking for 30 hits.
+Tool definitions are about 4.8k tokens (21.5k fixed context against web's 17.8k).
+Tool inputs are small (3.3k characters), so no payloads are pasted. The one tool-name
+failure: 11 calls to a bare `resolve` in 5 of 60 round-2 dam runs, none since. Output
+size was left alone because the endpoint is recall, not cost.
+
+**Server change** (round 5 only, run from commit 0e3661f with `--server-spec`): a
+description that names another tool first says the client may list it with a prefix
+(`mcp__data-aggregator__resolve`).
+
+**Round 4** (5 held-out tasks × 4 arms × 3 runs, dam 0.74.0 from PyPI, tu 1.5.7; U5's
+key re-frozen 2026-10-18 after an OSF file-level re-check; 87 pooled entries judged
+blind by fresh agents with no MCP server):
+
+| arm | mean recall (95% CI) | valid-only | precision | median cost | median calls | median wall, s | valid runs |
+|---|---|---|---|---|---|---|---|
+| dam | 0.66 (0.46–0.86) | 0.66 | 0.88 | $1.87 | 20 | 176 | 15 of 15 |
+| web | 0.66 (0.44–0.87) | 0.83 | 0.77 | $1.86 | 57 | 677 | 12 of 15 |
+| tu | 0.59 (0.34–0.81) | 0.59 | 0.81 | $2.16 | 34 | 187 | 15 of 15 |
+| bare | 0.02 (0.00–0.04) | 0.02 | 0.33 | $0.05 | 1 | 19 | 15 of 15 |
+| DataCite top 100, no model | 0.17 (0.04–0.32) | | 0.39 | | | | |
+
+Per task (dam / web): U1 0.55 / 0.64, U2 0.95 / 0.95, U3 0.90 / 0.30 (two web
+timeouts), U4 0.63 / 0.92, U5 0.29 / 0.49. **Against the pre-committed rule
+(dam above web on at least 4 of 5 tasks and the interval above 0): not separated.**
+dam was higher on 1 task, web on 3, and they tied on 1. The difference is +0.004
+(−0.22 to 0.32). The PREREG's valid-only check points the other way: web higher on 3
+tasks, tied on 2, −0.16 (−0.32 to −0.02). What does separate: dam made fewer tool calls than web (−34 a run, −50 to −15) and finished
+faster (−454 s, −633 to −220), and it was more precise (+0.12, 0.02 to 0.24). It cost
+less than tu (−$0.51, −0.83 to −0.25). Cost against web was not separated. Bare-name
+refusals: 0 in 15 dam runs. The sweep cost $90.61 and seven-day utilization rose
+0.24 → 0.30. Each timed-out run is recorded at $0, because a run killed at 900 s
+reports no cost, so web's cost figures are understated in both rounds.
+
+**Round 5** (10 new tasks × 4 arms × 3 runs; dam on commit 0e3661f, tu 1.5.7; keys by
+builders with no MCP server, see [`round5/README.md`](round5/README.md); 88 pooled
+entries judged blind by fresh agents with no MCP server: 14 aliases, 19 additions, 7
+borderline, 48 rejected, $4.51):
+
+| arm | mean recall (95% CI) | valid-only | precision | median cost | median calls | median wall, s | valid runs |
+|---|---|---|---|---|---|---|---|
+| dam | 0.72 (0.61–0.80) | 0.72 | 0.95 | $2.08 | 25.5 | 203 | 30 of 30 |
+| web | 0.58 (0.37–0.78) | 0.90 | 0.62 | $1.51 | 50 | 599 | 19 of 30 |
+| tu | 0.63 (0.50–0.75) | 0.65 | 0.92 | $2.61 | 40 | 215 | 29 of 30 |
+| bare | 0.09 (0.02–0.17) | 0.09 | 0.50 | $0.06 | 1 | 24 | 30 of 30 |
+| DataCite top 100, no model | 0.14 (0.02–0.28) | | | | | | |
+
+Per task (dam / web, web timeouts in brackets): V1 0.67 / 0.94, V2 0.91 / 0.67 [1],
+V3 0.36 / 0.00 [3], V4 0.67 / 0.32 [2], V5 0.89 / 0.96, V6 0.73 / 0.60 [1], V7 0.87 /
+0.97, V8 0.62 / 0.25 [2], V9 0.68 / 0.29 [2], V10 0.76 / 0.76. **Against the
+pre-committed rule (dam above web on at least 8 of 10 tasks, ties against dam, and the
+interval above 0): not separated.** dam was higher on 6 tasks, web on 3, and 1 tied.
+The difference was +0.14 (−0.005 to 0.28). The valid-only check, which the rule
+requires to agree, disagrees. Web finished V3 in none of its 3 runs, so V3 drops out,
+and on the other 9 tasks web was higher on 8 and tied on 1: −0.15 (−0.21 to −0.09).
+So dam's lead on the primary endpoint comes from web's timeouts: on tasks where web
+finished, web found more.
+
+What does separate (secondary): dam was faster than web on all 10 tasks (−426 s,
+−557 to −295) and made fewer calls (−21, −31 to −12). It was more precise (+0.33,
+0.15 to 0.54), and its cost was higher (+$0.96, 0.40 to 1.52; web's timeouts count
+$0). Against tu, dam made fewer calls (−16, −26 to −6) and cost less (−$0.43, −0.86 to
+−0.01); recall against tu was not separated (+0.09, −0.02 to 0.21). Bare-name
+refusals: 0 in 30 dam runs, and 0 in round 4 without the note, so the PREREG's
+mechanism test (some in round 4, fewer in round 5) cannot be run. The sweep cost
+$185.00 (dam $66.33, tu $79.19, web $37.50, bare $1.97) and seven-day utilization
+rose 0.30 → 0.43, against a projected 0.42. The key builders cost $68.31.
+
+Exploratory, rounds 4 and 5 pooled (15 tasks): dam vs web +0.09 (−0.04 to 0.23),
+higher on 7 of 15 tasks. Valid-only: −0.15 (−0.22 to −0.09), web higher on 11 of 14.
+
 ## Controls
 
-- Oracle (positive and negative): for all 15 tasks of rounds 2 to 4, the key
+- Oracle (positive and negative): for all 25 tasks of rounds 2 to 5, the key
   listed by its own ids scores recall 1.0, precision 1.0 and nothing unjudged, and
   a list of near-miss ids (each id with a suffix) scores 0.0 (`run.oracle_problems`,
   tested in CI and run before any sweep, which stops if it fails).
@@ -67,7 +154,8 @@ the baseline rows; [`comparisons.tsv`](comparisons.tsv) has every paired test.
   `summary.tsv`): an empty list, another task's key, and DataCite's top 25 and 100
   datasets for a short keyword query per task (queries written down before the
   fetch in `analyze.DATACITE_QUERY`; results in
-  [`baselines/datacite.json`](baselines/datacite.json), fetched 2026-10-16).
+  [`baselines/datacite.json`](baselines/datacite.json), fetched 2026-10-16, round 5
+  2026-10-19).
 - Validity, one rule for every arm (`run.validity`): a run counts only if it
   finished (no timeout, harness error or budget stop), started with exactly its
   arm's built-in tools and server, used a data tool at least once (bare excepted)
@@ -76,6 +164,7 @@ the baseline rows; [`comparisons.tsv`](comparisons.tsv) has every paired test.
   run the harness died in is moved to `_aborted/` and logged, the same for every
   arm. 3 of 243 archived runs are invalid, all in round 2: a timeout in `r2_266`
   (web) that had been kept as valid, and the two leak-scan hits. Round 3 has none.
+  Rounds 4 and 5: 15 of 180, all 900-second timeouts with no result (web 14, tu 1).
 - Leak scan (`run.leak_hits`): every tool input and output of every run is
   searched for the key and adjudication files, this benchmark's paths on disk and
   on GitHub, and other runs' directories. Across 243 runs and 10,010 tool blocks
@@ -83,12 +172,15 @@ the baseline rows; [`comparisons.tsv`](comparisons.tsv) has every paired test.
   directory (`r2_066` web R2 r1, `r2_final` tu R5 r2), with no key or other run
   read. As a control, without excluding a run's own directory, all 240 runs of
   rounds 2 and 3 hit (their path names the round), so the scan does read the
-  transcripts.
+  transcripts. Rounds 4 and 5: no hits in 180 runs.
 
 ## Limitations
 
-- Five tasks per round. No sign test over 5 tasks can go below p = 0.0625, and a
-  bootstrap over 5 tasks is too narrow to rely on.
+- Five tasks per round up to round 4. No sign test over 5 tasks can go below
+  p = 0.0625, and a bootstrap over 5 tasks is too narrow to rely on. Round 5 has 10.
+- The 900-second timeout hits web far more often than the server arms (14 of 45
+  web runs in rounds 4 and 5, against 0 dam and 1 tu), so the primary endpoint,
+  where a timeout scores 0, and the valid-only check disagree.
 - Only round 3's first run is held out. Round 2's tasks were used to diagnose
   about ten server changes (#244 to #271), and round 3's for three more (#277,
   #278, #281), so both are now tuning data.
@@ -113,7 +205,7 @@ key does not cover are pooled and judged blind to arm, then everything is
 re-scored. [`analyze.py`](analyze.py) re-scores every archived run set and writes
 `summary.tsv` and `comparisons.tsv`. The rounds' own write-ups:
 [round 1](RESULTS.md), [round 2](round2/RESULTS.md), [round 3](round3/RESULTS.md),
-[round 4](round4/README.md).
+[round 4](round4/README.md), [round 5](round5/README.md).
 
 Run transcripts are kept outside the repository, in
 `~/data-aggregator-mcp-artifacts/h2h/` (`MANIFEST.txt` has their hashes). The
@@ -131,6 +223,8 @@ name.
 | 10-12 | #277, #278, #281 fixed on round 3; rerun on 0.71.0 | gap audit | 0.55 / 0.43 / 0.30; now tuning data | `r3_071` |
 | 10-16 | harness isolation (#298): pinned PyPI releases with `uvx --exclude-newer`, a fresh `/tmp` directory per run, no user settings, one system prompt, Opus 5.5, provenance per row | runs inherited the developer's settings and a checkout | pilot only; the round-4 sweep has not run | `r4_pilot` |
 | 10-16 | fairness fixes (#298): server arms get Read; `bare` arm; ToolUniverse cache per run; no silent re-run; validity rule; leak scan; oracle and version preflight; URL-form ids for every archive, accessions matched exactly | ToolUniverse could not read its own saved results; a timed-out run had been kept as valid | re-score below | |
+| 10-19 | round 4 as pre-committed, dam 0.74.0, tu 1.5.7, plus `bare`; blind adjudication by fresh agents | held-out check after the harness fixes | 0.66 / 0.66 / 0.59; not separated | `r4` (`r4_runs`) |
+| 10-19 | round 5: 10 new tasks, keys by builders with no MCP server; dam at 0e3661f (prefix note), tu 1.5.7 | 5 tasks cannot reach p < 0.05 | 0.72 / 0.58 / 0.63; not separated (valid-only: web higher on 8 of 9) | `r5` (`r5_runs`) |
 
 Re-scoring every archived run with the fixed scorer changed no row. The only
 differences from the committed score files are in round 2 R4, whose key grew from

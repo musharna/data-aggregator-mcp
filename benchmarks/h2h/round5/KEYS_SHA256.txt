@@ -1,0 +1,13 @@
+# sha256 of the round-5 keys and tasks.json, frozen 2026-10-18 before any round-5 run;
+# the files are committed after the sweep (they live in ~/data-aggregator-mcp-artifacts/h2h/round5/ until then).
+ee78494d1ddb4020d2934f2af144b1054bc100b9567947abe9ccbd96f49130f4  keys/V1.yaml
+59405c0816806dae9290f30a6644d785215d3d1fc8b8b03af57e512ad65c06d2  keys/V2.yaml
+179bba0440032d321818c9fa3c9494b88fcda00133e669357cb248f48a84431e  keys/V3.yaml
+fe442f8bf81991d1404cfe44df26931849858e248b432bea0db9aa05a6605cb5  keys/V4.yaml
+721b31e01bd70b0a92de3c6e65da396b50a0feac8ddbc13a44e8ba3519a4dd06  keys/V5.yaml
+2809f7eb19690c2119ddb00dab055f9dd73dbc7bed3a4a76083d6985608b6f0c  keys/V6.yaml
+cf0116f295b0f3c86e2e78a3bfe4d202bda7d823def960a3f079254d41740dd6  keys/V7.yaml
+74cc4b0d7fa3ebff48e3bfcbf41f78b97a72f30c1cf65059cc25e9530eb3b654  keys/V8.yaml
+9e973b73317440c8ad24190d044ad44f3fea9814715bc24a934e5dd2050e2839  keys/V9.yaml
+da86e1c5156579b41d93a97ff81b784815ea1a2e786546f5ad1214ccda706801  keys/V10.yaml
+c12b1d2e32449687e5149671dde4ae3ad00e2cac2705482d7753a8066ae872e5  tasks.json

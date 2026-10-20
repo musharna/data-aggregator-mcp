@@ -1,0 +1,1620 @@
+[
+ {
+  "id": "V1",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds spatially resolved gene-expression data (sequencing- or imaging-based spatial transcriptomics such as Visium / Visium HD, Stereo-seq, Slide-seq, MERFISH, Xenium, GeoMx, seqFISH or similar) measured on tissue of the inner ear of any vertebrate: the cochlea, the vestibular organs, or the spiral and vestibular ganglia. Raw or processed spatial data both count. Whole-embryo or whole-head atlases that only happen to include the ear, brainstem auditory nuclei, vestibular schwannomas and other tumors, outer or middle ear, inner-ear organoids, dissociated single-cell / single-nucleus data without a spatial assay, few-probe in situ hybridization, and papers whose spatial data were never deposited do not count.",
+  "frozen": "2026-10-18",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "GSE312646",
+     "PRJNA1375652",
+     "SRP651704"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "GSE309565",
+     "PRJNA1335542",
+     "SRP629162"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "PRJCA031138",
+     "CRA019653",
+     "PRJDB33021",
+     "DRP015037",
+     "10.6084/m9.figshare.33027089",
+     "10.6084/m9.figshare.33027089.v1",
+     "10.6084/m9.figshare.33030437",
+     "10.6084/m9.figshare.33030437.v2"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "E-MTAB-16462",
+     "PRJEB105893",
+     "ERP187045",
+     "E-MTAB-16513",
+     "PRJEB106161",
+     "ERP187267",
+     "PRJCA057841"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "gEAR:f50389ab",
+     "f50389ab",
+     "59a45c1c-3125-ac4d-590c-dc6379e29c23",
+     "7e256740",
+     "83590bd2",
+     "62ef8043",
+     "9d71b642",
+     "a56fe32b",
+     "3429de90"
+    ]
+   }
+  ],
+  "optional": []
+ },
+ {
+  "id": "V10",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds ancient or historical DNA sequenced from the dental calculus (calcified dental plaque) of non-human animals: archaeological, palaeontological, or museum and skeletal-collection specimens of wild, captive or domestic animals. Raw sequencing reads and derived sequence data both count, including oral metagenomes, microbial profiles or genomes, and host mitogenomes recovered from the calculus. Calculus from living animals, calculus from humans or archaic hominins only, proteomic, isotopic or microfossil-only calculus studies, DNA from other dental tissues (dentine, enamel, pulp), code-only repositories, and papers without deposited data do not count.",
+  "frozen": "2026-10-18",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "PRJEB33363",
+     "ERP116150"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "PRJEB42014",
+     "ERP125873"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "PRJNA531027",
+     "SRP192592"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "PRJEB34875",
+     "ERP117845"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "PRJEB34569",
+     "ERP117493",
+     "10.5281/zenodo.3740492",
+     "10.5281/zenodo.3740493",
+     "10.5281/zenodo.4648012",
+     "10.5281/zenodo.4704319",
+     "10.5281/zenodo.4775267"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "PRJEB49638",
+     "ERP134154",
+     "10.5281/zenodo.6861584",
+     "10.5281/zenodo.6861585",
+     "10.5281/zenodo.6961995",
+     "10.5281/zenodo.7361823"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "PRJEB91453",
+     "ERP174400",
+     "PRJEB91354",
+     "ERP174333"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "PRJEB84391",
+     "ERP167865"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "PRJNA550086",
+     "SRP286433",
+     "10.5061/dryad.djh9w0vxz",
+     "zenodo:4386268"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "PRJNA508503"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S11",
+    "ids": [
+     "PRJNA685265",
+     "SRP298251"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "10.5061/dryad.tx95x6b53",
+     "zenodo:10659483"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "V2",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds chromatin accessibility or chromatin-binding sequencing data (ATAC-seq including single-cell ATAC, DNase-seq, ChIP-seq of histone marks, RNA polymerase or transcription factors, CUT&RUN or CUT&Tag) generated from a cnidarian: corals, sea anemones, Hydra and other hydrozoans, or jellyfish. Raw reads or processed outputs such as peak files both count. Other assays alone (RNA-seq, DNA methylation, Hi-C/Micro-C, SELEX, histone proteomics), other animals, reanalyses that deposit no new chromatin data, and registered projects with no public data do not count.",
+  "frozen": "2026-10-18",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "GSE46488",
+     "PRJNA200689",
+     "SRP021895"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "GSE95723",
+     "PRJNA378226",
+     "SRP101436"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "PRJNA471067",
+     "SRP145481"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "PRJNA518019",
+     "SRP184142",
+     "10.6084/m9.figshare.8331779",
+     "10.6084/m9.figshare.8331779.v1"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "PRJNA598421",
+     "SRP239374",
+     "PRJNA598420",
+     "10.6084/m9.figshare.14909490",
+     "10.6084/m9.figshare.14909490.v1",
+     "10.6084/m9.figshare.12111018",
+     "10.6084/m9.figshare.12111018.v1"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "GSE121617",
+     "PRJNA497876",
+     "SRP166331"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "GSE127280",
+     "GSE127277",
+     "GSE127278",
+     "PRJNA524651",
+     "PRJNA524657",
+     "PRJNA524656",
+     "SRP187045",
+     "SRP187046"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "GSE152994",
+     "PRJNA641135",
+     "SRP268329",
+     "10.25338/B8S612",
+     "zenodo:3998321"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "PRJNA816482",
+     "SRP364758"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "PRJNA667495",
+     "SRP286434",
+     "SRX19856712",
+     "SRR24055088"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "PRJNA971210",
+     "SRP436875",
+     "SRX20278314",
+     "SRR24493085"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "GSE260572",
+     "GSE260569",
+     "PRJNA1082243",
+     "PRJNA1082247",
+     "SRP492555"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "GSE294388",
+     "PRJNA1249376",
+     "SRP577940"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "PRJNA1261600",
+     "SRP584403",
+     "10.25338/B83S8C",
+     "zenodo:7796431"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "GSE307384",
+     "PRJNA1320626",
+     "SRP617739"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "GSE309459",
+     "PRJNA1333423",
+     "SRP625517"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "GSE329226",
+     "PRJNA1446962",
+     "SRP689000"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "GSE329959",
+     "PRJNA1462273",
+     "SRP697643"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "PRJNA1544129",
+     "SRP745656"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "GSE63414",
+     "PRJNA267694",
+     "SRP049999"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "PRJNA415358",
+     "SRP120942"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "PRJNA532677",
+     "SRP192505",
+     "10.6084/m9.figshare.c.5173119",
+     "10.6084/m9.figshare.c.5173119.v1",
+     "10.6084/m9.figshare.13083264",
+     "10.6084/m9.figshare.13083267",
+     "10.6084/m9.figshare.13083270",
+     "10.6084/m9.figshare.13083261"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "GSE182573",
+     "GSE198320",
+     "PRJNA756953",
+     "SRP333687"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "PRJNA767103",
+     "SRP339175"
+    ]
+   },
+   {
+    "key": "S25",
+    "ids": [
+     "PRJNA820593",
+     "SRP366231"
+    ]
+   },
+   {
+    "key": "S26",
+    "ids": [
+     "PRJNA826667",
+     "SRP370151",
+     "PRJNA826310"
+    ]
+   },
+   {
+    "key": "S27",
+    "ids": [
+     "GSE205918",
+     "GSE205699",
+     "GSE205908",
+     "PRJNA848229",
+     "PRJNA847206",
+     "PRJNA848216",
+     "SRP379166",
+     "SRP379732"
+    ]
+   },
+   {
+    "key": "S28",
+    "ids": [
+     "PRJNA931730",
+     "SRP421041"
+    ]
+   },
+   {
+    "key": "S29",
+    "ids": [
+     "10.5281/zenodo.23004114",
+     "10.5281/zenodo.23004113"
+    ]
+   }
+  ],
+  "optional": []
+ },
+ {
+  "id": "V3",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds brain imaging or brain recording data (structural or functional MRI, diffusion MRI/DTI, EEG or event-related potentials, MEG, fNIRS) from people who stutter (children or adults with developmental stuttering, usually compared with fluent controls). Raw or processed data both count, including group statistical maps and per-participant derived measures. Speech-audio, behavioural, questionnaire, genetic, kinematic or vocal-tract-only data, fluent speakers imitating stuttering, meta-analysis maps built from published coordinates, journal supplement PDFs or summary tables, and deposits that are not openly accessible do not count.",
+  "frozen": "2026-10-18",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "10.17632/v6346g59xh",
+     "10.17632/v6346g59xh.1"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "10.5281/zenodo.22982941",
+     "10.5281/zenodo.22982940"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.25625/OQBVSL",
+     "doi:10.25625/OQBVSL"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "osf.io/7gpyb",
+     "7gpyb"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "osf.io/5jkur",
+     "5jkur"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.17605/OSF.IO/TQ8J5",
+     "osf.io/tq8j5",
+     "neurovault:collection:16872",
+     "https://neurovault.org/collections/16872/"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "10.17605/OSF.IO/GP84X",
+     "osf.io/gp84x"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "neurovault:collection:8669",
+     "https://neurovault.org/collections/8669/"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "neurovault:collection:12207",
+     "https://neurovault.org/collections/12207/"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "neurovault:collection:21188",
+     "https://neurovault.org/collections/21188/"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "osf.io/97tsm",
+     "97tsm"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "osf.io/uv263",
+     "uv263"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "neurovault:collection:9572",
+     "https://neurovault.org/collections/UPUDTUZJ/",
+     "UPUDTUZJ"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.5281/zenodo.21906356",
+     "10.5281/zenodo.21906355"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S8",
+    "ids": [
+     "figshare:4532570",
+     "10.1371/journal.pone.0168836.s001",
+     "10.1371/journal.pone.0168836.s002",
+     "10.1371/journal.pone.0168836.s003"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "V4",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds records of birds colliding with buildings, windows or other glass structures: carcass or collision surveys at buildings, citizen-science collision reports, counts or case records of building/window-collision victims, or field and flight-tunnel tests of glass or window treatments with birds. Raw or processed data both count. Collisions with wind turbines, power lines, towers, vehicles or aircraft, studies that only use window-killed birds as specimens for unrelated questions, opinion surveys of people, code-only deposits and papers without deposited data do not count.",
+  "frozen": "2026-10-18",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "10.5061/dryad.b2rbnzsd2",
+     "zenodo:4311837"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "10.5061/dryad.gb5mkkwkf",
+     "zenodo:4308656"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.5061/dryad.41ns1rnmw",
+     "zenodo:10473709"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "10.5061/dryad.12jm63z25",
+     "zenodo:7320346"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "10.5061/dryad.hqbzkh1g6",
+     "zenodo:6373683"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.5061/dryad.8rr0498",
+     "zenodo:4987639"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "10.17632/mjvt3yxdkv",
+     "10.17632/mjvt3yxdkv.1",
+     "10.17632/mjvt3yxdkv.2"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "10.6084/m9.figshare.14226167",
+     "10.6084/m9.figshare.14226167.v1"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.17632/vcm4pbcvgp",
+     "10.17632/vcm4pbcvgp.1"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.17632/spfyh38ndx",
+     "10.17632/spfyh38ndx.1"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "10.17632/bccnfc6jw6",
+     "10.17632/bccnfc6jw6.1"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "10.5281/zenodo.6444620",
+     "10.5281/zenodo.6444619"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.5281/zenodo.15271127",
+     "10.5281/zenodo.15271126"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.5281/zenodo.20058828",
+     "10.5281/zenodo.20058827"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.5281/zenodo.16797374",
+     "10.5281/zenodo.15396539"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "10.5281/zenodo.8280339",
+     "10.5281/zenodo.8280226",
+     "10.1371/journal.pone.0306362.s001"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "10.6084/m9.figshare.30985105",
+     "10.6084/m9.figshare.30985105.v1"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "10.6084/m9.figshare.31282609",
+     "10.6084/m9.figshare.31282609.v1"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "10.15468/ypsd84",
+     "gbif:a1272b24-4c1c-433f-8e33-db3e38682db0"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "10.15472/nkrlhr",
+     "gbif:7e2b9e0d-b268-4c31-8971-ab2171acf556"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "10.17605/OSF.IO/9CNEX",
+     "osf:9cnex"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "osf:zpgt7",
+     "https://osf.io/zpgt7/"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "osf:v5nu4",
+     "https://osf.io/v5nu4/"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "10.34740/kaggle/dsv/13812706",
+     "kaggle:hacheolsung/bird-window-collision-data-for-nb-glm"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S25",
+    "ids": [
+     "kaggle:bhavinmoriya/bird-window-collison"
+    ]
+   },
+   {
+    "key": "S26",
+    "ids": [
+     "10.5061/dryad.8pk0p2nhw"
+    ]
+   },
+   {
+    "key": "S27",
+    "ids": [
+     "10.5061/dryad.bvq83bkk9"
+    ]
+   },
+   {
+    "key": "S28",
+    "ids": [
+     "10.3897/zoologia.34.e13729.suppl5",
+     "zenodo:904689",
+     "10.6084/m9.figshare.20037617",
+     "10.6084/m9.figshare.20037617.v1"
+    ]
+   },
+   {
+    "key": "S29",
+    "ids": [
+     "10.1371/journal.pone.0144600.s001",
+     "10.1371/journal.pone.0144600.s002",
+     "figshare:1633829"
+    ]
+   },
+   {
+    "key": "S30",
+    "ids": [
+     "10.1371/journal.pone.0224164.s007",
+     "10.1371/journal.pone.0224164.s008",
+     "10.1371/journal.pone.0224164.s009",
+     "figshare:10261217"
+    ]
+   },
+   {
+    "key": "S31",
+    "ids": [
+     "10.1371/journal.pone.0201558.s004",
+     "figshare:6951275"
+    ]
+   },
+   {
+    "key": "S32",
+    "ids": [
+     "10.5281/zenodo.18866599",
+     "10.5281/zenodo.17437872"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "V5",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, of mass-spectrometry or NMR metabolite profiling of honey (metabolomics, lipidomics, or volatile, phenolic or other multi-compound chemical fingerprinting) from any bee species, including stingless bees. Raw or processed data both count, as do deposits that include honey alongside other sample types. Data on bee tissues, pollen, propolis, nectar or mead alone, on animals fed honey, residue- or contaminant-only assays (pesticides, PAHs, toxins), proteomics, DNA- or pollen-based origin tests, physicochemical, sensor or optical spectroscopy (FTIR, NIR, Raman, GC-IMS) data, journal supplementary files, and papers without a data deposit do not count.",
+  "frozen": "2026-10-18",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "PR003204",
+     "ST004989",
+     "ST004990",
+     "10.21228/M8J56V"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "PR002998",
+     "ST004728",
+     "10.21228/M8526D"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "PR002756",
+     "ST004344",
+     "10.21228/M8DR9M"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "PR002502",
+     "ST003997",
+     "10.21228/M87C2M"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "MTBLS12228",
+     "10.5281/zenodo.15846597",
+     "10.5281/zenodo.15846598"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "MSV000101830",
+     "10.25345/c5k06xf5g"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "MSV000100392",
+     "10.25345/c5vt1h36c"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "MSV000097988",
+     "MSV000097989",
+     "MSV000097990",
+     "10.25345/c55d8ns9r",
+     "10.25345/c51n7z06h",
+     "10.25345/c5x05xr38"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "MSV000094511",
+     "10.25345/c5cn6z97r"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "MSV000093476",
+     "10.25345/c5zs2kq3s"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "MSV000084208",
+     "10.25345/c5vh3k"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "MSV000079356"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.5061/dryad.qnk98sfs7",
+     "10.5281/zenodo.13889267",
+     "10.5281/zenodo.13889268",
+     "10.5281/zenodo.13889269",
+     "10.5281/zenodo.13889270"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.17632/y8djpwzx59",
+     "10.17632/y8djpwzx59.1"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.17632/w9wtvf52vd",
+     "10.17632/w9wtvf52vd.1"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "10.17632/wc7r6tv3xw",
+     "10.17632/wc7r6tv3xw.1",
+     "10.17632/wc7r6tv3xw.2",
+     "10.17632/wc7r6tv3xw.3",
+     "10.17632/wc7r6tv3xw.4"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "10.17632/s5gkf4yw7d",
+     "10.17632/s5gkf4yw7d.1",
+     "10.17632/ydrfcrdr4z",
+     "10.17632/ydrfcrdr4z.1",
+     "10.17632/ydrfcrdr4z.2",
+     "10.17632/ydrfcrdr4z.3",
+     "10.17632/ydrfcrdr4z.4",
+     "10.17632/ydrfcrdr4z.5",
+     "10.17632/ydrfcrdr4z.6",
+     "10.17632/ydrfcrdr4z.7",
+     "10.17632/ydrfcrdr4z.8",
+     "10.17632/ydrfcrdr4z.9",
+     "10.17632/ydrfcrdr4z.10",
+     "10.17632/ydrfcrdr4z.11",
+     "10.17632/p8xm4fx5ys",
+     "10.17632/p8xm4fx5ys.1",
+     "10.17632/7cj8phvkh2",
+     "10.17632/7cj8phvkh2.1",
+     "10.17632/cwn4mm3png",
+     "10.17632/cwn4mm3png.1",
+     "10.17632/hsg78hx8fx",
+     "10.17632/hsg78hx8fx.1"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "10.17632/8wtn82v7wg",
+     "10.17632/8wtn82v7wg.1",
+     "10.17632/8wtn82v7wg.2",
+     "10.17632/8wtn82v7wg.3",
+     "10.17632/473vwznkdj",
+     "10.17632/473vwznkdj.1",
+     "10.17632/473vwznkdj.2",
+     "10.17632/3dwkxtbnyt",
+     "10.17632/3dwkxtbnyt.1",
+     "10.17632/3dwkxtbnyt.2",
+     "10.17632/cdhspzm3v8",
+     "10.17632/cdhspzm3v8.1",
+     "10.17632/cdhspzm3v8.2"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "10.17632/jxd6xvmtcg",
+     "10.17632/jxd6xvmtcg.1",
+     "10.17632/jxd6xvmtcg.2",
+     "10.17632/mxddfpm8hs",
+     "10.17632/mxddfpm8hs.1",
+     "10.17632/mxddfpm8hs.2",
+     "10.1371/journal.pone.0301213.t003",
+     "10.1371/journal.pone.0301213.t005"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "10.5281/zenodo.10559697",
+     "10.5281/zenodo.10559698",
+     "10.5281/zenodo.10969320",
+     "10.5281/zenodo.11341173",
+     "10.5281/zenodo.11341174"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "10.6084/m9.figshare.24972558",
+     "10.6084/m9.figshare.24972558.v1"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "10.6084/m9.figshare.29339258",
+     "10.6084/m9.figshare.29339258.v1"
+    ]
+   },
+   {
+    "key": "S23",
+    "ids": [
+     "10.57760/sciencedb.sepu.00035"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "10.6084/m9.figshare.31144237",
+     "10.6084/m9.figshare.31144237.v1"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S25",
+    "ids": [
+     "10.5281/zenodo.11066037",
+     "10.5281/zenodo.11066038"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "V6",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds methanesulfonic acid (MSA, methanesulfonate) measurements from ice cores or firn cores drilled in the Northern Hemisphere (Greenland ice sheet and ice caps, the Canadian, Alaskan and Eurasian Arctic, and Northern Hemisphere mountain glaciers). Datasets of multi-species ice-core chemistry count if they include an MSA column. Snow-pit or surface-snow sampling, atmospheric aerosol MSA, Antarctic and other Southern Hemisphere cores, records that only use MSA to date layers without reporting it, and papers without deposited data do not count.",
+  "frozen": "2026-10-18",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "10.25921/50sv-7k61",
+     "noaa-icecore-17804",
+     "https://www.ncei.noaa.gov/access/paleo-search/study/17804",
+     "10.1594/PANGAEA.56095",
+     "10.1594/PANGAEA.56096"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "10.25921/hhps-mt78",
+     "noaa-icecore-26691",
+     "https://www.ncei.noaa.gov/access/paleo-search/study/26691"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.25921/s655-jh52",
+     "noaa-icecore-17843",
+     "https://www.ncei.noaa.gov/access/paleo-search/study/17843",
+     "10.1594/PANGAEA.55104"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "10.25921/ve8y-c636",
+     "noaa-icecore-2474",
+     "https://www.ncei.noaa.gov/access/paleo-search/study/2474"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.1594/PANGAEA.944172"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "10.1594/PANGAEA.966041"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "10.18739/A2Q814T9K",
+     "10.18739/A23N20G53"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.18739/A2VT1GR07"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.18739/A20Z70W9G",
+     "10.18739/A2TZ7X"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "10.18739/A2WW7717K"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "10.18739/A2FQ9Q575",
+     "10.18739/A2Z67K",
+     "10.18739/A29Z90C4W",
+     "10.18739/A2310F",
+     "10.18739/A2BZ61844",
+     "10.18739/A22096",
+     "10.18739/A2MG7FW3Q",
+     "10.18739/A2SH5C",
+     "10.18739/A23J3918S",
+     "10.18739/A29H51",
+     "10.18739/A2V11VM02",
+     "10.18739/A2K09V",
+     "10.18739/A2G15TC0M"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.18739/A2TX35676"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.18739/A2F18SF79"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S5",
+    "ids": [
+     "PANGAEA.484983",
+     "https://doi.pangaea.de/10.1594/PANGAEA.484983",
+     "10.1594/PANGAEA.484983",
+     "PANGAEA.484984",
+     "https://doi.pangaea.de/10.1594/PANGAEA.484984",
+     "10.1594/PANGAEA.484984"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "10.18739/A2X63B64H"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "V7",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds aerial, drone (UAV) or satellite images of whales with annotations marking the individual whales (points, bounding boxes, masks or labelled image chips), or the per-whale annotation layers drawn on such images, made to train, test or carry out detection or counting of whales. \"Whales\" means any baleen or toothed whale, including beluga, narwhal, sperm, pilot and killer whales. These do not count: dolphin- or porpoise-only sets; photo-identification or re-identification sets; photogrammetry or body-condition measurements; raw imagery without annotations; observer sighting or group-count tables; acoustic detections; and code-only repositories.",
+  "frozen": "2026-10-18",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "10.5285/c1afe32c-493c-4dc7-af9f-649593b97b2c",
+     "10.5285/90fab89e-5d07-4d5c-b619-60799a4d09f8",
+     "GB/NERC/BAS/PDC/01482",
+     "GB/NERC/BAS/PDC/01592"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "10.5285/2d8a4b45-e21f-47d4-8279-b4362489301e",
+     "GB/NERC/BAS/PDC/01827"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.5285/ae34b490-4838-4740-a78e-924d23dc5540",
+     "GB/NERC/BAS/PDC/01829"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "10.5285/b26c3a3d-73c8-4500-9a23-696011c20a45",
+     "GB/NERC/BAS/PDC/02083"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "10.5285/7a952870-9880-415d-a8ab-194fedf01a26",
+     "GB/NERC/BAS/PDC/02202"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.5285/ab19aaba-12d6-44a7-89a3-7b45af0343ed",
+     "GB/NERC/BAS/PDC/02045"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "10.5281/zenodo.15679220",
+     "10.5281/zenodo.15679219",
+     "roboflow:object-detection/beluga_1080",
+     "https://universe.roboflow.com/object-detection/beluga_1080"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "10.5061/dryad.7482v2n",
+     "10.5281/zenodo.4933008",
+     "10.5281/zenodo.4933007"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.57760/sciencedb.j00001.01659",
+     "scidb:093922e8ee574ad1a9cbd78b112bc4a6"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S10",
+    "ids": [
+     "10.5281/zenodo.18776518",
+     "10.5281/zenodo.18776517"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "10.6084/m9.figshare.33193551",
+     "10.6084/m9.figshare.33193551.v1",
+     "10.6084/m9.figshare.33193551.v2",
+     "10.6084/m9.figshare.33193551.v3"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "10.6084/m9.figshare.25966288",
+     "10.6084/m9.figshare.25966288.v1"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.5281/zenodo.3356970",
+     "10.5281/zenodo.3356969"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "10.7910/DVN/SWIHAN",
+     "doi:10.7910/DVN/SWIHAN"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "kaggle:opamusora/whale-identification",
+     "https://www.kaggle.com/datasets/opamusora/whale-identification"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "V8",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds audio recordings of the speech or voice of people with Parkinson's disease (sustained vowels, reading, diadochokinetic syllables, spontaneous speech, and so on) that can be used for acoustic analysis; datasets that also include healthy controls or other conditions count if they contain Parkinson's speakers. Tables of acoustic features or measurements without the audio, synthetic or simulated voices, animal models, recordings available only by application or under a data use agreement, and papers without deposited audio do not count.",
+  "frozen": "2026-10-18",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "10.5281/zenodo.2867216",
+     "10.5281/zenodo.2867215",
+     "zenodo:2867216",
+     "10.6084/m9.figshare.32588973",
+     "10.6084/m9.figshare.32588973.v1",
+     "10.6084/m9.figshare.32588973.v2",
+     "kaggle:nutansingh/mdvr-kcl-dataset",
+     "kaggle:shivam17818/parkinsons-dataset",
+     "huggingface:Hahad14/Parkinsons_Disease_Speech",
+     "huggingface:harishBattula2/Parkinsons_Disease_Speech"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "10.21227/aw6b-tg17",
+     "10.21227/kv93-ak67",
+     "kaggle:ieeeai/italian-parkinsons-voice-and-speech",
+     "kaggle:anshsavla/italian-parkinsons-speech",
+     "huggingface:birgermoell/Italian_Parkinsons_Voice_and_Speech"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "10.6084/m9.figshare.23849127",
+     "10.6084/m9.figshare.23849127.v1",
+     "kaggle:drishyatomar/voice-samples-for-parkinsons-and-healthy-controls"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "10.6084/m9.figshare.21453867",
+     "10.6084/m9.figshare.21453867.v1"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "10.5281/zenodo.22036480",
+     "10.5281/zenodo.22036479",
+     "zenodo:22036480"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "10.5281/zenodo.21775027",
+     "10.5281/zenodo.21775026",
+     "zenodo:21775027"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S7",
+    "ids": [
+     "10.23641/asha.19529017",
+     "10.23641/asha.19529017.v1"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "10.23641/asha.6170453",
+     "10.23641/asha.6170453.v1"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "10.23641/asha.21809544",
+     "10.23641/asha.21809544.v1"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "10.23641/asha.8637008",
+     "10.23641/asha.8637008.v1"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "10.34847/nkl.60888k55"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "10.6084/m9.figshare.7628819",
+     "10.6084/m9.figshare.7628819.v1"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "10.5281/zenodo.22082939",
+     "10.5281/zenodo.22082938"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "kaggle:ucimachinelearning/parkinsons-voice-dataset"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "kaggle:drishyatomar/parkinson-patient-speech-dataset-github"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "V9",
+  "kind": "list",
+  "prompt": "Find every public dataset, in any archive, that holds culture-independent metagenomic (shotgun) or amplicon (16S/18S/ITS) sequencing of the wastewater side of hospital plumbing: sink drains, drain covers and tailpieces, P-traps / sink traps, toilets, shower, bath or floor drains, and in-building sewer pipework of hospitals. Raw reads or processed community tables both count, and studies that also sampled other sites count if the drain/trap samples are part of the deposit. Isolate-only genome sequencing, species-specific typing amplicons, culture-only work, lab model drains, drinking water supply/faucets, non-hospital buildings, and pooled hospital effluent or sewage do not count.",
+  "frozen": "2026-10-18",
+  "studies": [
+   {
+    "key": "S1",
+    "ids": [
+     "PRJEB36775",
+     "ERP120005",
+     "10.6084/m9.figshare.11860893",
+     "10.6084/m9.figshare.11860893.v1",
+     "10.6084/m9.figshare.12337283",
+     "10.6084/m9.figshare.12337283.v1"
+    ]
+   },
+   {
+    "key": "S2",
+    "ids": [
+     "PRJNA587635",
+     "SRP239799"
+    ]
+   },
+   {
+    "key": "S3",
+    "ids": [
+     "PRJNA574189",
+     "SRP226867"
+    ]
+   },
+   {
+    "key": "S4",
+    "ids": [
+     "PRJNA1280267",
+     "SRP593558"
+    ]
+   },
+   {
+    "key": "S5",
+    "ids": [
+     "PRJNA1310651",
+     "SRP612388"
+    ]
+   },
+   {
+    "key": "S6",
+    "ids": [
+     "PRJNA1433472",
+     "SRP681738"
+    ]
+   },
+   {
+    "key": "S7",
+    "ids": [
+     "PRJNA1203679",
+     "SRP554142"
+    ]
+   },
+   {
+    "key": "S8",
+    "ids": [
+     "PRJNA1190863",
+     "SRP547662"
+    ]
+   },
+   {
+    "key": "S9",
+    "ids": [
+     "PRJNA1090773",
+     "SRP723315"
+    ]
+   },
+   {
+    "key": "S10",
+    "ids": [
+     "PRJEB83107",
+     "ERP166773"
+    ]
+   },
+   {
+    "key": "S11",
+    "ids": [
+     "PRJEB111259",
+     "ERP191900"
+    ]
+   },
+   {
+    "key": "S12",
+    "ids": [
+     "PRJDB40572",
+     "DRP017409"
+    ]
+   },
+   {
+    "key": "S13",
+    "ids": [
+     "PRJEB121104",
+     "ERP201177"
+    ]
+   },
+   {
+    "key": "S14",
+    "ids": [
+     "PRJEB76684"
+    ]
+   },
+   {
+    "key": "S15",
+    "ids": [
+     "PRJNA631351",
+     "SRP260965"
+    ]
+   },
+   {
+    "key": "S16",
+    "ids": [
+     "PRJNA383436",
+     "SRP106560"
+    ]
+   },
+   {
+    "key": "S17",
+    "ids": [
+     "PRJEB31632",
+     "ERP114207"
+    ]
+   },
+   {
+    "key": "S18",
+    "ids": [
+     "PRJNA1042964",
+     "SRP472967",
+     "10.5281/zenodo.14980789",
+     "10.5281/zenodo.10205179"
+    ]
+   },
+   {
+    "key": "S19",
+    "ids": [
+     "PRJNA432186",
+     "SRP131754"
+    ]
+   },
+   {
+    "key": "S20",
+    "ids": [
+     "PRJNA579377",
+     "SRP226997"
+    ]
+   },
+   {
+    "key": "S21",
+    "ids": [
+     "PRJEB80895",
+     "ERP164848",
+     "qiita:14921"
+    ]
+   },
+   {
+    "key": "S22",
+    "ids": [
+     "PRJEB79274",
+     "ERP163461"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "S23",
+    "ids": [
+     "PRJNA376580",
+     "SRP103137",
+     "PRJNA471744"
+    ]
+   },
+   {
+    "key": "S24",
+    "ids": [
+     "PRJNA672813",
+     "SRP289383"
+    ]
+   },
+   {
+    "key": "S25",
+    "ids": [
+     "PRJNA774945",
+     "SRP343378"
+    ]
+   },
+   {
+    "key": "S26",
+    "ids": [
+     "PRJNA1426335",
+     "SRP678392"
+    ]
+   },
+   {
+    "key": "S27",
+    "ids": [
+     "PRJNA1393330"
+    ]
+   },
+   {
+    "key": "S28",
+    "ids": [
+     "PRJNA1402335",
+     "SRP661961"
+    ]
+   }
+  ]
+ }
+]

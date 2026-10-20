@@ -1,7 +1,8 @@
-# Head-to-head round 4: a fresh held-out round (keys frozen 2026-10-16)
+# Head-to-head round 4: a fresh held-out round (keys frozen 2026-10-16, U5 re-frozen 2026-10-18)
 
-Not yet run: OSF was down for maintenance while the keys were built; U5's OSF
-studies get re-checked and the key re-frozen before the sweep.
+OSF was down for maintenance while the keys were built. On 2026-10-18, before any
+run, every OSF study in U5 was re-read from its OSF file listing and the key
+re-frozen (U5's `revised` field; listings in `osf_recheck_U5_2026-10-18.json`).
 
 Round 3's tasks were held out when they ran, but the gap audit that followed
 diagnosed and fixed this server on them (#277, #278, #281), so they are now tuning
@@ -17,13 +18,14 @@ barely touched. Arms, controls and earlier rounds: [`../README.md`](../README.md
 | U2 | *Batrachochytrium salamandrivorans* sequencing (backup topic: Tasmanian devil DFTD passed the 30-study cap) | 13 | 1 | NCBI SRA/BioProject/Assembly/TSA, ENA, DDBJ, GEO, Dryad, Figshare |
 | U3 | rice drought MS proteomics | 19 | 5 | PRIDE, iProX, Zenodo, NGDC OMIX, Figshare |
 | U4 | microplastics in polar and glacier snow and ice | 7 | 9 | 11: PANGAEA, AADC, UK PDC, USAP-DC, IMAS, Mendeley Data, Zenodo, Figshare and 3 more |
-| U5 | eye tracking of children reading | 10 | 23 | OSF (22 of 33), DataverseNL, Figshare, Zenodo, Harvard Dataverse, ScienceDB and 5 more |
+| U5 | eye tracking of children reading | 22 | 8 | OSF (19 of 30), DataverseNL, Figshare, Zenodo, Harvard Dataverse, ScienceDB and 5 more |
 
 Each key ([`keys/U*.yaml`](keys/)) was built by one agent per task from each
 archive's own API, DataCite and Europe PMC full text, with no access to this
 server, its code or ToolUniverse, and committed before any run. Borderline studies
 are optional. [`tasks.json`](tasks.json) is built from the keys with
-`python3 benchmarks/h2h/build_tasks.py benchmarks/h2h/round4 --frozen 2026-10-16`.
+`python3 benchmarks/h2h/build_tasks.py benchmarks/h2h/round4 --frozen 2026-10-16`, with
+U5's `frozen` set to 2026-10-18 after its OSF re-check.
 
 ## Arms and setup
 
@@ -88,9 +90,17 @@ p = 0.38 and 5 of 5 p = 0.0625.
   09:00 to 2026-10-19 09:00 EDT, per the builders; `osf.io` answered 503 at 20:50
   EDT on 2026-10-16). No OSF file list could be read, which is why most of U5's 23
   borderline studies are borderline, and U1's two OSF studies rest on DataCite
-  metadata. A run during the outage would measure the outage. Re-checking U5's OSF
-  studies may move some between firm and borderline; that is a pre-run key
-  revision, re-frozen with its date.
+  metadata. A run during the outage would measure the outage. The re-check on
+  2026-10-18 (OSF API v2, [`osf_recheck.py`](osf_recheck.py)) applied one rule to
+  U5: a public project with trial-level or finer eye data of under-18 readers is
+  firm, subject-level summaries only stay borderline, and a project OSF answers 401
+  for is not public. 13 borderline studies became firm, one firm study became
+  borderline, 4 left the key (401) and one near miss became a borderline study:
+  22 firm and 8 borderline (was 10 and 23). The re-check was done by the benchmark
+  operator, not a key builder, with the OSF API alone. U1's two OSF projects were
+  listed too (`osf_recheck_U1_2026-10-18.json`) and left as they were: 3HPVR holds
+  figure source data and is keyed through its NEMAR copy; 8KEVM holds figure-level
+  .mat files and stays borderline.
 
 ## Method
 

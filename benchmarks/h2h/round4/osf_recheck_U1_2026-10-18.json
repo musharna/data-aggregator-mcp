@@ -1,0 +1,688 @@
+{
+ "checked": "2026-10-18T18:20:03-0400",
+ "api": "https://api.osf.io/v2",
+ "nodes": [
+  {
+   "guid": "3hpvr",
+   "status": 200,
+   "title": "Sleep spindles mediate hippocampal-neocortical coupling during long-duration ripples",
+   "public": true,
+   "category": "project",
+   "date_created": "2020-07-09T08:12:19.767074",
+   "description": "Examination of the role of sleep spindles in the hypothesized  cortico-hippocampal communication around ripples using scalp- and intracranial sleep-EEG recordings from epilepsy patients.",
+   "files": [
+    {
+     "path": "osfstorage:/Figure source data/figure3_figureSupplement3/figure3_figureSupplement3_script.m",
+     "size": 1379
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3_figureSupplement3/figure3_figureSupplement3_data.mat",
+     "size": 31656
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3_figureSupplement1/figure3_figureSupplement1_data.mat",
+     "size": 41524
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3_figureSupplement1/figure3_figureSupplement1_script.m",
+     "size": 1403
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3_figureSupplement2/figure3_figureSupplement2_panelCD_script.m",
+     "size": 1944
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3_figureSupplement2/figure3_figureSupplement2_panelAB_script.m",
+     "size": 1981
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3_figureSupplement2/figure3_figureSupplement2_panelAB_data.mat",
+     "size": 51673
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3_figureSupplement2/figure3_figureSupplement2_panelCD_data.mat",
+     "size": 51684
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure2_figureSupplement1/figure2_figureSupplement1_script.m",
+     "size": 3371
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure2_figureSupplement1/figure2_figureSupplement1_data.mat",
+     "size": 13744
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure4/figure4_panelB_script.m",
+     "size": 1823
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure4/figure4_panelC_data.mat",
+     "size": 12712
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure4/figure4_panelA_data.mat",
+     "size": 732536
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure4/figure4_panelB_data.mat",
+     "size": 85840
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure4/figure4_panelA_script.m",
+     "size": 3872
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure4/figure4_panelC_script.m",
+     "size": 1218
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3/figure3_panelE_data.mat",
+     "size": 7000
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3/figure3_panelAB_script.m",
+     "size": 1459
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3/figure3_panelCD_script.m",
+     "size": 1930
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3/figure3_panelCD_data.mat",
+     "size": 20304
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3/figure3_panelAB_data.mat",
+     "size": 13000
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure3/figure3_panelE_script.m",
+     "size": 2369
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure2/figure2_data.mat",
+     "size": 140502
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure2/figure2_script.m",
+     "size": 3066
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure1/figure1_avgRipple_script.m",
+     "size": 920
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure1/figure1_avgRipple_data.mat",
+     "size": 31839
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure1/figure1_avgSpindle_script.m",
+     "size": 1270
+    },
+    {
+     "path": "osfstorage:/Figure source data/figure1/figure1_avgSpindle_data.mat",
+     "size": 132054
+    },
+    {
+     "path": "osfstorage:/Raw data/Control events/ngo_et_al_eLife2020_controlData_100sets.zip",
+     "size": 44151839
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat02_HIPP_spindles.mat",
+     "size": 607056
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat02_NC_spindles.mat",
+     "size": 1259161
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat01_NC_spindles.mat",
+     "size": 1478859
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat01_HIPP_spindles.mat",
+     "size": 1323660
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat03_HIPP_spindles.mat",
+     "size": 1787631
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat03_NC_spindles.mat",
+     "size": 1873389
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat05_HIPP_spindles.mat",
+     "size": 1107752
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat04_HIPP_spindles.mat",
+     "size": 1441827
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat05_NC_spindles.mat",
+     "size": 1542443
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat04_NC_spindles.mat",
+     "size": 1718430
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat06_HIPP_spindles.mat",
+     "size": 851560
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat06_NC_spindles.mat",
+     "size": 1219792
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat07_NC_spindles.mat",
+     "size": 1132680
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat08_HIPP_spindles.mat",
+     "size": 1142360
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat07_HIPP_spindles.mat",
+     "size": 1909130
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat08_NC_spindles.mat",
+     "size": 1115840
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat10_HIPP_spindles.mat",
+     "size": 910776
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat09_HIPP_spindles.mat",
+     "size": 2016127
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat11_HIPP_spindles.mat",
+     "size": 773280
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat11_NC_spindles.mat",
+     "size": 548864
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat10_NC_spindles.mat",
+     "size": 1151008
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat09_NC_spindles.mat",
+     "size": 2062211
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat12_HIPP_spindles.mat",
+     "size": 453800
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat12_NC_spindles.mat",
+     "size": 478832
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat13_HIPP_spindles.mat",
+     "size": 791016
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat13_NC_spindles.mat",
+     "size": 1331094
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat14_NC_spindles.mat",
+     "size": 1886368
+    },
+    {
+     "path": "osfstorage:/Raw data/Spindles/pat14_HIPP_spindles.mat",
+     "size": 1593821
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat01_HIPP_ripples.mat",
+     "size": 338240
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat03_HIPP_ripples.mat",
+     "size": 560128
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat02_HIPP_ripples.mat",
+     "size": 534176
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat04_HIPP_ripples.mat",
+     "size": 1212537
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat05_HIPP_ripples.mat",
+     "size": 1016648
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat06_HIPP_ripples.mat",
+     "size": 844272
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat10_HIPP_ripples.mat",
+     "size": 435400
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat09_HIPP_ripples.mat",
+     "size": 801824
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat11_HIPP_ripples.mat",
+     "size": 299656
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat08_HIPP_ripples.mat",
+     "size": 1158004
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat12_HIPP_ripples.mat",
+     "size": 155208
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat07_HIPP_ripples.mat",
+     "size": 1765047
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat13_HIPP_ripples.mat",
+     "size": 587344
+    },
+    {
+     "path": "osfstorage:/Raw data/Ripples/pat14_HIPP_ripples.mat",
+     "size": 892984
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat01_HIPP_supplement.mat",
+     "size": 1481391
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat01_NC_supplement.mat",
+     "size": 1457806
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat02_HIPP_supplement.mat",
+     "size": 1205910
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat02_NC_supplement.mat",
+     "size": 1137036
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat02_NC.mat",
+     "size": 94661476
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat03_HIPP_supplement.mat",
+     "size": 1611390
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat01_NC.mat",
+     "size": 130617137
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat02_HIPP.mat",
+     "size": 130488584
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat03_NC_supplement.mat",
+     "size": 1584038
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat04_HIPP_supplement.mat",
+     "size": 2390404
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat01_HIPP.mat",
+     "size": 156976114
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat04_NC_supplement.mat",
+     "size": 2349478
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat03_HIPP.mat",
+     "size": 168190402
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat05_HIPP_supplement.mat",
+     "size": 2173423
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat03_NC.mat",
+     "size": 136206146
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat05_NC_supplement.mat",
+     "size": 2168717
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat04_NC.mat",
+     "size": 218512256
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat06_HIPP_supplement.mat",
+     "size": 1887867
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat05_HIPP.mat",
+     "size": 228868520
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat06_NC_supplement.mat",
+     "size": 1821150
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat04_HIPP.mat",
+     "size": 259651307
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat05_NC.mat",
+     "size": 218516762
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat07_HIPP_supplement.mat",
+     "size": 1988889
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat07_NC_supplement.mat",
+     "size": 2025640
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat06_HIPP.mat",
+     "size": 199288829
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat08_HIPP_supplement.mat",
+     "size": 1352552
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat06_NC.mat",
+     "size": 164689163
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat08_NC_supplement.mat",
+     "size": 1347018
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat08_NC.mat",
+     "size": 120426117
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat09_HIPP_supplement.mat",
+     "size": 1861966
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat08_HIPP.mat",
+     "size": 134629602
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat09_NC_supplement.mat",
+     "size": 1861965
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat07_NC.mat",
+     "size": 181314211
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat10_HIPP_supplement.mat",
+     "size": 1474528
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat07_HIPP.mat",
+     "size": 202992902
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat10_NC_supplement.mat",
+     "size": 1476208
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat09_HIPP.mat",
+     "size": 198850844
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat11_HIPP_supplement.mat",
+     "size": 2745523
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat10_HIPP.mat",
+     "size": 158165830
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat11_NC_supplement.mat",
+     "size": 2745006
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat09_NC.mat",
+     "size": 172960596
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat12_HIPP_supplement.mat",
+     "size": 2157246
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat10_NC.mat",
+     "size": 137443923
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat12_NC_supplement.mat",
+     "size": 2144823
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat11_HIPP.mat",
+     "size": 278843695
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat13_HIPP_supplement.mat",
+     "size": 1490330
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat11_NC.mat",
+     "size": 244787460
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat13_NC_supplement.mat",
+     "size": 1466967
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat13_HIPP.mat",
+     "size": 170221560
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat14_HIPP_supplement.mat",
+     "size": 1509781
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat12_NC.mat",
+     "size": 197737892
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat14_NC_supplement.mat",
+     "size": 1478207
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat12_HIPP.mat",
+     "size": 240831483
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat13_NC.mat",
+     "size": 143859371
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat14_HIPP.mat",
+     "size": 171804922
+    },
+    {
+     "path": "osfstorage:/Raw data/EEGs/pat14_NC.mat",
+     "size": 141232604
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "8kevm",
+   "status": 200,
+   "title": "Staresina_et_al_NN_2023",
+   "public": true,
+   "category": "project",
+   "date_created": "2023-06-04T13:15:43.346574",
+   "description": "data and code for Staresina et al. (Nature Neuroscience 2023), 'How coupled slow oscillations, spindles and ripples coordinate neuronal processing and communication during human sleep'",
+   "files": [
+    {
+     "path": "osfstorage:/code_F3D.m",
+     "size": 16384
+    },
+    {
+     "path": "osfstorage:/code_F1C.m",
+     "size": 6871
+    },
+    {
+     "path": "osfstorage:/code_F2.m",
+     "size": 18930
+    },
+    {
+     "path": "osfstorage:/code_F3B.m",
+     "size": 15911
+    },
+    {
+     "path": "osfstorage:/code_F4A.m",
+     "size": 19992
+    },
+    {
+     "path": "osfstorage:/code_F4B.m",
+     "size": 6305
+    },
+    {
+     "path": "osfstorage:/code_F5C.m",
+     "size": 10401
+    },
+    {
+     "path": "osfstorage:/code_F5B.m",
+     "size": 13336
+    },
+    {
+     "path": "osfstorage:/code_F5D.m",
+     "size": 12587
+    },
+    {
+     "path": "osfstorage:/data_F2_offset.mat",
+     "size": 17696098
+    },
+    {
+     "path": "osfstorage:/data_F1C.mat",
+     "size": 17578137
+    },
+    {
+     "path": "osfstorage:/data_F2_onset.mat",
+     "size": 17673464
+    },
+    {
+     "path": "osfstorage:/data_F2_centre.mat",
+     "size": 17696605
+    },
+    {
+     "path": "osfstorage:/data_F3B.mat",
+     "size": 24084211
+    },
+    {
+     "path": "osfstorage:/data_F4A.mat",
+     "size": 27909468
+    },
+    {
+     "path": "osfstorage:/MNI_coordinates.mat",
+     "size": 699
+    },
+    {
+     "path": "osfstorage:/data_F5D.mat",
+     "size": 41104968
+    },
+    {
+     "path": "osfstorage:/data_F5B.mat",
+     "size": 88454728
+    },
+    {
+     "path": "osfstorage:/data_F3D.mat",
+     "size": 297510071
+    },
+    {
+     "path": "osfstorage:/data_F5C.mat",
+     "size": 1045800234
+    },
+    {
+     "path": "osfstorage:/dependencies/cbrewer_preview.jpg",
+     "size": 92995
+    },
+    {
+     "path": "osfstorage:/dependencies/colorbrewer.mat",
+     "size": 4475
+    },
+    {
+     "path": "osfstorage:/dependencies/change_jet.m",
+     "size": 1886
+    },
+    {
+     "path": "osfstorage:/dependencies/cbrewer.m",
+     "size": 4874
+    },
+    {
+     "path": "osfstorage:/dependencies/boundedline.m",
+     "size": 9747
+    },
+    {
+     "path": "osfstorage:/dependencies/hline.m",
+     "size": 160
+    },
+    {
+     "path": "osfstorage:/dependencies/interpolate_cbrewer.m",
+     "size": 1195
+    },
+    {
+     "path": "osfstorage:/dependencies/plot_contour.m",
+     "size": 882
+    },
+    {
+     "path": "osfstorage:/dependencies/plot_brewer_cmap.m",
+     "size": 1722
+    },
+    {
+     "path": "osfstorage:/dependencies/vline.m",
+     "size": 196
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "mt72e",
+   "status": 200,
+   "title": "BGOOSE",
+   "public": true,
+   "category": "project",
+   "date_created": "2023-12-23T15:27:57.052629",
+   "description": "BGOOSE stands for Basal Ganglia Oscillation-based mOdel for Sleep-stage Estimation.\nBGOOSE \ud83e\udda2 contains a sleep decoding model with an input of local field potential signals recorded from basal ganglia structures (i.e., subthalamic nucleus and globus pallidus internus), and an output of three-class sleep stage labels (i.e., NREM, REM and wakefulness).",
+   "files": [
+    {
+     "path": "osfstorage:/demo_data.npy",
+     "size": 9552128
+    },
+    {
+     "path": "osfstorage:/final_model_240121_balance_nrem.joblib",
+     "size": 26253776
+    },
+    {
+     "path": "osfstorage:/final_model_240121_balance.joblib",
+     "size": 851731280
+    }
+   ],
+   "components": []
+  },
+  {
+   "guid": "jm2xu",
+   "status": 404,
+   "guid_status": 200,
+   "guid_type": "preprints"
+  }
+ ]
+}

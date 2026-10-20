@@ -1,0 +1,98 @@
+task: V1
+prompt: >-
+  Find every public dataset, in any archive, that holds spatially resolved gene-expression data (sequencing- or
+  imaging-based spatial transcriptomics such as Visium / Visium HD, Stereo-seq, Slide-seq, MERFISH, Xenium, GeoMx,
+  seqFISH or similar) measured on tissue of the inner ear of any vertebrate: the cochlea, the vestibular organs, or the
+  spiral and vestibular ganglia. Raw or processed spatial data both count. Whole-embryo or whole-head atlases that only
+  happen to include the ear, brainstem auditory nuclei, vestibular schwannomas and other tumors, outer or middle ear,
+  inner-ear organoids, dissociated single-cell / single-nucleus data without a spatial assay, few-probe in situ
+  hybridization, and papers whose spatial data were never deposited do not count.
+criteria: >-
+  Topic: PRIMARY (spatial transcriptomics of the vertebrate inner ear). Included: a public deposit (GEO/SRA,
+  ArrayExpress/ENA, GSA/DDBJ, Figshare, gEAR, etc.) of spatially barcoded or in situ, transcriptome- or panel-scale gene
+  expression (Visium/Visium HD, Stereo-seq or other spatial-seq, GeoMx DSP, Xenium, MERFISH, seqFISH, Slide-seq) whose
+  tissue is the inner ear: cochlear duct / organ of Corti, lateral wall, modiolus and spiral ganglion, vestibular end
+  organs, or the vestibular (Scarpa's) ganglion, which is counted as inner-ear tissue because it holds the primary
+  afferents of the vestibular end organs. Raw reads, count matrices, spot/cell coordinate tables and processed h5ad
+  objects all count; a deposit holding only spot metadata or figure tables of a spatial study counts as an alias of that
+  study when the raw data are deposited elsewhere. Species, tissue and technique were confirmed from the deposit
+  metadata and file listing, or, if these were silent, from the linked paper. Excluded: whole-embryo / whole-head /
+  craniofacial spatial atlases where the ear is one region among many (MOSTA, craniofacial atlases); cochlear nucleus and
+  other brain regions; vestibular schwannoma and other tumors; outer-ear skin; inner-ear organoids; scRNA-seq, snRNA-seq,
+  bulk or regional RNA-seq, and computational spatial reconstructions from dissociated cells; HCR / RNAscope-type
+  few-gene imaging; papers whose spatial data are only in figures or supplements; restricted-access deposits. Unit =
+  study: a GEO series with its BioProject/SRA study, an ArrayExpress experiment with its ENA project, an NGDC umbrella
+  project, GSA/DDBJ mirrors, and Figshare or gEAR views of the same data are aliases of one study. Sibling deposits of
+  the same paper that hold only non-spatial data (scRNA-seq, bulk RNA-seq, multiome) are not aliases; they are near
+  misses.
+studies:
+  - key: S1
+    title: "Heat-Shock Pathway Activation by TRC-051384 Protects Spiral Ganglion Neurons from Noise-Induced Hearing Loss [Spatial Transcriptomics]"
+    year: 2025
+    ids: ["GSE312646", "PRJNA1375652", "SRP651704"]
+    archives: [GEO, SRA]
+    evidence: "GEO series and sample records: GeoMx Mouse Whole Transcriptome Atlas on fresh-frozen cochlear sections of 16-week CBA/CaJ mice (mock vs 100 dB SPL noise), 51 neuron and supporting-cell ROIs (tissue: cochlea); files GSE312646_GeoMX_table.csv.gz and RAW.tar; 51 public SRA runs under SRP651704 (Yu et al. 2026 JCI Insight, PMID 41415422)."
+  - key: S2
+    title: "Morphological and Functional Diversity of Spatially Resolved Vestibular Ganglion Neuron Cell Types (Visium HD)"
+    year: 2026
+    ids: ["GSE309565", "PRJNA1335542", "SRP629162"]
+    archives: [GEO, SRA]
+    evidence: "GEO: Visium HD CytAssist sections of adult mouse vestibular ganglion (GSM9269270 WT male, GSM9269271 Tmie KO female) with SpaceRanger binned-output tarballs; ENA/SRA lists runs '10x visiumHD of mus musculus: adult ... vestibular ganglion' under SRP629162 (Liu et al. 2026 PNAS, PMID 42412930)."
+  - key: S3
+    title: "mm_inner ear_spatial-seq: spatial transcriptomics of the mouse cochlea at E17.5, P8 and adult (Yan et al., tonotopic organization)"
+    year: 2025
+    ids: ["PRJCA031138", "CRA019653", "PRJDB33021", "DRP015037", "10.6084/m9.figshare.33027089", "10.6084/m9.figshare.33027089.v1", "10.6084/m9.figshare.33030437", "10.6084/m9.figshare.33030437.v2"]
+    archives: [GSA, DDBJ, Figshare]
+    evidence: "NGDC BioProject PRJCA031138 (submitter Mengzhen Yan, released 2025-05-01) and GSA CRA019653 hold three 'single-cell spatial-seq datasets from mouse inner ear' (samples mm_cochlea_E17.5, _P8, _2M), mirrored as DDBJ PRJDB33021/DRP015037 with public runs DRR787634-6. The same author's Figshare items hold per-section spatial spot metadata (E17.5/P8/adult SCT_metadata.txt) and figure tables. All match bioRxiv 10.1101/2024.10.30.621022."
+  - key: S4
+    title: "A Human Fetal Cochlear Cell Atlas Reveals a Regulatory Blueprint for Spatial Patterning (Stereo-seq)"
+    year: 2026
+    ids: ["E-MTAB-16462", "PRJEB105893", "ERP187045", "E-MTAB-16513", "PRJEB106161", "ERP187267", "PRJCA057841"]
+    archives: [ArrayExpress, ENA, NGDC BioProject]
+    evidence: "ArrayExpress 'spatial transcriptomics by high-throughput sequencing' records (organism part: cochlea) give Stereo-seq of human fetal cochleae at 10, 14 and 16 PCW, with processed .gef, bin20/bin50/cellbin .h5ad and metadata csv files; the ENA projects hold the DNBSEQ-T7 reads (5 + 1 runs). Stereo-seq-2 is a second part of the same study. NGDC PRJCA057841 (Wenyan Li, Fudan EENT) is the umbrella project. No journal article was found in Europe PMC."
+  - key: S5
+    title: "Xenium Analysis of P8 WT Mouse Inner Ear Sections (Hertzano lab, gEAR)"
+    year: 2024
+    ids: ["gEAR:f50389ab", "f50389ab", "59a45c1c-3125-ac4d-590c-dc6379e29c23", "7e256740", "83590bd2", "62ef8043", "9d71b642", "a56fe32b", "3429de90"]
+    archives: [gEAR]
+    evidence: "gEAR search API: public, downloadable dataset of P8 wild-type mouse inner ears (PFA-fixed, decalcified, 5 um paraffin sections, Xenium custom panel). The h5ad (27 MB, downloaded then deleted) contains Centroid_X/Centroid_Y, nCount_Xenium and CellType fields with inner-ear genes (Tecta, Tmem145, Sox10). The other share ids are UMAP/violin/zoom and 'mesenchymal removed' views of the same data. No GEO or paper link is given."
+near_misses:
+  - {ids: ["STDS0000243", "CNP0004597", "STT0000046", "CNP0004488", "CNP0005064"], why_excluded: "MCNSTA mouse cochlear nucleus Stereo-seq/snRNA atlas (PMC13287771): brainstem auditory nucleus, not inner ear."}
+  - {ids: ["STDS0000058", "CNP0001543"], why_excluded: "MOSTA whole mouse-embryo Stereo-seq atlas; the inner ear is only one annotated region (used as such by the ARHL GWAS paper PMC13172361)."}
+  - {ids: ["GSE345691", "PRJNA1521486"], why_excluded: "Xenium of human vestibular schwannoma (tumor), not inner-ear tissue."}
+  - {ids: ["10.5281/zenodo.15581954", "10.5281/zenodo.15581955"], why_excluded: "NF2 vestibular schwannoma single-cell paper record (tumor; publication type)."}
+  - {ids: ["8D-2JQ0", "7N-54BY", "10.5281/zenodo.14675171"], why_excluded: "Human/mouse craniofacial development atlas (PMC13102946, FaceBase); spatial data cover the whole developing face/head, with inner ear only as one putative region; human raw data controlled access. FaceBase records were not opened."}
+  - {ids: ["GSE293181"], why_excluded: "High-resolution spatial transcriptomics of mouse craniofacial/palate mesenchyme, not inner ear."}
+  - {ids: ["GSE318565", "PRJNA1419233"], why_excluded: "Neural plate border / neurogenic placode atlas: GEO holds only 10x scRNA-seq of E11.5 cranial regions (incl. otic region); no spatial samples deposited."}
+  - {ids: ["GSE309608"], why_excluded: "scRNA-seq sibling of S2 (shares BioProject PRJNA1335542 but holds no spatial data)."}
+  - {ids: ["GSE312476", "PRJNA1373571"], why_excluded: "Bulk RNA-seq sibling of S1."}
+  - {ids: ["E-MTAB-16336", "PRJEB104889", "E-MTAB-16612", "PRJEB108119", "E-MTAB-16331", "PRJEB108522"], why_excluded: "scRNA-seq, organoid scRNA-seq and sn-Multiome siblings of S4 (no spatial assay)."}
+  - {ids: ["GSE202588", "PRJNA836609"], why_excluded: "3D reconstruction of the mouse cochlea computed from dissociated scRNA-seq; no spatial assay."}
+  - {ids: ["GSE303895"], why_excluded: "Diabetic cochlea region-specific bulk RNA-seq (PMC13410151); spatial transcriptomics only mentioned as future work."}
+  - {ids: ["10.3389/fncel.2023.1256619", "umgear:f526abfe"], why_excluded: "CFW outbred mouse cochlea (PMC10716316): MERFISH used only for validation figures; deposited gEAR data are the snRNA-seq matrix."}
+  - {ids: ["PMC12789471"], why_excluded: "TMEM145 paper (PMC12789471) shows a Xenium density map of a mouse cochlea section but deposits no Xenium data (only reuses GSE114759/GSE202920)."}
+  - {ids: ["PMC12970211"], why_excluded: "Cx26 cKO P5 cochlea spatial transcriptomics (two libraries); data availability states supplementary material only, no archive deposit."}
+  - {ids: ["10.5061/dryad.hmgqnk9xs"], why_excluded: "Zebrafish utricle hair-cell zonal patterning: per-figure xlsx tables of targeted marker imaging, not spatial transcriptomics (README could not be downloaded without a Dryad token)."}
+  - {ids: ["10.5281/zenodo.23451538", "10.5281/zenodo.23451539"], why_excluded: "Day-night atlas of inner ear and marrow: restricted access, single-cell/flow/imaging, no spatial transcriptomics."}
+  - {ids: ["10.5281/zenodo.22109268", "10.5281/zenodo.22109269"], why_excluded: "Integrated scRNA-seq atlas of the mouse cochlea; no spatial assay."}
+  - {ids: ["c7a342eb-777e-4479-95ce-468f5bbcd893"], why_excluded: "HCA single-nucleus atlas of human prenatal inner ear (10x 3' v3 only)."}
+  - {ids: ["18d0fe01-3682-4b5d-aa39-2ca937424c83", "e49e556a-da5a-442a-b45c-8691b457623e"], why_excluded: "CELLxGENE/HCA Visium of skin of external ear (basal cell carcinoma study), not inner ear."}
+  - {ids: ["CRA032615", "CRA015540", "CRA004814"], why_excluded: "Non-human primate cochlea, cross-vertebrate auditory atlas and cochlear aging atlas: snRNA/scRNA-seq only; spatial transcriptomics only mentioned."}
+queries:
+  - "GEO E-utilities db=gds: '(cochlea OR cochlear OR inner ear OR utricle OR vestibular OR saccule OR organ of Corti OR otic OR otocyst) AND (spatial transcriptomics/Visium/Slide-seq/MERFISH/Stereo-seq/GeoMx/seqFISH/spatially resolved)' 18; '(cochlea OR cochlear OR inner ear) AND spatial' 61; '(cochlea ... vestibular) AND (spatial OR Visium OR Xenium OR MERFISH OR CosMx)' 71; '(hair cell OR spiral ganglion OR stria vascularis OR organ of Corti OR lateral wall OR auditory) AND (spatial methods)' 10; '(cochlea* OR inner ear OR otic OR vestibul* OR utricle* OR macula OR crista OR ampulla OR endolymphatic) AND (spatial terms incl. STOmics/DBiT/HDST)' 66; 'cochlea AND gse' 338; broad inner-ear GSE set (cochlea/inner ear/otic/vestibular/utricle/saccule/organ of Corti/hair cell/spiral ganglion/stria/auditory/hearing loss/crista/semicircular) 882 series, all summaries regex-screened for spatial terms; GSM-level ear terms AND spatial/Visium/GeoMx/Xenium/MERFISH/SpaceRanger 53 (all S1/S2 samples); endolymphatic/Meniere AND spatial 0; temporal bone/human inner ear/crista/macula AND GeoMx/Visium 8 (all retina/macula); vestibular-organ GSE list 89 screened; all GEO series matching spatial-method terms 2955, title+summary regex-screened for ear terms."
+  - "NCBI BioProject: inner-ear terms AND spatial-method terms 18 (found PRJEB105893/106161 fetal cochlea Stereo-seq and PRJDB33021 'mm_inner ear_spatial-seq'). NCBI SRA same query 130 runs, grouped by study."
+  - "ENA portal study search: title contains cochlea/inner ear/cochlear 268 (7 with spatial words); description cochlea AND spatial/Visium/Stereo-seq 11; inner ear AND spatial 1; (utricle/vestibular/otic/hair cell/spiral ganglion) AND (spatial transcriptom*/Visium/Stereo-seq/MERFISH/GeoMx/Xenium) 89 (no ear hits besides known). ENA filereports read for PRJEB105893, PRJEB106161, PRJEB104889, PRJEB108119, PRJEB108522, PRJDB33021, PRJNA1335542, PRJNA1375652."
+  - "BioStudies/ArrayExpress API: 11 free-text queries (cochlea/inner ear/utricle/vestibular/hair cell/spiral ganglion/otic + spatial/Visium/Stereo-seq/MERFISH) screened; ArrayExpress collection '(cochlea OR cochlear OR inner ear OR utricle OR vestibular OR otic OR hair cell(s) OR spiral ganglion OR organ of Corti) AND (spatial OR Visium OR Stereo-seq OR MERFISH OR GeoMx OR Xenium OR Slide-seq)' 7; 'Human Fetal Cochlear Cell Atlas' 5 relevant. E-MTAB-16462 and E-MTAB-16513 study JSON and file lists read."
+  - "NGDC BIG Search API (db=bioproject and db=gsa), 13 queries each: 'cochlea spatial' 6/0, 'cochlear spatial' 6/14, 'inner ear spatial' 3/0, 'cochlea Stereo-seq' 0/0, 'cochlea visium' 0/0, 'utricle spatial' 1/0, 'vestibular spatial' 5/2, 'hair cell spatial' 18/0, 'spiral ganglion spatial' 2/0, 'otic spatial' 0/0, 'inner ear stereo' 0/0, 'cochlea spatiotemporal' 4/0, 'ear spatial transcriptome' 5/0. NGDC project pages PRJCA031138 and PRJCA057841 read."
+  - "CNGB STOmicsDB API /stomics/api/datasets/ fully paged: 416 datasets, regex-screened for ear terms (only STDS0000243 cochlear nucleus; MOSTA whole embryo). DataCite prefix 10.26036 (CNGB) AND ear/cochlea/hearing terms 19; prefix 10.26036 AND spatial AND head/craniofacial/embryo 8."
+  - "DataCite REST: '(cochlea ... basilar papilla) AND (spatial transcriptomics/spatially resolved/Visium/MERFISH/Stereo-seq/STOmics/GeoMx/seqFISH/Slide-seq/Xenium/CosMx/spatial gene expression/in situ sequencing)' 22; '(cochlea OR cochlear OR inner ear OR utricle OR vestibular OR otic OR hair cells OR spiral ganglion) AND (spatial OR spatially OR Visium OR single-cell OR snRNA OR scRNA) AND Dataset/Other/Collection' 246 (all screened); creators Jean/Michalski/Etournay AND cochlea/spatial 340 (noise); Dabdoub/Liang AND utricle/inner ear/spatial 4; 'Visium HD' AND ear 0; ear terms AND h5ad/AnnData/Seurat AND spatial 0."
+  - "Zenodo /api/records (anonymous, 25 per page): '(cochlea ... stria vascularis) AND (spatial methods)' 1; '(cochlea OR cochlear OR inner ear OR utricle OR vestibular) AND spatial' 196 (all screened); title search for the zebrafish utricle Dryad deposit 0."
+  - "Figshare /v2/articles/search: ':title: cochlea AND :title: spatial' 3; ':title: \"inner ear\" AND :title: spatial' 0; ':description: cochlea AND \"spatial transcriptomics\"' 0; ':description: \"inner ear\" AND \"spatial transcriptomics\"' 1; ':description: cochlear AND (Visium/MERFISH/Stereo-seq/GeoMx/Xenium)' 13 (Frontiers CFW supplements); ':description: (utricle/vestibular/hair cells/spiral ganglion) AND \"spatial transcriptomic\"' 500 (noise, screened). Article records 33027089 and 33030437 fetched; file download was refused by Figshare (UnknownException)."
+  - "Dryad /api/v2/search: 'cochlea spatial transcriptomics' 0; 'inner ear spatial transcriptomics' 0; 'cochlea Visium' 0; 'utricle spatial' 1; 'hair cell spatial transcriptomics' 1; 'cochlea MERFISH' 0. Record 10.5061/dryad.hmgqnk9xs metadata and file list fetched."
+  - "Mendeley Data /api/research-data/search?query=: 'cochlea spatial transcriptomics' 3410; 'inner ear spatial transcriptomics' 3898; 'cochlea Visium' 28; 'cochlear Stereo-seq' 1029; 'utricle spatial' 3220; 'hair cell spatial transcriptome' 10669; 'cochlea MERFISH' 11; 'vestibular spatial transcriptomics' 3457; 'spiral ganglion spatial' 3288 (first 100 of each screened for ear terms; none spatial)."
+  - "Harvard Dataverse search '(cochlea OR cochlear OR inner ear OR utricle) AND (spatial OR Visium OR MERFISH OR Xenium OR GeoMx)' 0; OSF nodes filter[title]=cochlea 143 (10 shown, none relevant), 'inner ear' 1."
+  - "gEAR /cgi/search_datasets.cgi: spatial 6; visium 0; merfish 0; xenium 7; stereo 0; geomx 0; slide-seq 0; 'spatial transcriptomics' 14; seqfish 0; cochlea 95; inner ear 125; utricle 70; vestibular 31; sections 6; in situ 1; CosMx 0; Visium HD 0; centroid 0; hair cell 310; mouse 248; human 61; zebrafish 24; chicken 28 (dtypes and titles screened; only the Hertzano Xenium set is spatial)."
+  - "CZ CELLxGENE curation API all 2243 datasets: tissue ear-terms AND spatial assay 1 (external-ear skin Visium). HCA Azul dcp60 all 532 projects screened for ear organs/organ parts: 1 inner-ear project (snRNA only). Broad Single Cell Portal search: cochlea 0; inner ear 5 (eye); utricle 0; vestibular 0; cochlear 0; hair cell 739 (noise); otic 1 (zebrafish embryo)."
+  - "Europe PMC: TITLE_ABS inner-ear terms AND TITLE_ABS spatial-method terms 19; TITLE_ABS inner-ear terms AND full-text spatial-method terms 69; full-text spatial methods AND inner-ear terms AND repository terms 81; TITLE_ABS inner-ear terms AND TITLE_ABS (spatial omics/spatially resolved/spatial profiling/digital spatial/spatial atlas/spatiotemporal transcriptom*/in situ sequencing/spatial expression) 81; full-text spatial methods AND non-mammal species AND ear terms 2019-2026 157; tonotopic AND spatial cochlea 2025-26 251; figshare id / Yan M author query 9; 'Human Fetal Cochlear Cell Atlas' 0. Full texts fetched and scanned for spatial methods and accessions: PMC12960138, PMC13410151, PMC12905143, PMC13115875, PMC13000480, PMC12970211, PMC10716316, PMC13090407, PMC10098046, PMC12225709, PMC8709734, PMC13287771, PMC12789471, PMC13172361, PMC11659469, PMC12865797, PMC13230503, PMC13102946, PMC10783631, PMC11441570; abstracts read for PPR1225435, PPR1260470, PPR551514, PPR933394, PPR1282758, PPR1121167, PMID 42412930, 42640720, 42727577, 33761346."
+  - "doi.org / landing checks: both Figshare DOIs 302 to figshare.com; umgear.org/p?s=f50389ab 200; E-MTAB-16462 page 200; ENA PRJEB106161 XML 200; DDBJ PRJDB33021 301 (redirect); NGDC CRA019653 200; GEO GSE312646 and GSE309565 series and sample records read."
+size_verdict: "ok but at the floor: 5 distinct firm studies (0 borderline) across 9 archives (studies per archive: GEO 2, SRA 2, GSA 1, DDBJ 1, Figshare 1, ArrayExpress 1, ENA 1, NGDC BioProject 1 (umbrella alias of S4), gEAR 1). This meets the 5-30 firm, at-least-3-archive gate, so the backup topic was not used. S2 counts as firm only because the criteria treat the vestibular ganglion as inner-ear tissue. Known inner-ear spatial preprints without findable deposits (Jean et al. 2026 Visium HD developing cochlea; Liang et al. 2026 human fetal utricle imaging-based spatial; Lallemend et al. 2026 vestibular spatial mapping) could raise the count once their data are released."

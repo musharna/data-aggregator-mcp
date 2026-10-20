@@ -783,6 +783,164 @@
     "10.5255/ukda-sn-856609"
    ],
    "total": 11
+  },
+  "V1": {
+   "query": "spatial transcriptomics cochlea",
+   "url": "https://api.datacite.org/dois?query=spatial+transcriptomics+cochlea&resource-type-id=dataset&page%5Bsize%5D=100&fields%5Bdois%5D=doi",
+   "dois": [],
+   "total": 0,
+   "fetched": "2026-10-19T17:39:07-0400"
+  },
+  "V2": {
+   "query": "cnidarian ATAC-seq",
+   "url": "https://api.datacite.org/dois?query=cnidarian+ATAC-seq&resource-type-id=dataset&page%5Bsize%5D=100&fields%5Bdois%5D=doi",
+   "dois": [
+    "10.5281/zenodo.21679335",
+    "10.5281/zenodo.21679334",
+    "10.25338/b83s8c"
+   ],
+   "total": 3,
+   "fetched": "2026-10-19T17:39:10-0400"
+  },
+  "V3": {
+   "query": "stuttering MRI",
+   "url": "https://api.datacite.org/dois?query=stuttering+MRI&resource-type-id=dataset&page%5Bsize%5D=100&fields%5Bdois%5D=doi",
+   "dois": [
+    "10.60723/11458",
+    "10.23641/asha.14110454.v1",
+    "10.23641/asha.14110454",
+    "10.23641/asha.14782092.v1",
+    "10.23641/asha.14782092"
+   ],
+   "total": 5,
+   "fetched": "2026-10-19T17:39:13-0400"
+  },
+  "V4": {
+   "query": "bird window collisions",
+   "url": "https://api.datacite.org/dois?query=bird+window+collisions&resource-type-id=dataset&page%5Bsize%5D=100&fields%5Bdois%5D=doi",
+   "dois": [
+    "10.5061/dryad.69p8cz9bw",
+    "10.15468/uypa42",
+    "10.6084/m9.figshare.31282609",
+    "10.6084/m9.figshare.31282609.v1",
+    "10.5061/dryad.qbzkh18wd",
+    "10.5061/dryad.41ns1rnmw",
+    "10.5061/dryad.12jm63z25",
+    "10.5061/dryad.hqbzkh1g6",
+    "10.5061/dryad.b2rbnzsd2",
+    "10.5061/dryad.gb5mkkwkf",
+    "10.6084/m9.figshare.30985105",
+    "10.6084/m9.figshare.30985105.v1",
+    "10.17632/mjvt3yxdkv",
+    "10.6084/m9.figshare.11997108.v1",
+    "10.17632/bccnfc6jw6",
+    "10.6084/m9.figshare.20037617.v1",
+    "10.6084/m9.figshare.20037617",
+    "10.17632/mjvt3yxdkv.2",
+    "10.6084/m9.figshare.11997108",
+    "10.17632/bccnfc6jw6.1"
+   ],
+   "total": 20,
+   "fetched": "2026-10-19T17:39:16-0400"
+  },
+  "V5": {
+   "query": "honey metabolomics",
+   "url": "https://api.datacite.org/dois?query=honey+metabolomics&resource-type-id=dataset&page%5Bsize%5D=100&fields%5Bdois%5D=doi",
+   "dois": [
+    "10.5281/zenodo.18400536",
+    "10.5281/zenodo.18400537",
+    "10.6084/m9.figshare.31333059",
+    "10.6084/m9.figshare.31333059.v1",
+    "10.6084/m9.figshare.31144237",
+    "10.6084/m9.figshare.31144237.v1",
+    "10.25345/c5vt1h36c",
+    "10.5281/zenodo.17954316",
+    "10.5281/zenodo.17954317",
+    "10.6084/m9.figshare.29339258.v1",
+    "10.6084/m9.figshare.29339258",
+    "10.17632/wc7r6tv3xw",
+    "10.25345/c5zs2kq3s",
+    "10.5281/zenodo.10066635",
+    "10.5281/zenodo.10066636",
+    "10.17632/wc7r6tv3xw.4",
+    "10.17632/wc7r6tv3xw.2",
+    "10.17632/wc7r6tv3xw.1",
+    "10.17632/wc7r6tv3xw.3"
+   ],
+   "total": 19,
+   "fetched": "2026-10-19T17:39:18-0400"
+  },
+  "V6": {
+   "query": "ice core methanesulfonic acid",
+   "url": "https://api.datacite.org/dois?query=ice+core+methanesulfonic+acid&resource-type-id=dataset&page%5Bsize%5D=100&fields%5Bdois%5D=doi",
+   "dois": [
+    "10.1594/pangaea.996557",
+    "10.5285/db075c2a-0b32-4ea9-a6f6-41e3bc922c24",
+    "10.1594/pangaea.960067",
+    "10.1594/pangaea.944172",
+    "10.1594/pangaea.961108",
+    "10.1594/pangaea.55104",
+    "10.1594/pangaea.966041",
+    "10.1594/pangaea.896623",
+    "10.1594/pangaea.56096",
+    "10.1594/pangaea.56077",
+    "10.1594/pangaea.56095",
+    "10.25921/72ga-6k73",
+    "10.25921/50sv-7k61",
+    "10.25921/hhps-mt78",
+    "10.18739/a2tx35676",
+    "10.18739/a29z90c4w",
+    "10.18739/a2fq9q575",
+    "10.18739/a2v11vm02",
+    "10.18739/a23j3918s",
+    "10.18739/a2bz61844",
+    "10.18739/a2mg7fw3q",
+    "10.18739/a2q814t9k",
+    "10.18739/a23n20g53",
+    "10.18739/a2ww7717k",
+    "10.18739/a20z70w9g",
+    "10.18739/a2310f",
+    "10.18739/a22096",
+    "10.18739/a2k09v",
+    "10.18739/a2z67k",
+    "10.18739/a29h51",
+    "10.18739/a2sh5c"
+   ],
+   "total": 31,
+   "fetched": "2026-10-19T17:39:21-0400"
+  },
+  "V7": {
+   "query": "whale aerial imagery detection",
+   "url": "https://api.datacite.org/dois?query=whale+aerial+imagery+detection&resource-type-id=dataset&page%5Bsize%5D=100&fields%5Bdois%5D=doi",
+   "dois": [
+    "10.5285/b26c3a3d-73c8-4500-9a23-696011c20a45"
+   ],
+   "total": 1,
+   "fetched": "2026-10-19T17:39:24-0400"
+  },
+  "V8": {
+   "query": "Parkinson speech recordings",
+   "url": "https://api.datacite.org/dois?query=Parkinson+speech+recordings&resource-type-id=dataset&page%5Bsize%5D=100&fields%5Bdois%5D=doi",
+   "dois": [
+    "10.5281/zenodo.17753640",
+    "10.5281/zenodo.17753641"
+   ],
+   "total": 2,
+   "fetched": "2026-10-19T17:39:27-0400"
+  },
+  "V9": {
+   "query": "hospital sink drain microbiome",
+   "url": "https://api.datacite.org/dois?query=hospital+sink+drain+microbiome&resource-type-id=dataset&page%5Bsize%5D=100&fields%5Bdois%5D=doi",
+   "dois": [],
+   "total": 0,
+   "fetched": "2026-10-19T17:39:30-0400"
+  },
+  "V10": {
+   "query": "dental calculus ancient DNA animal",
+   "url": "https://api.datacite.org/dois?query=dental+calculus+ancient+DNA+animal&resource-type-id=dataset&page%5Bsize%5D=100&fields%5Bdois%5D=doi",
+   "dois": [],
+   "total": 0,
+   "fetched": "2026-10-19T17:39:34-0400"
   }
  }
 }
