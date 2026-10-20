@@ -102,13 +102,35 @@ def judge(task: dict, entries: list[dict], out: Path, budget: str, timeout_min: 
     return rep
 
 
-def merge(verdicts: dict[str, list[dict]], pool: dict[str, list[dict]]) -> tuple[dict, list]:
-    """Verdicts -> the scorer's adjudication (alias / add / optional / reject per task)."""
+# A later sweep's judge sees the earlier adjudication's studies under this prefix
+# (``prior-A1``), so its labels cannot collide with them; ``merge`` maps them back.
+PRIOR = "prior-"
+
+
+def merge(
+    verdicts: dict[str, list[dict]],
+    pool: dict[str, list[dict]],
+    prior: dict | None = None,
+    prefix: str = "",
+) -> tuple[dict, list]:
+    """Verdicts -> the scorer's adjudication (alias / add / optional / reject per task).
+
+    With ``prior`` (an earlier sweep's adjudication of the same tasks) the result is the
+    union: the earlier verdicts stay, an ``alias:prior-A1`` adds ids to the earlier study
+    A1, and this sweep's new studies are labelled ``prefix`` + label (``HA1``)."""
+    prior = prior or {}
     adj: dict[str, dict] = {}
     reasons = []
     for tid, entries in pool.items():
         by_id = {v["id"]: v for v in verdicts.get(tid, [])}
-        a: dict = {"add": [], "optional": [], "reject": [], "alias": {}}
+        old = prior.get(tid, {})
+        a: dict = {
+            "add": [dict(s) for s in old.get("add", [])],
+            "optional": [dict(s) for s in old.get("optional", [])],
+            "reject": list(old.get("reject", [])),
+            "alias": {k: list(v) for k, v in old.get("alias", {}).items()},
+        }
+        taken = {s["key"] for s in [*a["add"], *a["optional"]]}
         groups: dict[str, list[str]] = {}
         for e in entries:
             v = by_id.get(e["id"])
@@ -117,9 +139,9 @@ def merge(verdicts: dict[str, list[dict]], pool: dict[str, list[dict]]) -> tuple
             ids = [str(e["id"]), *[str(x) for x in e.get("same_as") or []]]
             kind, _, label = v["verdict"].partition(":")
             if kind == "alias":
-                a["alias"].setdefault(label, []).extend(ids)
-            elif kind in ("add", "optional"):
-                groups.setdefault(f"{kind}:{label}", []).extend(ids)
+                a["alias"].setdefault(label.removeprefix(PRIOR), []).extend(ids)
+            elif kind in ("add", "optional") and not label.startswith(PRIOR):
+                groups.setdefault(f"{kind}:{prefix}{label}", []).extend(ids)
             elif kind == "reject":
                 a["reject"].append(str(e["id"]))
             else:
@@ -128,25 +150,38 @@ def merge(verdicts: dict[str, list[dict]], pool: dict[str, list[dict]]) -> tuple
                             "reason": v.get("reason", "")})  # fmt: skip
         for g, ids in sorted(groups.items()):
             kind, label = g.split(":")
+            if label in taken:
+                raise SystemExit(f"{tid}: new study {label} collides with an earlier one")
             a[kind].append({"key": label, "ids": sorted(set(ids))})
         adj[tid] = a
     return adj, reasons
 
 
-def task_view(key: dict) -> dict:
+def task_view(key: dict, prior: dict | None = None) -> dict:
+    """What the judge sees of a task: its key, plus (``prior``) the studies an earlier
+    adjudication added or found borderline and the ids it found to be aliases."""
+    prior = prior or {}
+    alias = prior.get("alias", {})
+    studies = [
+        {
+            "key": s["key"],
+            "title": s.get("title"),
+            "ids": [*s["ids"], *alias.get(s["key"], [])],
+            "borderline": str(s.get("evidence", "")).startswith("confidence: borderline"),
+        }
+        for s in key["studies"]
+    ]
+    for kind in ("add", "optional"):
+        studies += [
+            {"key": PRIOR + s["key"], "title": None, "ids": [*s["ids"], *alias.get(s["key"], [])],
+             "borderline": kind == "optional"}
+            for s in prior.get(kind, [])
+        ]  # fmt: skip
     return {
         "task": key["task"],
         "prompt": key["prompt"],
         "criteria": key.get("criteria"),
-        "studies": [
-            {
-                "key": s["key"],
-                "title": s.get("title"),
-                "ids": s["ids"],
-                "borderline": str(s.get("evidence", "")).startswith("confidence: borderline"),
-            }
-            for s in key["studies"]
-        ],  # fmt: skip
+        "studies": studies,
         "near_misses": key.get("near_misses", []),
     }
 
@@ -160,8 +195,17 @@ def main() -> None:
     ap.add_argument("--budget-usd", default="10")
     ap.add_argument("--timeout-min", type=int, default=90)
     ap.add_argument("--merge-only", action="store_true")
+    ap.add_argument(
+        "--prior", type=Path,
+        help="an earlier sweep's adjudication.json of the same tasks: shown to the judge "
+        "and kept; the output is the union",
+    )  # fmt: skip
+    ap.add_argument("--prefix", default="", help="label prefix for this sweep's new studies")
     args = ap.parse_args()
     pool = json.loads(args.pool.read_text())
+    prior = json.loads(args.prior.read_text()) if args.prior else {}
+    if prior and not args.prefix:
+        raise SystemExit("--prior needs --prefix, so new studies cannot reuse earlier labels")
     args.out.mkdir(parents=True, exist_ok=True)
     tids = [t for t in sorted(pool) if not args.only or t in args.only.split(",")]
     if not args.merge_only:
@@ -169,14 +213,16 @@ def main() -> None:
             if (args.out / f"{tid}.verdicts.json").exists():
                 continue
             key = yaml.safe_load((args.keys / f"{tid}.yaml").read_text())
-            rep = judge(task_view(key), pool[tid], args.out, args.budget_usd, args.timeout_min)
+            view = task_view(key, prior.get(tid))
+            rep = judge(view, pool[tid], args.out, args.budget_usd, args.timeout_min)
             (args.out / f"{tid}.report.json").write_text(json.dumps(rep, indent=1))
             print(f"{tid}: {rep['verdicts']}/{rep['entries']} verdicts, ${rep['cost_usd']}, "
                   f"violation {rep['audit']['violation']}", flush=True)  # fmt: skip
             time.sleep(1)
     verdicts = {t: json.loads((args.out / f"{t}.verdicts.json").read_text()) for t in sorted(pool)
                 if (args.out / f"{t}.verdicts.json").exists()}  # fmt: skip
-    adj, reasons = merge(verdicts, {t: pool[t] for t in verdicts})
+    adj, reasons = merge(verdicts, {t: pool[t] for t in verdicts}, prior, args.prefix)
+    adj = {**prior, **adj}  # tasks with nothing new keep their earlier adjudication
     (args.out / "adjudication.json").write_text(json.dumps(adj, indent=1) + "\n")
     with (args.out / "adjudication_reasons.yaml").open("w") as fh:
         fh.write("# Blind adjudication by fresh agents that built no key and ran no arm\n")

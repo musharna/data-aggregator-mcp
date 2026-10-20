@@ -553,3 +553,66 @@ def test_valid_only_comparison_drops_invalid_runs_and_tasks_an_arm_lacks() -> No
     # Valid-only: A's invalid web run is dropped (web 0.9 > dam), B drops out.
     assert (valid["tasks"], valid["a_higher"], valid["b_higher"]) == (2, 1, 1)
     assert valid["mean_diff"] == pytest.approx(((0.5 - 0.9) + (0.4 - 0.1)) / 2)
+
+
+def test_a_run_set_holds_one_model_and_a_row_must_be_served_the_model_it_asked_for(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tasks = json.loads((H2H / "round4" / "tasks.json").read_text())[:1]
+    seen = {"data-aggregator-mcp": "0.74.0", "tooluniverse": "1.5.7"}
+    monkeypatch.setattr(run, "installed_versions", lambda p, v, x: {p: seen[p]})
+    haiku = _cfg(arms="web", out=tmp_path / "h", model="claude-haiku-5-5")
+    run.preflight(tasks, haiku)  # control: a fresh set records the model asked for
+    assert json.loads((tmp_path / "h" / "versions.json").read_text())["_model"] == {
+        "requested": "claude-haiku-5-5"}  # fmt: skip
+    run.preflight(tasks, haiku)  # control: the same model may resume its own set
+    with pytest.raises(SystemExit, match="holds claude-haiku-5-5 runs, not claude-opus-5-5"):
+        run.preflight(tasks, _cfg(arms="web", out=tmp_path / "h", model="claude-opus-5-5"))
+    # A set from before the record (no "_model") is the default model's.
+    (tmp_path / "o").mkdir()
+    (tmp_path / "o" / "versions.json").write_text(json.dumps({"tu": {}}))
+    with pytest.raises(SystemExit, match="holds claude-opus-5-5 runs, not claude-haiku-5-5"):
+        run.preflight(tasks, _cfg(arms="web", out=tmp_path / "o", model="claude-haiku-5-5"))
+
+    def row(name: str, asked: str | None) -> dict:  # the init event says model "m"
+        meta = {"tools": ["Read", "Write"]} | ({"model_requested": asked} if asked else {})
+        return run.score(TASK, "dam", _session(tmp_path / name, tools=DAM_TOOLS,
+                         servers=DAM_SERVER, calls=["mcp__data-aggregator__search"],
+                         result=OK, meta=meta))  # fmt: skip
+
+    assert row("served", "m")["valid"]  # control: served what it asked for
+    assert row("old", None)["valid"]  # rounds 1 to 3 recorded no request
+    assert row("swapped", "claude-haiku-5-5")["invalid_reason"] == ["model m not claude-haiku-5-5"]
+
+
+def test_a_later_adjudication_keeps_the_earlier_one_and_cannot_reuse_its_labels(
+    tmp_path: Path,
+) -> None:
+    import adjudicate
+
+    prior = {"X": {"add": [{"key": "A1", "ids": ["E-MTAB-7"]}], "optional": [],
+                   "reject": ["GSE999"], "alias": {"S3": ["MSV000123"]}}}  # fmt: skip
+    key = {"task": "X", "prompt": "p", "studies": [{"key": "S3", "ids": ["PXD000001"]}]}
+    view = adjudicate.task_view(key, prior["X"])
+    assert view["studies"] == [
+        {"key": "S3", "title": None, "ids": ["PXD000001", "MSV000123"], "borderline": False},
+        {"key": "prior-A1", "title": None, "ids": ["E-MTAB-7"], "borderline": False},
+    ]
+    assert adjudicate.task_view(key)["studies"][0]["ids"] == ["PXD000001"]  # control
+    pool = {"X": [{"id": "E-MTAB-77"}, {"id": "GSE5"}, {"id": "GSE6"}]}
+    verdicts = {"X": [{"id": "E-MTAB-77", "verdict": "alias:prior-A1"},
+                      {"id": "GSE5", "verdict": "add:A1"}, {"id": "GSE6", "verdict": "reject"}]}  # fmt: skip
+    adj, _ = adjudicate.merge(verdicts, pool, prior, "H")
+    assert adj["X"]["add"] == [{"key": "A1", "ids": ["E-MTAB-7"]}, {"key": "HA1", "ids": ["GSE5"]}]
+    assert adj["X"]["alias"] == {"S3": ["MSV000123"], "A1": ["E-MTAB-77"]}
+    assert adj["X"]["reject"] == ["GSE999", "GSE6"]
+    assert prior["X"]["add"] == [{"key": "A1", "ids": ["E-MTAB-7"]}]  # the earlier file intact
+    # Scored with the union: the earlier study found by its new alias, the new one keyed.
+    listed = [{"id": "E-MTAB-77"}, {"id": "GSE5"}, {"id": "GSE999"}]
+    s = run.score_list({**TASK, "studies": TASK["studies"][2:3]}, _run_dir(tmp_path, listed), adj)
+    assert s["found_keys"] == ["A1", "HA1"] and s["irrelevant"] == 1 and not s["pending"], s
+    with pytest.raises(SystemExit, match="HA1 collides"):  # a prefix that reuses a label
+        adjudicate.merge(verdicts, pool, {"X": {"add": [{"key": "HA1", "ids": ["Z"]}]}}, "H")
+    with pytest.raises(SystemExit, match="bad verdict 'add:prior-A1'"):
+        adjudicate.merge({"X": [{**verdicts["X"][0], "verdict": "add:prior-A1"},
+                                *verdicts["X"][1:]]}, pool, prior, "H")  # fmt: skip

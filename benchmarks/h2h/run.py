@@ -19,6 +19,10 @@ the dam arm on an unreleased commit instead of the PyPI pin (``uvx --from``, wit
 ``--exclude-newer`` for its dependencies); preflight checks the installed package came
 from that commit, and the spec is recorded in every row and in ``versions.json``.
 
+``--model`` (default ``MODEL``) is the model every arm runs on. A run set holds one model:
+preflight refuses an ``--out`` started on another, ``versions.json`` records the model asked
+for and the models served, and a run served another model than it asked for is invalid.
+
 Usage gate (added 2026-10-18; the runs share the account's limits with its owner): after
 every run its transcript's last ``rate_limit_event`` is read and kept in ``meta.json``.
 A five-hour utilization at or above ``PAUSE_AT`` or a ``rejected`` status holds every
@@ -643,8 +647,12 @@ def validity(arm: str, writes_list: bool, meta: dict, init: dict, result: dict,
 
     The run must finish (no timeout, harness error or budget stop), start with exactly
     its arm's tools and server, use them at least once unless the arm has none (bare),
-    and touch nothing of the benchmark (``leak_hits``)."""
+    and touch nothing of the benchmark (``leak_hits``). A run that says which model it
+    asked for (round 4 on) must have been served that model (the init event's)."""
     why = []
+    asked = meta.get("model_requested")
+    if asked and init.get("model") != asked:
+        why.append(f"model {init.get('model')} not {asked}")
     if meta.get("exit") != 0:
         why.append(f"exit {meta.get('exit')}")
     if not result:
@@ -782,7 +790,15 @@ def preflight(tasks: list[dict], args: argparse.Namespace) -> None:
     problems = oracle_problems(tasks)
     if problems:
         raise SystemExit("oracle check failed: " + "; ".join(problems))
-    versions: dict[str, dict[str, str]] = {}
+    # One model per run set: a set started on one model is never topped up with another
+    # (the Opus round-5 runs stay as they are; a Haiku sweep gets its own --out).
+    model = getattr(args, "model", MODEL)
+    old = args.out / "versions.json"
+    if old.exists():
+        before = (json.loads(old.read_text()).get("_model") or {}).get("requested", MODEL)
+        if before != model:
+            raise SystemExit(f"{args.out} holds {before} runs, not {model}: use another --out")
+    versions: dict[str, dict] = {"_model": {"requested": model}}
     arms = args.arms.split(",")
     pins = {
         "dam": ("data-aggregator-mcp", args.dam_version),
@@ -863,6 +879,12 @@ def main() -> None:
         run_dir = args.out / a / t["id"] / f"r{r}"
         if (run_dir / "meta.json").exists():
             rows.append(score(t, a, run_dir, adjudication))
+    if not args.score_only and rows:
+        # The model each run was actually served (its init event), beside the one asked for.
+        vpath = args.out / "versions.json"
+        versions = json.loads(vpath.read_text())
+        versions["_model"]["served"] = sorted({str(r["model"]) for r in rows})
+        vpath.write_text(json.dumps(versions, indent=1, sort_keys=True))
     dest = args.write_to or args.out
     dest.mkdir(parents=True, exist_ok=True)
     (dest / "scores.json").write_text(json.dumps(rows, indent=1))

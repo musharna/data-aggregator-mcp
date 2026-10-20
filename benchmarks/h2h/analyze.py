@@ -48,7 +48,14 @@ SETS = {
     "r4_pilot": ("round4", "r4_pilot", 1, "round 4 pilot, U2 only, Opus 5.5, dam 0.74.0"),
     "r4": ("round4", "r4_runs", 3, "round 4 held out, Opus 5.5, dam 0.74.0, 2026-10-18"),
     "r5": ("round5", "r5_runs", 3, "round 5 held out, Opus 5.5, dam 0e3661f (unreleased)"),
+    "r5_haiku": ("round5", "r5_haiku_runs", 3, "round 5 on Haiku 5.5, dam 0.75.4, 2026-10-20"),
 }
+# A set scored with another adjudication than its round's ``adjudication.json``: the
+# Haiku sweep's file is round 5's verdicts plus those on the Haiku runs' new entries.
+SET_ADJUDICATION = {"r5_haiku": "round5/adjudication_haiku_2026-10-20.json"}
+# Non-concurrent comparisons (PREREG_2026-10-20_model-tiers.md): an arm of one set against
+# an arm of another on the same tasks, both scored with the first set's adjudication.
+CROSS = (("r5_haiku", "dam", "r5", "web"), ("r5_haiku", "dam", "r5", "dam"))
 ARMS = ("dam", "tu", "web", "bare")
 PAIRS = (("dam", "web"), ("dam", "tu"), ("tu", "web"), ("dam", "bare"), ("web", "bare"))
 BOOT = 10_000
@@ -203,9 +210,9 @@ def compare(name: str, rows: list[dict]) -> list[dict]:
     return out
 
 
-def rescore(round_dir: Path, run_dir: Path, reps: int) -> list[dict]:
+def rescore(round_dir: Path, run_dir: Path, reps: int, adj_path: Path | None = None) -> list[dict]:
     tasks = json.loads((round_dir / "tasks.json").read_text())
-    adj_path = round_dir / "adjudication.json"
+    adj_path = adj_path or round_dir / "adjudication.json"
     adj = json.loads(adj_path.read_text()) if adj_path.exists() else {}
     rows = []
     for t in tasks:
@@ -306,7 +313,8 @@ def main() -> None:
         if not run_dir.exists():
             print(f"{name}: {run_dir} missing, skipped", file=sys.stderr)
             continue
-        rows = rescore(HERE / round_name, run_dir, reps)
+        adj = HERE / SET_ADJUDICATION[name] if name in SET_ADJUDICATION else None
+        rows = rescore(HERE / round_name, run_dir, reps, adj)
         if args.write_to:
             (args.write_to / name).mkdir(parents=True, exist_ok=True)
             (args.write_to / name / "scores_rescored.json").write_text(
@@ -315,6 +323,20 @@ def main() -> None:
         for s in summarize(name, rows):
             summary.append({**s, "about": about})
         comparisons += compare(name, rows)
+    for set_a, arm_a, set_b, arm_b in CROSS:
+        round_name, dir_a, reps, _ = SETS[set_a]
+        dir_b = SETS[set_b][1]
+        if not ((args.artifacts / dir_a).exists() and (args.artifacts / dir_b).exists()):
+            continue
+        adj = HERE / SET_ADJUDICATION[set_a] if set_a in SET_ADJUDICATION else None
+        # Relabelled "dam" (set a) and "web" (set b) so compare() pairs them; the set name
+        # says which arm of which set each one is.
+        a = [{**r, "arm": "dam"} for r in rescore(HERE / round_name, args.artifacts / dir_a,
+                                                  reps, adj) if r["arm"] == arm_a]  # fmt: skip
+        b = [{**r, "arm": "web"} for r in rescore(HERE / round_name, args.artifacts / dir_b,
+                                                  SETS[set_b][2], adj) if r["arm"] == arm_b]  # fmt: skip
+        name = f"{set_a}:{arm_a}_vs_{set_b}:{arm_b}"
+        comparisons += [c for c in compare(name, a + b) if (c["a"], c["b"]) == ("dam", "web")]
     for round_name in ("round2", "round3", "round4", "round5"):
         if not (HERE / round_name / "tasks.json").exists():  # round 5's lands after its sweep
             print(f"{round_name}: no tasks.json yet, baselines skipped", file=sys.stderr)
