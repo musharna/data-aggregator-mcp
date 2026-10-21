@@ -113,3 +113,14 @@ Both tiers and the cross-set comparisons are scored with the final file,
 Every result is reported, whatever it is, in a dated README section "Haiku and Sonnet
 re-run 2026-10-20"; the headline and the top-level summary change only from the
 confirmatory result.
+
+## Amendment, 2026-10-20 23:00 EDT (before any round-5 run on either tier)
+
+The coordinator's usage rule across the six benchmark tracks: seven-day was 0.84 at 22:50
+EDT, every server's Haiku sweep runs before any Sonnet sweep, and Sonnet gets what is left
+below 0.90. So the Sonnet pilot and sweep here wait for the coordinator's go after the
+Haiku sweep instead of following it directly; the Sonnet pilot queued earlier was
+cancelled before it ran. Haiku projection: about $13 x 0.0007 = +0.01, so about 0.85; if a
+reading before the sweep projects past 0.90, only the rep-major prefix that fits runs and
+the shortfall is reported. If Sonnet does not run, the Haiku result is reported with its
+raw p and the cross-tier verdict (Holm, win/tie/loss) stays pending. Nothing else changes.
