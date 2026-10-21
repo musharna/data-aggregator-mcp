@@ -124,3 +124,9 @@ cancelled before it ran. Haiku projection: about $13 x 0.0007 = +0.01, so about 
 reading before the sweep projects past 0.90, only the rep-major prefix that fits runs and
 the shortfall is reported. If Sonnet does not run, the Haiku result is reported with its
 raw p and the cross-tier verdict (Holm, win/tie/loss) stays pending. Nothing else changes.
+
+Lane change, 23:50 EDT (before any round-5 run): at the coordinator's request the Haiku
+sweep runs under a second lock, `sweep2.lock` (same flock, heavy-run and start gate),
+after the plant-genomics sweep on that lane, so that no two network-bound sweeps hit the
+same upstream APIs at once. The queued run on the first lock was cancelled before it
+started. The df check, the projection and the 0.90 stop are unchanged.
