@@ -130,3 +130,10 @@ sweep runs under a second lock, `sweep2.lock` (same flock, heavy-run and start g
 after the plant-genomics sweep on that lane, so that no two network-bound sweeps hit the
 same upstream APIs at once. The queued run on the first lock was cancelled before it
 started. The df check, the projection and the 0.90 stop are unchanged.
+
+State, 2026-10-21 00:20 EDT: **no round-5 run has been made on either tier.** The Haiku
+sweep's start gate read seven-day 0.90 (five-hour 0.74) at 00:18 EDT and stopped before
+any run (`STOP: seven_day 0.9 >= 0.90`; no run directory was created). Per the
+coordinator, nothing more runs until after the weekly reset (Sun 10-25 12:00 EDT); the
+design above stands unchanged for that sweep, and the projection is redone from a fresh
+reading before it starts.
