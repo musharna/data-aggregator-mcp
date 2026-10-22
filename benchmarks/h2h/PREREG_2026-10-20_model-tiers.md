@@ -138,12 +138,12 @@ coordinator, nothing more runs until after the weekly reset (Sun 10-25 12:00 EDT
 design above stands unchanged for that sweep, and the projection is redone from a fresh
 reading before it starts.
 
-## Amendment, 2026-10-21 23:30 EDT (before any round-5 run on either tier)
+## Amendment, 2026-10-21 23:10 EDT (before any round-5 run on either tier)
 
 At the coordinator's word, the Haiku sweep starts now; Sonnet does not run in this sweep.
 
 - **Usage gate.** The real weekly window read 0.66 by the user's /usage at 22:50 and 0.70
-  by a probe at 23:2x, resetting Sat 10-24 23:00; the server sometimes also reports a
+  by a probe at 23:09, resetting Sat 10-24 23:00; the server sometimes also reports a
   spurious second weekly window at 0.98 (resetting Sun 12:00), which is what stopped the
   sweep on 10-21 at 00:18. New rule, in `run.py` (`probe_seven_day`, `_observe`) and in the
   start gate: a seven-day reading at or above 0.90 triggers a fresh probe (`claude -p "say
