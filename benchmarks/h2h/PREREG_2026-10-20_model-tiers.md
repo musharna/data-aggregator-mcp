@@ -163,3 +163,4 @@ At the coordinator's word, the Haiku sweep starts now; Sonnet does not run in th
   row. `--workers 2` stays.
 - **Projection**: the pilot's $0.44 for 4 runs gives about $13 for 120 runs, +0.01 on the
   real window (0.70 → about 0.71).
+- **Start gate** (23:20 EDT, the coordinator's decision, before any run): for the Haiku tier, "start only if five-hour < 0.50" becomes "start if five-hour < 0.85" (`START_FIVE=0.85`). The run-level pause at five-hour 0.85 until `resetsAt` and the probe-confirmed seven-day 0.90 stop are unchanged. The 0.50 rule was set for Opus-arm rounds (Haiku pilot here: about $0.11 a run), and the gate treats every arm alike.
