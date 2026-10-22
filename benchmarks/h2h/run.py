@@ -268,17 +268,52 @@ def _hold(root: Path) -> bool:
         time.sleep(min(wait, 60))
 
 
+def probe_seven_day() -> float | None:
+    """A fresh seven-day reading: the newest ``rate_limit_event`` of a one-word Haiku run
+    with no tools, settings or servers. None if the probe fails or reports no window.
+
+    Added 2026-10-21: the server sometimes reports a spurious second weekly window
+    (0.98, resetting on another day) beside the real one (0.69 by /usage), so a reading
+    at the stop line is checked by a fresh probe before it stops the sweep."""
+    d = Path(tempfile.mkdtemp(prefix="h2h-probe-", dir="/tmp"))  # nosec B108 - as _attempt
+    try:
+        (d / "mcp.json").write_text(json.dumps({"mcpServers": {}}))
+        cmd = ["claude", "-p", "say ok", "--model", "claude-haiku-5-5", "--output-format",
+               "stream-json", "--verbose", "--no-session-persistence", "--setting-sources", "",
+               "--strict-mcp-config", "--mcp-config", str(d / "mcp.json"), "--tools", ""]  # fmt: skip
+        proc = subprocess.run(cmd, cwd=d, capture_output=True, text=True, timeout=120,
+                              env={**os.environ, "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"})  # fmt: skip
+        events = []
+        for line in proc.stdout.splitlines():
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        return (rate_limit(events) or {}).get("seven_day")
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    finally:
+        shutil.rmtree(d)
+
+
 def _observe(root: Path, run_dir: Path, rl: dict | None) -> None:
-    """Pause or stop the sweep on the reading a run just left."""
+    """Pause or stop the sweep on the reading a run just left. A seven-day reading at or
+    above the stop line stops the sweep only if a fresh probe agrees (or gives no
+    reading); otherwise the reading is logged and the sweep goes on."""
     if rl is None:
         return
     now = time.time()
     stop_at = _GATE.get("stop_at", STOP_AT)
     if (rl.get("seven_day") or 0) >= stop_at:
-        with _GATE_LOCK:
-            _GATE["stopped"] = f"seven_day {rl['seven_day']} >= {stop_at}"
-        _log(root, "pauses.jsonl", {"at": now, "stop": True, "after": str(run_dir), **rl})
-        return
+        fresh = probe_seven_day()
+        if fresh is None or fresh >= stop_at:
+            with _GATE_LOCK:
+                _GATE["stopped"] = f"seven_day {rl['seven_day']} >= {stop_at} (probe {fresh})"
+            _log(root, "pauses.jsonl", {"at": now, "stop": True, "probe": fresh,
+                                        "after": str(run_dir), **rl})  # fmt: skip
+            return
+        _log(root, "pauses.jsonl", {"at": now, "spurious_seven_day": True, "probe": fresh,
+                                    "after": str(run_dir), **rl})  # fmt: skip
     if rl.get("status") == "rejected" or (rl.get("five_hour") or 0) >= PAUSE_AT:
         until = float(rl.get("five_hour_resets") or now + 3600) + 60
         with _GATE_LOCK:
@@ -629,14 +664,36 @@ def _tool_traffic(events: list[dict]) -> list[tuple[str, str]]:
     return out
 
 
-def leak_hits(events: list[dict], own: list[str]) -> list[dict]:
+# A path inside an installed tool (uv's cache, which holds the dam arm's git checkout,
+# a site-packages, pipx or node_modules tree), and what in such a path is still a leak:
+# an answer file (the checkout of this repository holds the committed keys).
+_INSTALL_PATH = re.compile(
+    r"[^\s\"']*(?:/\.cache/uv/|/site-packages/|/\.local/share/uv/|/\.local/pipx/"
+    r"|/node_modules/)[^\s\"']*"
+)
+_ANSWER_FILE = re.compile(
+    r"answer_key|adjudication(?:_reasons)?\.(?:json|yaml)"
+    r"|round[1-5]/(?:keys|tasks\.json|scores)|keys/[rtuv]\d+\.yaml"
+    r"|(?<![0-9a-z])(?:adj|pool)_[rtuv]\d+\.json",
+    re.IGNORECASE,
+)
+
+
+def leak_hits(events: list[dict], own: list[str], narrowed: bool = True) -> list[dict]:
     """Where the run touched the key, the benchmark or another run. ``own``: the run's
     own directories, removed first (an old round ran inside its run directory, whose path
-    names the round, and every Write of its answer names it)."""
+    names the round, and every Write of its answer names it).
+
+    ``narrowed`` (the primary rule from 2026-10-21): a tool-install path is not a leak
+    unless it names an answer file; ``narrowed=False`` is the rule as first written."""
     hits = []
     for where, text in _tool_traffic(events):
         for path in sorted(filter(None, own), key=len, reverse=True):
             text = text.replace(path, "<own>")
+        if narrowed:
+            text = _INSTALL_PATH.sub(
+                lambda m: m.group(0) if _ANSWER_FILE.search(m.group(0)) else "<install>", text
+            )
         hits += [{"where": where, "match": m.group(0)} for m in _LEAK.finditer(text)]
     return hits
 
@@ -699,7 +756,8 @@ def score(task: dict, arm: str, run_dir: Path, adjudication: dict | None = None)
     answer = (result.get("result") or "").casefold()
     servers = {s.get("name"): s.get("status") for s in init.get("mcp_servers", [])}
     meta = json.loads((run_dir / "meta.json").read_text())
-    leaks = leak_hits(events, [init.get("cwd"), meta.get("cwd"), str(run_dir.resolve())])
+    own = [init.get("cwd"), meta.get("cwd"), str(run_dir.resolve())]
+    leaks = leak_hits(events, own)
     invalid = validity(arm, task.get("kind") == "list", meta, init, result, calls, leaks)
     # Rounds 1-3 recorded none of these in meta.json; their init event still names the
     # model and the Claude Code version.
@@ -731,6 +789,8 @@ def score(task: dict, arm: str, run_dir: Path, adjudication: dict | None = None)
         "valid": not invalid,
         "invalid_reason": invalid,
         "leaks": leaks,
+        # The leak rule as first written (install paths count): the secondary validity.
+        "leaks_as_written": leak_hits(events, own, narrowed=False),
         **outcome,
         "tool_calls": len(calls),
         "tools": calls,

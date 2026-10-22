@@ -189,14 +189,23 @@ def summarize(name: str, rows: list[dict]) -> list[dict]:
     return out
 
 
-def compare(name: str, rows: list[dict]) -> list[dict]:
+def compare(name: str, rows: list[dict], leak_as_written: bool = False) -> list[dict]:
+    """Paired per-task comparisons. ``leak_as_written`` (the model-tier sets) adds
+    ``recall_leak_as_written``: recall with the leak rule as first written, under which a
+    tool-install path is a leak too (PREREG_2026-10-20_model-tiers.md, secondary)."""
     out = []
+    metrics = ["recall", "recall_valid_only", "precision_listed", "cost", "wall_s", "calls"]
+    if leak_as_written:
+        metrics.insert(2, "recall_leak_as_written")
     for a, b in PAIRS:
-        for metric in ("recall", "recall_valid_only", "precision_listed", "cost", "wall_s",
-                       "calls"):  # fmt: skip
+        for metric in metrics:
             if metric == "recall_valid_only":  # the PREREG's agreement check: valid runs
                 ok = [r for r in rows if r["valid"]]  # only; a task either arm lacks drops
                 ma, mb = task_means(ok, a, "recall"), task_means(ok, b, "recall")
+            elif metric == "recall_leak_as_written":
+                strict = [{**r, "valid": r["valid"] and not r.get("leaks_as_written")}
+                          for r in rows]  # fmt: skip
+                ma, mb = task_means(strict, a, "recall"), task_means(strict, b, "recall")
             else:
                 ma, mb = task_means(rows, a, metric), task_means(rows, b, metric)
             both = sorted(set(ma) & set(mb))
@@ -327,7 +336,7 @@ def main() -> None:
             )
         for s in summarize(name, rows):
             summary.append({**s, "about": about})
-        comparisons += compare(name, rows)
+        comparisons += compare(name, rows, name in SET_ADJUDICATION)
     for set_a, arm_a, set_b, arm_b in CROSS:
         round_name, dir_a, reps, _ = SETS[set_a]
         dir_b = SETS[set_b][1]

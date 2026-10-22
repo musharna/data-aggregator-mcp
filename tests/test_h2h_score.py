@@ -394,6 +394,9 @@ def gate(monkeypatch: pytest.MonkeyPatch) -> dict:
     """A fresh usage gate, and a fake clock: sleeping advances it, nothing really waits."""
     clock = {"now": 1_000_000.0, "slept": []}
     monkeypatch.setattr(run, "_GATE", {"resume_at": 0.0, "stopped": None})
+    # The confirming probe gives no reading unless a test plants one, so a stop-line
+    # reading stops the sweep as it did before the probe existed.
+    monkeypatch.setattr(run, "probe_seven_day", lambda: clock.get("probe"))
     monkeypatch.setattr(run.time, "time", lambda: clock["now"])
 
     def sleep(s: float) -> None:
@@ -474,7 +477,7 @@ def test_stop_at_lowers_the_seven_day_stop_for_one_sweep(
     assert run.run_one(task, "dam", 1, tmp_path, cfg) is not None  # 0.59: keeps going
     assert run.run_one(task, "dam", 2, tmp_path, cfg) is not None  # reads 0.60
     assert run.run_one(task, "web", 2, tmp_path, cfg) is None  # stopped below 0.80
-    assert len(calls) == 2 and run._GATE["stopped"] == "seven_day 0.6 >= 0.6"
+    assert len(calls) == 2 and run._GATE["stopped"] == "seven_day 0.6 >= 0.6 (probe None)"
     # The flag reaches the gate, and its default stays 0.80.
     monkeypatch.setattr(run, "preflight", lambda *a: None)
     monkeypatch.setattr(run, "claude_version", lambda: "v")
@@ -616,3 +619,48 @@ def test_a_later_adjudication_keeps_the_earlier_one_and_cannot_reuse_its_labels(
     with pytest.raises(SystemExit, match="bad verdict 'add:prior-A1'"):
         adjudicate.merge({"X": [{**verdicts["X"][0], "verdict": "add:prior-A1"},
                                 *verdicts["X"][1:]]}, pool, prior, "H")  # fmt: skip
+
+
+def test_a_stop_line_reading_stops_the_sweep_only_if_a_fresh_probe_agrees(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
+) -> None:
+    """2026-10-21: the server sometimes reports a spurious weekly window at 0.98 beside the
+    real one; a fresh probe decides."""
+    cfg = _cfg(model="m", budget_usd="1", claude_code="v")
+    task = {**TASK, "prompt": "Find every dataset."}
+    run._GATE["stop_at"] = 0.90
+    spurious = [_rl("allowed_warning", 0.2, 0.98, gate["now"] + 300), {"type": "result", **OK}]
+    calls: list = []
+    monkeypatch.setattr(run.subprocess, "run", _claude_script(calls, [spurious]))
+    gate["probe"] = 0.66  # the real window
+    assert run.run_one(task, "dam", 1, tmp_path, cfg) is not None
+    assert run.run_one(task, "web", 1, tmp_path, cfg) is not None  # went on
+    assert len(calls) == 2 and run._GATE["stopped"] is None
+    logged = [json.loads(x) for x in (tmp_path / "pauses.jsonl").read_text().splitlines()]
+    assert [(e.get("spurious_seven_day"), e["probe"], e["seven_day"]) for e in logged] == [
+        (True, 0.66, 0.98), (True, 0.66, 0.98)]  # fmt: skip
+    gate["probe"] = 0.95  # the probe agrees: stop
+    assert run.run_one(task, "tu", 1, tmp_path, cfg) is not None
+    assert run.run_one(task, "bare", 1, tmp_path, cfg) is None
+    assert len(calls) == 3 and run._GATE["stopped"] == "seven_day 0.98 >= 0.9 (probe 0.95)"
+
+
+def test_the_narrowed_leak_rule_excuses_an_install_path_but_not_an_answer_file_in_it(
+    tmp_path: Path,
+) -> None:
+    def row(name: str, out: str) -> dict:
+        return run.score(TASK, "dam", _session(
+            tmp_path / name, tools=DAM_TOOLS, servers=DAM_SERVER,
+            calls=["mcp__data-aggregator__search"], result=OK, outputs=(out,),
+            meta={"tools": ["Read", "Write"]}))  # fmt: skip
+
+    uv = "/home/u/.cache/uv/git-v0/checkouts/ab12/8e10a5b/benchmarks/h2h"
+    install = row("install", f"File {uv}/run.py, line 3")
+    assert install["valid"] and install["leaks"] == [], install  # primary: not a leak
+    assert install["leaks_as_written"][0]["match"] == "benchmarks/h2h"  # secondary: a leak
+    key = row("key", f"cat {uv}/round5/keys/V1.yaml")  # the committed key, in the checkout
+    assert not key["valid"] and key["leaks"], key
+    site = row("site", "/x/lib/python3.13/site-packages/foo/benchmarks/h2h/x.py")
+    assert site["valid"] and site["leaks_as_written"]
+    assert not row("repo", "cat benchmarks/h2h/run.py")["valid"]  # control: outside one
+    assert row("clean", "GSE123 found")["leaks_as_written"] == []  # control

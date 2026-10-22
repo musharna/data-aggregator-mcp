@@ -137,3 +137,29 @@ any run (`STOP: seven_day 0.9 >= 0.90`; no run directory was created). Per the
 coordinator, nothing more runs until after the weekly reset (Sun 10-25 12:00 EDT); the
 design above stands unchanged for that sweep, and the projection is redone from a fresh
 reading before it starts.
+
+## Amendment, 2026-10-21 23:30 EDT (before any round-5 run on either tier)
+
+At the coordinator's word, the Haiku sweep starts now; Sonnet does not run in this sweep.
+
+- **Usage gate.** The real weekly window read 0.66 by the user's /usage at 22:50 and 0.70
+  by a probe at 23:2x, resetting Sat 10-24 23:00; the server sometimes also reports a
+  spurious second weekly window at 0.98 (resetting Sun 12:00), which is what stopped the
+  sweep on 10-21 at 00:18. New rule, in `run.py` (`probe_seven_day`, `_observe`) and in the
+  start gate: a seven-day reading at or above 0.90 triggers a fresh probe (`claude -p "say
+  ok" --model claude-haiku-5-5`, no tools, settings or servers; the newest event's
+  `unifiedWindows.seven_day`). The sweep stops only if the probe also reads >= 0.90 or gives
+  no reading; otherwise the reading and the probe are logged to `pauses.jsonl` and the sweep
+  goes on. The five-hour pause is unchanged. Test:
+  `test_a_stop_line_reading_stops_the_sweep_only_if_a_fresh_probe_agrees` (a planted 0.98
+  with a 0.66 probe goes on, with a 0.95 probe stops), seen to fail on the old gate.
+- **Leak rule.** Primary: the narrowed rule. A path inside an installed tool (uv's cache,
+  which holds the dam arm's git checkout, or a site-packages, pipx or node_modules tree) is
+  not a leak, unless it names an answer file (the checkout holds the committed round-5
+  keys, so reading `.../round5/keys/V1.yaml` there still voids the run). Secondary: the rule
+  as first written, reported as `recall_leak_as_written` beside the primary. Rescoring every
+  archived set with the narrowed rule changes no row.
+- **Claude Code** 2.1.307 (round 5's Opus rows ran 2.1.303, the pilot 2.1.305), recorded per
+  row. `--workers 2` stays.
+- **Projection**: the pilot's $0.44 for 4 runs gives about $13 for 120 runs, +0.01 on the
+  real window (0.70 → about 0.71).
