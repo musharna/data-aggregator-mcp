@@ -109,8 +109,10 @@ What each source can fetch, and which checksum it is verified against:
 An agent using this server was compared with the same agent using web search, on held-out
 dataset-finding tasks scored by recall against independently built answer keys, 3 runs per
 task. Mean recall, server against web search: Claude Haiku 5.5 0.47 against 0.32 (higher on
-8 of 10 tasks), Sonnet 5.5 0.54 against 0.52, Opus 5.5 0.72 against 0.58. None met its
-pre-registered rule (Haiku needed 9 of 10 tasks, Opus 8). With Opus it returned fewer wrong
+8 of 10 tasks), Sonnet 5.5 0.54 against 0.52 (5 of 10), Opus 5.5 0.72 against 0.58 (6 of 10).
+With Haiku the server met round 5's pre-registered "better" rule (higher on at least 8 of 10
+tasks, interval above 0) but not the stricter bar for a win across model tiers (9 of 10,
+Holm-adjusted sign test, p = 0.22); Sonnet and Opus met neither. With Opus it returned fewer wrong
 entries and answered in about a third of the time; with Sonnet it was faster on 9 of 10
 tasks; with Haiku it cost less on 9 of 10.
 
