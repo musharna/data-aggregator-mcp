@@ -20,30 +20,6 @@ mcp-name: io.github.musharna/data-aggregator-mcp
        width="820">
 </p>
 
-## Does it help?
-
-Not shown for finding more datasets. In three held-out rounds, an agent using this
-server was not separated from the same agent using web search on how many matching
-datasets it found. The two
-latest rounds (2026-10-19, Claude Opus 5.5, rules written before the runs, 3 runs per
-task) were scored by mean recall against independently built answer keys:
-
-| Tools given to the agent | Round 4 (5 tasks) | Round 5 (10 tasks) |
-| --- | :---: | :---: |
-| this server | 0.66 | 0.72 |
-| web search | 0.66 | 0.58 |
-| ToolUniverse | 0.59 | 0.63 |
-| no tools (memory only) | 0.02 | 0.09 |
-
-In round 5 this server was higher on 6 of 10 tasks, where the pre-set rule needed 8.
-Web search hit the 15-minute limit in 11 of 30 runs, and a run that times out scores
-0. In runs that finished, web search found more (0.90). What this server does
-reliably: answers in about a third of the time (203 s against 599 s, median, round 5),
-with fewer tool calls and fewer wrong entries (precision 0.95 against 0.62). It cost
-more per run than web search ($2.08 against $1.51, API-equivalent).
-Method and controls:
-[benchmarks/h2h](https://github.com/musharna/data-aggregator-mcp/blob/main/benchmarks/h2h/README.md).
-
 ## Install
 
 Claude Code:
@@ -127,6 +103,38 @@ A source that fails is named in the result's `errors`, never dropped silently.
 
 What each source can fetch, and which checksum it is verified against:
 [docs/sources.md](https://github.com/musharna/data-aggregator-mcp/blob/main/docs/sources.md).
+
+## What the benchmark shows
+
+An agent using this server was compared with the same agent using web search, on held-out
+dataset-finding tasks scored by recall against independently built answer keys, 3 runs per
+task. Mean recall, server against web search: Claude Haiku 5.5 0.47 against 0.32 (higher on
+8 of 10 tasks), Sonnet 5.5 0.54 against 0.52, Opus 5.5 0.72 against 0.58. None met its
+pre-registered rule (Haiku needed 9 of 10 tasks, Opus 8). With Opus it returned fewer wrong
+entries and answered in about a third of the time; with Sonnet it was faster on 9 of 10
+tasks; with Haiku it cost less on 9 of 10.
+
+The two latest Opus 5.5 rounds (2026-10-19, rules written before the runs):
+
+| Tools given to the agent | Round 4 (5 tasks) | Round 5 (10 tasks) |
+| --- | :---: | :---: |
+| this server | 0.66 | 0.72 |
+| web search | 0.66 | 0.58 |
+| ToolUniverse | 0.59 | 0.63 |
+| no tools (memory only) | 0.02 | 0.09 |
+
+In round 5 this server was higher on 6 of 10 tasks, where the pre-set rule needed 8.
+Web search hit the 15-minute limit in 11 of 30 runs, and a run that times out scores
+0. In runs that finished, web search found more (0.90). The server answered in 203 s
+against 599 s (median), with fewer tool calls and fewer wrong entries (precision 0.95
+against 0.62). It cost more per run than web search ($2.08 against $1.51,
+API-equivalent).
+
+We chose the tasks and ran the benchmark ourselves; an outside re-run is welcome. Method
+and controls:
+[benchmarks/h2h](https://github.com/musharna/data-aggregator-mcp/blob/main/benchmarks/h2h/README.md);
+the Haiku and Sonnet runs:
+[2026-10-20 re-run](https://github.com/musharna/data-aggregator-mcp/blob/main/benchmarks/h2h/README.md#haiku-and-sonnet-re-run-2026-10-20).
 
 ## Compared with other servers
 
