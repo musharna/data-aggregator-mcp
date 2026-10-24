@@ -672,7 +672,9 @@ def test_the_spend_gate_stops_the_sweep_before_a_run_and_lets_it_through_under_c
     """API-billed sweeps (2026-10-23): _hold asks BENCH_SPEND_GATE before every run; a
     non-zero exit stops the sweep and is logged. Under the cap, or unset, runs start."""
     gate_py = tmp_path / "gate.py"
-    gate_py.write_text("import os, sys\nprint('cap reached', file=sys.stderr)\nsys.exit(int(os.environ['GATE_RC']))\n")
+    gate_py.write_text(
+        "import os, sys\nprint('cap reached', file=sys.stderr)\nsys.exit(int(os.environ['GATE_RC']))\n"
+    )
     monkeypatch.setenv("BENCH_SPEND_GATE", str(gate_py))
     monkeypatch.setenv("GATE_RC", "0")
     assert run._hold(tmp_path) is True and run._GATE["stopped"] is None  # under the cap
