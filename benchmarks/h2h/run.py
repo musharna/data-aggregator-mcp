@@ -375,8 +375,10 @@ def run_one(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace)
         # before Claude started: a harness failure. Kept, logged, and run once more
         # (after the pause; a refusal's re-run asks the spend gate first, and if it
         # still refuses the sweep stops with the run unrecorded, so a resume runs it).
+        # Numbered like _aborted/: a resumed sweep can set the same run aside again.
         holding, log_name = SET_ASIDE[kind]
-        dest = root / holding / f"{arm}-{task['id']}-r{rep}-1"
+        n = len(list((root / holding).glob(f"{arm}-{task['id']}-r{rep}-*")))
+        dest = root / holding / f"{arm}-{task['id']}-r{rep}-{n + 1}"
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(run_dir), dest)
         _log(root, log_name, {"arm": arm, "task": task["id"], "rep": rep,

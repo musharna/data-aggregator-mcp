@@ -503,6 +503,18 @@ def test_a_wrapper_refusal_is_set_aside_and_run_once_more(
     monkeypatch.setattr(run.subprocess, "run", script((75, []), (0, answered)))
     assert run.run_one(task, "bare", 1, tmp_path, cfg) is None
     assert len(calls) == 1 and not (tmp_path / "bare" / "X" / "r1" / "meta.json").exists()
+    # Resumed twice more and refused each time: each refusal is kept in its own
+    # numbered directory, and the log points at each one's own meta.json.
+    gate_py.write_text(gate_py.read_text().replace("n == 1", "n % 2"))
+    monkeypatch.setattr(run.subprocess, "run", script((75, [])))
+    for _ in range(2):
+        run._GATE["stopped"] = None  # a fresh sweep process
+        assert run.run_one(task, "bare", 1, tmp_path, cfg) is None
+    log = [json.loads(x) for x in (tmp_path / "refused.jsonl").read_text().splitlines()]
+    kept = [Path(e["kept"]) for e in log if e["arm"] == "bare"]
+    assert [k.name for k in kept] == ["bare-X-r1-1", "bare-X-r1-2", "bare-X-r1-3"]
+    for k in kept:
+        assert json.loads((k / "meta.json").read_text())["api_failure"] == "wrapper_refused"
 
 
 def test_usage_gate_pauses_at_five_hour_085_and_stops_at_seven_day_080(
