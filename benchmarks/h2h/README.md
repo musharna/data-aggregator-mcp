@@ -144,6 +144,50 @@ rose 0.30 → 0.43, against a projected 0.42. The key builders cost $68.31.
 Exploratory, rounds 4 and 5 pooled (15 tasks): dam vs web +0.09 (−0.04 to 0.23),
 higher on 7 of 15 tasks. Valid-only: −0.15 (−0.22 to −0.09), web higher on 11 of 14.
 
+## Haiku and Sonnet re-run 2026-10-20
+
+Round 5's 10 tasks, 4 arms and 3 runs, re-run on Claude Haiku 5.5 and Sonnet 5.5 under
+[`PREREG_2026-10-20_model-tiers.md`](PREREG_2026-10-20_model-tiers.md); dam on commit
+8e10a5b5 (`--server-spec`). Each sweep's new entries were judged blind as in round 5
+(Haiku: 98 entries, $1.36; Sonnet: 29, $0.94), and both tiers are scored with
+[`round5/adjudication_tiers_2026-10-20.json`](round5/adjudication_tiers_2026-10-20.json)
+(round 5's verdicts plus both passes'). 29 Haiku runs ran on the subscription on 10-22;
+the other 91 Haiku runs and all of Sonnet ran on 10-23 and 10-24 on an API key under a
+spend gate (the PREREG's amendments).
+
+**Win rule across both tiers: TIE.** Holm-adjusted sign-test p: Haiku 0.22, Sonnet 1.0.
+No lift and no loss at either tier.
+
+| tier | arm | mean recall (95% CI) | valid-only | precision | median cost | median calls | median wall, s | valid runs |
+|---|---|---|---|---|---|---|---|---|
+| Haiku | dam | 0.47 (0.37–0.55) | 0.47 | 0.85 | $0.136 | 25 | 163 | 30 of 30 |
+| Haiku | web | 0.32 (0.23–0.42) | 0.33 | 0.86 | $0.229 | 32 | 128 | 29 of 30 |
+| Haiku | tu | 0.40 (0.29–0.49) | 0.40 | 0.83 | $0.132 | 42.5 | 98 | 30 of 30 |
+| Haiku | bare | 0.01 (0.00–0.04) | 0.01 | 0.03 | $0.001 | 1 | 9 | 30 of 30 |
+| Sonnet | dam | 0.54 (0.43–0.63) | 0.54 | 0.90 | $0.255 | 11 | 82 | 30 of 30 |
+| Sonnet | web | 0.52 (0.40–0.64) | 0.52 | 0.90 | $0.257 | 18 | 144 | 30 of 30 |
+| Sonnet | tu | 0.40 (0.29–0.50) | 0.42 | 0.95 | $0.368 | 24 | 51 | 29 of 30 |
+| Sonnet | bare | 0.03 (0.00–0.08) | 0.03 | 0.16 | $0.008 | 1 | 7 | 30 of 30 |
+
+- **Haiku: dam better, not significant.** dam was above web on 8 of 10 tasks, +0.16
+  (0.02 to 0.28), and the valid-only check agrees (8 of 10, +0.15, 0.01 to 0.26), so
+  round 5's rule calls it "dam better"; but the sign test gives p = 0.11 raw (0.22 after
+  Holm), and a lift needs at least 9 of 10. dam cost less than web on 9 tasks (−$0.11,
+  −0.17 to −0.06). Web timed out in 1 of 30 runs (Opus: 11).
+- **Sonnet: not separated.** dam above web on 5 tasks, web on 5, +0.02 (−0.13 to
+  0.18), p = 1. dam finished faster on 9 tasks (−95 s, −178 to −26) and made fewer calls
+  on 9 (−6.7, −12.4 to 0.2); cost was the same (−$0.01, −0.10 to 0.07). Against tu, dam
+  found more (+0.14, 0.02 to 0.29) and cost less (−$0.12, −0.24 to −0.02).
+- **Mechanism:** every dam run called the server: median 23.5 calls a run (8 to 44) on
+  Haiku, 10 (5 to 38) on Sonnet. tu: 41.5 (17 to 65) and 20.5 (7 to 56). No run in
+  either arm made no server call.
+- **Substitute (secondary, non-concurrent):** each tier's dam against round 5's Opus web
+  arm: Haiku −0.10 (−0.28 to 0.07), Sonnet −0.04 (−0.18 to 0.11), both higher on 4 of
+  10 tasks (p = 0.75). Against Opus dam, both tiers are lower on 9 of 10 (p = 0.004).
+- **Controls:** 240 runs; 1 invalid on Haiku (a web timeout, scored 0) and 1 on Sonnet (a
+  tu run, V6 r2, that failed the leak scan). 0 unjudged entries. The sweeps cost $16.28
+  (Haiku) and $29.39 (Sonnet).
+
 ## Controls
 
 - Oracle (positive and negative): for all 25 tasks of rounds 2 to 5, the key

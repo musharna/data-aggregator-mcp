@@ -394,6 +394,9 @@ def gate(monkeypatch: pytest.MonkeyPatch) -> dict:
     """A fresh usage gate, and a fake clock: sleeping advances it, nothing really waits."""
     clock = {"now": 1_000_000.0, "slept": []}
     monkeypatch.setattr(run, "_GATE", {"resume_at": 0.0, "stopped": None})
+    # The confirming probe gives no reading unless a test plants one, so a stop-line
+    # reading stops the sweep as it did before the probe existed.
+    monkeypatch.setattr(run, "probe_seven_day", lambda: clock.get("probe"))
     monkeypatch.setattr(run.time, "time", lambda: clock["now"])
 
     def sleep(s: float) -> None:
@@ -439,6 +442,81 @@ def test_usage_gate_reruns_a_rate_limited_run_once_and_pauses_until_the_reset(
     assert json.loads((rd / "meta.json").read_text())["api_failure"] == "rate_limited"
 
 
+def test_a_wrapper_refusal_is_set_aside_and_run_once_more(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
+) -> None:
+    """PREREG amendment 2026-10-23: a run the wrapper refuses (exit 75, no transcript)
+    is a harness failure, set aside and re-run once, never kept as an invalid result."""
+    cfg = _cfg(model="m", budget_usd="1", claude_code="v")
+    task = {**TASK, "prompt": "Find every dataset."}
+    answered = [_rl(), {"type": "result", **OK}]
+    calls: list = []
+
+    real_run = run.subprocess.run
+
+    def script(*outcomes: tuple[int, list[dict]]):
+        def fake(cmd, **kw):
+            if cmd[0] == run.sys.executable:  # the spend gate: really run it
+                return real_run(cmd, **kw)
+            calls.append(cmd)
+            stdout = kw["stdout"]
+            rc, events = outcomes[min(len(calls), len(outcomes)) - 1]
+            for e in events:
+                stdout.write(json.dumps(e) + "\n")
+            return run.subprocess.CompletedProcess(cmd, rc, "", "bench-spend: cap")
+
+        return fake
+
+    assert run.api_failure([], 75) == "wrapper_refused"
+    assert run.api_failure([], 0) is None and run.api_failure(answered, 75) is None
+    monkeypatch.setattr(run.subprocess, "run", script((75, []), (0, answered)))
+    rd = run.run_one(task, "dam", 1, tmp_path, cfg)
+    assert len(calls) == 2  # run once more
+    assert json.loads((rd / "meta.json").read_text())["api_failure"] is None
+    kept = tmp_path / "_refused" / "dam-X-r1-1" / "meta.json"
+    assert json.loads(kept.read_text())["api_failure"] == "wrapper_refused"
+    log = [json.loads(x) for x in (tmp_path / "refused.jsonl").read_text().splitlines()]
+    assert [(e["arm"], e["rep"]) for e in log] == [("dam", 1)]
+    # Control: an answered run is one call, nothing set aside.
+    run.run_one(task, "web", 1, tmp_path, cfg)
+    assert len(calls) == 3 and len(log) == 1
+    # Refused twice: it stays as the run's row, never a third attempt.
+    calls.clear()
+    monkeypatch.setattr(run.subprocess, "run", script((75, []), (75, [])))
+    rd = run.run_one(task, "tu", 1, tmp_path, cfg)
+    assert len(calls) == 2
+    assert json.loads((rd / "meta.json").read_text())["api_failure"] == "wrapper_refused"
+    # If the spend gate refuses the re-run, the sweep stops with nothing recorded,
+    # so a resumed sweep runs it.
+    counter = tmp_path / "gate_calls"
+    gate_py = tmp_path / "gate.py"
+    gate_py.write_text(
+        "import pathlib, sys\n"
+        f"p = pathlib.Path({str(counter)!r})\n"
+        "n = int(p.read_text()) + 1 if p.exists() else 1\n"
+        "p.write_text(str(n))\n"
+        "print('cap reached', file=sys.stderr)\n"
+        "sys.exit(0 if n == 1 else 3)\n"
+    )
+    monkeypatch.setenv("BENCH_SPEND_GATE", str(gate_py))
+    calls.clear()
+    monkeypatch.setattr(run.subprocess, "run", script((75, []), (0, answered)))
+    assert run.run_one(task, "bare", 1, tmp_path, cfg) is None
+    assert len(calls) == 1 and not (tmp_path / "bare" / "X" / "r1" / "meta.json").exists()
+    # Resumed twice more and refused each time: each refusal is kept in its own
+    # numbered directory, and the log points at each one's own meta.json.
+    gate_py.write_text(gate_py.read_text().replace("n == 1", "n % 2"))
+    monkeypatch.setattr(run.subprocess, "run", script((75, [])))
+    for _ in range(2):
+        run._GATE["stopped"] = None  # a fresh sweep process
+        assert run.run_one(task, "bare", 1, tmp_path, cfg) is None
+    log = [json.loads(x) for x in (tmp_path / "refused.jsonl").read_text().splitlines()]
+    kept = [Path(e["kept"]) for e in log if e["arm"] == "bare"]
+    assert [k.name for k in kept] == ["bare-X-r1-1", "bare-X-r1-2", "bare-X-r1-3"]
+    for k in kept:
+        assert json.loads((k / "meta.json").read_text())["api_failure"] == "wrapper_refused"
+
+
 def test_usage_gate_pauses_at_five_hour_085_and_stops_at_seven_day_080(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
 ) -> None:
@@ -474,7 +552,7 @@ def test_stop_at_lowers_the_seven_day_stop_for_one_sweep(
     assert run.run_one(task, "dam", 1, tmp_path, cfg) is not None  # 0.59: keeps going
     assert run.run_one(task, "dam", 2, tmp_path, cfg) is not None  # reads 0.60
     assert run.run_one(task, "web", 2, tmp_path, cfg) is None  # stopped below 0.80
-    assert len(calls) == 2 and run._GATE["stopped"] == "seven_day 0.6 >= 0.6"
+    assert len(calls) == 2 and run._GATE["stopped"] == "seven_day 0.6 >= 0.6 (probe None)"
     # The flag reaches the gate, and its default stays 0.80.
     monkeypatch.setattr(run, "preflight", lambda *a: None)
     monkeypatch.setattr(run, "claude_version", lambda: "v")
@@ -553,3 +631,133 @@ def test_valid_only_comparison_drops_invalid_runs_and_tasks_an_arm_lacks() -> No
     # Valid-only: A's invalid web run is dropped (web 0.9 > dam), B drops out.
     assert (valid["tasks"], valid["a_higher"], valid["b_higher"]) == (2, 1, 1)
     assert valid["mean_diff"] == pytest.approx(((0.5 - 0.9) + (0.4 - 0.1)) / 2)
+
+
+def test_a_run_set_holds_one_model_and_a_row_must_be_served_the_model_it_asked_for(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tasks = json.loads((H2H / "round4" / "tasks.json").read_text())[:1]
+    seen = {"data-aggregator-mcp": "0.74.0", "tooluniverse": "1.5.7"}
+    monkeypatch.setattr(run, "installed_versions", lambda p, v, x: {p: seen[p]})
+    haiku = _cfg(arms="web", out=tmp_path / "h", model="claude-haiku-5-5")
+    run.preflight(tasks, haiku)  # control: a fresh set records the model asked for
+    assert json.loads((tmp_path / "h" / "versions.json").read_text())["_model"] == {
+        "requested": "claude-haiku-5-5"}  # fmt: skip
+    run.preflight(tasks, haiku)  # control: the same model may resume its own set
+    with pytest.raises(SystemExit, match="holds claude-haiku-5-5 runs, not claude-opus-5-5"):
+        run.preflight(tasks, _cfg(arms="web", out=tmp_path / "h", model="claude-opus-5-5"))
+    # A set from before the record (no "_model") is the default model's.
+    (tmp_path / "o").mkdir()
+    (tmp_path / "o" / "versions.json").write_text(json.dumps({"tu": {}}))
+    with pytest.raises(SystemExit, match="holds claude-opus-5-5 runs, not claude-haiku-5-5"):
+        run.preflight(tasks, _cfg(arms="web", out=tmp_path / "o", model="claude-haiku-5-5"))
+
+    def row(name: str, asked: str | None) -> dict:  # the init event says model "m"
+        meta = {"tools": ["Read", "Write"]} | ({"model_requested": asked} if asked else {})
+        return run.score(TASK, "dam", _session(tmp_path / name, tools=DAM_TOOLS,
+                         servers=DAM_SERVER, calls=["mcp__data-aggregator__search"],
+                         result=OK, meta=meta))  # fmt: skip
+
+    assert row("served", "m")["valid"]  # control: served what it asked for
+    assert row("old", None)["valid"]  # rounds 1 to 3 recorded no request
+    assert row("swapped", "claude-haiku-5-5")["invalid_reason"] == ["model m not claude-haiku-5-5"]
+
+
+def test_a_later_adjudication_keeps_the_earlier_one_and_cannot_reuse_its_labels(
+    tmp_path: Path,
+) -> None:
+    import adjudicate
+
+    prior = {"X": {"add": [{"key": "A1", "ids": ["E-MTAB-7"]}], "optional": [],
+                   "reject": ["GSE999"], "alias": {"S3": ["MSV000123"]}}}  # fmt: skip
+    key = {"task": "X", "prompt": "p", "studies": [{"key": "S3", "ids": ["PXD000001"]}]}
+    view = adjudicate.task_view(key, prior["X"])
+    assert view["studies"] == [
+        {"key": "S3", "title": None, "ids": ["PXD000001", "MSV000123"], "borderline": False},
+        {"key": "prior-A1", "title": None, "ids": ["E-MTAB-7"], "borderline": False},
+    ]
+    assert adjudicate.task_view(key)["studies"][0]["ids"] == ["PXD000001"]  # control
+    pool = {"X": [{"id": "E-MTAB-77"}, {"id": "GSE5"}, {"id": "GSE6"}]}
+    verdicts = {"X": [{"id": "E-MTAB-77", "verdict": "alias:prior-A1"},
+                      {"id": "GSE5", "verdict": "add:A1"}, {"id": "GSE6", "verdict": "reject"}]}  # fmt: skip
+    adj, _ = adjudicate.merge(verdicts, pool, prior, "H")
+    assert adj["X"]["add"] == [{"key": "A1", "ids": ["E-MTAB-7"]}, {"key": "HA1", "ids": ["GSE5"]}]
+    assert adj["X"]["alias"] == {"S3": ["MSV000123"], "A1": ["E-MTAB-77"]}
+    assert adj["X"]["reject"] == ["GSE999", "GSE6"]
+    assert prior["X"]["add"] == [{"key": "A1", "ids": ["E-MTAB-7"]}]  # the earlier file intact
+    # Scored with the union: the earlier study found by its new alias, the new one keyed.
+    listed = [{"id": "E-MTAB-77"}, {"id": "GSE5"}, {"id": "GSE999"}]
+    s = run.score_list({**TASK, "studies": TASK["studies"][2:3]}, _run_dir(tmp_path, listed), adj)
+    assert s["found_keys"] == ["A1", "HA1"] and s["irrelevant"] == 1 and not s["pending"], s
+    with pytest.raises(SystemExit, match="HA1 collides"):  # a prefix that reuses a label
+        adjudicate.merge(verdicts, pool, {"X": {"add": [{"key": "HA1", "ids": ["Z"]}]}}, "H")
+    with pytest.raises(SystemExit, match="bad verdict 'add:prior-A1'"):
+        adjudicate.merge({"X": [{**verdicts["X"][0], "verdict": "add:prior-A1"},
+                                *verdicts["X"][1:]]}, pool, prior, "H")  # fmt: skip
+
+
+def test_a_stop_line_reading_stops_the_sweep_only_if_a_fresh_probe_agrees(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
+) -> None:
+    """2026-10-21: the server sometimes reports a spurious weekly window at 0.98 beside the
+    real one; a fresh probe decides."""
+    cfg = _cfg(model="m", budget_usd="1", claude_code="v")
+    task = {**TASK, "prompt": "Find every dataset."}
+    run._GATE["stop_at"] = 0.90
+    spurious = [_rl("allowed_warning", 0.2, 0.98, gate["now"] + 300), {"type": "result", **OK}]
+    calls: list = []
+    monkeypatch.setattr(run.subprocess, "run", _claude_script(calls, [spurious]))
+    gate["probe"] = 0.66  # the real window
+    assert run.run_one(task, "dam", 1, tmp_path, cfg) is not None
+    assert run.run_one(task, "web", 1, tmp_path, cfg) is not None  # went on
+    assert len(calls) == 2 and run._GATE["stopped"] is None
+    logged = [json.loads(x) for x in (tmp_path / "pauses.jsonl").read_text().splitlines()]
+    assert [(e.get("spurious_seven_day"), e["probe"], e["seven_day"]) for e in logged] == [
+        (True, 0.66, 0.98), (True, 0.66, 0.98)]  # fmt: skip
+    gate["probe"] = 0.95  # the probe agrees: stop
+    assert run.run_one(task, "tu", 1, tmp_path, cfg) is not None
+    assert run.run_one(task, "bare", 1, tmp_path, cfg) is None
+    assert len(calls) == 3 and run._GATE["stopped"] == "seven_day 0.98 >= 0.9 (probe 0.95)"
+
+
+def test_the_narrowed_leak_rule_excuses_an_install_path_but_not_an_answer_file_in_it(
+    tmp_path: Path,
+) -> None:
+    def row(name: str, out: str) -> dict:
+        return run.score(TASK, "dam", _session(
+            tmp_path / name, tools=DAM_TOOLS, servers=DAM_SERVER,
+            calls=["mcp__data-aggregator__search"], result=OK, outputs=(out,),
+            meta={"tools": ["Read", "Write"]}))  # fmt: skip
+
+    uv = "/home/u/.cache/uv/git-v0/checkouts/ab12/8e10a5b/benchmarks/h2h"
+    install = row("install", f"File {uv}/run.py, line 3")
+    assert install["valid"] and install["leaks"] == [], install  # primary: not a leak
+    assert install["leaks_as_written"][0]["match"] == "benchmarks/h2h"  # secondary: a leak
+    key = row("key", f"cat {uv}/round5/keys/V1.yaml")  # the committed key, in the checkout
+    assert not key["valid"] and key["leaks"], key
+    site = row("site", "/x/lib/python3.13/site-packages/foo/benchmarks/h2h/x.py")
+    assert site["valid"] and site["leaks_as_written"]
+    assert not row("repo", "cat benchmarks/h2h/run.py")["valid"]  # control: outside one
+    assert row("clean", "GSE123 found")["leaks_as_written"] == []  # control
+
+
+def test_the_spend_gate_stops_the_sweep_before_a_run_and_lets_it_through_under_cap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
+) -> None:
+    """API-billed sweeps (2026-10-23): _hold asks BENCH_SPEND_GATE before every run; a
+    non-zero exit stops the sweep and is logged. Under the cap, or unset, runs start."""
+    gate_py = tmp_path / "gate.py"
+    gate_py.write_text(
+        "import os, sys\nprint('cap reached', file=sys.stderr)\nsys.exit(int(os.environ['GATE_RC']))\n"
+    )
+    monkeypatch.setenv("BENCH_SPEND_GATE", str(gate_py))
+    monkeypatch.setenv("GATE_RC", "0")
+    assert run._hold(tmp_path) is True and run._GATE["stopped"] is None  # under the cap
+    monkeypatch.setenv("GATE_RC", "3")
+    assert run._hold(tmp_path) is False
+    assert run._GATE["stopped"] == "spend gate: cap reached"
+    logged = [json.loads(x) for x in (tmp_path / "pauses.jsonl").read_text().splitlines()]
+    assert logged[-1]["spend_gate"] == "cap reached" and logged[-1]["stop"] is True
+    run._GATE["stopped"] = None
+    monkeypatch.delenv("BENCH_SPEND_GATE")  # unset: subscription sweeps unchanged
+    assert run._hold(tmp_path) is True

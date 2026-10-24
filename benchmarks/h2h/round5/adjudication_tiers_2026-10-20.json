@@ -1,0 +1,515 @@
+{
+ "V1": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "KAP241832",
+     "KGD10063443",
+     "KGD10063444"
+    ]
+   }
+  ],
+  "optional": [],
+  "reject": [],
+  "alias": {}
+ },
+ "V10": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "PRJEB103957"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "PRJNA1031168",
+     "SRP467950"
+    ]
+   }
+  ],
+  "reject": [
+   "PRJEB41528",
+   "PRJEB127169",
+   "PRJEB35596",
+   "PRJEB106305",
+   "PRJEB104944",
+   "zenodo:19435471",
+   "zenodo:10.5281/zenodo.19435471",
+   "10.1101/2025.08.02.668267"
+  ],
+  "alias": {
+   "S5": [
+    "biostudies:S-EPMC8157933",
+    "datacite:10.17863/cam.71224"
+   ]
+  }
+ },
+ "V2": {
+  "add": [],
+  "optional": [],
+  "reject": [
+   "GSE260568",
+   "PRJNA664900",
+   "PRJNA1515428",
+   "10.1101/2025.08.24.672008",
+   "doi:10.1101/gr.277040.122",
+   "DRP013593",
+   "GSE121316",
+   "PRJDB36774",
+   "GSE232065"
+  ],
+  "alias": {
+   "S4": [
+    "751285e9-6164-5607-8171-33e3ffdb93c6"
+   ],
+   "S28": [
+    "605b7c3e-74b9-5523-9cb2-2622d5dd63a8"
+   ]
+  }
+ },
+ "V3": {
+  "add": [],
+  "optional": [],
+  "reject": [
+   "10.17605/osf.io/zjswa",
+   "10.1371/journal.pone.0089891"
+  ],
+  "alias": {
+   "S11": [
+    "neurovault:21188"
+   ],
+   "S9": [
+    "neurovault:8669"
+   ],
+   "S10": [
+    "neurovault:12207"
+   ],
+   "S6": [
+    "neurovault:16872"
+   ],
+   "S7": [
+    "osf:gp84x"
+   ]
+  }
+ },
+ "V4": {
+  "add": [],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "10.15468/dl.3dpgzn",
+     "10.15468/dl.heq2nw"
+    ]
+   },
+   {
+    "key": "HAB1",
+    "ids": [
+     "figshare:12354065",
+     "figshare:12354074"
+    ]
+   }
+  ],
+  "reject": [
+   "datacite:10.6084/m9.figshare.32025609",
+   "figshare:114863",
+   "10.1371/journal.pone.0024708",
+   "10.25334/q4zt3f",
+   "10.1371/journal.pone.0053371",
+   "10.1371/journal.pone.0178667.t002",
+   "10.1371/journal.pone.0053371.t002",
+   "10.6084/m9.figshare.32025609",
+   "biostudies:S-EPMC9789516",
+   "zenodo:11361953",
+   "10.7717/peerj.9926/supp-1",
+   "10.6084/m9.figshare.4140666",
+   "biostudies:S-EPMC8953498",
+   "biostudies:S-EPMC3541239",
+   "datacite:10.3929/ethz-b-000248948",
+   "10.5281/zenodo.11361953",
+   "biostudies:S-EPMC4741078",
+   "biostudies:S-EPMC8155105",
+   "datacite:10.3929/ethz-b-000178648",
+   "datacite:10.13016/n6eq-gavy",
+   "biostudies:S-EPMC7307557",
+   "biostudies:S-EPMC9784330",
+   "10.1371/journal.pone.0224164",
+   "10.7717/peerj.4215",
+   "10.7717/peerj.9926",
+   "10.1371/journal.pone.0178667",
+   "10.1371/journal.pone.0201558",
+   "10.1002/ecy.70126",
+   "10.7717/peerj.14676",
+   "10.1371/journal.pone.0144600",
+   "10.7717/peerj.7620",
+   "10.1371/journal.pone.0306362"
+  ],
+  "alias": {
+   "S28": [
+    "figshare:20037617",
+    "zenodo:816520"
+   ],
+   "S17": [
+    "figshare:30985105"
+   ],
+   "S5": [
+    "dataone:sha256:e98cacbbe5ae418ebcd32ea5aaf82408b902ea3e39d61d00dbd12d79e02f2894"
+   ],
+   "S30": [
+    "biostudies:S-EPMC6834121"
+   ],
+   "S4": [
+    "dataone:sha256:328455ae45f270b545f68ad8bb4498ce13398596b88861c70453bd610e6bc44e"
+   ],
+   "S3": [
+    "dataone:sha256:da797df70540a56148e72719f2821b5f30d8b0316c7c62e34b3f294842a833cf"
+   ],
+   "S1": [
+    "dataone:sha256:7d8b69f3937657046fa462d86b227a3c356ba75b2541864661df3ff481848d86"
+   ],
+   "S29": [
+    "biostudies:S-EPMC4701451"
+   ],
+   "S18": [
+    "figshare:31282609"
+   ],
+   "S31": [
+    "biostudies:S-EPMC6084936"
+   ],
+   "S16": [
+    "biostudies:S-EPMC11305546"
+   ]
+  }
+ },
+ "V5": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "10.17617/3.1ddavp",
+     "10.17617/3.93v7dd",
+     "10.17617/3.a6enhh",
+     "10.17617/3.bvkvjf",
+     "10.17617/3.knfemp",
+     "10.17617/3.rcdk6m",
+     "10.17617/3.rzrnt8",
+     "10.17617/3.wpyyf3"
+    ]
+   },
+   {
+    "key": "A2",
+    "ids": [
+     "10.17632/vtbg4xn26v"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "10.5281/zenodo.4572396"
+    ]
+   },
+   {
+    "key": "B2",
+    "ids": [
+     "10.13012/b2idb-6733018_v1"
+    ]
+   }
+  ],
+  "reject": [
+   "10.5281/zenodo.17954317",
+   "10.5281/zenodo.17954316",
+   "MSV000101829",
+   "MSV000092846",
+   "10.5281/zenodo.4780883",
+   "10.17632/5cdpbpbkcz",
+   "datacite:10.6084/m9.figshare.10025651",
+   "datacite:10.6084/m9.figshare.23680892",
+   "datacite:10.6084/m9.figshare.c.6707756",
+   "datacite:10.57935/agr.26353132",
+   "zenodo:17954317",
+   "datacite:10.25405/ncl.34383213",
+   "10.5281/zenodo.23584075",
+   "datacite:10.6084/m9.figshare.25385748",
+   "zenodo:1100770",
+   "10.6084/m9.figshare.23635244",
+   "datacite:10.5281/zenodo.23584075",
+   "10.17632/v8gvnjkf73.1",
+   "10.57935/agr.26353132",
+   "10.17632/kn72vrxxy7",
+   "10.25405/ncl.34383213",
+   "10.17608/k6.auckland.34027347",
+   "10.6084/m9.figshare.c.6707756"
+  ],
+  "alias": {
+   "S12": [
+    "MSV000084590"
+   ]
+  }
+ },
+ "V6": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "10.18739/A25X25D07",
+     "doi:10.18739/A2793K"
+    ]
+   },
+   {
+    "key": "A2",
+    "ids": [
+     "hdl:2115/87441"
+    ]
+   }
+  ],
+  "optional": [],
+  "reject": [
+   "UNVERIFIED: NOAA NCEI Paleo - Lomonosovfonna, Svalbard ice core ion chemistry incl. MSA (Isaksson, Kekonen et al.)",
+   "https://www.polardata.ca/pdcsearch/PDCSearch.jsp?doi_id=256",
+   "UNVERIFIED: PANGAEA - Akademii Nauk ice cap, Severnaya Zemlya ion chemistry incl. MSA (Weiler, Fritzsche, Opel et al.)",
+   "UNVERIFIED: NOAA NCEI Paleo - NEEM-2011-S1 MSA and bromine (Maselli et al. 2017)",
+   "https://www.polardata.ca/pdcsearch/PDCSearch.jsp?doi_id=258",
+   "UNVERIFIED: NOAA NCEI Paleo - Mount Logan PR Col ice core major ions and MSA (Osterberg et al. 2008)",
+   "10.18739/A2TB0XV7T",
+   "UNVERIFIED: Lomonosovfonna MSA (Isaksson/O'Dwyer)",
+   "UNVERIFIED: NOAA NCEI Paleo - Eclipse Icefield, Yukon ice core chemistry (Yalcin, Wake et al.)",
+   "UNVERIFIED: Akademii Nauk ice core chemistry (Weiler et al. 2005; Opel et al.)",
+   "10.18739/A26T0GX7K",
+   "10.18739/a24627",
+   "doi:10.17863/cam.8949"
+  ],
+  "alias": {
+   "S2": [
+    "UNVERIFIED: NOAA NCEI Paleo - Greenland ice core MSA records (Osman et al. 2019)",
+    "UNVERIFIED: NOAA NCEI Paleo study for Osman et al. 2019 (paper doi:10.1038/s41586-019-1060-4)"
+   ],
+   "S4": [
+    "UNVERIFIED: Penny Ice Cap MSA",
+    "UNVERIFIED: NOAA NCEI Paleo - Penny Ice Cap, Baffin Island ice core chemistry (Grumet et al.)"
+   ],
+   "S1": [
+    "https://www.ncei.noaa.gov/pub/data/paleo/icecore/greenland/summit/gisp2/chem/",
+    "UNVERIFIED: GISP2 MSA (Saltzman et al. 1997)",
+    "UNVERIFIED: NOAA NCEI Paleo - GISP2 methanesulfonate (Saltzman et al. 1997)",
+    "UNVERIFIED: NSIDC GISP2 CD-ROM chemistry (gisp2/chem)",
+    "ede002dfdceb4824bf8e0b21c981bef3",
+    "b4d36db2ebee2563da095f0ba6d5bbb3",
+    "10.1594/PANGAEA.870454",
+    "10.5065/D6QR4V8G"
+   ],
+   "S11": [
+    "UNVERIFIED: Arctic Data Center - Greenland Summit ice core MSA (Jongebloed et al. 2023)"
+   ],
+   "S3": [
+    "UNVERIFIED: PANGAEA - GRIP MSA and sulfate (Legrand et al. 1997)"
+   ],
+   "S5": [
+    "dbfede9b7870d94b380012660684f6dc",
+    "c6f3b684c40a295d027c25ee7d415463",
+    "e0c6df464b7480679a58a30387ab79d2",
+    "b6a2512046e6f3d5bd02a7bc8583de4a"
+   ],
+   "S12": [
+    "10.18739/A2J67V"
+   ]
+  }
+ },
+ "V7": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "LucieLprt-Dvldr/WhaleDrone",
+     "https://huggingface.co/datasets/LucieLprt-Dvldr/WhaleDrone",
+     "https://huggingface.co/datasets/pierreadorni/WhaleDrone-YOLO",
+     "pierreadorni/WhaleDrone-YOLO"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "https://universe.roboflow.com/welding-gisso/dronewhale"
+    ]
+   },
+   {
+    "key": "B2",
+    "ids": [
+     "10.5281/zenodo.20070987",
+     "10.5281/zenodo.21401889"
+    ]
+   },
+   {
+    "key": "HAB1",
+    "ids": [
+     "universe.roboflow.com/welding-gisso/dronewhale",
+     "welding-gisso/dronewhale/1"
+    ]
+   }
+  ],
+  "reject": [
+   "10.34992/sgs5-yw58",
+   "Boulent2023_beluga_aerial_human_in_the_loop",
+   "10.5285/c1afe32c-493c-4b0a-8de4-2f1e6f8b6b4c",
+   "10.5285/c1afe32c-493c-4dc5-8c9b-7fe7d1be1b6c",
+   "Guirado2019_whale_counting_satellite",
+   "https://universe.roboflow.com/whale-detect",
+   "10.5285/C1AFE32C-493C-4ADD-9B2E-6E4C4A2D1F4D",
+   "10.1371/journal.pone.0254380",
+   "biostudies:S-EPMC6772036",
+   "biostudies:S-EPMC9142526",
+   "biostudies:S-EPMC8336832",
+   "S-EPMC6776647",
+   "biostudies:S-EPMC6776647",
+   "10.17863/cam.85970",
+   "hdl:1810/338557"
+  ],
+  "alias": {
+   "S1": [
+    "https://github.com/WSiqiqi/WSDataset"
+   ],
+   "S13": [
+    "Borowicz2019_aerial_trained_cetaceans_satellite"
+   ],
+   "S2": [
+    "Green2023_gray_whale_satellite_detection"
+   ]
+  }
+ },
+ "V8": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "10.25439/rmt.12618755"
+    ]
+   },
+   {
+    "key": "A2",
+    "ids": [
+     "10.5281/zenodo.16874898",
+     "https://stimmdb.coli.uni-saarland.de/"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "HAB1",
+    "ids": [
+     "Ankesh1234/parkinson_data",
+     "huggingface:Ankesh1234/parkinson_data"
+    ]
+   },
+   {
+    "key": "HAB2",
+    "ids": [
+     "huggingface:neuronbit/parkinsons-test",
+     "neuronbit/parkinsons-test"
+    ]
+   },
+   {
+    "key": "HAB3",
+    "ids": [
+     "huggingface:mdimamhosen/pd-voice-full-multimodal-dataset"
+    ]
+   }
+  ],
+  "reject": [
+   "kaggle:cycoool29/movement-disorders-voice",
+   "10.5281/zenodo.10777657",
+   "kaggle:feimuzhao/parkinson-audio",
+   "Kashish-jain/Parkinsons-training-data",
+   "UCI:301",
+   "huggingface:XANJEEV/Parkinson_Classification_Dataset",
+   "huggingface:Kashish-jain/Parkinsons-training-data",
+   "https://archive.ics.uci.edu/dataset/ (Parkinson Speech Dataset with Multiple Types of Sound Recordings)",
+   "XANJEEV/Parkinson_Classification_Dataset",
+   "https://zenodo.org/ (NeuroVoz: Castilian Spanish PD speech corpus)",
+   "PC-GITA (Spanish PD speech corpus, Orozco-Arroyo et al.)",
+   "10.5281/zenodo.10777656",
+   "10.24432/c5nc8m",
+   "UCI-301",
+   "10.5281/zenodo.10952479",
+   "10.5281/zenodo.10952480"
+  ],
+  "alias": {
+   "S15": [
+    "https://github.com/SJTU-YONGFU-RESEARCH-GRP/Parkinson-Patient-Speech-Dataset"
+   ],
+   "S2": [
+    "https://archive.ics.uci.edu/dataset/ (Italian Parkinson's Voice and Speech)",
+    "IEEE DataPort: Italian Parkinson's Voice and Speech (Dimauro et al.)",
+    "IEEE-DataPort: Italian Parkinson's Voice and Speech"
+   ],
+   "S3": [
+    "figshare:23849127"
+   ],
+   "S1": [
+    "https://zenodo.org/ (MDVR-KCL: Mobile Device Voice Recordings at King's College London)"
+   ],
+   "S5": [
+    "OpenAIRE:Arabic Parkinson's Disease Speech Dataset (Hassanat and Almahadin)"
+   ],
+   "A1": [
+    "10.6084/m9.figshare.12618755"
+   ]
+  }
+ },
+ "V9": {
+  "add": [
+   {
+    "key": "A1",
+    "ids": [
+     "CNP0005378"
+    ]
+   }
+  ],
+  "optional": [
+   {
+    "key": "B1",
+    "ids": [
+     "https://opus4.kobv.de/opus4-rhein-waal/frontdoor/index/index/docId/2082"
+    ]
+   },
+   {
+    "key": "SAB1",
+    "ids": [
+     "PRJEB29943"
+    ]
+   }
+  ],
+  "reject": [
+   "PRJEB115929",
+   "PRJNA741124",
+   "PRJNA487668",
+   "PRJNA1540402",
+   "PRJNA924001",
+   "PRJEB84924",
+   "PRJNA575544",
+   "PRJNA1247874",
+   "10.5281/zenodo.19557132",
+   "PRJEB34410",
+   "datacite:10.3929/ethz-b-000421754",
+   "10.6084/m9.figshare.c.7905958",
+   "datacite:10.5281/zenodo.19557132",
+   "PRJNA1105564",
+   "PRJNA294605"
+  ],
+  "alias": {
+   "S25": [
+    "zenodo:5940344"
+   ],
+   "B1": [
+    "opus4.kobv.de docId 2082"
+   ]
+  }
+ }
+}
