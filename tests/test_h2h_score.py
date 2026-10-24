@@ -442,6 +442,69 @@ def test_usage_gate_reruns_a_rate_limited_run_once_and_pauses_until_the_reset(
     assert json.loads((rd / "meta.json").read_text())["api_failure"] == "rate_limited"
 
 
+def test_a_wrapper_refusal_is_set_aside_and_run_once_more(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
+) -> None:
+    """PREREG amendment 2026-10-23: a run the wrapper refuses (exit 75, no transcript)
+    is a harness failure, set aside and re-run once, never kept as an invalid result."""
+    cfg = _cfg(model="m", budget_usd="1", claude_code="v")
+    task = {**TASK, "prompt": "Find every dataset."}
+    answered = [_rl(), {"type": "result", **OK}]
+    calls: list = []
+
+    real_run = run.subprocess.run
+
+    def script(*outcomes: tuple[int, list[dict]]):
+        def fake(cmd, **kw):
+            if cmd[0] == run.sys.executable:  # the spend gate: really run it
+                return real_run(cmd, **kw)
+            calls.append(cmd)
+            stdout = kw["stdout"]
+            rc, events = outcomes[min(len(calls), len(outcomes)) - 1]
+            for e in events:
+                stdout.write(json.dumps(e) + "\n")
+            return run.subprocess.CompletedProcess(cmd, rc, "", "bench-spend: cap")
+
+        return fake
+
+    assert run.api_failure([], 75) == "wrapper_refused"
+    assert run.api_failure([], 0) is None and run.api_failure(answered, 75) is None
+    monkeypatch.setattr(run.subprocess, "run", script((75, []), (0, answered)))
+    rd = run.run_one(task, "dam", 1, tmp_path, cfg)
+    assert len(calls) == 2  # run once more
+    assert json.loads((rd / "meta.json").read_text())["api_failure"] is None
+    kept = tmp_path / "_refused" / "dam-X-r1-1" / "meta.json"
+    assert json.loads(kept.read_text())["api_failure"] == "wrapper_refused"
+    log = [json.loads(x) for x in (tmp_path / "refused.jsonl").read_text().splitlines()]
+    assert [(e["arm"], e["rep"]) for e in log] == [("dam", 1)]
+    # Control: an answered run is one call, nothing set aside.
+    run.run_one(task, "web", 1, tmp_path, cfg)
+    assert len(calls) == 3 and len(log) == 1
+    # Refused twice: it stays as the run's row, never a third attempt.
+    calls.clear()
+    monkeypatch.setattr(run.subprocess, "run", script((75, []), (75, [])))
+    rd = run.run_one(task, "tu", 1, tmp_path, cfg)
+    assert len(calls) == 2
+    assert json.loads((rd / "meta.json").read_text())["api_failure"] == "wrapper_refused"
+    # If the spend gate refuses the re-run, the sweep stops with nothing recorded,
+    # so a resumed sweep runs it.
+    counter = tmp_path / "gate_calls"
+    gate_py = tmp_path / "gate.py"
+    gate_py.write_text(
+        "import pathlib, sys\n"
+        f"p = pathlib.Path({str(counter)!r})\n"
+        "n = int(p.read_text()) + 1 if p.exists() else 1\n"
+        "p.write_text(str(n))\n"
+        "print('cap reached', file=sys.stderr)\n"
+        "sys.exit(0 if n == 1 else 3)\n"
+    )
+    monkeypatch.setenv("BENCH_SPEND_GATE", str(gate_py))
+    calls.clear()
+    monkeypatch.setattr(run.subprocess, "run", script((75, []), (0, answered)))
+    assert run.run_one(task, "bare", 1, tmp_path, cfg) is None
+    assert len(calls) == 1 and not (tmp_path / "bare" / "X" / "r1" / "meta.json").exists()
+
+
 def test_usage_gate_pauses_at_five_hour_085_and_stops_at_seven_day_080(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
 ) -> None:

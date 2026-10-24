@@ -230,11 +230,24 @@ def rate_limit(events: list[dict]) -> dict | None:
     }
 
 
-def api_failure(events: list[dict]) -> str | None:
+# The benchmark-only claude wrapper's exit code when the spend gate refuses a launch
+# (PREREG_2026-10-20 amendment, 2026-10-23); Claude never starts, so there is no transcript.
+WRAPPER_REFUSED = 75
+
+# Where each kind of harness failure is set aside before its one re-run.
+SET_ASIDE = {"rate_limited": ("_ratelimited", "ratelimited.jsonl"),
+             "wrapper_refused": ("_refused", "refused.jsonl")}  # fmt: skip
+
+
+def api_failure(events: list[dict], status: int | str | None = None) -> str | None:
     """``rate_limited`` when the account's limit rejected the run before the model
     answered: a ``rejected`` rate-limit event and no successful result. Read from the
     transcript alone, never from the list or its score, so one rule picks rows in every
-    arm. A timeout or a budget stop is not one: it stays a result."""
+    arm. A timeout or a budget stop is not one: it stays a result.
+
+    ``wrapper_refused`` when the wrapper refused to launch it (exit 75, no transcript)."""
+    if status == WRAPPER_REFUSED and not events:
+        return "wrapper_refused"
     result = next((e for e in reversed(events) if e.get("type") == "result"), None)
     ok = result is not None and result.get("subtype") == "success" and not result.get("is_error")
     rejected = any(
@@ -355,15 +368,19 @@ def run_one(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace)
         _attempt(task, arm, rep, root, cfg)
         meta = json.loads((run_dir / "meta.json").read_text())
         _observe(root, run_dir, meta.get("rate_limit"))
-        if meta.get("api_failure") != "rate_limited" or attempt == 2:
+        kind = meta.get("api_failure")
+        if kind not in SET_ASIDE or attempt == 2:
             return run_dir
-        # Rejected by the account's limit before any answer: a harness failure. Kept,
-        # logged, and run once more after the pause.
-        dest = root / "_ratelimited" / f"{arm}-{task['id']}-r{rep}-1"
+        # Rejected by the account's limit before any answer, or refused by the wrapper
+        # before Claude started: a harness failure. Kept, logged, and run once more
+        # (after the pause; a refusal's re-run asks the spend gate first, and if it
+        # still refuses the sweep stops with the run unrecorded, so a resume runs it).
+        holding, log_name = SET_ASIDE[kind]
+        dest = root / holding / f"{arm}-{task['id']}-r{rep}-1"
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(run_dir), dest)
-        _log(root, "ratelimited.jsonl", {"arm": arm, "task": task["id"], "rep": rep,
-                                         "kept": str(dest)})  # fmt: skip
+        _log(root, log_name, {"arm": arm, "task": task["id"], "rep": rep,
+                              "kept": str(dest)})  # fmt: skip
     return run_dir
 
 
@@ -435,7 +452,7 @@ def _attempt(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace
     }
     events = _events(log)
     meta["rate_limit"] = rate_limit(events)
-    meta["api_failure"] = api_failure(events)
+    meta["api_failure"] = api_failure(events, status)
     (run_dir / "meta.json").write_text(json.dumps(meta))
     return run_dir
 
