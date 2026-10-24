@@ -19,6 +19,10 @@ the dam arm on an unreleased commit instead of the PyPI pin (``uvx --from``, wit
 ``--exclude-newer`` for its dependencies); preflight checks the installed package came
 from that commit, and the spec is recorded in every row and in ``versions.json``.
 
+``--model`` (default ``MODEL``) is the model every arm runs on. A run set holds one model:
+preflight refuses an ``--out`` started on another, ``versions.json`` records the model asked
+for and the models served, and a run served another model than it asked for is invalid.
+
 Usage gate (added 2026-10-18; the runs share the account's limits with its owner): after
 every run its transcript's last ``rate_limit_event`` is read and kept in ``meta.json``.
 A five-hour utilization at or above ``PAUSE_AT`` or a ``rejected`` status holds every
@@ -42,6 +46,7 @@ import random
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -225,11 +230,24 @@ def rate_limit(events: list[dict]) -> dict | None:
     }
 
 
-def api_failure(events: list[dict]) -> str | None:
+# The benchmark-only claude wrapper's exit code when the spend gate refuses a launch
+# (PREREG_2026-10-20 amendment, 2026-10-23); Claude never starts, so there is no transcript.
+WRAPPER_REFUSED = 75
+
+# Where each kind of harness failure is set aside before its one re-run.
+SET_ASIDE = {"rate_limited": ("_ratelimited", "ratelimited.jsonl"),
+             "wrapper_refused": ("_refused", "refused.jsonl")}  # fmt: skip
+
+
+def api_failure(events: list[dict], status: int | str | None = None) -> str | None:
     """``rate_limited`` when the account's limit rejected the run before the model
     answered: a ``rejected`` rate-limit event and no successful result. Read from the
     transcript alone, never from the list or its score, so one rule picks rows in every
-    arm. A timeout or a budget stop is not one: it stays a result."""
+    arm. A timeout or a budget stop is not one: it stays a result.
+
+    ``wrapper_refused`` when the wrapper refused to launch it (exit 75, no transcript)."""
+    if status == WRAPPER_REFUSED and not events:
+        return "wrapper_refused"
     result = next((e for e in reversed(events) if e.get("type") == "result"), None)
     ok = result is not None and result.get("subtype") == "success" and not result.get("is_error")
     rejected = any(
@@ -260,21 +278,76 @@ def _hold(root: Path) -> bool:
             return False
         wait = resume_at - time.time()
         if wait <= 0:
+            why = spend_stop()
+            if why:
+                with _GATE_LOCK:
+                    _GATE["stopped"] = f"spend gate: {why}"
+                _log(root, "pauses.jsonl", {"at": time.time(), "stop": True, "spend_gate": why})
+                return False
             return True
         time.sleep(min(wait, 60))
 
 
+def spend_stop() -> str | None:
+    """Why an API-billed sweep must stop before its next run, or None.
+
+    Set ``BENCH_SPEND_GATE`` to the shared spend meter's script and each run
+    first asks it (``check``, track from ``BENCH_TRACK``); any non-zero exit
+    (spend cap, billing violation, checkpoint) stops the sweep cleanly.
+    """
+    gate = os.environ.get("BENCH_SPEND_GATE")
+    if not gate:
+        return None
+    p = subprocess.run([sys.executable, gate, "check"], capture_output=True, text=True, check=False)
+    return None if p.returncode == 0 else (p.stderr.strip() or f"spend gate exit {p.returncode}")
+
+
+def probe_seven_day() -> float | None:
+    """A fresh seven-day reading: the newest ``rate_limit_event`` of a one-word Haiku run
+    with no tools, settings or servers. None if the probe fails or reports no window.
+
+    Added 2026-10-21: the server sometimes reports a spurious second weekly window
+    (0.98, resetting on another day) beside the real one (0.69 by /usage), so a reading
+    at the stop line is checked by a fresh probe before it stops the sweep."""
+    d = Path(tempfile.mkdtemp(prefix="h2h-probe-", dir="/tmp"))  # nosec B108 - as _attempt
+    try:
+        (d / "mcp.json").write_text(json.dumps({"mcpServers": {}}))
+        cmd = ["claude", "-p", "say ok", "--model", "claude-haiku-5-5", "--output-format",
+               "stream-json", "--verbose", "--no-session-persistence", "--setting-sources", "",
+               "--strict-mcp-config", "--mcp-config", str(d / "mcp.json"), "--tools", ""]  # fmt: skip
+        proc = subprocess.run(cmd, cwd=d, capture_output=True, text=True, timeout=120,
+                              env={**os.environ, "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"})  # fmt: skip
+        events = []
+        for line in proc.stdout.splitlines():
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        return (rate_limit(events) or {}).get("seven_day")
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    finally:
+        shutil.rmtree(d)
+
+
 def _observe(root: Path, run_dir: Path, rl: dict | None) -> None:
-    """Pause or stop the sweep on the reading a run just left."""
+    """Pause or stop the sweep on the reading a run just left. A seven-day reading at or
+    above the stop line stops the sweep only if a fresh probe agrees (or gives no
+    reading); otherwise the reading is logged and the sweep goes on."""
     if rl is None:
         return
     now = time.time()
     stop_at = _GATE.get("stop_at", STOP_AT)
     if (rl.get("seven_day") or 0) >= stop_at:
-        with _GATE_LOCK:
-            _GATE["stopped"] = f"seven_day {rl['seven_day']} >= {stop_at}"
-        _log(root, "pauses.jsonl", {"at": now, "stop": True, "after": str(run_dir), **rl})
-        return
+        fresh = probe_seven_day()
+        if fresh is None or fresh >= stop_at:
+            with _GATE_LOCK:
+                _GATE["stopped"] = f"seven_day {rl['seven_day']} >= {stop_at} (probe {fresh})"
+            _log(root, "pauses.jsonl", {"at": now, "stop": True, "probe": fresh,
+                                        "after": str(run_dir), **rl})  # fmt: skip
+            return
+        _log(root, "pauses.jsonl", {"at": now, "spurious_seven_day": True, "probe": fresh,
+                                    "after": str(run_dir), **rl})  # fmt: skip
     if rl.get("status") == "rejected" or (rl.get("five_hour") or 0) >= PAUSE_AT:
         until = float(rl.get("five_hour_resets") or now + 3600) + 60
         with _GATE_LOCK:
@@ -295,15 +368,21 @@ def run_one(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace)
         _attempt(task, arm, rep, root, cfg)
         meta = json.loads((run_dir / "meta.json").read_text())
         _observe(root, run_dir, meta.get("rate_limit"))
-        if meta.get("api_failure") != "rate_limited" or attempt == 2:
+        kind = meta.get("api_failure")
+        if kind not in SET_ASIDE or attempt == 2:
             return run_dir
-        # Rejected by the account's limit before any answer: a harness failure. Kept,
-        # logged, and run once more after the pause.
-        dest = root / "_ratelimited" / f"{arm}-{task['id']}-r{rep}-1"
+        # Rejected by the account's limit before any answer, or refused by the wrapper
+        # before Claude started: a harness failure. Kept, logged, and run once more
+        # (after the pause; a refusal's re-run asks the spend gate first, and if it
+        # still refuses the sweep stops with the run unrecorded, so a resume runs it).
+        # Numbered like _aborted/: a resumed sweep can set the same run aside again.
+        holding, log_name = SET_ASIDE[kind]
+        n = len(list((root / holding).glob(f"{arm}-{task['id']}-r{rep}-*")))
+        dest = root / holding / f"{arm}-{task['id']}-r{rep}-{n + 1}"
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(run_dir), dest)
-        _log(root, "ratelimited.jsonl", {"arm": arm, "task": task["id"], "rep": rep,
-                                         "kept": str(dest)})  # fmt: skip
+        _log(root, log_name, {"arm": arm, "task": task["id"], "rep": rep,
+                              "kept": str(dest)})  # fmt: skip
     return run_dir
 
 
@@ -375,7 +454,7 @@ def _attempt(task: dict, arm: str, rep: int, root: Path, cfg: argparse.Namespace
     }
     events = _events(log)
     meta["rate_limit"] = rate_limit(events)
-    meta["api_failure"] = api_failure(events)
+    meta["api_failure"] = api_failure(events, status)
     (run_dir / "meta.json").write_text(json.dumps(meta))
     return run_dir
 
@@ -625,14 +704,36 @@ def _tool_traffic(events: list[dict]) -> list[tuple[str, str]]:
     return out
 
 
-def leak_hits(events: list[dict], own: list[str]) -> list[dict]:
+# A path inside an installed tool (uv's cache, which holds the dam arm's git checkout,
+# a site-packages, pipx or node_modules tree), and what in such a path is still a leak:
+# an answer file (the checkout of this repository holds the committed keys).
+_INSTALL_PATH = re.compile(
+    r"[^\s\"']*(?:/\.cache/uv/|/site-packages/|/\.local/share/uv/|/\.local/pipx/"
+    r"|/node_modules/)[^\s\"']*"
+)
+_ANSWER_FILE = re.compile(
+    r"answer_key|adjudication(?:_reasons)?\.(?:json|yaml)"
+    r"|round[1-5]/(?:keys|tasks\.json|scores)|keys/[rtuv]\d+\.yaml"
+    r"|(?<![0-9a-z])(?:adj|pool)_[rtuv]\d+\.json",
+    re.IGNORECASE,
+)
+
+
+def leak_hits(events: list[dict], own: list[str], narrowed: bool = True) -> list[dict]:
     """Where the run touched the key, the benchmark or another run. ``own``: the run's
     own directories, removed first (an old round ran inside its run directory, whose path
-    names the round, and every Write of its answer names it)."""
+    names the round, and every Write of its answer names it).
+
+    ``narrowed`` (the primary rule from 2026-10-21): a tool-install path is not a leak
+    unless it names an answer file; ``narrowed=False`` is the rule as first written."""
     hits = []
     for where, text in _tool_traffic(events):
         for path in sorted(filter(None, own), key=len, reverse=True):
             text = text.replace(path, "<own>")
+        if narrowed:
+            text = _INSTALL_PATH.sub(
+                lambda m: m.group(0) if _ANSWER_FILE.search(m.group(0)) else "<install>", text
+            )
         hits += [{"where": where, "match": m.group(0)} for m in _LEAK.finditer(text)]
     return hits
 
@@ -643,8 +744,12 @@ def validity(arm: str, writes_list: bool, meta: dict, init: dict, result: dict,
 
     The run must finish (no timeout, harness error or budget stop), start with exactly
     its arm's tools and server, use them at least once unless the arm has none (bare),
-    and touch nothing of the benchmark (``leak_hits``)."""
+    and touch nothing of the benchmark (``leak_hits``). A run that says which model it
+    asked for (round 4 on) must have been served that model (the init event's)."""
     why = []
+    asked = meta.get("model_requested")
+    if asked and init.get("model") != asked:
+        why.append(f"model {init.get('model')} not {asked}")
     if meta.get("exit") != 0:
         why.append(f"exit {meta.get('exit')}")
     if not result:
@@ -691,7 +796,8 @@ def score(task: dict, arm: str, run_dir: Path, adjudication: dict | None = None)
     answer = (result.get("result") or "").casefold()
     servers = {s.get("name"): s.get("status") for s in init.get("mcp_servers", [])}
     meta = json.loads((run_dir / "meta.json").read_text())
-    leaks = leak_hits(events, [init.get("cwd"), meta.get("cwd"), str(run_dir.resolve())])
+    own = [init.get("cwd"), meta.get("cwd"), str(run_dir.resolve())]
+    leaks = leak_hits(events, own)
     invalid = validity(arm, task.get("kind") == "list", meta, init, result, calls, leaks)
     # Rounds 1-3 recorded none of these in meta.json; their init event still names the
     # model and the Claude Code version.
@@ -723,6 +829,8 @@ def score(task: dict, arm: str, run_dir: Path, adjudication: dict | None = None)
         "valid": not invalid,
         "invalid_reason": invalid,
         "leaks": leaks,
+        # The leak rule as first written (install paths count): the secondary validity.
+        "leaks_as_written": leak_hits(events, own, narrowed=False),
         **outcome,
         "tool_calls": len(calls),
         "tools": calls,
@@ -782,7 +890,15 @@ def preflight(tasks: list[dict], args: argparse.Namespace) -> None:
     problems = oracle_problems(tasks)
     if problems:
         raise SystemExit("oracle check failed: " + "; ".join(problems))
-    versions: dict[str, dict[str, str]] = {}
+    # One model per run set: a set started on one model is never topped up with another
+    # (the Opus round-5 runs stay as they are; a Haiku sweep gets its own --out).
+    model = getattr(args, "model", MODEL)
+    old = args.out / "versions.json"
+    if old.exists():
+        before = (json.loads(old.read_text()).get("_model") or {}).get("requested", MODEL)
+        if before != model:
+            raise SystemExit(f"{args.out} holds {before} runs, not {model}: use another --out")
+    versions: dict[str, dict] = {"_model": {"requested": model}}
     arms = args.arms.split(",")
     pins = {
         "dam": ("data-aggregator-mcp", args.dam_version),
@@ -863,6 +979,12 @@ def main() -> None:
         run_dir = args.out / a / t["id"] / f"r{r}"
         if (run_dir / "meta.json").exists():
             rows.append(score(t, a, run_dir, adjudication))
+    if not args.score_only and rows:
+        # The model each run was actually served (its init event), beside the one asked for.
+        vpath = args.out / "versions.json"
+        versions = json.loads(vpath.read_text())
+        versions["_model"]["served"] = sorted({str(r["model"]) for r in rows})
+        vpath.write_text(json.dumps(versions, indent=1, sort_keys=True))
     dest = args.write_to or args.out
     dest.mkdir(parents=True, exist_ok=True)
     (dest / "scores.json").write_text(json.dumps(rows, indent=1))
