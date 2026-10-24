@@ -169,3 +169,31 @@ At the coordinator's word, the Haiku sweep starts now; Sonnet does not run in th
 - **Second outage** (10-22): the resumed sweep made 20 runs (05:45 to 06:38), then paused at five-hour 0.86 until 08:21. DNS failed again at about 06:48, and a watchdog (3 failed lookups, 60 s apart) stopped the sweep at 06:51. No run was in progress or started in that window, so no row is set aside. 46 of 120 runs are made.
 - **Second outage window** (the coordinator's decision, by time, as for the first): the resume window 05:45 to 06:38 is set aside too. In the first outage connect timeouts began about an hour before DNS failed (03:21 against 04:24), and here 4 of the 5 dam runs since the resume met `ConnectTimeout`s to archives (0 of 7 before the pause). All 20 runs started in it, all four arms (rep 1 of V6 web and bare, V7 to V9 in every arm, rep 2 of V1 and V10), moved to `_outage/` (suffix `-2`, logged in `outage.jsonl`) for re-run. 26 runs stand; 94 remain.
 - **Usage stop** (10-22 15:16 EDT): resumed at 15:00 (DNS back; dam and tu connected in a probe; Zenodo and DataCite answered), the sweep made 3 more runs, then read seven-day 0.90 on the window that resets Sat 10-24 23:00. The confirming probe also read 0.90, so it stopped, as the rule says. 29 runs are made: rep 1 of V1 to V6 and V10 in all four arms, and V7 dam. They are kept, nothing is set aside, and 91 runs remain for after the reset.
+
+## Amendment, 2026-10-23 ~19:20 EDT: API billing (before any further run)
+
+- **Billing.** The user's decision: every remaining run in this design (both
+  tiers) bills an Anthropic API key, not the Claude subscription. Same model
+  IDs, prompts, arms, reps, harness and controls. Claude Code is 2.1.309 now
+  (recorded per row).
+- **How.** A benchmark-only `claude` wrapper, first on `PATH` for the sweep,
+  loads the key and then `exec`s the real CLI (so the harness's timeout still
+  kills Claude itself). It records each run's cost (Claude Code's
+  `total_cost_usd`; for a killed run, estimated from its token counts) and
+  refuses to start a run once the total reaches $171 of the user's $175 cap
+  (exit 75, no transcript). A run whose `init` event does not show
+  `apiKeySource: ANTHROPIC_API_KEY` stops every later launch.
+- **Gate.** API calls report no subscription windows, so the seven-day stop
+  and the five-hour pause no longer fire. `run.py` instead asks the spend gate
+  (`BENCH_SPEND_GATE`) before every run and, on a refusal, stops cleanly as
+  at the seven-day stop: finished rows stay, nothing new starts. Test added,
+  seen to fail with the check disabled (`mutate-run`).
+- **Set aside by exit code, not outcome.** A run the wrapper refuses (exit
+  75) is a harness failure, not a result: it is set aside and re-run once.
+- **Concurrency.** Up to 4 servers' sweeps run at once (2 before). The
+  workers per sweep are unchanged.
+- **Data-aggregator Sonnet checkpoint.** The pilot's seven-day projection rule
+  is replaced by a cost checkpoint: the Sonnet sweep starts after this
+  server's Haiku sweep and stops after 10 runs. Spend so far plus a
+  projection from those 10 runs decides it: within $175 it goes on;
+  otherwise it stays stopped and the user decides.

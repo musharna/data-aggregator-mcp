@@ -46,6 +46,7 @@ import random
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -264,8 +265,28 @@ def _hold(root: Path) -> bool:
             return False
         wait = resume_at - time.time()
         if wait <= 0:
+            why = spend_stop()
+            if why:
+                with _GATE_LOCK:
+                    _GATE["stopped"] = f"spend gate: {why}"
+                _log(root, "pauses.jsonl", {"at": time.time(), "stop": True, "spend_gate": why})
+                return False
             return True
         time.sleep(min(wait, 60))
+
+
+def spend_stop() -> str | None:
+    """Why an API-billed sweep must stop before its next run, or None.
+
+    Set ``BENCH_SPEND_GATE`` to the shared spend meter's script and each run
+    first asks it (``check``, track from ``BENCH_TRACK``); any non-zero exit
+    (spend cap, billing violation, checkpoint) stops the sweep cleanly.
+    """
+    gate = os.environ.get("BENCH_SPEND_GATE")
+    if not gate:
+        return None
+    p = subprocess.run([sys.executable, gate, "check"], capture_output=True, text=True, check=False)
+    return None if p.returncode == 0 else (p.stderr.strip() or f"spend gate exit {p.returncode}")
 
 
 def probe_seven_day() -> float | None:

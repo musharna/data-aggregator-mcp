@@ -664,3 +664,23 @@ def test_the_narrowed_leak_rule_excuses_an_install_path_but_not_an_answer_file_i
     assert site["valid"] and site["leaks_as_written"]
     assert not row("repo", "cat benchmarks/h2h/run.py")["valid"]  # control: outside one
     assert row("clean", "GSE123 found")["leaks_as_written"] == []  # control
+
+
+def test_the_spend_gate_stops_the_sweep_before_a_run_and_lets_it_through_under_cap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict
+) -> None:
+    """API-billed sweeps (2026-10-23): _hold asks BENCH_SPEND_GATE before every run; a
+    non-zero exit stops the sweep and is logged. Under the cap, or unset, runs start."""
+    gate_py = tmp_path / "gate.py"
+    gate_py.write_text("import os, sys\nprint('cap reached', file=sys.stderr)\nsys.exit(int(os.environ['GATE_RC']))\n")
+    monkeypatch.setenv("BENCH_SPEND_GATE", str(gate_py))
+    monkeypatch.setenv("GATE_RC", "0")
+    assert run._hold(tmp_path) is True and run._GATE["stopped"] is None  # under the cap
+    monkeypatch.setenv("GATE_RC", "3")
+    assert run._hold(tmp_path) is False
+    assert run._GATE["stopped"] == "spend gate: cap reached"
+    logged = [json.loads(x) for x in (tmp_path / "pauses.jsonl").read_text().splitlines()]
+    assert logged[-1]["spend_gate"] == "cap reached" and logged[-1]["stop"] is True
+    run._GATE["stopped"] = None
+    monkeypatch.delenv("BENCH_SPEND_GATE")  # unset: subscription sweeps unchanged
+    assert run._hold(tmp_path) is True
