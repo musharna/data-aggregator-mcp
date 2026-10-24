@@ -164,10 +164,10 @@ At the coordinator's word, the Haiku sweep starts now; Sonnet does not run in th
 - **Projection**: the pilot's $0.44 for 4 runs gives about $13 for 120 runs, +0.01 on the
   real window (0.70 → about 0.71).
 - **Start gate** (23:20 EDT, the coordinator's decision, before any run): for the Haiku tier, "start only if five-hour < 0.50" becomes "start if five-hour < 0.85" (`START_FIVE=0.85`). The run-level pause at five-hour 0.85 until `resetsAt` and the probe-confirmed seven-day 0.90 stop are unchanged. The 0.50 rule was set for Opus-arm rounds (Haiku pilot here: about $0.11 a run), and the gate treats every arm alike.
-- **Network outage** (10-22, recorded before any analysis): the sweep paused at 23:43 EDT (five-hour 0.85) and resumed at 03:21 into a DNS/network outage (the VT VPN tunnel mode; the WSL resolver failed for api.anthropic.com, github.com and pypi.org). From 03:21 the server arms' MCP servers often failed to start (11 runs `failed`/`pending`) and dam's archives timed out (Zenodo `ConnectTimeout`); from 04:24 every run failed at the model API (`EAI_AGAIN`). The coordinator stopped the sweep at 05:06. Rule, chosen by time and not by outcome: every run started after the resume (45 runs, all four arms) is an outage failure, not a result. They were moved to `_outage/` (logged in `outage.jsonl`) and will be re-run when the sweep resumes. The 26 runs made before the pause (rep 1: V1 to V5 in all arms, and V6 dam and tu) stand.
+- **Network outage** (10-22, recorded before any analysis): the sweep paused at 23:43 EDT (five-hour 0.85) and resumed at 03:21 into a DNS/network outage (the VT VPN tunnel mode; the WSL resolver failed for api.anthropic.com, github.com and pypi.org). From 03:21 the server arms' MCP servers often failed to start (11 runs `failed`/`pending`) and dam's archives timed out (Zenodo `ConnectTimeout`); from 04:24 every run failed at the model API (`EAI_AGAIN`). The coordinator stopped the sweep at 05:06. Rule, chosen by time and not by outcome: every run started after the resume (45 runs, all four arms) is an outage failure, not a result. They were moved to `_outage/` (logged in `outage.jsonl`) and will be re-run when the sweep resumes. The 26 runs made before the pause (rep 1 of V1, V10 and V2 to V5 in all arms, and V6 dam and tu; tasks run in string order, so V10 follows V1) stand. (Task list corrected 2026-10-24 from `outage.jsonl`; it first read "V1 to V5", which is 22 runs.)
 - **Resume** (10-22 05:45 EDT, DNS back, before any further run): the probe before resuming found dam connecting but ToolUniverse `failed` in 3 of 3 Claude Code probes. Started by hand it answers `initialize` after 22.6 s with the machine at load 19 on 22 cores, against Claude Code's default 30 s MCP connect timeout, which also covers Claude Code's own start. With `MCP_TIMEOUT=90000` it connects (1 of 1). The resumed sweep runs with `MCP_TIMEOUT=90000` in every run's environment. The setting affects only how long a server may take to start, the same for both server arms, and web and bare have no server. The 26 runs before the pause ran on the default, and all their servers connected.
 - **Second outage** (10-22): the resumed sweep made 20 runs (05:45 to 06:38), then paused at five-hour 0.86 until 08:21. DNS failed again at about 06:48, and a watchdog (3 failed lookups, 60 s apart) stopped the sweep at 06:51. No run was in progress or started in that window, so no row is set aside. 46 of 120 runs are made.
-- **Second outage window** (the coordinator's decision, by time, as for the first): the resume window 05:45 to 06:38 is set aside too. In the first outage connect timeouts began about an hour before DNS failed (03:21 against 04:24), and here 4 of the 5 dam runs since the resume met `ConnectTimeout`s to archives (0 of 7 before the pause). All 20 runs started in it, all four arms (rep 1 of V6 web and bare, V7 to V9 in every arm, rep 2 of V1 and V10), moved to `_outage/` (suffix `-2`, logged in `outage.jsonl`) for re-run. 26 runs stand; 94 remain.
+- **Second outage window** (the coordinator's decision, by time, as for the first): the resume window 05:45 to 06:38 is set aside too. In the first outage connect timeouts began about an hour before DNS failed (03:21 against 04:24), and here 4 of the 5 dam runs since the resume met `ConnectTimeout`s to archives (0 of 7 before the pause). All 20 runs started in it, all four arms (rep 1 of V6 web and bare and of V7 to V9 in every arm, rep 2 of V1 in every arm and of V10 dam and tu), moved to `_outage/` (suffix `-2`, logged in `outage.jsonl`) for re-run. 26 runs stand; 94 remain. (Run list corrected 2026-10-24 from `outage.jsonl`, window 2: it first read "rep 2 of V1 and V10", which sums to 22.)
 - **Usage stop** (10-22 15:16 EDT): resumed at 15:00 (DNS back; dam and tu connected in a probe; Zenodo and DataCite answered), the sweep made 3 more runs, then read seven-day 0.90 on the window that resets Sat 10-24 23:00. The confirming probe also read 0.90, so it stopped, as the rule says. 29 runs are made: rep 1 of V1 to V6 and V10 in all four arms, and V7 dam. They are kept, nothing is set aside, and 91 runs remain for after the reset.
 
 ## Amendment, 2026-10-23 ~19:20 EDT: API billing (before any further run)
@@ -213,3 +213,22 @@ At the coordinator's word, the Haiku sweep starts now; Sonnet does not run in th
   never the environment; the run's `init` must show `apiKeySource:
   apiKeyHelper` and the permission mode the harness asked for, or every later
   launch stops.
+- **Where the billing check lives (clarification, 2026-10-24, after the
+  sweeps; changes no rule).** The two "stops every later launch" checks above
+  are not in `run.py`. They are in the benchmark-only wrapper, which is
+  outside this repo (`~/.claude/state/mcp-bench-api/`). After each run its
+  recorder (`bench_spend.py record`) reads the `init` event and writes a
+  `BILLING_VIOLATION` flag if `apiKeySource` is wrong or the permission mode is
+  not the one the harness asked for. From then on `bench_spend.py check` exits 5,
+  so the wrapper refuses every launch (exit 75) and `run.py`'s spend gate
+  stops the sweep. The wrapper's own test (`test_wrapper.py`, cases 4 and 7)
+  raises both flags and checks that launches are blocked, then that they
+  start again once the flag is cleared. The recorder runs after a run ends,
+  so a run already started on the other worker can still finish. The ledger
+  logged 313 data-aggregator sweep runs (Haiku, Sonnet and the Sonnet pilot)
+  and 17 adjudication calls. 98 sweep runs used `ANTHROPIC_API_KEY`, all
+  inside the 20:38-20:52 set-aside window. The other 215 and all 17
+  adjudication calls used `apiKeyHelper`, each in the asked-for mode. No flag
+  was ever raised, and no run was refused with exit 75. `run.py` now sets an
+  exit-75 refusal with no transcript aside (`_refused/`, `refused.jsonl`) and
+  runs it once more, as the rule above says.
