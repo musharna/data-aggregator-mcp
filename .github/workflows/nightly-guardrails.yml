@@ -426,18 +426,19 @@ jobs:
           # A partial run is not a survivor count; say so where it is read.
           if [ "$ABORTED" = "1" ]; then title="$title (PARTIAL: mutmut aborted, $UNCHECKED unchecked)"
           elif [ "${UNCHECKED:-0}" != "0" ]; then title="$title ($UNCHECKED unchecked at the wall-clock cap)"; fi
+          # A body file of cut lines, never argv: see the dependency-audit issue step.
           # shellcheck disable=SC2016  # printf format string is literal by design
-          body="$(printf 'Run: %s/%s/actions/runs/%s\n\nEach survivor is a line of code no test observes.\n\n```\n%s\n```\n' \
-                  "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$(head -150 survivors.txt)")"
+          printf 'Run: %s/%s/actions/runs/%s\n\nEach survivor is a line of code no test observes.\n\n```\n%s\n```\n' \
+                 "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$(head -150 survivors.txt | cut -c1-200)" > /tmp/issue-body.md
           num=$(gh issue list --label mutation --state open --json number -q '.[0].number')
-          if [ -n "$num" ]; then gh issue edit "$num" --title "$title" --body "$body"
+          if [ -n "$num" ]; then gh issue edit "$num" --title "$title" --body-file /tmp/issue-body.md
           else
             gh label create mutation --color 8B0000 --force >/dev/null
             # Take the number from the create call's URL. Re-listing right after
             # a create returned NOTHING (figcite 2026-09-17, index lag): the
             # triage prompt then read "issue #", Haiku spent 37 turns and $0.69
             # with 14 permission denials, posted nowhere, and the step was green.
-            url=$(gh issue create --label mutation --title "$title" --body "$body")
+            url=$(gh issue create --label mutation --title "$title" --body-file /tmp/issue-body.md)
             num=${url##*/}
           fi
           case "$num" in ''|*[!0-9]*) echo "::error::could not determine the tracking issue number (got '$num')"; exit 1;; esac
@@ -635,14 +636,31 @@ jobs:
             if [ -n "$num" ]; then gh issue close "$num" --comment "pip-audit is clean again on $(date -u +%Y-%m-%d) ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."; fi
             echo "dependencies clean"; exit 0
           fi
-          # shellcheck disable=SC2016  # printf format string is literal by design
-          body="$(printf 'Run: %s/%s/actions/runs/%s\n\npip-audit found a known vulnerability in a dependency already on the default branch. Bump it in a PR; that PR is audited because it changes a dependency file.\n\n```\n%s\n```\n' \
-                  "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$(grep -vE '^\s*$' /tmp/audit.txt | tail -60)")"
+          # The body goes in a file, never on argv, and every line is cut: one
+          # argument is capped at 128 KB and an issue body at 65,536 characters.
+          # --desc puts a whole advisory on one table row and pads the ---- rule
+          # to the widest (28,747 characters for one pillow advisory). figcite
+          # 2026-10-31: `gh: Argument list too long`, the issue never written.
+          # At most 300 lines of at most 160 characters (GNU cut -c counts bytes,
+          # others characters; either way <= 160 characters): under 48,500
+          # characters, every ID kept. awk, not grep -v: an empty match must reach
+          # the count below under -e and under -eo pipefail alike.
+          sed -n '/^Found [0-9][0-9]* known vulnerabilit/,$p' /tmp/audit.txt | awk 'NF' | cut -c1-160 > /tmp/audit-rows.txt
+          total=$(wc -l < /tmp/audit-rows.txt)
+          if [ "$total" -eq 0 ]; then echo "::error::pip-audit reported a vulnerability but printed no 'Found N known vulnerabilities' line: its output format changed"; exit 1; fi
+          {
+            # shellcheck disable=SC2016  # printf format string is literal by design
+            printf 'Run: %s/%s/actions/runs/%s\n\npip-audit found a known vulnerability in a dependency already on the default branch. Bump it in a PR; that PR is audited because it changes a dependency file. Descriptions are cut at 160 characters; look an ID up at https://osv.dev/vulnerability/<ID>.\n\n```\n' \
+                   "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+            head -300 /tmp/audit-rows.txt
+            if [ "$total" -gt 300 ]; then echo "... $((total - 300)) more rows: run pip-audit locally for the rest"; fi
+            printf '```\n'
+          } > /tmp/issue-body.md
           title="dependency audit: known vulnerabilities on the default branch"
-          if [ -n "$num" ]; then gh issue edit "$num" --title "$title" --body "$body" >/dev/null
+          if [ -n "$num" ]; then gh issue edit "$num" --title "$title" --body-file /tmp/issue-body.md >/dev/null
           else
             gh label create dependency-audit --color B60205 --force >/dev/null
-            gh issue create --label dependency-audit --title "$title" --body "$body" >/dev/null
+            gh issue create --label dependency-audit --title "$title" --body-file /tmp/issue-body.md >/dev/null
           fi
           echo "::error::known-vulnerable dependency on the default branch; see the dependency-audit issue"; exit 1
 
