@@ -605,26 +605,27 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
-      - name: pip-audit the default branch's resolved dependencies
+      - name: Audit every package in uv.lock, for every Python it covers
         id: audit
         run: |
-          if [ -x scripts/guardrails-setup.sh ]; then bash scripts/guardrails-setup.sh; fi
-          # assignment, not inline $(...): a helper failure must stop the step
-          extras_s=$(python3 scripts/uv_extras.py)
-          read -ra extras <<<"$extras_s"
-          uv sync "${extras[@]}" --dev
-          uv export "${extras[@]}" --dev --no-emit-project --no-hashes -o /tmp/req.txt
+          # The audit can fail: a pin only another Python selects is found, a clean
+          # lock passes, no network exits 2. `uv export | pip-audit` audited only
+          # this runner's Python (figcite, 2026-11-01: pillow 12.3.0 for 3.10).
+          bash scripts/lock-audit-selftest.sh
+          # Findings on stdout, uv's `Found ...` summary on stderr: kept apart, so
+          # the issue body does not depend on how the two streams interleave.
           set +e
-          uvx pip-audit -r /tmp/req.txt --strict --desc on > /tmp/audit.txt 2>&1
+          bash scripts/lock_audit.sh > /tmp/audit.txt 2> /tmp/audit-log.txt
           rc=$?
           set -e
+          cat /tmp/audit-log.txt
           tail -40 /tmp/audit.txt
-          # 0 = clean, 1 = vulnerabilities. Anything else is pip-audit failing to
+          # 0 = clean, 1 = vulnerabilities. Anything else is the audit failing to
           # run, which must not read as "clean" or as "vulnerable".
           case "$rc" in
             0) echo "state=clean" >> "$GITHUB_OUTPUT" ;;
-            1) if grep -qE 'vulnerabilit' /tmp/audit.txt; then echo "state=vulnerable" >> "$GITHUB_OUTPUT"; else echo "::error::pip-audit exited 1 without reporting a vulnerability: it did not run"; exit 1; fi ;;
-            *) echo "::error::pip-audit exited $rc: it did not run"; exit 1 ;;
+            1) if grep -qE '^Found .* known vulnerabilit' /tmp/audit-log.txt; then echo "state=vulnerable" >> "$GITHUB_OUTPUT"; else echo "::error::uv audit exited 1 without its 'Found N known vulnerabilities' line: it did not run, or its output format changed"; exit 1; fi ;;
+            *) echo "::error::uv audit exited $rc: it did not run"; exit 1 ;;
           esac
       - name: Open, update or close the dependency-audit issue
         env:
@@ -633,27 +634,27 @@ jobs:
         run: |
           num=$(gh issue list --label dependency-audit --state open --json number -q '.[0].number')
           if [ "$STATE" = clean ]; then
-            if [ -n "$num" ]; then gh issue close "$num" --comment "pip-audit is clean again on $(date -u +%Y-%m-%d) ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."; fi
+            if [ -n "$num" ]; then gh issue close "$num" --comment "The lock audit is clean again on $(date -u +%Y-%m-%d) ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."; fi
             echo "dependencies clean"; exit 0
           fi
           # The body goes in a file, never on argv, and every line is cut: one
-          # argument is capped at 128 KB and an issue body at 65,536 characters.
-          # --desc puts a whole advisory on one table row and pads the ---- rule
-          # to the widest (28,747 characters for one pillow advisory). figcite
-          # 2026-10-31: `gh: Argument list too long`, the issue never written.
+          # argument is capped at 128 KB and an issue body at 65,536 characters
+          # (figcite 2026-10-31: pip-audit --desc rows of 28,747 characters,
+          # `gh: Argument list too long`, the issue never written).
           # At most 300 lines of at most 160 characters (GNU cut -c counts bytes,
           # others characters; either way <= 160 characters): under 48,500
-          # characters, every ID kept. awk, not grep -v: an empty match must reach
-          # the count below under -e and under -eo pipefail alike.
-          sed -n '/^Found [0-9][0-9]* known vulnerabilit/,$p' /tmp/audit.txt | awk 'NF' | cut -c1-160 > /tmp/audit-rows.txt
+          # characters. awk, not grep -v: an empty match must reach the count
+          # below under -e and under -eo pipefail alike.
+          found=$(awk '/^Found .* known vulnerabilit/ { print; exit }' /tmp/audit-log.txt)
+          awk 'NF' /tmp/audit.txt | cut -c1-160 > /tmp/audit-rows.txt
           total=$(wc -l < /tmp/audit-rows.txt)
-          if [ "$total" -eq 0 ]; then echo "::error::pip-audit reported a vulnerability but printed no 'Found N known vulnerabilities' line: its output format changed"; exit 1; fi
+          if [ -z "$found" ] || [ "$total" -eq 0 ]; then echo "::error::uv audit reported a vulnerability but printed no 'Found N known vulnerabilities' line or no findings: its output format changed"; exit 1; fi
           {
             # shellcheck disable=SC2016  # printf format string is literal by design
-            printf 'Run: %s/%s/actions/runs/%s\n\npip-audit found a known vulnerability in a dependency already on the default branch. Bump it in a PR; that PR is audited because it changes a dependency file. Descriptions are cut at 160 characters; look an ID up at https://osv.dev/vulnerability/<ID>.\n\n```\n' \
-                   "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+            printf 'Run: %s/%s/actions/runs/%s\n\n`uv audit` found a known vulnerability in a package in uv.lock, for at least one Python version or platform the lock covers. Bump it in a PR; that PR is audited because it changes a dependency file. Lines are cut at 160 characters; look an ID up at https://osv.dev/vulnerability/<ID>.\n\n```\n%s\n' \
+                   "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "${found:0:160}"
             head -300 /tmp/audit-rows.txt
-            if [ "$total" -gt 300 ]; then echo "... $((total - 300)) more rows: run pip-audit locally for the rest"; fi
+            if [ "$total" -gt 300 ]; then echo "... $((total - 300)) more lines: run 'bash scripts/lock_audit.sh' for the rest"; fi
             printf '```\n'
           } > /tmp/issue-body.md
           title="dependency audit: known vulnerabilities on the default branch"
