@@ -276,12 +276,20 @@ jobs:
           claude_args: |
             --allowed-tools "${{ env.REVIEW_TOOLS }}"
             --max-turns 80
-      - name: Subscription out of usage? Then the API key reviews instead
-        # Only a usage limit falls back. On a limit the action's transcript has
-        # an assistant message with error "rate_limit" ("You've hit your weekly
-        # limit", 2026-10-17); the step's execution_file output is unset when it
-        # fails, so read the file at its fixed path. Any other failure is a real
-        # one and fails here, with the reason.
+      - name: Subscription refused (usage limit, or turned off)? Then the API key reviews instead
+        # Two refusals fall back, each named in the warning. A usage limit: the
+        # action's transcript has an assistant message with error "rate_limit"
+        # ("You've hit your weekly limit", 2026-10-17). Subscription access
+        # turned off for Claude Code by the organization: the run ends before
+        # any turn ($0) with "Your organization has disabled Claude subscription
+        # access for Claude Code · Use an Anthropic API key instead"
+        # (phylokit-mcp#90, 2026-11-03). That one is matched on its text, so if
+        # the wording changes it fails here with the reason, as before. Anything
+        # else is a real failure (a bad token fails with its 401, 2026-10-18)
+        # and fails here, with the reason. The transcript's shape (message types
+        # and error codes, no text) is printed, so the next new refusal can be
+        # told apart from the log. The step's execution_file output is unset
+        # when it fails, so read the file at its fixed path.
         id: fallback
         if: steps.review.outcome == 'failure'
         env:
@@ -289,13 +297,18 @@ jobs:
           KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           why=$(jq -r '[.[] | select(.type == "result") | .result][0] // "no result"' "$F" 2>/dev/null || echo "no transcript at $F")
-          if ! jq -e 'any(.[]; .type == "assistant" and .error == "rate_limit")' "$F" >/dev/null 2>&1; then
-            echo "::error::the review step failed, and not on a usage limit: $why"; exit 1
+          echo "transcript shape: $(jq -c '[.[] | {type, subtype, error} | with_entries(select(.value != null))]' "$F" 2>/dev/null || echo unreadable)"
+          if jq -e 'any(.[]; .type == "assistant" and .error == "rate_limit")' "$F" >/dev/null 2>&1; then
+            refused="subscription usage limit"
+          elif grep -qF 'disabled Claude subscription access' <<<"$why"; then
+            refused="subscription access turned off by the organization"
+          else
+            echo "::error::the review step failed, and not on a usage limit or a turned-off subscription: $why"; exit 1
           fi
           if [ -z "$KEY" ]; then
-            echo "::error::subscription usage limit ($why) and no ANTHROPIC_API_KEY secret to fall back on. Add it: gh secret set ANTHROPIC_API_KEY -R ${{ github.repository }}"; exit 1
+            echo "::error::$refused ($why) and no ANTHROPIC_API_KEY secret to fall back on. Add it: gh secret set ANTHROPIC_API_KEY -R ${{ github.repository }}"; exit 1
           fi
-          echo "::warning::subscription usage limit ($why): this review runs on the API key"
+          echo "::warning::$refused ($why): this review runs on the API key"
           echo "run=1" >>"$GITHUB_OUTPUT"
       - name: Review on the API key (Claude Code itself, not the action)
         # Not the action: it labels its requests claude-code-github-action, and
