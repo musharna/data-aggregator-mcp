@@ -276,7 +276,7 @@ jobs:
           claude_args: |
             --allowed-tools "${{ env.REVIEW_TOOLS }}"
             --max-turns 80
-      - name: Subscription refused (usage limit, or turned off)? Then the API key reviews instead
+      - name: Subscription refused (usage limit, or turned off)? Then the next credential reviews instead
         # Two refusals fall back, each named in the warning. A usage limit: the
         # action's transcript has an assistant message with error "rate_limit"
         # ("You've hit your weekly limit", 2026-10-17). Subscription access
@@ -289,28 +289,51 @@ jobs:
         # and fails here, with the reason. The transcript's shape (message types
         # and error codes, no text) is printed, so the next new refusal can be
         # told apart from the log. The step's execution_file output is unset
-        # when it fails, so read the file at its fixed path.
+        # when it fails, so read the file at its fixed path. The rules are one
+        # function, written to a file here and sourced by the next step, so the
+        # main review and every spare credential are classified by the same code.
         id: fallback
         if: steps.review.outcome == 'failure'
         env:
           F: ${{ runner.temp }}/claude-execution-output.json
+          KEY2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          KEY3: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 }}
           KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          cat >"$RUNNER_TEMP/refusal.sh" <<'SH'
+          # refusal TRANSCRIPT: the refusal's name if TRANSCRIPT (a JSON array of
+          # messages) is one another credential can get past; nothing otherwise.
+          refusal() {
+            local why
+            why=$(jq -r '[.[] | select(.type == "result") | .result][0] // ""' "$1" 2>/dev/null) || why=""
+            if jq -e 'any(.[]; .type == "assistant" and .error == "rate_limit")' "$1" >/dev/null 2>&1; then
+              echo "subscription usage limit"
+            elif grep -qF 'disabled Claude subscription access' <<<"$why"; then
+              echo "subscription access turned off by the organization"
+            fi
+          }
+          SH
+          . "$RUNNER_TEMP/refusal.sh"
           why=$(jq -r '[.[] | select(.type == "result") | .result][0] // "no result"' "$F" 2>/dev/null || echo "no transcript at $F")
           echo "transcript shape: $(jq -c '[.[] | {type, subtype, error} | with_entries(select(.value != null))]' "$F" 2>/dev/null || echo unreadable)"
-          if jq -e 'any(.[]; .type == "assistant" and .error == "rate_limit")' "$F" >/dev/null 2>&1; then
-            refused="subscription usage limit"
-          elif grep -qF 'disabled Claude subscription access' <<<"$why"; then
-            refused="subscription access turned off by the organization"
-          else
+          refused=$(refusal "$F")
+          if [ -z "$refused" ]; then
             echo "::error::the review step failed, and not on a usage limit or a turned-off subscription: $why"; exit 1
           fi
-          if [ -z "$KEY" ]; then
-            echo "::error::$refused ($why) and no ANTHROPIC_API_KEY secret to fall back on. Add it: gh secret set ANTHROPIC_API_KEY -R ${{ github.repository }}"; exit 1
+          if [ -z "$KEY2$KEY3$KEY" ]; then
+            echo "::error::$refused ($why) and no other credential to fall back on. Add one: run claude setup-token signed in to another subscription, then gh secret set CLAUDE_CODE_OAUTH_TOKEN_2 -R ${{ github.repository }} (or CLAUDE_CODE_OAUTH_TOKEN_3, or ANTHROPIC_API_KEY)"; exit 1
           fi
-          echo "::warning::$refused ($why): this review runs on the API key"
+          echo "::warning::$refused ($why): this review moves to the next credential"
           echo "run=1" >>"$GITHUB_OUTPUT"
-      - name: Review on the API key (Claude Code itself, not the action)
+      - name: Review on the next credential (other subscriptions first, then the API key)
+        # In order: CLAUDE_CODE_OAUTH_TOKEN_2, CLAUDE_CODE_OAUTH_TOKEN_3 (other
+        # Claude subscriptions, from claude setup-token), then ANTHROPIC_API_KEY.
+        # An unset slot is skipped. A refusal (the same function as the step
+        # above) moves to the next slot; any other failure stops here with its
+        # reason, because the next account would not fix a bad token or a review
+        # that ran out of turns, and rotating past an expired token would hide it.
+        # Each run gets its own credential and no other: the CLI prefers an API
+        # key over an OAuth token when both are set.
         # Not the action: it labels its requests claude-code-github-action, and
         # this account's API credits refuse that label ("Credit balance is too
         # low"; the same key works from the CLI, 2026-10-18). The action already
@@ -323,21 +346,43 @@ jobs:
         # /proc. Sonnet, as on the subscription: an API key defaults to Opus.
         if: steps.fallback.outputs.run == '1'
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUB2: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 }}
+          SUB3: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 }}
+          APIKEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GH_TOKEN: ${{ github.token }}
         run: |
           claude=$HOME/.local/bin/claude
           [ -x "$claude" ] || { echo "::error::no Claude Code CLI at $claude (the action installs it)"; exit 1; }
-          out=$RUNNER_TEMP/review-api.json
-          rc=0
-          "$claude" -p "$REVIEW_PROMPT$REVIEW_CONTEXT" --model claude-sonnet-5 --max-turns 80 \
-            --allowed-tools "$REVIEW_TOOLS" --setting-sources user --strict-mcp-config \
-            --output-format json >"$out" || rc=$?
-          # The summary only; the transcript stays out of a public log.
-          jq -c '{subtype, is_error, num_turns, total_cost_usd}' "$out" || { echo "::error::no JSON result (exit $rc)"; exit 1; }
-          if [ "$rc" != 0 ] || jq -e '.is_error' "$out" >/dev/null; then
-            echo "::error::the API-key review failed (exit $rc): $(jq -r '.result // ""' "$out" | head -c 200)"; exit 1
-          fi
+          . "$RUNNER_TEMP/refusal.sh"
+          tried=""
+          for slot in CLAUDE_CODE_OAUTH_TOKEN_2 CLAUDE_CODE_OAUTH_TOKEN_3 ANTHROPIC_API_KEY; do
+            case $slot in
+              CLAUDE_CODE_OAUTH_TOKEN_2) cred=$SUB2 var=CLAUDE_CODE_OAUTH_TOKEN ;;
+              CLAUDE_CODE_OAUTH_TOKEN_3) cred=$SUB3 var=CLAUDE_CODE_OAUTH_TOKEN ;;
+              ANTHROPIC_API_KEY) cred=$APIKEY var=ANTHROPIC_API_KEY ;;
+            esac
+            [ -n "$cred" ] || continue
+            out=$RUNNER_TEMP/review-$slot.jsonl
+            rc=0
+            env -u SUB2 -u SUB3 -u APIKEY -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY "$var=$cred" \
+              "$claude" -p "$REVIEW_PROMPT$REVIEW_CONTEXT" --model claude-sonnet-5 --max-turns 80 \
+              --allowed-tools "$REVIEW_TOOLS" --setting-sources user --strict-mcp-config \
+              --output-format stream-json --verbose >"$out" || rc=$?
+            jq -s . "$out" >"$out.json" 2>/dev/null || { echo "::error::$slot: no JSON transcript (exit $rc)"; exit 1; }
+            # The summary only; the transcript stays out of a public log.
+            echo "$slot: $(jq -c '[.[] | select(.type == "result")][-1] | {subtype, is_error, num_turns, total_cost_usd}' "$out.json")"
+            if [ "$rc" = 0 ] && jq -e '[.[] | select(.type == "result")][-1] | .is_error == false' "$out.json" >/dev/null; then
+              echo "reviewed on $slot"; exit 0
+            fi
+            refused=$(refusal "$out.json")
+            if [ -n "$refused" ]; then
+              echo "::warning::$slot: $refused, so the next credential reviews instead"
+              tried="$tried $slot ($refused)"
+              continue
+            fi
+            echo "::error::the review on $slot failed (exit $rc): $(jq -r '[.[] | select(.type == "result")][-1].result // ""' "$out.json" | head -c 200)"; exit 1
+          done
+          echo "::error::every credential was refused:${tried:- none set}"; exit 1
       - name: Review was actually posted BY THIS RUN (the comment is the deliverable)
         # The action is green whenever the model stops cleanly, posted or not
         # (tmodloader#89, 2026-09-30). Accept only a comment carrying this run
