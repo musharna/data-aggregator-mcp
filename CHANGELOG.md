@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `fetch(extract=true)` extracts an archive it resumes. A verified archive already on
+  disk was reported as done without being extracted, so an archive fetched earlier
+  without `extract`, or one whose extraction failed or was killed after its download
+  finished, came back as the bare archive with nothing unpacked, on every retry.
+  Extraction overwrites its members, so redoing a finished one is safe.
+
 ## [0.75.4] - 2026-10-19
 
 ### Fixed
