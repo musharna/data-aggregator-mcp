@@ -97,11 +97,12 @@ def _is_public(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     return ip.is_global and not (ip.is_reserved or ip.is_multicast)
 
 
-def _origin(url: str) -> tuple[str, str | None, int | None]:
+def _origin(url: str, *, what: str) -> tuple[str, str | None, int | None]:
     """Scheme, host and port, the port filled in when the URL leaves it implicit: httpx
     drops a default port when it prints a request URL. ``urlsplit`` lower-cases the
-    scheme and ``hostname`` the host."""
-    parts = urlsplit(url)
+    scheme and ``hostname`` the host. Parsed through ``split_url``: a redirect to a port
+    out of range reached the bare ``.port`` here as ``ValueError`` (issue 347)."""
+    parts = split_url(url, what=what)
     return parts.scheme, parts.hostname, parts.port or _DEFAULT_PORTS.get(parts.scheme)
 
 
@@ -109,7 +110,7 @@ def operator_configured(url: str) -> dict[str, Any]:
     """Request extensions marking a request to ``url`` as one the operator configured, so
     ``enforce_on_request`` passes it while it stays on ``url``'s origin. For the model
     endpoints only, never for a URL that came from a record or a caller."""
-    return {_OPERATOR_CONFIGURED: _origin(url)}
+    return {_OPERATOR_CONFIGURED: _origin(url, what="operator-configured endpoint")}
 
 
 def split_url(url: str, *, what: str) -> SplitResult:
@@ -233,7 +234,7 @@ async def enforce_on_request(request: Any) -> None:
     the mark names; on any other origin, a redirect target included, it is checked.
     """
     url = str(request.url)
-    if request.extensions.get(_OPERATOR_CONFIGURED) == _origin(url):
+    if request.extensions.get(_OPERATOR_CONFIGURED) == _origin(url, what="request"):
         return
     await assert_public_url(url, what="request")
 

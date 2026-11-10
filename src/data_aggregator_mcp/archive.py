@@ -48,6 +48,12 @@ def _reading(path: Path) -> Iterator[None]:
 
 def _safe_dest(root: Path, member_name: str) -> Path:
     """Resolve a member to a file path strictly inside ``root`` or fail loud."""
+    if "\x00" in member_name:
+        # A tar's PAX path header can carry one; no file name can, and resolve() would
+        # raise a bare ValueError ("embedded null character in path").
+        raise UpstreamUnavailableError(
+            f"archive member {member_name!r} holds a NUL byte, which no file name can — refusing"
+        )
     target = (root / member_name).resolve()
     if target == root or not target.is_relative_to(root):
         raise UpstreamUnavailableError(

@@ -23,6 +23,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per source, largest first, and names the sources that may count records holding only
   one word. `total` itself is unchanged.
 
+- Three inputs that raised a bare `ValueError` now get this server's own error, naming
+  what was refused: a redirect to a port out of range (`ValidationError`, from the egress
+  hook; the request was already never sent), a `fetch` `dest` holding a NUL byte
+  (`ValidationError`, before any request), and a tar member whose name holds a NUL byte
+  (`UpstreamUnavailableError`, like any other bad member name).
+
 - `fetch(extract=true)` extracts an archive it resumes. A verified archive already on
   disk was reported as done without being extracted, so an archive fetched earlier
   without `extract`, or one whose extraction failed or was killed after its download

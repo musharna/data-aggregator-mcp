@@ -10,7 +10,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from data_aggregator_mcp import fetch as fetch_mod
-from data_aggregator_mcp.errors import FetchTooLargeError
+from data_aggregator_mcp.errors import FetchTooLargeError, ValidationError
 from data_aggregator_mcp.models import DataResource, FileEntry
 
 
@@ -863,3 +863,23 @@ def test_a_path_through_a_planned_file_gets_its_own_directory_instead_of_hanging
         "data~fa80af8f/y.csv",
         "other/z.csv",
     ]
+
+
+async def test_a_dest_holding_a_nul_byte_is_refused_before_any_request(tmp_path: Path) -> None:
+    """Issue 338: ``dest`` comes straight from the fetch tool's arguments, and a NUL in it
+    surfaced as a bare ``ValueError`` from the first mkdir ("embedded null character in
+    path"), naming neither the argument nor what was refused."""
+    content = b"col1,col2\n1,2\n"
+    sent: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        sent.append(str(request.url))
+        return httpx.Response(200, content=content)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        with pytest.raises(ValidationError, match=r"dest '.*foo\\x00bar' holds a NUL byte"):
+            await fetch_mod.fetch_files(client, _resource(content), dest=f"{tmp_path}/foo\x00bar")
+        assert sent == []
+        # Positive control: the same fetch into a plain dest writes the file.
+        out = await fetch_mod.fetch_files(client, _resource(content), dest=f"{tmp_path}/foobar")
+    assert [Path(p).read_bytes() for p in out.paths] == [content]

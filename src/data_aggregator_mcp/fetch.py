@@ -43,6 +43,12 @@ def _looks_like_html(head: bytes) -> bool:
 
 
 def _target_dir(resource: DataResource, dest: str | None) -> Path:
+    if dest and "\x00" in dest:
+        # No path can hold one, and the first mkdir would raise a bare ValueError
+        # ("embedded null character in path") naming neither the argument nor the call.
+        raise ValidationError(
+            f"dest {dest!r} holds a NUL byte, which no path can; nothing was fetched"
+        )
     base = Path(dest) if dest else DEFAULT_CACHE_DIR
     safe = resource.id.replace(":", "/").replace("..", "_")
     return base / safe
