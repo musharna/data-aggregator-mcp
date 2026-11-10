@@ -277,6 +277,10 @@ async def test_a_license_the_text_and_the_url_disagree_on_is_neither():
         dict(_STUDY_NCND, license_url=by_url),
         _study(license="CC BY 3.0"),  # a stated version the URL does not pin
         _study(license="CC BY-NC", license_url=ncnd_url),
+        # Neither side a CC family: two unknowns are not an agreement (#364 review).
+        _study(
+            license="xyz unrecognized", license_url="https://opendatacommons.org/licenses/odbl/1.0/"
+        ),
     ):
         r = await _resolved(study)
         assert r.license is None, study

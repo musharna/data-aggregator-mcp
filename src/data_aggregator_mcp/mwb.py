@@ -131,7 +131,12 @@ def _license(s: dict) -> tuple[str | None, str | None]:
     named = normalize_spdx(words) if words else None
     if words is None or pinned is None:
         return (pinned or named or words), None
-    if named == pinned or (named is None and identify_cc_family(words) == _cc_family(pinned)):
+    # Two unknowns are not an agreement: a non-CC URL (ODbL) has no CC family, and nor
+    # do words that name nothing, so the family test needs one on the URL's side.
+    family = _cc_family(pinned)
+    if named == pinned or (
+        named is None and family is not None and identify_cc_family(words) == family
+    ):
         return pinned, None
     return None, (
         f"the Workbench states the license as {words!r} but its license_url {url!r} names "
