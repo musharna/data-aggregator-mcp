@@ -16,7 +16,11 @@ OmicsDI's copy, which also indexes descriptions, still finds the older ones. The
 list (``study_id/ST/summary``) would let every field be matched, but takes 91 s.
 
 Discovery-only: a record names its study and landing page; Workbench file download is
-not wired. Every study carries CC BY 4.0 (4,623 of 4,623).
+not wired. A study states its license twice: ``license`` in words, ``license_url`` as a
+Creative Commons URL. On 2026-10-11 both said CC BY 4.0. By 2026-11-10 the words were
+"CC BY-NC-ND", with no version, and only the URL (``.../by-nc-nd/4.0/``) named one; the
+words alone had read as no license. So the URL pins the version, but only of the license
+the words name (``_license``).
 """
 
 from __future__ import annotations
@@ -31,7 +35,7 @@ from data_aggregator_mcp import _http
 from data_aggregator_mcp._relevance import _names, holding_words, query_terms
 from data_aggregator_mcp._relevance import _normalize as _normalize_words
 from data_aggregator_mcp.errors import NotFoundError
-from data_aggregator_mcp.license_compat import normalize_spdx
+from data_aggregator_mcp.license_compat import identify_cc_family, normalize_spdx
 from data_aggregator_mcp.models import DataResource, Link, compact, local_id, year_from
 
 API = "https://www.metabolomicsworkbench.org/rest/study"
@@ -70,7 +74,14 @@ def _is_study(s: object) -> bool:
         and isinstance(s.get("study_title"), str)
         and all(
             isinstance(s.get(f), str | None)
-            for f in ("species", "institute", "analysis_type", "release_date", "license")
+            for f in (
+                "species",
+                "institute",
+                "analysis_type",
+                "release_date",
+                "license",
+                "license_url",
+            )
         )
     )
 
@@ -95,9 +106,43 @@ def _species(s: dict) -> list[str]:
     return [p for p in _SPECIES_SEP.split(value.strip()) if p and p != "-"]
 
 
+def _cc_family(spdx: str) -> str | None:
+    """The element set of a versioned CC SPDX id: ``CC-BY-NC-ND-4.0`` -> ``CC-BY-NC-ND``
+    (a port's too: ``CC-BY-3.0-IGO`` -> ``CC-BY``); None for anything else."""
+    m = _CC_SPDX_RE.fullmatch(spdx)
+    return m.group(1) if m else None
+
+
+_CC_SPDX_RE = re.compile(r"(CC(?:-[A-Z]{2})+)-[0-9]\.[0-9](?:-[A-Z]+)?")
+
+
+def _license(s: dict) -> tuple[str | None, str | None]:
+    """(license, error) of a study from its ``license`` words and its ``license_url``.
+
+    The URL names a version; the words may not ("CC BY-NC-ND"). The URL's license is
+    taken when the words name the same one, or the same CC elements with no version.
+    When the two name different terms, neither is reported and the error says so: the
+    URL never stands in for words that say something else. Words alone are their SPDX
+    id, or kept as written when they have none, so a verdict quotes them instead of
+    calling the license unstated; no version is ever guessed."""
+    words = s.get("license") or None
+    url = s.get("license_url") or None
+    pinned = normalize_spdx(url) if url else None
+    named = normalize_spdx(words) if words else None
+    if words is None or pinned is None:
+        return (pinned or named or words), None
+    if named == pinned or (named is None and identify_cc_family(words) == _cc_family(pinned)):
+        return pinned, None
+    return None, (
+        f"the Workbench states the license as {words!r} but its license_url {url!r} names "
+        f"{pinned}; the two disagree, so neither is reported"
+    )
+
+
 def _normalize(s: dict) -> DataResource:
     sid = s["study_id"]
     released = s.get("release_date") or None
+    license_, license_error = _license(s)
     return DataResource(
         id=f"mwb:{sid}",
         source="mwb",
@@ -107,11 +152,12 @@ def _normalize(s: dict) -> DataResource:
         accessions=[sid],
         organism=_species(s),
         subjects=[s["analysis_type"]] if s.get("analysis_type") else [],
-        license=normalize_spdx(s["license"]) if s.get("license") else None,
+        license=license_,
         last_updated=released,
         # The record's ``study_url`` names the searched string, not the study
         # ("StudyID=CORAL"), so the landing page is built from the id.
         links=[Link(rel="landing_page", target_id=_LANDING.format(id=sid))],
+        errors={"license": license_error} if license_error else {},
     )
 
 
