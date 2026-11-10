@@ -51,7 +51,7 @@ TERMS: dict[str, str] = {
     "accessions": "Database accessions the record cites.",
     "links": "Qualified relations of the record (relation name to target id).",
     "result_count": "Number of hits on this search page.",
-    "total": "Total number of hits the sources report for the query.",
+    "total": "Sum of the hit counts the sources report for the query, each by its own matching.",
     "sources_queried": "Sources observed to take part in this search page.",
     "ontology_expansions": "Ontology terms the query was expanded with.",
     "axis": "The search filter an ontology expansion applies to.",

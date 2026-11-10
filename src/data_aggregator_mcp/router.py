@@ -530,6 +530,31 @@ def _all_words_note(empty: list[str], query: str | None, filled: Sequence[str]) 
     return "; ".join(parts)
 
 
+def _total_note(counted: dict[str, int], every_word: set[str], query: str | None) -> str | None:
+    """``errors['total']``: what ``total`` adds up. It is the sum of each source's own
+    count, and a source that does not need every word counts records holding any one of
+    them: "Phelipanche aegyptiaca RNA-seq" gave 66,402 with nothing saying so, Zenodo
+    22,121 and BioStudies 36,163 of it, DataCite 4 (MCP-server audit, 2026-11-10). No
+    count is invented: the note only splits ``total`` into the counts it was summed from,
+    largest first. Only for a query of two or more words with such a source in the sum:
+    elsewhere every count is of records holding the whole query, and a note on every
+    search would leave ``errors`` never empty."""
+    counts = sorted(((n, src) for src, n in counted.items() if n), key=lambda c: -c[0])
+    some = [src for _, src in counts if src not in every_word]
+    if len(query.split() if query else []) < 2 or not some:
+        return None
+    note = (
+        "`total` adds up the count each source reports, so it is not a count of distinct "
+        "hits: " + ", ".join(f"{src} {n}" for n, src in counts)
+    )
+    note += f". {', '.join(some)} may count records holding any one of the query words, not all"
+    every = [src for _, src in counts if src in every_word]
+    if every:
+        verb = "counts" if len(every) == 1 else "count"
+        note += f"; {', '.join(every)} {verb} only records holding every word"
+    return note
+
+
 def _within_limit(
     label: str,
     q: str,
@@ -629,6 +654,10 @@ class _Page:
     empty_every_word: list[str] = field(default_factory=list)
     # Those of them whose fill found records holding only some of the words.
     filled: list[str] = field(default_factory=list)
+    # What ``total`` adds up, per source (``_total_note``), and the sources in it that
+    # count only records holding every word.
+    counted: dict[str, int] = field(default_factory=dict)
+    every_word: set[str] = field(default_factory=set)
 
 
 async def _fetch_page(
@@ -656,6 +685,7 @@ async def _fetch_page(
     fetched: dict[str, list[DataResource]] = {}
     totals: dict[str, int] = {}
     total = 0
+    counted: dict[str, int] = {}
     # gather() returns one outcome per awaitable, so strict= cannot change behaviour.
     for s, outcome in zip(streams, outcomes, strict=True):  # pragma: no mutate
         if isinstance(outcome, BaseException):
@@ -664,7 +694,9 @@ async def _fetch_page(
             fetched[s.key], totals[s.key] = [], 0
             continue
         stream_total, recs = outcome
-        total += 0 if s.fill else stream_total
+        if not s.fill:
+            total += stream_total
+            counted[s.source] = counted.get(s.source, 0) + stream_total
         fetched[s.key], totals[s.key] = list(recs), stream_total
     # A source is empty when every one of its streams (one per query variant, and GEO's
     # plurals) answered and matched nothing; a stream that found something, or failed,
@@ -830,7 +862,10 @@ async def _fetch_page(
     more = any(remaining) and any(fetched.values())
     if note := _filters_note(streams, removed, filters, more=more):
         errors["filters"] = note
-    return _Page(emitted, total, new_offsets, new_ahead, more, empty_every_word, filled)
+    every_word = {s.source for s in streams if s.every_word}
+    return _Page(
+        emitted, total, new_offsets, new_ahead, more, empty_every_word, filled, counted, every_word
+    )
 
 
 def _filters_note(
@@ -1005,6 +1040,8 @@ async def _multi_query_page(
     )
     if note := _all_words_note(page.empty_every_word, original_query, page.filled):
         errors["all_words"] = note
+    if note := _total_note(page.counted, page.every_word, original_query):
+        errors["total"] = note
     emitted, total = page.emitted, page.total
     next_cursor = (
         _cursor.encode(
@@ -1375,6 +1412,8 @@ async def search_page(
     )
     if note := _all_words_note(page.empty_every_word, query, page.filled):
         errors["all_words"] = note
+    if note := _total_note(page.counted, page.every_word, query):
+        errors["total"] = note
     emitted, total = page.emitted, page.total
     next_cursor = (
         _cursor.encode(

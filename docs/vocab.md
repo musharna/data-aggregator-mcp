@@ -94,7 +94,7 @@ Number of hits on this search page.
 
 ## total
 
-Total number of hits the sources report for the query.
+Sum of the hit counts the sources report for the query, each by its own matching.
 
 ## sources_queried
 

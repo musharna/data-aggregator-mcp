@@ -16,6 +16,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the same license. When the words and the URL disagree, `license` stays null and
   `errors.license` says why. Words with no URL are kept as written; no version is guessed.
 
+- `search` says what `total` adds up. It is the sum of each source's own count, and several
+  sources count records holding any one of the query words, so "Phelipanche aegyptiaca
+  RNA-seq" gave a `total` of 66,402 with nothing saying so. For a query of two or more
+  words where such a source answered, `errors.total` now lists the count behind `total`
+  per source, largest first, and names the sources that may count records holding only
+  one word. `total` itself is unchanged.
+
 - `fetch(extract=true)` extracts an archive it resumes. A verified archive already on
   disk was reported as done without being extracted, so an archive fetched earlier
   without `extract`, or one whose extraction failed or was killed after its download
