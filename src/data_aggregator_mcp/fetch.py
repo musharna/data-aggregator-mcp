@@ -182,6 +182,28 @@ class _Outcome:
     checksum_unverifiable: bool = False
 
 
+async def _extract(
+    out: Path, target: Path, safe_name: str, budget: _Budget, force: bool
+) -> list[str]:
+    """Extract the verified archive ``out`` into ``target``; return the written paths.
+
+    The download limit and the zip-bomb guard share the budget: the extraction ceiling is
+    the REMAINING headroom, so download + extraction together cannot exceed max_bytes.
+    With force the ceiling is max_bytes itself: force lifts the download limit, not the
+    per-archive zip-bomb guard. The actual extracted bytes are debited afterward so later
+    archives in the same fetch share the ceiling."""
+    if force:
+        extract_max = budget.cap
+    else:
+        extract_max = await budget.headroom()
+    members = archive.extract_archive(out, target, max_bytes=extract_max)
+    extracted_bytes = sum(p.stat().st_size for p in members)
+    # Extraction is capped at the headroom read just above (or force skips the
+    # check), so this debit cannot overrun; the name only labels that error.
+    await budget.debit(extracted_bytes, safe_name)  # pragma: no mutate
+    return [str(m) for m in members]
+
+
 async def _download_one(
     client: httpx.AsyncClient,
     f: FileEntry,
@@ -215,7 +237,16 @@ async def _download_one(
     out = target / rel
     out.parent.mkdir(parents=True, exist_ok=True)
     if not force and _already_complete(out, f):
-        return _Outcome(f.name, path=str(out), state="resumed")
+        # A verified archive on disk says the DOWNLOAD finished, not the extraction: it
+        # may have been fetched without extract, or its extraction failed or was killed
+        # after the replace below. So a resume still extracts when asked; extraction
+        # overwrites its members, so redoing a finished one is safe.
+        members = (
+            await _extract(out, target, safe_name, budget, force)
+            if extract and archive.is_archive(safe_name)
+            else []
+        )
+        return _Outcome(f.name, path=str(out), extracted=members, state="resumed")
     h = _hasher(f.checksum)
     # A declared checksum we cannot compute is NOT the same as no checksum, and the two
     # completed identically before this — so a caller could not tell an honoured integrity
@@ -289,21 +320,7 @@ async def _download_one(
     # From here ``out`` is a verified download, so a failed extraction leaves it in place.
     extracted: list[str] = []
     if extract and archive.is_archive(safe_name):
-        # Fix 2: pass the REMAINING budget headroom as the extraction ceiling so
-        # that download + extraction together cannot exceed max_bytes. With force
-        # the ceiling is max_bytes itself: force lifts the download limit, not the
-        # per-archive zip-bomb guard. Debit the actual extracted bytes from the
-        # budget afterward so later archives in the same fetch share the ceiling.
-        if force:
-            extract_max = budget.cap
-        else:
-            extract_max = await budget.headroom()
-        members = archive.extract_archive(out, target, max_bytes=extract_max)
-        extracted_bytes = sum(p.stat().st_size for p in members)
-        # Extraction is capped at the headroom read just above (or force skips the
-        # check), so this debit cannot overrun; the name only labels that error.
-        await budget.debit(extracted_bytes, safe_name)  # pragma: no mutate
-        extracted = [str(m) for m in members]
+        extracted = await _extract(out, target, safe_name, budget, force)
     return _Outcome(
         f.name,
         path=str(out),

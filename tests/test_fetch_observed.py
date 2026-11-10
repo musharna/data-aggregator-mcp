@@ -318,6 +318,88 @@ async def test_an_archive_is_not_extracted_unless_asked(tmp_path: Path) -> None:
     assert out.paths == [str(tmp_path / "zenodo" / "1" / "bundle.tar.gz")]
 
 
+def _counting_extract(monkeypatch) -> list[Path]:
+    """Wrap the real extractor; return the list of archives it was called on."""
+    calls: list[Path] = []
+    real = fetch_mod.archive.extract_archive
+
+    def counting(path: Path, dest: Path, *, max_bytes: int) -> list[Path]:
+        calls.append(path)
+        return real(path, dest, max_bytes=max_bytes)
+
+    monkeypatch.setattr(fetch_mod.archive, "extract_archive", counting)
+    return calls
+
+
+async def test_a_resumed_archive_is_extracted_when_asked(tmp_path: Path, monkeypatch) -> None:
+    """A verified archive already on disk (fetched earlier without extract) is resumed,
+    not downloaded again, and still extracted: resume skips the download, not the
+    extraction. A resumed file that is not an archive, or a resume without extract, is
+    not extracted. Positive control: a fresh download extracts exactly once."""
+    arc = _tar_gz("inner.txt", b"inner")
+    r = _record(_entry("bundle.tar.gz", size=len(arc)), _entry("notes.csv", size=3))
+    calls = _counting_extract(monkeypatch)
+    seen: list[httpx.Request] = []
+    bodies = {"https://h/bundle.tar.gz": arc, "https://h/notes.csv": b"a,b"}
+    fresh_dir, resumed_dir = tmp_path / "fresh", tmp_path / "resumed"
+    fresh_t, target = fresh_dir / "zenodo" / "1", resumed_dir / "zenodo" / "1"
+    async with _serving(bodies, seen) as client:
+        fresh = await fetch_mod.fetch_files(client, r, dest=str(fresh_dir), extract=True)
+        assert (len(seen), calls) == (2, [fresh_t / "bundle.tar.gz"])  # fresh: once
+        await fetch_mod.fetch_files(client, r, dest=str(resumed_dir))  # no extract asked
+        assert (len(seen), len(calls)) == (4, 1)
+        plain = await fetch_mod.fetch_files(client, r, dest=str(resumed_dir))
+        assert (len(seen), len(calls)) == (4, 1)  # a resume without extract: no extraction
+        resumed = await fetch_mod.fetch_files(client, r, dest=str(resumed_dir), extract=True)
+    assert len(seen) == 4  # both files were resumed, not fetched again
+    assert resumed.resumed == plain.resumed == ["bundle.tar.gz", "notes.csv"]
+    assert resumed.bytes == 0
+    assert calls == [fresh_t / "bundle.tar.gz", target / "bundle.tar.gz"]  # not notes.csv
+    assert plain.paths == [str(target / "bundle.tar.gz"), str(target / "notes.csv")]
+    assert resumed.paths == [
+        str(target / "bundle.tar.gz"),
+        str(target / "inner.txt"),
+        str(target / "notes.csv"),
+    ]
+    assert (target / "inner.txt").read_bytes() == b"inner"
+    assert fresh.resumed == []
+    assert fresh.paths == [
+        str(fresh_t / "bundle.tar.gz"),
+        str(fresh_t / "inner.txt"),
+        str(fresh_t / "notes.csv"),
+    ]
+
+
+async def test_an_extraction_that_failed_after_the_download_is_finished_on_retry(
+    tmp_path: Path,
+) -> None:
+    """The download completed and the archive was kept, but extraction did not finish
+    (here the extraction ceiling stopped it; in the field, the process can also be
+    killed between the two). The retry resumes the archive and must extract it, not
+    report the bare archive as done."""
+    arc = _tar_gz("inner.bin", b"I" * 2000)  # compresses far below 1000 bytes
+    assert len(arc) < 500
+    r = _record(_entry("bundle.tar.gz", size=len(arc)))
+    seen: list[httpx.Request] = []
+    target = tmp_path / "zenodo" / "1"
+    async with _serving({"https://h/bundle.tar.gz": arc}, seen) as client:
+        with pytest.raises(FetchTooLargeError) as stopped:
+            await fetch_mod.fetch_files(client, r, dest=str(tmp_path), extract=True, max_bytes=1000)
+        assert str(stopped.value) == (
+            "[FetchTooLargeError] extracted size exceeds max_bytes="
+            f"{1000 - len(arc)} for bundle.tar.gz"
+        )
+        assert (target / "bundle.tar.gz").read_bytes() == arc  # the good archive stays
+        assert not (target / "inner.bin").exists()
+        retry = await fetch_mod.fetch_files(
+            client, r, dest=str(tmp_path), extract=True, max_bytes=10_000
+        )
+    assert len(seen) == 1  # resumed: the archive was not downloaded again
+    assert retry.resumed == ["bundle.tar.gz"]
+    assert retry.paths == [str(target / "bundle.tar.gz"), str(target / "inner.bin")]
+    assert (target / "inner.bin").read_bytes() == b"I" * 2000
+
+
 async def test_a_download_gets_its_own_timeout_not_the_clients(tmp_path: Path) -> None:
     seen: list[httpx.Request] = []
     async with _serving({"https://h/d.bin": b"d"}, seen) as client:
