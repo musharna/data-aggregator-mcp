@@ -82,6 +82,7 @@
    "egress.py:_target": 28,
    "egress.py:assert_public_url": 28,
    "egress.py:enforce_on_request": 28,
+   "egress.py:split_url": 28,
    "models.py:SearchResult._dense_results": 4,
    "models.py:_orcid": 42,
    "models.py:compact": 150,
@@ -110,6 +111,9 @@
    "router.py:_source_streams": 4,
    "router.py:_source_streams.<locals>.<genexpr>": 16,
    "router.py:_stored_offset": 28,
+   "router.py:_total_note": 4,
+   "router.py:_total_note.<locals>.<genexpr>": 8,
+   "router.py:_total_note.<locals>.<lambda>": 8,
    "router.py:_with_version_status": 20,
    "router.py:search_page": 4,
    "server.py:_dispatch": 4,
@@ -129,7 +133,7 @@
    "zenodo.py:_opt": 900,
    "zenodo.py:search": 12
   },
-  "calls_total": 13460,
+  "calls_total": 13508,
   "http": {
    "api.datacite.org": 16,
    "zenodo.org": 12
@@ -155,13 +159,13 @@
    "_ratelimit.py:TokenBucket._lock": 1,
    "_ratelimit.py:TokenBucket.acquire": 1,
    "_ratelimit.py:_bucket_for": 1,
-   "_ratelimit.py:_host_of": 1,
+   "_ratelimit.py:_host_path": 1,
    "_ratelimit.py:acquire": 1,
    "egress.py:_origin": 3,
    "egress.py:_target": 5,
    "egress.py:assert_public_url": 5,
    "egress.py:enforce_on_request": 3,
-   "egress.py:split_url": 2,
+   "egress.py:split_url": 5,
    "fetch.py:_Budget.debit": 2,
    "fetch.py:_already_complete": 2,
    "fetch.py:_download_one": 2,
@@ -209,7 +213,7 @@
    "zenodo.py:_with_superseded_by": 1,
    "zenodo.py:resolve": 1
   },
-  "calls_total": 146,
+  "calls_total": 149,
   "http": {
    "zenodo.org": 3
   },
@@ -273,6 +277,7 @@
    "egress.py:_target": 6,
    "egress.py:assert_public_url": 6,
    "egress.py:enforce_on_request": 6,
+   "egress.py:split_url": 6,
    "fetch_gate.py:ensure_datagov_fetchable": 2,
    "fetch_gate.py:ensure_fetchable": 3,
    "fetch_gate.py:ensure_fulltext_available": 2,
@@ -321,7 +326,7 @@
    "zenodo.py:_with_superseded_by": 1,
    "zenodo.py:resolve": 1
   },
-  "calls_total": 295,
+  "calls_total": 301,
   "http": {
    "api.datacite.org": 1,
    "datadryad.org": 2,
@@ -414,6 +419,7 @@
    "egress.py:_target": 8,
    "egress.py:assert_public_url": 8,
    "egress.py:enforce_on_request": 8,
+   "egress.py:split_url": 8,
    "huggingface.py:_check_datasets": 1,
    "huggingface.py:_check_datasets.<locals>.<genexpr>": 1,
    "huggingface.py:_is_dataset": 6,
@@ -450,6 +456,9 @@
    "router.py:_source_streams": 1,
    "router.py:_source_streams.<locals>.<genexpr>": 5,
    "router.py:_stored_offset": 8,
+   "router.py:_total_note": 1,
+   "router.py:_total_note.<locals>.<genexpr>": 2,
+   "router.py:_total_note.<locals>.<lambda>": 3,
    "router.py:_with_version_status": 10,
    "router.py:search_page": 1,
    "server.py:_dispatch": 1,
@@ -469,7 +478,7 @@
    "zenodo.py:_opt": 450,
    "zenodo.py:search": 3
   },
-  "calls_total": 7268,
+  "calls_total": 7282,
   "http": {
    "api.datacite.org": 4,
    "huggingface.co": 1,
@@ -478,7 +487,8 @@
   "http_total": 8,
   "output": {
    "errors": [
-    "next_page"
+    "next_page",
+    "total"
    ],
    "ids": "4f015c5985efcfd1",
    "results": 10
