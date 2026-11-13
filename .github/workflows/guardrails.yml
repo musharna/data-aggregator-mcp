@@ -422,7 +422,14 @@ jobs:
     # review-ack label and re-run only this job (`gh run rerun <id> --failed`),
     # which reads the review the review job already posted instead of paying for
     # a new one. Skipped whenever the review is skipped (sync PRs, Dependabot).
+    # A review job that FAILED is not skipped: without the `if` below GitHub
+    # skips this job when the job it needs fails, and a skipped job "may not
+    # block merging" even as a required check (GitHub's own troubleshooting
+    # page). 20 PRs merged that way with the review red, 2026-10-18 to 11-08:
+    # every credential was refused, so nothing had read the diff. The status
+    # function in the `if` is what makes the job run after a failed need.
     needs: review
+    if: ${{ !cancelled() && needs.review.result != 'skipped' }}
     runs-on: ubuntu-latest
     permissions:
       issues: read
@@ -432,31 +439,42 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
+          REVIEW_RESULT: ${{ needs.review.result }}
         run: |
           # This run's review comment, any attempt: re-running only this job (after adding
           # review-ack) must find the review the review job already posted.
           mark="<!-- guardrails-review $GITHUB_RUN_ID-"
           body=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
             | jq -rs --arg m "$mark" '[.[][] | select(.user.login == "claude[bot]" or .user.login == "github-actions[bot]") | select(.body | contains($m))] | last | .body // ""')
-          if [ -z "$body" ]; then
-            # The review job fails when it posted nothing, except on a PR that edits this
-            # workflow (claude-code-action does not run there); its warning says so.
-            echo "no review comment from run $GITHUB_RUN_ID, so there is nothing to gate"; exit 0
-          fi
-          # REVIEW.md's format: the first non-blank line after the marker is the count.
-          count=$(awk 'f && NF {print; exit} /<!-- guardrails-review /{f=1}' <<<"$body")
+          ack="gh label create review-ack --force -R $GITHUB_REPOSITORY && gh pr edit $PR --add-label review-ack -R $GITHUB_REPOSITORY && gh run rerun $GITHUB_RUN_ID --failed -R $GITHUB_REPOSITORY"
           re='^([0-9]+) Important, [0-9]+ Nit, [0-9]+ Pre-existing\.'
-          if [[ "$count" == "Nothing meets the bar."* ]] || { [[ "$count" =~ $re ]] && [ "${BASH_REMATCH[1]}" = 0 ]; }; then
-            echo "review: $count"; exit 0
-          elif [[ "$count" =~ $re ]]; then
-            why="$count An Important finding blocks the merge."
+          if [ "$REVIEW_RESULT" != "success" ]; then
+            # Judged before the comment is read: a review job that did not end green did
+            # not finish its own checks, whatever it managed to post.
+            why="The review job ended '$REVIEW_RESULT', so this PR has not been reviewed (the review job's log says why)."
+            under="the PR says why it merges without a review."
+            fix="Re-run it when a credential can review: gh run rerun $GITHUB_RUN_ID --failed -R $GITHUB_REPOSITORY (re-runs the review, then this job). To merge unreviewed, say why in the PR, then: $ack"
+          elif [ -z "$body" ]; then
+            # A green review job with no comment is the one case it allows: a PR that edits
+            # this workflow (claude-code-action does not run there); its warning says so.
+            echo "no review comment from run $GITHUB_RUN_ID, so there is nothing to gate"; exit 0
           else
-            why="The review's count line is not in REVIEW.md's format, so its findings can't be read: '${count:0:120}'."
+            # REVIEW.md's format: the first non-blank line after the marker is the count.
+            count=$(awk 'f && NF {print; exit} /<!-- guardrails-review /{f=1}' <<<"$body")
+            if [[ "$count" == "Nothing meets the bar."* ]] || { [[ "$count" =~ $re ]] && [ "${BASH_REMATCH[1]}" = 0 ]; }; then
+              echo "review: $count"; exit 0
+            elif [[ "$count" =~ $re ]]; then
+              why="$count An Important finding blocks the merge."
+            else
+              why="The review's count line is not in REVIEW.md's format, so its findings can't be read: '${count:0:120}'."
+            fi
+            under="the PR says why each Important finding is a false alarm or deferred."
+            fix="Fix it and push (the next round reviews the new commits). For a false alarm or a deliberate deferral, say why in the PR, then: $ack (re-runs only this job, not the review)"
           fi
           # captured, not piped: under pipefail `gh | grep -q` can read as no match
           labels=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/labels" --paginate -q '.[].name')
           if grep -qxF review-ack <<<"$labels"; then
-            echo "::warning::$why Passing under the review-ack label: the PR says why each Important finding is a false alarm or deferred."; exit 0
+            echo "::warning::$why Passing under the review-ack label: $under"; exit 0
           fi
-          echo "::error::$why Fix it and push (the next round reviews the new commits). For a false alarm or a deliberate deferral, say why in the PR, then: gh label create review-ack --force -R $GITHUB_REPOSITORY && gh pr edit $PR --add-label review-ack -R $GITHUB_REPOSITORY && gh run rerun $GITHUB_RUN_ID --failed -R $GITHUB_REPOSITORY (re-runs only this job, not the review)"
+          echo "::error::$why $fix"
           exit 1

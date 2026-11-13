@@ -15,6 +15,17 @@ permissions:
   contents: read
   issues: write
 
+# One run at a time, repo-wide. Two overlapping runs (the schedule plus a manual
+# dispatch, or a slow night still going when the next starts) each find no open
+# issue and each create one, and both save the results cache under one key. Not
+# per ref: the issues are repo-wide, so a dispatch from a branch races them too.
+# Queue, never cancel: a cancelled mutation run saves no cache. A third run
+# arriving while one is queued replaces the queued one, which loses nothing.
+# Checked by scripts/nightly-issue-selftest.sh.
+concurrency:
+  group: nightly-guardrails
+  cancel-in-progress: false
+
 jobs:
   mutation:
     runs-on: ubuntu-latest
@@ -185,9 +196,27 @@ jobs:
           inflight="$RUNNER_TEMP/inflight.txt"
           : > "$inflight"
           (
+            tick=0
             while sleep 20; do
               ps -eo etimes=,args= | sed -n 's/^ *\([0-9][0-9]*\) mutmut: \([^ ]*\)$/\2 \1/p' > "$inflight.tmp"
               mv "$inflight.tmp" "$inflight"
+              # Each minute, and every 20 s while memory is low, the same note goes
+              # to the log with each mutant's memory and the host's free memory,
+              # swap, OOM kills and disk. A runner that dies mid-run saves no file
+              # and runs no later step, but its log keeps every line written before
+              # ("The runner has received a shutdown signal", plantcv-mcp, two
+              # nights running): the last note says what was running, and how big.
+              tick=$((tick + 1))
+              avail=$(awk '/^MemAvailable:/ {print int($2 / 1024)}' /proc/meminfo 2>/dev/null || true)
+              if [ $((tick % 3)) -eq 0 ] || [ "${avail:-1024}" -lt 1024 ]; then
+                swap=$(awk '/^SwapTotal:/ {t = $2} /^SwapFree:/ {f = $2} END {if (t != "") print int((t - f) / 1024)}' /proc/meminfo 2>/dev/null || true)
+                ooms=$(awk '$1 == "oom_kill" {print $2}' /proc/vmstat 2>/dev/null || true)
+                disk=$(df -Pm . 2>/dev/null | awk 'NR == 2 {print $4}' || true)
+                top=$(ps -eo rss=,comm= 2>/dev/null | sort -rn | awk 'NR == 1 {print $2 ":" int($1 / 1024) "M"}' || true)
+                kids=$(ps -eo etimes=,rss=,args= 2>/dev/null | awk '$3 == "mutmut:" {printf " %s %ss %dM", $4, $1, $2 / 1024}' || true)
+                printf '\n[watch] %s mem_avail=%sM swap_used=%sM oom_kills=%s disk_free=%sM top=%s | running:%s\n' \
+                  "$(date -u +%H:%M:%SZ)" "${avail:-?}" "${swap:-?}" "${ooms:-?}" "${disk:-?}" "${top:-?}" "${kids:- none}"
+              fi
             done
           ) &
           watcher=$!
@@ -314,9 +343,13 @@ jobs:
               if dirty:
                   meta.write_text(json.dumps(d))
           fp.parent.mkdir(exist_ok=True)
-          fp.write_text(json.dumps({"tests": now, "recheck": sorted(waiting | set(stale))}, indent=1, sort_keys=True))
+          owed = waiting | set(stale)
+          fp.write_text(json.dumps({"tests": now, "recheck": sorted(owed)}, indent=1, sort_keys=True))
+          # stale: reset tonight, after the run (not this run's to check; the gate).
+          # recheck: every one still owed a recheck, including those reset before
+          # tonight's run that the cap left unchecked (the issue).
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write(f"stale={len(stale)}\n")
+              f.write(f"stale={len(stale)}\nrecheck={len(owed)}\n")
           shown = ", ".join(changed[:10]) + (f" and {len(changed) - 10} more" if len(changed) > 10 else "")
           print(f"test files changed since the carried results: {len(changed)}" + (f" ({shown})" if changed else ""))
           if every and changed:
@@ -360,6 +393,14 @@ jobs:
         # can spend its whole cap rechecking and still look busy (phylokit-mcp
         # 2026-10-21: new 99, of them 86 rechecks). `first` counts only mutants
         # that had no result before this run: the unchecked tail shrinking.
+        # A result is not always a verdict. mutmut files every exit code it has
+        # no name for under "suspicious", and a worker the kernel killed (-9,
+        # out of memory) under "segfault"; both count as checked and neither is
+        # a kill or a survivor. plantcv-mcp's memory cap (2026-11-10) exits 35
+        # before any test when the cap is too tight for the runner: every mutant
+        # would then be "checked", none killed, none surviving, and the job
+        # green with nothing to report. `unjudged_new` counts this run's results
+        # that are not a verdict; the gate reads it.
         env:
           RC: ${{ steps.run.outputs.rc }}
           CARRIED: ${{ steps.carry.outputs.carried }}
@@ -380,11 +421,12 @@ jobs:
           carried = set(open(os.path.join(tmp, "carried.txt")).read().split())
           reset = set(open(os.path.join(tmp, "reset.txt")).read().split())
           rows = [l.strip().rsplit(": ", 1) for l in open("all-mutants.txt") if ": " in l]
-          made = [name for name, status in rows if status != "not checked" and name not in carried]
-          print(len(made), sum(1 for name in made if name not in reset))
+          made = [(name, status) for name, status in rows if status != "not checked" and name not in carried]
+          unjudged = ("suspicious", "segfault", "check was interrupted by user")
+          print(len(made), sum(1 for name, _ in made if name not in reset), sum(1 for _, status in made if status in unjudged))
           PY
           )
-          read -r new first <<<"$counts"
+          read -r new first unjudged_new <<<"$counts"
           aborted=0
           if [ "$RC" != "0" ] && [ "$RC" != "124" ]; then aborted=1; fi
           # Diffs for the triage step, dumped HERE: 2026-09-16 ldraw-mcp, the
@@ -402,7 +444,7 @@ jobs:
               print(f"### {n}\n{d.strip()}\n")
           PY
           {
-            echo "count=$n"; echo "unchecked=$unchecked"; echo "aborted=$aborted"; echo "checked=$checked"; echo "new=$new"; echo "first=$first"
+            echo "count=$n"; echo "unchecked=$unchecked"; echo "aborted=$aborted"; echo "checked=$checked"; echo "new=$new"; echo "first=$first"; echo "unjudged_new=$unjudged_new"
           } >> "$GITHUB_OUTPUT"
           echo "## Mutants: $killed killed, $n survived, $checked checked ($new this run, $first of them first checks; $CARRIED carried from earlier this week, ${STALE:-0} of them reset after the run because a test that may cover them changed; ${MARKED:-0} timeouts the cap cut off twice), $unchecked unchecked, ${CUTOFF:-0} of them cut off by the cap (mutmut exit $RC, aborted=$aborted)" >> "$GITHUB_STEP_SUMMARY"
           head -200 survivors.txt >> "$GITHUB_STEP_SUMMARY"
@@ -415,21 +457,69 @@ jobs:
             survivor-diffs.txt
       - name: Upsert tracking issue
         id: upsert
-        if: steps.optout.outputs.skip != '1' && steps.survivors.outputs.count != '0'
+        # Also on 0 survivors while rechecks are owed: those read "not checked"
+        # until a run rechecks them, so a night can count none while hundreds
+        # wait, and a skipped step left last night's count and run link standing
+        # as tonight's. The parentheses: GitHub documents no precedence between
+        # && and ||, so the grouping is written out.
+        if: steps.optout.outputs.skip != '1' && (steps.survivors.outputs.count != '0' || steps.tests.outputs.recheck != '0')
         env:
           GH_TOKEN: ${{ github.token }}
           N: ${{ steps.survivors.outputs.count }}
           UNCHECKED: ${{ steps.survivors.outputs.unchecked }}
           ABORTED: ${{ steps.survivors.outputs.aborted }}
+          RECHECK: ${{ steps.tests.outputs.recheck }}
         run: |
           title="nightly: $N surviving mutants"
           # A partial run is not a survivor count; say so where it is read.
+          # Survivors reset for a recheck read "not checked" until the next run, so
+          # without RECHECK the count drops to near zero the night a shared test file
+          # changes (plantcv-mcp, the night after its conftest change: 27 survivors
+          # shown, 1,867 waiting for a recheck). The cap can leave some of them for
+          # the night after, so RECHECK counts every one still owed, not only those
+          # reset tonight (plantcv-mcp 2026-11-05: 613 still owed, none reset that
+          # night; the title read "6349 unchecked at the wall-clock cap" and 1,863 ->
+          # 1,151 survivors looked like ~700 kills, of which 114 were). The rest of
+          # the unchecked are the cap's backlog.
           if [ "$ABORTED" = "1" ]; then title="$title (PARTIAL: mutmut aborted, $UNCHECKED unchecked)"
+          elif [ "${RECHECK:-0}" != "0" ]; then
+            backlog=$(( ${UNCHECKED:-0} - RECHECK ))
+            title="$title (waiting for a recheck: $RECHECK earlier survivors and timeouts"
+            if [ "$backlog" -gt 0 ]; then title="$title; $backlog more unchecked at the wall-clock cap"; fi
+            title="$title)"
           elif [ "${UNCHECKED:-0}" != "0" ]; then title="$title ($UNCHECKED unchecked at the wall-clock cap)"; fi
           # A body file of cut lines, never argv: see the dependency-audit issue step.
-          # shellcheck disable=SC2016  # printf format string is literal by design
-          printf 'Run: %s/%s/actions/runs/%s\n\nEach survivor is a line of code no test observes.\n\n```\n%s\n```\n' \
-                 "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$(head -150 survivors.txt | cut -c1-200)" > /tmp/issue-body.md
+          # Survivors only, counted per function, then a sample taken from each
+          # function in turn. `mutmut results` lists every non-killed mutant sorted
+          # by name, so its head was one module's unchecked tail (plantcv-mcp's
+          # first full night: 133 "not checked" lines and 15 of 1,863 survivors).
+          python3 - <<'PY' > /tmp/issue-body.md
+          import collections, itertools, os
+          rows = [l.strip().rsplit(": ", 1) for l in open("survivors.txt") if ": " in l]
+          status = collections.Counter(s for _, s in rows)
+          by = collections.defaultdict(list)
+          for name, s in rows:
+              if s == "survived":
+                  by[name.split("__mutmut_")[0]].append(name)
+          order = sorted(by, key=lambda f: (-len(by[f]), f))
+          n = sum(len(v) for v in by.values())
+          sample = [m for m in itertools.chain.from_iterable(itertools.zip_longest(*(by[f] for f in order))) if m][:150]
+          counts = ", ".join(f"{c} {s}" for s, c in sorted(status.items(), key=lambda x: (x[0] != "survived", -x[1], x[0])))
+          e = os.environ
+          print(f"Run: {e['GITHUB_SERVER_URL']}/{e['GITHUB_REPOSITORY']}/actions/runs/{e['GITHUB_RUN_ID']}\n")
+          print(f"{counts}. Each survivor is a line of code no test observes; the full list, every status, is the run's `mutmut-survivors` artifact.\n")
+          owed = int(e.get("RECHECK") or 0)
+          if owed:
+              print(f"Waiting for a recheck: {owed} of the not checked, earlier survivors and timeouts that a changed test may cover. Until the next runs recheck them, the survivor count above is low.\n")
+          print(f"Survivors by function ({min(len(order), 100)} of {len(order)}):\n```")
+          for f in order[:100]:
+              print(f"{len(by[f]):5d} {f}"[:200])
+          shown = "all" if len(sample) == n else f"first {len(sample)} of"
+          print(f"```\n\nSurvivors, taken from each function in turn ({shown} {n}):\n```")
+          for m in sample:
+              print(m[:200])
+          print("```")
+          PY
           num=$(gh issue list --label mutation --state open --json number -q '.[0].number')
           if [ -n "$num" ]; then gh issue edit "$num" --title "$title" --body-file /tmp/issue-body.md
           else
@@ -455,6 +545,7 @@ jobs:
           UNCHECKED: ${{ steps.survivors.outputs.unchecked }}
           STALE: ${{ steps.tests.outputs.stale }}
           RC: ${{ steps.run.outputs.rc }}
+          UNJUDGED_NEW: ${{ steps.survivors.outputs.unjudged_new }}
         run: |
           # Results reset after the run (a test covering them changed) were not
           # there for this run to check: only the rest waited on it.
@@ -488,6 +579,16 @@ jobs:
           if [ "$ABORTED" = "1" ]; then
             echo "::error::mutmut aborted (exit $RC) with $UNCHECKED mutants unchecked; the survivor count is partial. Read the traceback above the exit line."
             exit 1
+          fi
+          # A run whose every result is "suspicious" or "segfault" judged nothing:
+          # the suite never got to decide (a memory cap too tight for the runner,
+          # workers killed for memory). Some of them among real verdicts is a
+          # warning; the artifact's all-status list names them.
+          if [ "${NEW:-0}" -gt 0 ] && [ "${UNJUDGED_NEW:-0}" -eq "${NEW:-0}" ]; then
+            echo "::error::none of the $NEW results this run made is a verdict: every one is 'suspicious' or 'segfault' (an exit code mutmut has no name for, or a worker killed by a signal). No test judged a mutant. Read the first mutant's output in the run step's log."
+            exit 1
+          elif [ "${UNJUDGED_NEW:-0}" -gt 0 ]; then
+            echo "::warning::$UNJUDGED_NEW of the $NEW results this run made are not verdicts ('suspicious' or 'segfault'): they count as checked and are neither kills nor survivors."
           fi
       - name: Triage day? (the repo's fuzz weekday, or a dispatch)
         id: triage
