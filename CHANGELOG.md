@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.76.0] - 2026-11-13
+
 ### Fixed
 
 - Metabolomics Workbench records carry their license again. The Workbench now states it
@@ -34,6 +36,17 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   without `extract`, or one whose extraction failed or was killed after its download
   finished, came back as the bare archive with nothing unpacked, on every retry.
   Extraction overwrites its members, so redoing a finished one is safe.
+
+### Changed
+
+- The README's "Does it help?" section is now "What the benchmark shows": mean recall
+  against web search on Claude Haiku 5.5, Sonnet 5.5 and Opus 5.5 (round 5), none meeting
+  its pre-registered rule, before the server comparison.
+
+### Security
+
+- The lock file now pins opentelemetry-api 1.45.2 (CVE-2026-114603; it comes with `mcp`).
+  An install from PyPI resolves its own versions within the declared ranges.
 
 ## [0.75.4] - 2026-10-19
 
