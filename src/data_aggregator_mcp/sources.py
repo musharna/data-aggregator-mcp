@@ -520,8 +520,8 @@ SOURCES: tuple[SourceSpec, ...] = (
         fetchable=False,
         fetchable_notes="Discovery-only: the record names its study (ST accession), species, analysis type and landing page; Workbench file download is not wired.",
         id_example="mwb:ST004329",
-        # No default_license: every study summary carries its own (CC BY 4.0 on all
-        # 4,623, 2026-10-11), read into the record.
+        # No default_license: every study summary carries its own, read into the record
+        # (CC BY 4.0 on all 4,623, 2026-10-11; "CC BY-NC-ND" + a 4.0 URL by 2026-11-10).
         description="Metabolomics Workbench (NIH) - metabolomics studies (ST accessions), searched natively so studies past OmicsDI's copy (which stops at ST002490) are found; matches words in the title, species, analysis type and institute, not the description.",
     ),
     _spec(

@@ -354,3 +354,44 @@ async def test_a_host_that_is_not_a_hostname_is_refused_by_name(
     assert "fetch data.csv: malformed URL" in str(exc2.value) and url in str(exc2.value), why
     # positive control: a well-formed name through the same call is not refused
     await egress.assert_public_url("http://8.8.8.8/data.csv", what="probe")
+
+
+# --- a redirect to a port out of range (issue 347) ------------------------------------
+
+
+def _redirecting_to(target: str) -> httpx.MockTransport:
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/start":
+            return httpx.Response(302, headers={"Location": target})
+        return httpx.Response(200, text="reached")
+
+    return httpx.MockTransport(handle)
+
+
+async def test_a_redirect_to_a_port_out_of_range_is_refused_by_the_guard(guard_on) -> None:
+    """``enforce_on_request`` read the port through ``_origin``, a second parse path that
+    skipped ``split_url``'s handling, so a server redirecting to ``:99999`` got the caller
+    a bare ``ValueError: Port out of range 0-65535``. Not a bypass (the hook raised, the
+    request was never sent); the error just named neither the request nor the URL."""
+    bad = "https://93.184.215.14:99999/x"
+    async with httpx.AsyncClient(
+        transport=_redirecting_to(bad),
+        follow_redirects=True,
+        event_hooks={"request": [egress.enforce_on_request]},
+    ) as client:
+        with pytest.raises(ValidationError, match=r"request: malformed URL .*99999"):
+            await client.get("https://93.184.215.14/start")
+    # Positive control: a redirect to a port in range is followed.
+    async with httpx.AsyncClient(
+        transport=_redirecting_to("https://93.184.215.14:8443/x"),
+        follow_redirects=True,
+        event_hooks={"request": [egress.enforce_on_request]},
+    ) as client:
+        assert (await client.get("https://93.184.215.14/start")).text == "reached"
+
+
+async def test_an_operator_endpoint_with_a_port_out_of_range_is_refused_by_name() -> None:
+    with pytest.raises(ValidationError, match=r"malformed URL .*https://h:99999/v1"):
+        egress.operator_configured("https://h:99999/v1")
+    # Positive control: an endpoint in range is marked with its origin.
+    assert list(egress.operator_configured("https://h:8443/v1").values()) == [("https", "h", 8443)]

@@ -17,7 +17,7 @@ from urllib.parse import unquote
 import httpx
 import pytest
 
-from data_aggregator_mcp import _mirror, mwb, router
+from data_aggregator_mcp import _mirror, license_compat, mwb, router
 from data_aggregator_mcp.errors import NotFoundError, UpstreamUnavailableError
 from data_aggregator_mcp.models import DataResource, Link
 
@@ -31,6 +31,9 @@ _TITLE = {
 }
 # study/study_id/ST004329/summary
 _STUDY = json.loads((_FIX / "mwb_study_ST004329.json").read_text())
+# The same answer on 2026-11-10: the Workbench now states "CC BY-NC-ND", with no version,
+# and pins the version only in license_url (.../by-nc-nd/4.0/deed.en).
+_STUDY_NCND = json.loads((_FIX / "mwb_study_ST004329_2026-11-10.json").read_text())
 # The answer to a word in no title, and to an id no study has.
 _EMPTY = json.loads((_FIX / "mwb_empty.json").read_text())
 # An unknown output item: HTTP 200, text/html.
@@ -202,6 +205,7 @@ _MALFORMED = [
     pytest.param({"1": _study(study_title=...)}, id="no-title"),
     pytest.param({"1": _study(species=["Acropora"])}, id="species-not-a-string"),
     pytest.param(_study(license=4), id="unwrapped-license-not-a-string"),
+    pytest.param({"1": _study(license_url=["https://x"])}, id="license-url-not-a-string"),
     pytest.param({"1": _study(institute=["UH"])}, id="institute-not-a-string"),
     pytest.param({"1": _study(analysis_type=1)}, id="analysis-type-not-a-string"),
     pytest.param({"1": _study(release_date=20251107)}, id="release-date-not-a-string"),
@@ -220,7 +224,9 @@ async def test_an_answer_of_the_wrong_shape_fails_the_search(body):
 
 @pytest.mark.asyncio
 async def test_a_study_without_its_optional_fields_reads_as_empty():
-    bare = _study(species=..., analysis_type="", release_date=..., license=..., institute=...)
+    bare = _study(
+        species=..., analysis_type="", release_date=..., license=..., license_url=..., institute=...
+    )
     semi = _study(study_id="ST000002", species="Homo sapiens; Mus musculus；Danio rerio")
     dash = _study(study_id="ST000001", species="-")  # 4 of 4,623 studies (2026-10-11)
     (_, recs), _ = await _search("coral", _titles(coral={"1": bare, "2": semi, "3": dash}))
@@ -239,6 +245,64 @@ async def test_resolve_reads_the_study_by_id():
         r = await mwb.resolve(c, "mwb: st004329 ")
     assert sent == ["study_id/ST004329"]
     assert (r.id, r.year, r.organism[0]) == ("mwb:ST004329", 2025, "Acropora hyacinthus")
+
+
+async def _resolved(study: dict) -> DataResource:
+    async with _client([], {"study_id/ST004329": study}) as c:
+        return await mwb.resolve(c, "mwb:ST004329")
+
+
+@pytest.mark.asyncio
+async def test_the_license_url_pins_the_version_the_license_text_leaves_out():
+    # The verbatim 2026-11-10 answer: "CC BY-NC-ND" alone names no version, so it read as
+    # no license at all, and use=commercial answered "licence not stated".
+    r = await _resolved(_STUDY_NCND)
+    assert r.license == "CC-BY-NC-ND-4.0"
+    verdict = license_compat.check(r.license, "commercial")
+    assert (verdict.verdict, verdict.spdx_id) == ("DENY", "CC-BY-NC-ND-4.0")
+    assert r.errors == {}
+    # Positive control: the 2026-10-11 answer, whose text and URL both say CC BY 4.0.
+    old = await _resolved(_STUDY)
+    assert old.license == "CC-BY-4.0"
+    assert license_compat.check(old.license, "commercial").verdict == "ALLOW"
+
+
+@pytest.mark.asyncio
+async def test_a_license_the_text_and_the_url_disagree_on_is_neither():
+    # The URL never stands in for a text that names other terms: "CC BY" with an NC-ND
+    # URL, or NC-ND with a CC BY URL, is not read as either license.
+    by_url, ncnd_url = _STUDY["license_url"], _STUDY_NCND["license_url"]
+    for study in (
+        dict(_STUDY_NCND, license="CC BY"),
+        dict(_STUDY_NCND, license_url=by_url),
+        _study(license="CC BY 3.0"),  # a stated version the URL does not pin
+        _study(license="CC BY-NC", license_url=ncnd_url),
+        # Neither side a CC family: two unknowns are not an agreement (#364 review).
+        _study(
+            license="xyz unrecognized", license_url="https://opendatacommons.org/licenses/odbl/1.0/"
+        ),
+    ):
+        r = await _resolved(study)
+        assert r.license is None, study
+        assert "disagree" in r.errors["license"] and study["license"] in r.errors["license"]
+    # Positive control: a text and a URL that agree, versioned or not, are read.
+    assert (await _resolved(_study(license="CC BY"))).license == "CC-BY-4.0"
+    assert (await _resolved(_STUDY_NCND)).license == "CC-BY-NC-ND-4.0"
+
+
+@pytest.mark.asyncio
+async def test_a_license_stated_in_only_one_of_the_two_fields_is_read_from_it():
+    # A URL alone names the license and its version.
+    assert (await _resolved(dict(_STUDY_NCND, license=None))).license == "CC-BY-NC-ND-4.0"
+    # A versionless text alone is kept as written: no version is guessed, and the
+    # verdict says the license was stated (as CC-BY-NC-ND, version unknown), not absent.
+    r = await _resolved(dict(_STUDY_NCND, license_url=None))
+    assert r.license == "CC BY-NC-ND"
+    verdict = license_compat.check(r.license, "commercial")
+    assert verdict.verdict == "REVIEW" and "CC-BY-NC-ND but with no version" in verdict.reason
+    # Positive control: a versioned text alone is read as its SPDX id; neither is None.
+    assert (await _resolved(_study(license_url=...))).license == "CC-BY-4.0"
+    assert (await _resolved(_study(license_url=..., license=...))).license is None
 
 
 @pytest.mark.asyncio
@@ -357,7 +421,8 @@ async def test_live_the_round_3_coral_studies_are_found(query, want):
 async def test_live_resolve_of_the_advertised_example_and_an_unknown_id():
     async with httpx.AsyncClient(timeout=90) as c:
         r = await mwb.resolve(c, "mwb:ST004329")
-        assert "coral" in r.title and r.license == "CC-BY-4.0"
+        # CC BY 4.0 on 2026-10-11; "CC BY-NC-ND" with a 4.0 license_url by 2026-11-10.
+        assert "coral" in r.title and r.license == "CC-BY-NC-ND-4.0", (r.license, r.errors)
         with pytest.raises(NotFoundError):
             await mwb.resolve(c, "mwb:ST999999")
 

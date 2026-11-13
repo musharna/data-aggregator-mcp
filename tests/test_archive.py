@@ -103,3 +103,30 @@ def test_extract_tar_midstream_oversize_unlinks_partial(tmp_path: Path) -> None:
         archive.extract_archive(arc, dest, max_bytes=400)
     # The partial second file must not exist after the mid-stream abort
     assert not (dest / "second.bin").exists()
+
+
+def test_extract_rejects_a_member_name_holding_a_nul_byte(tmp_path: Path) -> None:
+    """Issue 338: a PAX ``path`` header may hold a NUL, which no file name can, and the
+    path resolve raised a bare ``ValueError`` ("embedded null character in path") where
+    every other bad member name is refused with this module's error. (A zip cannot carry
+    one: zipfile cuts a name at its first NUL.)"""
+    arc = tmp_path / "nul.tar"
+    with tarfile.open(arc, "w", format=tarfile.PAX_FORMAT) as tf:
+        info = tarfile.TarInfo("placeholder")
+        info.size = 1
+        info.pax_headers = {"path": "a\x00b.txt"}
+        tf.addfile(info, io.BytesIO(b"x"))
+    with tarfile.open(arc) as tf:
+        assert tf.getnames() == ["a\x00b.txt"]  # the name the extractor sees
+    dest = tmp_path / "out"
+    with pytest.raises(UpstreamUnavailableError, match=r"'a\\x00b.txt' holds a NUL byte"):
+        archive.extract_archive(arc, dest, max_bytes=1000)
+    assert not dest.exists() or not any(dest.iterdir())
+    # Positive control: the same PAX archive with a plain name is extracted.
+    good = tmp_path / "good.tar"
+    with tarfile.open(good, "w", format=tarfile.PAX_FORMAT) as tf:
+        info = tarfile.TarInfo("placeholder")
+        info.size = 1
+        info.pax_headers = {"path": "ab.txt"}
+        tf.addfile(info, io.BytesIO(b"x"))
+    assert [p.name for p in archive.extract_archive(good, dest, max_bytes=1000)] == ["ab.txt"]

@@ -8,6 +8,27 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Metabolomics Workbench records carry their license again. The Workbench now states it
+  without a version ("CC BY-NC-ND") and names the version only in `license_url`
+  (`.../by-nc-nd/4.0/`), so every record came back with `license: null`, and
+  `resolve(use="commercial")` answered "licence not stated" for data marked
+  non-commercial. The record now reads `CC-BY-NC-ND-4.0` from the URL when the words name
+  the same license. When the words and the URL disagree, `license` stays null and
+  `errors.license` says why. Words with no URL are kept as written; no version is guessed.
+
+- `search` says what `total` adds up. It is the sum of each source's own count, and several
+  sources count records holding any one of the query words, so "Phelipanche aegyptiaca
+  RNA-seq" gave a `total` of 66,402 with nothing saying so. For a query of two or more
+  words where such a source answered, `errors.total` now lists the count behind `total`
+  per source, largest first, and names the sources that may count records holding only
+  one word. `total` itself is unchanged.
+
+- Three inputs that raised a bare `ValueError` now get this server's own error, naming
+  what was refused: a redirect to a port out of range (`ValidationError`, from the egress
+  hook; the request was already never sent), a `fetch` `dest` holding a NUL byte
+  (`ValidationError`, before any request), and a tar member whose name holds a NUL byte
+  (`UpstreamUnavailableError`, like any other bad member name).
+
 - `fetch(extract=true)` extracts an archive it resumes. A verified archive already on
   disk was reported as done without being extracted, so an archive fetched earlier
   without `extract`, or one whose extraction failed or was killed after its download
