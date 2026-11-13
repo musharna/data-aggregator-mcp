@@ -137,7 +137,9 @@ async def test_live_search_folds_the_researchgate_copy_of_a_zenodo_deposit() -> 
         raw = await router.search_page(
             client, query=query, size=10, sources=["zenodo", "datacite"], collapse_mirrors=False
         )
-        assert raw.errors == {}
+        # No source failed. The one note allowed says what `total` adds up: the
+        # query has several words and Zenodo may count records holding any one.
+        assert set(raw.errors) <= {"total"}, raw.errors
         ids = {r.id for r in raw.results}
         assert {"zenodo:11459539", RG} <= ids and CONCEPT not in ids, sorted(ids)
         page = await router.search_page(
