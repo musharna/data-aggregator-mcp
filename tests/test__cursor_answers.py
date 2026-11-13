@@ -177,9 +177,11 @@ async def test_every_genuine_cursor_shape_still_decodes(monkeypatch):
 async def test_live_page_two_continues_from_the_real_cursor_and_a_forged_one_is_refused():
     """Real execution: page 1 of a live Zenodo search through the router, page 2 from
     its own cursor (different records), then the same cursor forged two ways is refused
-    before any request is made. ``errors`` may carry only the ``next_page`` note (87a166d):
-    it says how many fetched hits come next, which a page with a cursor is expected to."""
-    notes = {"next_page"}
+    before any request is made. ``errors`` may carry only two notes, neither a failed
+    source. ``next_page`` (87a166d) says how many fetched hits come next, which a page
+    with a cursor is expected to. ``total`` says what the count adds up: the query has two
+    words and Zenodo may count records holding either one."""
+    notes = {"next_page", "total"}
     async with httpx.AsyncClient(timeout=60) as client:
         p1 = await router.search_page(client, query="soil moisture", size=3, sources=["zenodo"])
         assert set(p1.errors) <= notes and len(p1.results) == 3 and p1.next_cursor
