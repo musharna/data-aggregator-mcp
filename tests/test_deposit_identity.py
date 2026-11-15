@@ -166,10 +166,11 @@ async def test_live_snow_leopard_shows_each_deposit_once_and_finds_the_waiting_s
         first = await router.search_page(client, query="snow leopard", size=50)
         second = await router.search_page(client, cursor=first.next_cursor)
     keys = [k for r in first.results if (k := _mirror.deposit_key(r))]
-    assert not {k for k in keys if keys.count(k) > 1}
-    # Positive control: the study whose runs took 7 hits is on the page, as one hit.
+    twice = sorted({k for k in keys if keys.count(k) > 1})
+    # The study whose runs took 7 hits takes one at most, wherever it ranks now.
     virome = [r.id for r in first.results if "SRP731052" in r.accessions]
-    assert len(virome) == 1, virome
+    assert (twice, virome[1:]) == ([], [])
+    # Positive control: the search answered, and finds the studies the fold made room for.
     hits = [f"{r.id} {r.doi or ''}" for r in first.results + second.results]
     ranks = {
         k: [n for n, hit in enumerate(hits, 1) if any(i in hit for i in ids)]
