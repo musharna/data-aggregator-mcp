@@ -146,7 +146,7 @@ def test_a_zenodo_version_links_its_concept() -> None:
 
 
 _live = pytest.mark.skipif(not LIVE, reason="set DATA_AGGREGATOR_MCP_LIVE=1 to run")
-# The R4 studies page 1 lacked (benchmarks/h2h/round2/keys/R4.yaml).
+# The R4 studies page 1 lacked on 2026-10-07 (benchmarks/h2h/round2/keys/R4.yaml).
 _WAITING = {
     "S28": ("22252314", "22252315", "22253310", "22253311", "33415759"),
     "S29": ("19184897",),
@@ -156,13 +156,23 @@ _WAITING = {
 
 
 @_live
-async def test_live_page_one_of_snow_leopard_holds_the_waiting_studies_once() -> None:
-    """Probed 2026-10-07: page 1 (50) held none of S28-S32 before, all four after; the
-    captive gut-virome study took 7 slots before, 1 after."""
+async def test_live_snow_leopard_shows_each_deposit_once_and_finds_the_waiting_studies() -> None:
+    """Probed 2026-10-07: 13 of page 1's 50 hits were further copies of four deposits, 7 of
+    them runs of one captive gut-virome study; after the fold each deposit held one hit.
+    Which page the four waiting studies are on is not asserted, since the archives decide
+    it: they stood at ranks 41 to 54 on 2026-11-15, on this code and on the code that had
+    all four on page 1 on 10-18, and page 1 (48 hits that night) cut between them."""
     async with httpx.AsyncClient(timeout=90) as client:
-        page = await router.search_page(client, query="snow leopard", size=50)
-    blobs = [f"{r.id} {r.doi or ''}" for r in page.results]
-    found = {k for k, ids in _WAITING.items() if any(i in b for b in blobs for i in ids)}
-    assert len(found) >= 3, (found, blobs)
-    virome = [r.id for r in page.results if "SRP731052" in r.accessions]
-    assert len(virome) <= 1, virome
+        first = await router.search_page(client, query="snow leopard", size=50)
+        second = await router.search_page(client, cursor=first.next_cursor)
+    keys = [k for r in first.results if (k := _mirror.deposit_key(r))]
+    assert not {k for k in keys if keys.count(k) > 1}
+    # Positive control: the study whose runs took 7 hits is on the page, as one hit.
+    virome = [r.id for r in first.results if "SRP731052" in r.accessions]
+    assert len(virome) == 1, virome
+    hits = [f"{r.id} {r.doi or ''}" for r in first.results + second.results]
+    ranks = {
+        k: [n for n, hit in enumerate(hits, 1) if any(i in hit for i in ids)]
+        for k, ids in _WAITING.items()
+    }
+    assert sum(bool(at) for at in ranks.values()) >= 3, ranks
